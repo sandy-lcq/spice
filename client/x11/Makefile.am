@@ -29,6 +29,7 @@ INCLUDES = \
 	$(WARN_CFLAGS)                                  \
 	$(SPICE_NONPKGCONFIG_CFLAGS)			\
 	$(SMARTCARD_CFLAGS)				\
+	$(XINERAMA_CFLAGS)				\
 	$(NULL)
 
 
@@ -220,4 +221,5 @@ spicec_LDADD =						\
 	$(XRANDR_LIBS)					\
 	$(XFIXES_LIBS)					\
 	$(MISC_X_LIBS)					\
+	$(XINERAMA_LIBS)				\
 	$(CEGUI_LIBS)
