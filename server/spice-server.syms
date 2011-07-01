@@ -157,4 +157,8 @@ global:
 SPICE_SERVER_0.12.6 {
 global:
     spice_qxl_set_max_monitors;
+    spice_replay_free;
+    spice_replay_new;
+    spice_replay_next_cmd;
+    spice_replay_free_cmd;
 } SPICE_SERVER_0.12.5;
