@@ -1,6 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <strings.h>
+#include <signal.h>
+#include <string.h>
+#include <pthread.h>
 
 #include "test_util.h"
 #include "basic_event_loop.h"
@@ -221,7 +225,7 @@ static void watch_remove(SpiceWatch *watch)
 
 static void channel_event(int event, SpiceChannelEventInfo *info)
 {
-    NOT_IMPLEMENTED
+    printf("got event %d, pthreadid %x\n", event, pthread_self());
 }
 
 SpiceTimer *get_next_timer(void)
