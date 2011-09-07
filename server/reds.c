@@ -53,6 +53,7 @@
 
 #include "red_common.h"
 #include "red_dispatcher.h"
+#include "main_dispatcher.h"
 #include "snd_worker.h"
 #include <spice/stats.h>
 #include "stat.h"
@@ -415,7 +416,7 @@ static void reds_channel_event(RedsStream *stream, int event)
 {
     if (core->base.minor_version < 3 || core->channel_event == NULL)
         return;
-    core->channel_event(event, &stream->info);
+    main_dispatcher_channel_event(event, &stream->info);
 }
 
 static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
@@ -4685,6 +4686,7 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
     reds->outgoing.vec = reds->outgoing.vec_buf;
 
     init_vd_agent_resources();
+    main_dispatcher_init(core);
 
     if (!(reds->mig_timer = core->timer_add(migrate_timeout, NULL))) {
         red_error("migration timer create failed");
