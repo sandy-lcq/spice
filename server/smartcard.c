@@ -292,9 +292,7 @@ static void smartcard_channel_send_error(
     SmartCardChannel *smartcard_channel, PipeItem *item)
 {
     ErrorItem* error_item = (ErrorItem*)item;
-    VSCMsgError error;
 
-    error.code = error_item->error;
     smartcard_channel_send_data(&smartcard_channel->base, item, &error_item->vheader);
 }
 
