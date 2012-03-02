@@ -132,7 +132,7 @@ AM_CONDITIONAL(SUPPORT_CLIENT, test "x$enable_client" = "xyes")
 dnl =========================================================================
 dnl Check deps
 
-PKG_CHECK_MODULES(PROTOCOL, spice-protocol >= 0.10.1)
+PKG_CHECK_MODULES(PROTOCOL, spice-protocol >= 0.10.3)
 AC_SUBST(PROTOCOL_CFLAGS)
 
 AC_CHECK_LIBM
