@@ -3898,6 +3898,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_channel_security(SpiceServer *s, const c
 #ifdef USE_SMARTCARD
         [ SPICE_CHANNEL_SMARTCARD] = "smartcard",
 #endif
+        [ SPICE_CHANNEL_USBREDIR ] = "usbredir",
     };
     int i;
 
