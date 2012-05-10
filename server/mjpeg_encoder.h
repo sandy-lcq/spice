@@ -27,6 +27,11 @@ MJpegEncoder *mjpeg_encoder_new(int width, int height);
 void mjpeg_encoder_destroy(MJpegEncoder *encoder);
 
 uint8_t mjpeg_encoder_get_bytes_per_pixel(MJpegEncoder *encoder);
+
+/*
+ * *dest must be either NULL or allocated by malloc, since it might be freed
+ * during the encoding, if its size is too small.
+ */
 int mjpeg_encoder_start_frame(MJpegEncoder *encoder, SpiceBitmapFmt format,
                               uint8_t **dest, size_t *dest_len);
 int mjpeg_encoder_encode_scanline(MJpegEncoder *encoder, uint8_t *src_pixels,
