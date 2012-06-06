@@ -135,6 +135,9 @@ static int dispatcher_handle_single_read(Dispatcher *dispatcher)
         /* TODO: close socketpair? */
         return 0;
     }
+    if (dispatcher->any_handler) {
+        dispatcher->any_handler(dispatcher->opaque, type, payload);
+    }
     if (msg->handler) {
         msg->handler(dispatcher->opaque, (void *)payload);
     } else {
@@ -221,6 +224,13 @@ void dispatcher_register_handler(Dispatcher *dispatcher, uint32_t message_type,
         dispatcher->payload = realloc(dispatcher->payload, msg->size);
         dispatcher->payload_size = msg->size;
     }
+}
+
+void dispatcher_register_universal_handler(
+                               Dispatcher *dispatcher,
+                               dispatcher_handle_any_message any_handler)
+{
+    dispatcher->any_handler = any_handler;
 }
 
 #ifdef DEBUG_DISPATCHER
