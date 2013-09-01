@@ -12099,8 +12099,9 @@ static void handle_dev_input(int fd, int event, void *opaque)
     dispatcher_handle_recv_read(red_dispatcher_get_dispatcher(worker->red_dispatcher));
 }
 
-static void red_init(RedWorker *worker, WorkerInitData *init_data)
+static RedWorker* red_worker_new(WorkerInitData *init_data)
 {
+    RedWorker *worker = spice_new0(RedWorker, 1);
     RedWorkerMessage message;
     Dispatcher *dispatcher;
     int i;
@@ -12108,7 +12109,6 @@ static void red_init(RedWorker *worker, WorkerInitData *init_data)
 
     spice_assert(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
-    memset(worker, 0, sizeof(RedWorker));
     record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
     if (record_filename) {
         static const char header[] = "SPICE_REPLAY 1\n";
@@ -12193,6 +12193,8 @@ static void red_init(RedWorker *worker, WorkerInitData *init_data)
 #endif
     red_init_zlib(worker);
     worker->event_timeout = INF_EVENT_WAIT;
+
+    return worker;
 }
 
 static void red_display_cc_free_glz_drawables(RedChannelClient *rcc)
@@ -12204,7 +12206,7 @@ static void red_display_cc_free_glz_drawables(RedChannelClient *rcc)
 
 SPICE_GNUC_NORETURN void *red_worker_main(void *arg)
 {
-    RedWorker *worker = spice_malloc(sizeof(RedWorker));
+    RedWorker *worker = red_worker_new(arg);
 
     spice_info("begin");
     spice_assert(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
@@ -12213,8 +12215,6 @@ SPICE_GNUC_NORETURN void *red_worker_main(void *arg)
     if (pthread_getcpuclockid(pthread_self(), &clock_id)) {
         spice_error("pthread_getcpuclockid failed");
     }
-
-    red_init(worker, (WorkerInitData *)arg);
 
     for (;;) {
         int i, num_events;
