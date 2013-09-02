@@ -37,6 +37,8 @@ enum {
     RED_RENDERER_LAST
 };
 
+typedef struct RedWorker RedWorker;
+
 typedef struct WorkerInitData {
     struct QXLInstance *qxl;
     int id;
@@ -56,6 +58,7 @@ typedef struct WorkerInitData {
     RedDispatcher *red_dispatcher;
 } WorkerInitData;
 
-void *red_worker_main(void *arg);
+RedWorker* red_worker_new(WorkerInitData *init_data);
+bool       red_worker_run(RedWorker *worker);
 
 #endif

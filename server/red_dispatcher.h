@@ -83,11 +83,6 @@ static inline void receive_data(int fd, void *in_buf, int n)
     } while (n);
 }
 
-static inline void read_message(int fd, RedWorkerMessage *message)
-{
-    receive_data(fd, message, sizeof(RedWorkerMessage));
-}
-
 enum {
     RED_WORKER_MESSAGE_NOP,
     RED_WORKER_MESSAGE_UPDATE,

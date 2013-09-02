@@ -859,6 +859,7 @@ typedef struct ItemTrace {
 #define NUM_CURSORS 100
 
 typedef struct RedWorker {
+    pthread_t thread;
     clockid_t clockid;
     DisplayChannel *display_channel;
     CursorChannel *cursor_channel;
@@ -11846,7 +11847,7 @@ static void handle_dev_input(int fd, int event, void *opaque)
     dispatcher_handle_recv_read(red_dispatcher_get_dispatcher(worker->red_dispatcher));
 }
 
-static RedWorker* red_worker_new(WorkerInitData *init_data)
+RedWorker* red_worker_new(WorkerInitData *init_data)
 {
     RedWorker *worker = spice_new0(RedWorker, 1);
     RedWorkerMessage message;
@@ -11951,9 +11952,9 @@ static void red_display_cc_free_glz_drawables(RedChannelClient *rcc)
     red_display_handle_glz_drawables_to_free(dcc);
 }
 
-SPICE_GNUC_NORETURN void *red_worker_main(void *arg)
+SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
 {
-    RedWorker *worker = red_worker_new(arg);
+    RedWorker *worker = arg;
 
     spice_info("begin");
     spice_assert(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
@@ -12024,4 +12025,29 @@ SPICE_GNUC_NORETURN void *red_worker_main(void *arg)
     }
 
     spice_warn_if_reached();
+}
+
+bool red_worker_run(RedWorker *worker)
+{
+    uint32_t message;
+    sigset_t thread_sig_mask;
+    sigset_t curr_sig_mask;
+    int r;
+
+    spice_return_val_if_fail(worker, FALSE);
+    spice_return_val_if_fail(!worker->thread, FALSE);
+
+    sigfillset(&thread_sig_mask);
+    sigdelset(&thread_sig_mask, SIGILL);
+    sigdelset(&thread_sig_mask, SIGFPE);
+    sigdelset(&thread_sig_mask, SIGSEGV);
+    pthread_sigmask(SIG_SETMASK, &thread_sig_mask, &curr_sig_mask);
+    if ((r = pthread_create(&worker->thread, NULL, red_worker_main, worker))) {
+        spice_error("create thread failed %d", r);
+    }
+    pthread_sigmask(SIG_SETMASK, &curr_sig_mask, NULL);
+
+    message = dispatcher_read_message(red_dispatcher_get_dispatcher(worker->red_dispatcher));
+
+    return message == RED_WORKER_MESSAGE_READY;
 }

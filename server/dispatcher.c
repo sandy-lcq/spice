@@ -32,6 +32,7 @@
 #include "common/mem.h"
 #include "common/spice_common.h"
 #include "dispatcher.h"
+#include "red_dispatcher.h"
 
 //#define DEBUG_DISPATCHER
 
@@ -198,6 +199,18 @@ void dispatcher_send_message(Dispatcher *dispatcher, uint32_t message_type,
     }
 unlock:
     pthread_mutex_unlock(&dispatcher->lock);
+}
+
+uint32_t dispatcher_read_message(Dispatcher *dispatcher)
+{
+    uint32_t message;
+
+    spice_return_val_if_fail(dispatcher, 0);
+    spice_return_val_if_fail(dispatcher->send_fd != -1, 0);
+
+    receive_data(dispatcher->send_fd, &message, sizeof(message));
+
+    return message;
 }
 
 void dispatcher_register_async_done_callback(
