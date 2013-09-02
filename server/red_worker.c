@@ -11850,7 +11850,6 @@ static void handle_dev_input(int fd, int event, void *opaque)
 RedWorker* red_worker_new(WorkerInitData *init_data)
 {
     RedWorker *worker = spice_new0(RedWorker, 1);
-    RedWorkerMessage message;
     Dispatcher *dispatcher;
     int i;
     const char *record_filename;
@@ -11930,8 +11929,6 @@ RedWorker* red_worker_new(WorkerInitData *init_data)
     if (!spice_timer_queue_create()) {
         spice_error("failed to create timer queue");
     }
-    message = RED_WORKER_MESSAGE_READY;
-    write_message(worker->channel, &message);
 
     red_init_quic(worker);
     red_init_lz(worker);
@@ -12029,7 +12026,6 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
 
 bool red_worker_run(RedWorker *worker)
 {
-    uint32_t message;
     sigset_t thread_sig_mask;
     sigset_t curr_sig_mask;
     int r;
@@ -12047,7 +12043,5 @@ bool red_worker_run(RedWorker *worker)
     }
     pthread_sigmask(SIG_SETMASK, &curr_sig_mask, NULL);
 
-    message = dispatcher_read_message(red_dispatcher_get_dispatcher(worker->red_dispatcher));
-
-    return message == RED_WORKER_MESSAGE_READY;
+    return r == 0;
 }
