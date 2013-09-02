@@ -106,6 +106,8 @@ libspice_server_la_SOURCES =			\
 	red_time.h				\
 	red_worker.c				\
 	red_worker.h				\
+	display-channel.h			\
+	cursor-channel.h			\
 	reds.c					\
 	reds.h					\
 	reds-private.h				\

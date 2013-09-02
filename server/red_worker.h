@@ -58,6 +58,26 @@ typedef struct WorkerInitData {
     RedDispatcher *red_dispatcher;
 } WorkerInitData;
 
+typedef struct CommonChannelClient {
+    RedChannelClient base;
+    uint32_t id;
+    struct RedWorker *worker;
+    int is_low_bandwidth;
+} CommonChannelClient;
+
+#define CHANNEL_RECEIVE_BUF_SIZE 1024
+typedef struct CommonChannel {
+    RedChannel base; // Must be the first thing
+    struct RedWorker *worker;
+    uint8_t recv_buf[CHANNEL_RECEIVE_BUF_SIZE];
+    uint32_t id_alloc; // bitfield. TODO - use this instead of shift scheme.
+    int during_target_migrate; /* TRUE when the client that is associated with the channel
+                                  is during migration. Turned off when the vm is started.
+                                  The flag is used to avoid sending messages that are artifacts
+                                  of the transition from stopped vm to loaded vm (e.g., recreation
+                                  of the primary surface) */
+} CommonChannel;
+
 RedWorker* red_worker_new(WorkerInitData *init_data);
 bool       red_worker_run(RedWorker *worker);
 
