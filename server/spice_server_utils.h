@@ -2,6 +2,7 @@
 #define H_SPICE_SERVER_UTIL
 
 #include <unistd.h>
+#include <glib.h>
 
 static inline void set_bit(int index, uint32_t *addr)
 {

@@ -1076,11 +1076,15 @@ void red_dispatcher_init(QXLInstance *qxl)
 
     spice_return_if_fail(qxl->st->dispatcher == NULL);
 
-    quic_init();
-    sw_canvas_init();
+    static gsize initialized = FALSE;
+    if (g_once_init_enter(&initialized)) {
+        quic_init();
+        sw_canvas_init();
 #ifdef USE_OPENGL
-    gl_canvas_init();
+        gl_canvas_init();
 #endif // USE_OPENGL
+        g_once_init_leave(&initialized, TRUE);
+    }
 
     red_dispatcher = spice_new0(RedDispatcher, 1);
     ring_init(&red_dispatcher->async_commands);
