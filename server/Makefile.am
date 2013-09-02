@@ -88,7 +88,6 @@ libspice_server_la_SOURCES =			\
 	red_channel.c				\
 	red_channel.h				\
 	red_client_cache.h			\
-	red_client_shared_cache.h		\
 	red_common.h				\
 	dispatcher.c				\
 	dispatcher.h				\
@@ -128,6 +127,8 @@ libspice_server_la_SOURCES =			\
 	spice_server_utils.h		\
 	spice_image_cache.h			\
 	spice_image_cache.c			\
+	pixmap-cache.h				\
+	pixmap-cache.c				\
 	$(NULL)
 
 if SUPPORT_GL
