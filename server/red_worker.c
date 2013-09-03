@@ -603,8 +603,6 @@ typedef struct ItemTrace {
 typedef struct RedWorker {
     pthread_t thread;
     clockid_t clockid;
-    DisplayChannel *display_channel;
-    CursorChannel *cursor_channel;
     QXLInstance *qxl;
     RedDispatcher *red_dispatcher;
 
@@ -613,8 +611,13 @@ typedef struct RedWorker {
     struct pollfd poll_fds[MAX_EVENT_SOURCES];
     struct SpiceWatch watches[MAX_EVENT_SOURCES];
     unsigned int event_timeout;
+
+    DisplayChannel *display_channel;
     uint32_t repoll_cmd_ring;
+
+    CursorChannel *cursor_channel;
     uint32_t repoll_cursor_ring;
+
     uint32_t num_renderers;
     uint32_t renderers[RED_RENDERER_LAST];
     uint32_t renderer;
