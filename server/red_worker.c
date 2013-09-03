@@ -376,6 +376,10 @@ Ring glz_dictionary_list = {&glz_dictionary_list, &glz_dictionary_list};
 struct DisplayChannel {
     CommonChannel common; // Must be the first thing
 
+    uint32_t num_renderers;
+    uint32_t renderers[RED_RENDERER_LAST];
+    uint32_t renderer;
+
     int enable_jpeg;
     int jpeg_quality;
     int enable_zlib_glz_wrap;
@@ -480,10 +484,6 @@ typedef struct RedWorker {
 
     CursorChannel *cursor_channel;
     uint32_t cursor_poll_tries;
-
-    uint32_t num_renderers;
-    uint32_t renderers[RED_RENDERER_LAST];
-    uint32_t renderer;
 
     RedSurface surfaces[NUM_SURFACES];
     uint32_t n_surfaces;
@@ -8294,6 +8294,7 @@ static inline void red_create_surface(RedWorker *worker, uint32_t surface_id, ui
                                       void *line_0, int data_is_valid, int send_client)
 {
     RedSurface *surface = &worker->surfaces[surface_id];
+    DisplayChannel*display = worker->display_channel;
     uint32_t i;
 
     spice_warn_if(surface->context.canvas);
@@ -8318,8 +8319,8 @@ static inline void red_create_surface(RedWorker *worker, uint32_t surface_id, ui
     ring_init(&surface->depend_on_me);
     region_init(&surface->draw_dirty_region);
     surface->refs = 1;
-    if (worker->renderer != RED_RENDERER_INVALID) {
-        surface->context.canvas = create_canvas_for_surface(worker, surface, worker->renderer,
+    if (display->renderer != RED_RENDERER_INVALID) {
+        surface->context.canvas = create_canvas_for_surface(worker, surface, display->renderer,
                                                             width, height, stride,
                                                             surface->context.format, line_0);
         if (!surface->context.canvas) {
@@ -8335,12 +8336,12 @@ static inline void red_create_surface(RedWorker *worker, uint32_t surface_id, ui
         return;
     }
 
-    for (i = 0; i < worker->num_renderers; i++) {
-        surface->context.canvas = create_canvas_for_surface(worker, surface, worker->renderers[i],
+    for (i = 0; i < display->num_renderers; i++) {
+        surface->context.canvas = create_canvas_for_surface(worker, surface, display->renderers[i],
                                                             width, height, stride,
                                                             surface->context.format, line_0);
         if (surface->context.canvas) { //no need canvas check
-            worker->renderer = worker->renderers[i];
+            display->renderer = display->renderers[i];
             if (send_client) {
                 red_worker_create_surface_item(worker, surface_id);
                 if (data_is_valid) {
@@ -9253,9 +9254,7 @@ static void display_channel_create(RedWorker *worker, int migrate)
         .handle_migrate_data_get_serial = display_channel_handle_migrate_data_get_serial
     };
 
-    if (worker->display_channel) {
-        return;
-    }
+    spice_return_if_fail(num_renderers > 0);
 
     spice_info("create display channel");
     if (!(worker->display_channel = (DisplayChannel *)red_worker_new_channel(
@@ -9283,6 +9282,10 @@ static void display_channel_create(RedWorker *worker, int migrate)
     stat_compress_init(&display_channel->zlib_glz_stat, zlib_stat_name);
     stat_compress_init(&display_channel->jpeg_alpha_stat, jpeg_alpha_stat_name);
     stat_compress_init(&display_channel->lz4_stat, lz4_stat_name);
+
+    display_channel->num_renderers = num_renderers;
+    memcpy(display_channel->renderers, renderers, sizeof(display_channel->renderers));
+    display_channel->renderer = RED_RENDERER_INVALID;
 }
 
 static void guest_set_client_capabilities(RedWorker *worker)
@@ -10540,10 +10543,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     if (worker->record_fd) {
         dispatcher_register_universal_handler(dispatcher, worker_dispatcher_record);
     }
-    spice_assert(num_renderers > 0);
-    worker->num_renderers = num_renderers;
-    memcpy(worker->renderers, renderers, sizeof(worker->renderers));
-    worker->renderer = RED_RENDERER_INVALID;
     worker->image_compression = image_compression;
     worker->jpeg_state = jpeg_state;
     worker->zlib_glz_state = zlib_glz_state;
