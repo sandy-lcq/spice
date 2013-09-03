@@ -12163,8 +12163,6 @@ static void red_init(RedWorker *worker, WorkerInitData *init_data)
     if (!spice_timer_queue_create()) {
         spice_error("failed to create timer queue");
     }
-    srand(time(NULL));
-
     message = RED_WORKER_MESSAGE_READY;
     write_message(worker->channel, &message);
 
