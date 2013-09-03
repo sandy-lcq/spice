@@ -867,7 +867,6 @@ typedef struct RedWorker {
     RedDispatcher *red_dispatcher;
 
     int channel;
-    int id;
     int running;
     uint32_t *pending;
     struct pollfd poll_fds[MAX_EVENT_SOURCES];
@@ -10197,7 +10196,7 @@ static CommonChannelClient *common_channel_client_create(int size,
     }
     CommonChannelClient *common_cc = (CommonChannelClient*)rcc;
     common_cc->worker = common->worker;
-    common_cc->id = common->worker->id;
+    common_cc->id = common->worker->qxl->id;
     common->during_target_migrate = mig_target;
 
     // TODO: move wide/narrow ack setting to red_channel.
@@ -10281,7 +10280,7 @@ static RedChannel *__new_channel(RedWorker *worker, int size, uint32_t channel_t
     channel_cbs.handle_migrate_data_get_serial = migrate_get_serial;
 
     channel = red_channel_create_parser(size, &worker_core,
-                                        channel_type, worker->id,
+                                        channel_type, worker->qxl->id,
                                         TRUE /* handle_acks */,
                                         spice_get_client_channel_parser(channel_type, NULL),
                                         handle_parsed,
@@ -11872,7 +11871,6 @@ RedWorker* red_worker_new(WorkerInitData *init_data)
     dispatcher_set_opaque(dispatcher, worker);
     worker->red_dispatcher = init_data->red_dispatcher;
     worker->qxl = init_data->qxl;
-    worker->id = init_data->id;
     worker->channel = dispatcher_get_recv_fd(dispatcher);
     register_callbacks(dispatcher);
     if (worker->record_fd) {
@@ -11901,7 +11899,7 @@ RedWorker* red_worker_new(WorkerInitData *init_data)
     stat_init(&worker->__exclude_stat, __exclude_stat_name);
 #ifdef RED_STATISTICS
     char worker_str[20];
-    sprintf(worker_str, "display[%d]", worker->id);
+    sprintf(worker_str, "display[%d]", worker->qxl->id);
     worker->stat = stat_add_node(INVALID_STAT_REF, worker_str, TRUE);
     worker->wakeup_counter = stat_add_counter(worker->stat, "wakeups", TRUE);
     worker->command_counter = stat_add_counter(worker->stat, "commands", TRUE);
