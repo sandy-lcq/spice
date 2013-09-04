@@ -43,7 +43,6 @@
 #include <poll.h>
 #include <pthread.h>
 #include <netinet/tcp.h>
-#include <setjmp.h>
 #include <openssl/ssl.h>
 #include <inttypes.h>
 #include <glib.h>
@@ -58,41 +57,11 @@
 #include "common/ring.h"
 #include "common/generated_server_marshallers.h"
 
-#ifdef USE_OPENGL
-#include "common/ogl_ctx.h"
-#include "reds_gl_canvas.h"
-#endif /* USE_OPENGL */
+#include "display-channel.h"
 
 #include "spice.h"
 #include "red_worker.h"
-#include "reds_stream.h"
-#include "reds_sw_canvas.h"
-#include "glz_encoder_dictionary.h"
-#include "glz_encoder.h"
-#include "stat.h"
-#include "reds.h"
-#include "mjpeg_encoder.h"
-#include "red_memslots.h"
-#include "red_parse_qxl.h"
-#include "red_record_qxl.h"
-#include "jpeg_encoder.h"
-#ifdef USE_LZ4
-#include "lz4_encoder.h"
-#endif
-#include "demarshallers.h"
-#include "zlib_encoder.h"
-#include "red_channel.h"
-#include "red_dispatcher.h"
-#include "dispatcher.h"
-#include "main_channel.h"
-#include "migration_protocol.h"
 #include "spice_timer_queue.h"
-#include "main_dispatcher.h"
-#include "spice_server_utils.h"
-#include "spice_bitmap_utils.h"
-#include "spice_image_cache.h"
-#include "pixmap-cache.h"
-#include "display-channel.h"
 #include "cursor-channel.h"
 #include "tree.h"
 
@@ -295,8 +264,6 @@ typedef struct StreamActivateReportItem {
 #define WIDE_CLIENT_ACK_WINDOW 40
 #define NARROW_CLIENT_ACK_WINDOW 20
 
-#define CLIENT_PALETTE_CACHE_SIZE 128
-
 typedef struct ImageItem {
     PipeItem link;
     int refs;
@@ -311,8 +278,6 @@ typedef struct ImageItem {
     int can_lossy;
     uint8_t data[0];
 } ImageItem;
-
-typedef struct DisplayChannel DisplayChannel;
 
 enum {
     STREAM_FRAME_NONE,
@@ -9227,28 +9192,6 @@ CommonChannelClient *common_channel_new_client(CommonChannel *common,
 }
 
 
-DisplayChannelClient *display_channel_client_create(CommonChannel *common,
-                                                    RedClient *client, RedsStream *stream,
-                                                    int mig_target,
-                                                    uint32_t *common_caps, int num_common_caps,
-                                                    uint32_t *caps, int num_caps)
-{
-    DisplayChannelClient *dcc =
-        (DisplayChannelClient*)common_channel_new_client(
-            common, sizeof(DisplayChannelClient), client, stream,
-            mig_target,
-            TRUE,
-            common_caps, num_common_caps,
-            caps, num_caps);
-
-    if (!dcc) {
-        return NULL;
-    }
-    ring_init(&dcc->palette_cache_lru);
-    dcc->palette_cache_available = CLIENT_PALETTE_CACHE_SIZE;
-    return dcc;
-}
-
 RedChannel *red_worker_new_channel(RedWorker *worker, int size,
                                    uint32_t channel_type, int migration_flags,
                                    ChannelCbs *channel_cbs,
@@ -9531,10 +9474,8 @@ static void handle_new_display_channel(RedWorker *worker, RedClient *client, Red
     }
     display_channel = worker->display_channel;
     spice_info("add display channel client");
-    dcc = display_channel_client_create(&display_channel->common, client, stream,
-                                        migrate,
-                                        common_caps, num_common_caps,
-                                        caps, num_caps);
+    dcc = dcc_new(display_channel, client, stream, migrate,
+                  common_caps, num_common_caps, caps, num_caps);
     if (!dcc) {
         return;
     }

@@ -105,6 +105,7 @@ libspice_server_la_SOURCES =			\
 	red_parse_qxl.h				\
 	red_worker.c				\
 	red_worker.h				\
+	display-channel.c			\
 	display-channel.h			\
 	cursor-channel.c			\
 	cursor-channel.h			\
