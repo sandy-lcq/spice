@@ -18,9 +18,15 @@
 #ifndef RED_WORKER_CLIENT_H_
 # define RED_WORKER_CLIENT_H_
 
+#include <setjmp.h>
+
 #include "red_worker.h"
 #include "cache-item.h"
 #include "pixmap-cache.h"
+#include "reds_sw_canvas.h"
+#include "glz_encoder_dictionary.h"
+#include "glz_encoder.h"
+#include "mjpeg_encoder.h"
 #include "utils.h"
 
 typedef struct Drawable Drawable;
