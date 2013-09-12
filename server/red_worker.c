@@ -3417,8 +3417,8 @@ static inline void red_inc_surfaces_drawable_dependencies(RedWorker *worker, Dra
     }
 }
 
-static inline void red_process_drawable(RedWorker *worker, RedDrawable *red_drawable,
-                                        uint32_t group_id)
+static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable,
+                                    uint32_t group_id)
 {
     int surface_id;
     Drawable *drawable = get_drawable(worker, red_drawable->effect, red_drawable, group_id);
@@ -3857,7 +3857,7 @@ static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int s
            that it is valid to call red_update_area in this case and not red_update_area_till:
            It is impossible that there was newer item then 'last' in one of the surfaces
            that red_update_area is called for, Otherwise, 'now' would have already been rendered.
-           See the call for red_handle_depends_on_target_surface in red_process_drawable */
+           See the call for red_handle_depends_on_target_surface in red_process_draw */
         red_draw_drawable(worker, now);
         release_drawable(worker, now);
     } while (now != surface_last);
@@ -4019,7 +4019,7 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
 
             if (!red_get_drawable(&worker->mem_slots, ext_cmd.group_id,
                                  red_drawable, ext_cmd.cmd.data, ext_cmd.flags)) {
-                red_process_drawable(worker, red_drawable, ext_cmd.group_id);
+                red_process_draw(worker, red_drawable, ext_cmd.group_id);
             }
             // release the red_drawable
             put_red_drawable(worker, red_drawable, ext_cmd.group_id);
