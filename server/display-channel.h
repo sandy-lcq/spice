@@ -21,8 +21,7 @@
 #include "red_worker.h"
 #include "cache-item.h"
 #include "pixmap-cache.h"
-
-typedef int64_t red_time_t;
+#include "utils.h"
 
 typedef struct Drawable Drawable;
 

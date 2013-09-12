@@ -89,13 +89,11 @@
 #include "spice_timer_queue.h"
 #include "main_dispatcher.h"
 #include "spice_server_utils.h"
-#include "red_time.h"
 #include "spice_bitmap_utils.h"
 #include "spice_image_cache.h"
 #include "pixmap-cache.h"
 #include "display-channel.h"
 #include "cursor-channel.h"
-#include "utils.h"
 
 //#define COMPRESS_STAT
 //#define DUMP_BITMAP
@@ -4208,7 +4206,7 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
 {
     QXLCommandExt ext_cmd;
     int n = 0;
-    uint64_t start = red_now();
+    uint64_t start = red_get_monotonic_time();
 
     if (!worker->running) {
         *ring_is_empty = TRUE;
@@ -4308,7 +4306,7 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
         n++;
         if ((worker->display_channel &&
              red_channel_all_blocked(&worker->display_channel->common.base))
-            || red_now() - start > 10 * 1000 * 1000) {
+            || red_get_monotonic_time() - start > 10 * 1000 * 1000) {
             worker->event_timeout = 0;
             return n;
         }
@@ -7806,7 +7804,7 @@ static inline int red_marshall_stream_data(RedChannelClient *rcc,
     }
 
     StreamAgent *agent = &dcc->stream_agents[get_stream_id(worker, stream)];
-    uint64_t time_now = red_now();
+    uint64_t time_now = red_get_monotonic_time();
     size_t outbuf_size;
 
     if (!dcc->use_mjpeg_encoder_rate_control) {
@@ -8841,7 +8839,7 @@ static inline void flush_display_commands(RedWorker *worker)
         if (ring_is_empty) {
             break;
         }
-        end_time = red_now() + DISPLAY_CLIENT_TIMEOUT;
+        end_time = red_get_monotonic_time() + DISPLAY_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
             red_channel_push(&worker->display_channel->common.base);
@@ -8854,7 +8852,7 @@ static inline void flush_display_commands(RedWorker *worker)
             red_channel_send(channel);
             // TODO: MC: the whole timeout will break since it takes lowest timeout, should
             // do it client by client.
-            if (red_now() >= end_time) {
+            if (red_get_monotonic_time() >= end_time) {
                 spice_warning("update timeout");
                 red_disconnect_all_display_TODO_remove_me(channel);
             } else {
@@ -8885,7 +8883,7 @@ static inline void flush_cursor_commands(RedWorker *worker)
         if (ring_is_empty) {
             break;
         }
-        end_time = red_now() + DISPLAY_CLIENT_TIMEOUT;
+        end_time = red_get_monotonic_time() + DISPLAY_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
             red_channel_push(&worker->cursor_channel->common.base);
@@ -8896,7 +8894,7 @@ static inline void flush_cursor_commands(RedWorker *worker)
             RedChannel *channel = (RedChannel *)worker->cursor_channel;
             red_channel_receive(channel);
             red_channel_send(channel);
-            if (red_now() >= end_time) {
+            if (red_get_monotonic_time() >= end_time) {
                 spice_warning("flush cursor timeout");
                 cursor_channel_disconnect(channel);
                 worker->cursor_channel = NULL;
@@ -8930,7 +8928,7 @@ static void push_new_primary_surface(DisplayChannelClient *dcc)
 static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
 {
     dcc->expect_init = TRUE;
-    uint64_t end_time = red_now() + DISPLAY_CLIENT_TIMEOUT;
+    uint64_t end_time = red_get_monotonic_time() + DISPLAY_CLIENT_TIMEOUT;
     for (;;) {
         red_channel_client_receive(&dcc->common.base);
         if (!red_channel_client_is_connected(&dcc->common.base)) {
@@ -8946,7 +8944,7 @@ static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
             }
             return TRUE;
         }
-        if (red_now() > end_time) {
+        if (red_get_monotonic_time() > end_time) {
             spice_warning("timeout");
             red_channel_client_disconnect(&dcc->common.base);
             break;
@@ -10398,7 +10396,7 @@ void handle_dev_stop(void *opaque, void *payload)
 
 static int display_channel_wait_for_migrate_data(DisplayChannel *display)
 {
-    uint64_t end_time = red_now() + DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT;
+    uint64_t end_time = red_get_monotonic_time() + DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT;
     RedChannel *channel = &display->common.base;
     RedChannelClient *rcc;
 
@@ -10417,7 +10415,7 @@ static int display_channel_wait_for_migrate_data(DisplayChannel *display)
         if (!red_channel_client_waits_for_migrate_data(rcc)) {
             return TRUE;
         }
-        if (red_now() > end_time) {
+        if (red_get_monotonic_time() > end_time) {
             spice_warning("timeout");
             red_channel_client_disconnect(rcc);
             break;
