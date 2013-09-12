@@ -131,6 +131,7 @@ libspice_server_la_SOURCES =			\
 	spice_image_cache.c			\
 	pixmap-cache.h				\
 	pixmap-cache.c				\
+	utils.h					\
 	$(NULL)
 
 if HAVE_GL
