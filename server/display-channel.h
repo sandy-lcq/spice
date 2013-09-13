@@ -237,4 +237,21 @@ DisplayChannelClient*      dcc_new                                   (DisplayCha
                                                                       uint32_t *caps,
                                                                       int num_caps);
 
+typedef struct MonitorsConfig {
+    int refs;
+    int count;
+    int max_allowed;
+    QXLHead heads[0];
+} MonitorsConfig;
+
+typedef struct MonitorsConfigItem {
+    PipeItem pipe_item;
+    MonitorsConfig *monitors_config;
+} MonitorsConfigItem;
+
+MonitorsConfig*            monitors_config_new                       (QXLHead *heads, ssize_t nheads,
+                                                                      ssize_t max);
+MonitorsConfig *           monitors_config_ref                       (MonitorsConfig *config);
+void                       monitors_config_unref                     (MonitorsConfig *config);
+
 #endif /* DISPLAY_CHANNEL_H_ */
