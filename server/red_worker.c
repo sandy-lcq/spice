@@ -2957,6 +2957,7 @@ static inline int red_current_add_with_shadow(RedWorker *worker, Ring *ring, Dra
 {
 #ifdef RED_WORKER_STAT
     stat_time_t start_time = stat_now(worker);
+    ++worker->add_with_shadow_count;
 #endif
 
     Shadow *shadow = __new_shadow(worker, item, delta);
@@ -3032,24 +3033,8 @@ static inline void red_update_streamable(RedWorker *worker, Drawable *drawable,
     drawable->streamable = TRUE;
 }
 
-static inline int red_current_add_qxl(RedWorker *worker, Ring *ring, Drawable *drawable,
-                                      RedDrawable *red_drawable)
+static void red_print_stats(RedWorker *worker)
 {
-    int ret;
-
-    if (has_shadow(red_drawable)) {
-        SpicePoint delta;
-
-#ifdef RED_WORKER_STAT
-        ++worker->add_with_shadow_count;
-#endif
-        delta.x = red_drawable->u.copy_bits.src_pos.x - red_drawable->bbox.left;
-        delta.y = red_drawable->u.copy_bits.src_pos.y - red_drawable->bbox.top;
-        ret = red_current_add_with_shadow(worker, ring, drawable, &delta);
-    } else {
-        red_update_streamable(worker, drawable, red_drawable);
-        ret = red_current_add(worker, ring, drawable);
-    }
 #ifdef RED_WORKER_STAT
     if ((++worker->add_count % 100) == 0) {
         stat_time_t total = worker->add_stat.total;
@@ -3074,6 +3059,26 @@ static inline int red_current_add_qxl(RedWorker *worker, Ring *ring, Drawable *d
         stat_reset(&worker->__exclude_stat);
     }
 #endif
+}
+
+static int red_add_drawable(RedWorker *worker, Drawable *drawable)
+{
+    int ret = FALSE, surface_id = drawable->surface_id;
+    RedDrawable *red_drawable = drawable->red_drawable;
+    Ring *ring = &worker->surfaces[surface_id].current;
+
+    if (has_shadow(red_drawable)) {
+        SpicePoint delta = {
+            .x = red_drawable->u.copy_bits.src_pos.x - red_drawable->bbox.left,
+            .y = red_drawable->u.copy_bits.src_pos.y - red_drawable->bbox.top
+        };
+        ret = red_current_add_with_shadow(worker, ring, drawable, &delta);
+    } else {
+        red_update_streamable(worker, drawable, red_drawable);
+        ret = red_current_add(worker, ring, drawable);
+    }
+
+    red_print_stats(worker);
     return ret;
 }
 
@@ -3371,8 +3376,7 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
         goto cleanup;
     }
 
-    if (red_current_add_qxl(worker, &worker->surfaces[surface_id].current, drawable,
-                            red_drawable)) {
+    if (red_add_drawable(worker, drawable)) {
         if (drawable->tree_item.effect != QXL_EFFECT_OPAQUE) {
             worker->transparent_count++;
         }
