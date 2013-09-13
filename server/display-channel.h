@@ -360,4 +360,7 @@ struct DisplayChannel {
 #endif
 };
 
+void                       display_channel_compress_stats_print      (const DisplayChannel *display);
+void                       display_channel_compress_stats_reset      (DisplayChannel *display);
+
 #endif /* DISPLAY_CHANNEL_H_ */
