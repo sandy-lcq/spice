@@ -2951,15 +2951,20 @@ static inline Shadow *__new_shadow(RedWorker *worker, Drawable *item, SpicePoint
     return shadow;
 }
 
-static inline int red_current_add_with_shadow(RedWorker *worker, Ring *ring, Drawable *item,
-                                              SpicePoint *delta)
+static inline int red_current_add_with_shadow(RedWorker *worker, Ring *ring, Drawable *item)
 {
 #ifdef RED_WORKER_STAT
     stat_time_t start_time = stat_now(worker);
     ++worker->add_with_shadow_count;
 #endif
 
-    Shadow *shadow = __new_shadow(worker, item, delta);
+    RedDrawable *red_drawable = item->red_drawable;
+    SpicePoint delta = {
+        .x = red_drawable->u.copy_bits.src_pos.x - red_drawable->bbox.left,
+        .y = red_drawable->u.copy_bits.src_pos.y - red_drawable->bbox.top
+    };
+
+    Shadow *shadow = __new_shadow(worker, item, &delta);
     if (!shadow) {
         stat_add(&worker->add_stat, start_time);
         return FALSE;
@@ -3067,11 +3072,7 @@ static int red_add_drawable(RedWorker *worker, Drawable *drawable)
     Ring *ring = &worker->surfaces[surface_id].current;
 
     if (has_shadow(red_drawable)) {
-        SpicePoint delta = {
-            .x = red_drawable->u.copy_bits.src_pos.x - red_drawable->bbox.left,
-            .y = red_drawable->u.copy_bits.src_pos.y - red_drawable->bbox.top
-        };
-        ret = red_current_add_with_shadow(worker, ring, drawable, &delta);
+        ret = red_current_add_with_shadow(worker, ring, drawable);
     } else {
         red_update_streamable(worker, drawable, red_drawable);
         ret = red_current_add(worker, ring, drawable);
