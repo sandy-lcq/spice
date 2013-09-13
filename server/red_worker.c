@@ -1517,16 +1517,16 @@ static inline Shadow *__find_shadow(TreeItem *item)
     return ((DrawItem *)item)->shadow;
 }
 
-static inline Ring *ring_of(RedWorker *worker, Ring *ring, TreeItem *item)
+static inline Ring *ring_of(Ring *ring, TreeItem *item)
 {
     return (item->container) ? &item->container->items : ring;
 }
 
-static inline int __contained_by(RedWorker *worker, TreeItem *item, Ring *ring)
+static inline int __contained_by(TreeItem *item, Ring *ring)
 {
     spice_assert(item && ring);
     do {
-        Ring *now = ring_of(worker, ring, item);
+        Ring *now = ring_of(ring, item);
         if (now == ring) {
             return TRUE;
         }
@@ -1568,8 +1568,8 @@ static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *ite
                     region_exclude(&shadow->on_hold, &and_rgn);
                     region_or(rgn, &and_rgn);
                     // in flat representation of current, shadow is always his owner next
-                    if (!__contained_by(worker, (TreeItem*)shadow, *top_ring)) {
-                        *top_ring = ring_of(worker, ring, (TreeItem*)shadow);
+                    if (!__contained_by((TreeItem*)shadow, *top_ring)) {
+                        *top_ring = ring_of(ring, (TreeItem*)shadow);
                     }
                 }
             } else {
@@ -1588,8 +1588,8 @@ static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *ite
                 region_exclude(rgn, &and_rgn);
                 if ((shadow = __find_shadow(item))) {
                     region_or(rgn, &shadow->on_hold);
-                    if (!__contained_by(worker, (TreeItem*)shadow, *top_ring)) {
-                        *top_ring = ring_of(worker, ring, (TreeItem*)shadow);
+                    if (!__contained_by((TreeItem*)shadow, *top_ring)) {
+                        *top_ring = ring_of(ring, (TreeItem*)shadow);
                     }
                 }
             }
