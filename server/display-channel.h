@@ -236,6 +236,8 @@ DisplayChannelClient*      dcc_new                                   (DisplayCha
                                                                       uint32_t *caps,
                                                                       int num_caps);
 void                       dcc_push_monitors_config                  (DisplayChannelClient *dcc);
+void                       dcc_push_destroy_surface                  (DisplayChannelClient *dcc,
+                                                                      uint32_t surface_id);
 
 typedef struct DrawablePipeItem {
     RingItem base;  /* link for a list of pipe items held by Drawable */
@@ -313,6 +315,16 @@ struct DisplayChannel {
     stat_info_t lz4_stat;
 #endif
 };
+typedef struct SurfaceDestroyItem {
+    SpiceMsgSurfaceDestroy surface_destroy;
+    PipeItem pipe_item;
+} SurfaceDestroyItem;
+
+typedef struct SurfaceCreateItem {
+    SpiceMsgSurfaceCreate surface_create;
+    PipeItem pipe_item;
+} SurfaceCreateItem;
+
 
 void                       display_channel_set_stream_video          (DisplayChannel *display,
                                                                       int stream_video);
