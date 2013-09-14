@@ -300,14 +300,6 @@ struct RedGlzDrawable {
 pthread_mutex_t glz_dictionary_list_lock = PTHREAD_MUTEX_INITIALIZER;
 Ring glz_dictionary_list = {&glz_dictionary_list, &glz_dictionary_list};
 
-typedef struct _Drawable _Drawable;
-struct _Drawable {
-    union {
-        Drawable drawable;
-        _Drawable *next;
-    } u;
-};
-
 typedef struct UpgradeItem {
     PipeItem base;
     int refs;
@@ -339,8 +331,6 @@ typedef struct RedSurface {
     QXLReleaseInfoExt create, destroy;
 } RedSurface;
 
-#define NUM_DRAWABLES 1000
-
 typedef struct RedWorker {
     pthread_t thread;
     clockid_t clockid;
@@ -361,13 +351,9 @@ typedef struct RedWorker {
     uint32_t n_surfaces;
     SpiceImageSurfaces image_surfaces;
 
-    uint32_t drawable_count;
     uint32_t red_drawable_count;
     uint32_t glz_drawable_count;
     uint32_t bits_unique;
-
-    _Drawable drawables[NUM_DRAWABLES];
-    _Drawable *free_drawables;
 
     RedMemSlotInfo mem_slots;
 
@@ -442,7 +428,6 @@ static void red_draw_drawable(RedWorker *worker, Drawable *item);
 static void red_update_area(RedWorker *worker, const SpiceRect *area, int surface_id);
 static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int surface_id,
                                  Drawable *last);
-static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable);
 static void detach_stream(DisplayChannel *display, Stream *stream, int detach_sized);
 static inline void display_channel_stream_maintenance(DisplayChannel *display, Drawable *candidate, Drawable *sect);
 static inline void display_begin_send_message(RedChannelClient *rcc);
@@ -642,7 +627,7 @@ DrawablePipeItem *drawable_pipe_item_ref(DrawablePipeItem *dpi)
 
 void drawable_pipe_item_unref(DrawablePipeItem *dpi)
 {
-    RedWorker *worker = DCC_TO_WORKER(dpi->dcc);
+    DisplayChannel *display = DCC_TO_DC(dpi->dcc);
 
     if (--dpi->refs != 0) {
         return;
@@ -650,7 +635,7 @@ void drawable_pipe_item_unref(DrawablePipeItem *dpi)
 
     spice_warn_if_fail(!ring_item_is_linked(&dpi->dpi_pipe_item.link));
     spice_warn_if_fail(!ring_item_is_linked(&dpi->base));
-    red_worker_drawable_unref(worker, dpi->drawable);
+    display_channel_drawable_unref(display, dpi->drawable);
     free(dpi);
 }
 
@@ -876,12 +861,12 @@ static void release_image_item(ImageItem *item)
     }
 }
 
-static void release_upgrade_item(RedWorker* worker, UpgradeItem *item)
+static void upgrade_item_unref(DisplayChannel *display, UpgradeItem *item)
 {
     if (--item->refs != 0)
         return;
 
-    red_worker_drawable_unref(worker, item->drawable);
+    display_channel_drawable_unref(display, item->drawable);
     free(item->rects);
     free(item);
 }
@@ -919,30 +904,33 @@ static void red_reset_palette_cache(DisplayChannelClient *dcc)
     red_palette_cache_reset(dcc, CLIENT_PALETTE_CACHE_SIZE);
 }
 
-static inline Drawable *alloc_drawable(RedWorker *worker)
+static Drawable* drawable_try_new(DisplayChannel *display)
 {
     Drawable *drawable;
-    if (!worker->free_drawables) {
+
+    if (!display->free_drawables)
         return NULL;
-    }
-    drawable = &worker->free_drawables->u.drawable;
-    worker->free_drawables = worker->free_drawables->u.next;
+
+    drawable = &display->free_drawables->u.drawable;
+    display->free_drawables = display->free_drawables->u.next;
+    display->drawable_count++;
+
     return drawable;
 }
 
-static inline void free_drawable(RedWorker *worker, Drawable *item)
+static void drawable_free(DisplayChannel *display, Drawable *drawable)
 {
-    ((_Drawable *)item)->u.next = worker->free_drawables;
-    worker->free_drawables = (_Drawable *)item;
+    ((_Drawable *)drawable)->u.next = display->free_drawables;
+    display->free_drawables = (_Drawable *)drawable;
 }
 
-static void drawables_init(RedWorker *worker)
+static void drawables_init(DisplayChannel *display)
 {
     int i;
 
-    worker->free_drawables = NULL;
+    display->free_drawables = NULL;
     for (i = 0; i < NUM_DRAWABLES; i++) {
-        free_drawable(worker, &worker->drawables[i].u.drawable);
+        drawable_free(display, &display->drawables[i].u.drawable);
     }
 }
 
@@ -1038,7 +1026,7 @@ static void remove_depended_item(DependItem *item)
     ring_remove(&item->ring_item);
 }
 
-static void drawable_unref_surface_deps(RedWorker *worker, Drawable *drawable)
+static void drawable_unref_surface_deps(DisplayChannel *display, Drawable *drawable)
 {
     int x;
     int surface_id;
@@ -1048,11 +1036,11 @@ static void drawable_unref_surface_deps(RedWorker *worker, Drawable *drawable)
         if (surface_id == -1) {
             continue;
         }
-        red_surface_unref(worker, surface_id);
+        red_surface_unref(COMMON_CHANNEL(display)->worker, surface_id);
     }
 }
 
-static void remove_drawable_dependencies(RedWorker *worker, Drawable *drawable)
+static void drawable_remove_dependencies(DisplayChannel *display, Drawable *drawable)
 {
     int x;
     int surface_id;
@@ -1065,7 +1053,7 @@ static void remove_drawable_dependencies(RedWorker *worker, Drawable *drawable)
     }
 }
 
-static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable)
+void display_channel_drawable_unref(DisplayChannel *display, Drawable *drawable)
 {
     RingItem *item, *next;
 
@@ -1076,21 +1064,21 @@ static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable)
     spice_warn_if_fail(ring_is_empty(&drawable->pipes));
 
     if (drawable->stream) {
-        detach_stream(worker->display_channel, drawable->stream, TRUE);
+        detach_stream(display, drawable->stream, TRUE);
     }
     region_destroy(&drawable->tree_item.base.rgn);
 
-    remove_drawable_dependencies(worker, drawable);
-    drawable_unref_surface_deps(worker, drawable);
-    red_surface_unref(worker, drawable->surface_id);
+    drawable_remove_dependencies(display, drawable);
+    drawable_unref_surface_deps(display, drawable);
+    red_surface_unref(COMMON_CHANNEL(display)->worker, drawable->surface_id);
 
     RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
         SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->drawable = NULL;
         ring_remove(item);
     }
-    red_drawable_unref(worker, drawable->red_drawable, drawable->group_id);
-    free_drawable(worker, drawable);
-    worker->drawable_count--;
+    red_drawable_unref(COMMON_CHANNEL(display)->worker, drawable->red_drawable, drawable->group_id);
+    drawable_free(display, drawable);
+    display->drawable_count--;
 }
 
 static inline void remove_shadow(DrawItem *item)
@@ -1179,7 +1167,7 @@ static inline void current_remove_drawable(RedWorker *worker, Drawable *item)
     ring_remove(&item->tree_item.base.siblings_link);
     ring_remove(&item->list_link);
     ring_remove(&item->surface_list_link);
-    red_worker_drawable_unref(worker, item);
+    display_channel_drawable_unref(display, item);
     display->current_size--;
 }
 
@@ -2341,6 +2329,7 @@ static inline int is_drawable_independent_from_surfaces(Drawable *drawable)
 
 static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeItem *other)
 {
+    DisplayChannel *display  = worker->display_channel;
     DrawItem *other_draw_item;
     Drawable *drawable;
     Drawable *other_drawable;
@@ -2370,7 +2359,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
             red_pipes_add_drawable(worker, drawable);
         }
         red_pipes_remove_drawable(other_drawable);
-        red_worker_drawable_unref(worker, other_drawable);
+        display_channel_drawable_unref(display, other_drawable);
         return TRUE;
     }
 
@@ -2413,7 +2402,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
             /* not sending other_drawable where possible */
             red_pipes_remove_drawable(other_drawable);
 
-            red_worker_drawable_unref(worker, other_drawable);
+            display_channel_drawable_unref(display, other_drawable);
             return TRUE;
         }
         break;
@@ -2886,6 +2875,7 @@ static bool free_one_drawable(RedWorker *worker, int force_glz_free)
 static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *red_drawable,
                               uint32_t group_id)
 {
+    DisplayChannel *display = worker->display_channel;
     Drawable *drawable;
     int x;
 
@@ -2900,12 +2890,12 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
         }
     }
 
-    while (!(drawable = alloc_drawable(worker))) {
-        if (!free_one_drawable(worker, FALSE))
+    while (!(drawable = drawable_try_new(display))) {
+        if (!free_one_drawable(COMMON_CHANNEL(display)->worker, FALSE))
             return NULL;
     }
-    worker->drawable_count++;
-    memset(drawable, 0, sizeof(Drawable));
+
+    bzero(drawable, sizeof(Drawable));
     drawable->refs = 1;
     drawable->creation_time = red_get_monotonic_time();
     ring_item_init(&drawable->list_link);
@@ -3002,6 +2992,7 @@ static inline void red_inc_surfaces_drawable_dependencies(RedWorker *worker, Dra
 static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable,
                                     uint32_t group_id)
 {
+    DisplayChannel *display = worker->display_channel;
     int surface_id;
     Drawable *drawable = get_drawable(worker, red_drawable->effect, red_drawable, group_id);
 
@@ -3052,7 +3043,7 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
         red_pipes_add_drawable(worker, drawable);
     }
 cleanup:
-    red_worker_drawable_unref(worker, drawable);
+    display_channel_drawable_unref(display, drawable);
 }
 
 static inline void red_create_surface(RedWorker *worker, uint32_t surface_id,uint32_t width,
@@ -3381,13 +3372,14 @@ static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int s
            that red_update_area is called for, Otherwise, 'now' would have already been rendered.
            See the call for red_handle_depends_on_target_surface in red_process_draw */
         red_draw_drawable(worker, now);
-        red_worker_drawable_unref(worker, now);
+        display_channel_drawable_unref(display, now);
     } while (now != surface_last);
     validate_area(worker, area, surface_id);
 }
 
 static void red_update_area(RedWorker *worker, const SpiceRect *area, int surface_id)
 {
+    DisplayChannel *display = worker->display_channel;
     RedSurface *surface;
     Ring *ring;
     RingItem *ring_item;
@@ -3434,7 +3426,7 @@ static void red_update_area(RedWorker *worker, const SpiceRect *area, int surfac
         current_remove_drawable(worker, now);
         container_cleanup(worker, container);
         red_draw_drawable(worker, now);
-        red_worker_drawable_unref(worker, now);
+        display_channel_drawable_unref(display, now);
     } while (now != last);
     validate_area(worker, area, surface_id);
 }
@@ -3619,7 +3611,7 @@ static void red_free_some(RedWorker *worker)
     DisplayChannelClient *dcc;
     RingItem *item, *next;
 
-    spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d", worker->drawable_count,
+    spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d", display->drawable_count,
                 worker->red_drawable_count, worker->glz_drawable_count);
     FOREACH_DCC(worker->display_channel, item, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
@@ -7586,7 +7578,7 @@ void red_show_tree(RedWorker *worker)
 
 static void display_channel_client_on_disconnect(RedChannelClient *rcc)
 {
-    DisplayChannel *display_channel;
+    DisplayChannel *display;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     CommonChannel *common;
     RedWorker *worker;
@@ -7597,9 +7589,9 @@ static void display_channel_client_on_disconnect(RedChannelClient *rcc)
     spice_info(NULL);
     common = SPICE_CONTAINEROF(rcc->channel, CommonChannel, base);
     worker = common->worker;
-    display_channel = (DisplayChannel *)rcc->channel;
-    spice_assert(display_channel == worker->display_channel);
-    display_channel_compress_stats_print(display_channel);
+    display = (DisplayChannel *)rcc->channel;
+    spice_assert(display == worker->display_channel);
+    display_channel_compress_stats_print(display);
     pixmap_cache_unref(dcc->pixmap_cache);
     dcc->pixmap_cache = NULL;
     red_release_glz(dcc);
@@ -7611,10 +7603,10 @@ static void display_channel_client_on_disconnect(RedChannelClient *rcc)
 
     // this was the last channel client
     if (!red_channel_is_connected(rcc->channel)) {
-        red_display_destroy_compress_bufs(display_channel);
+        red_display_destroy_compress_bufs(display);
     }
     spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d",
-                worker->drawable_count, worker->red_drawable_count,
+                display->drawable_count, worker->red_drawable_count,
                 worker->glz_drawable_count);
 }
 
@@ -8665,7 +8657,7 @@ static void display_channel_client_release_item_after_push(DisplayChannelClient 
         display_stream_clip_unref(display, (StreamClipItem *)item);
         break;
     case PIPE_ITEM_TYPE_UPGRADE:
-        release_upgrade_item(DCC_TO_WORKER(dcc), (UpgradeItem *)item);
+        upgrade_item_unref(display, (UpgradeItem *)item);
         break;
     case PIPE_ITEM_TYPE_IMAGE:
         release_image_item((ImageItem *)item);
@@ -8713,7 +8705,7 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
         break;
     }
     case PIPE_ITEM_TYPE_UPGRADE:
-        release_upgrade_item(DCC_TO_WORKER(dcc), (UpgradeItem *)item);
+        upgrade_item_unref(display, (UpgradeItem *)item);
         break;
     case PIPE_ITEM_TYPE_IMAGE:
         release_image_item((ImageItem *)item);
@@ -8825,6 +8817,7 @@ static void display_channel_create(RedWorker *worker, int migrate)
     init_streams(display_channel);
     image_cache_init(&display_channel->image_cache);
     ring_init(&display_channel->current_list);
+    drawables_init(display_channel);
 }
 
 static void guest_set_client_capabilities(RedWorker *worker)
@@ -9385,7 +9378,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     spice_assert(worker->running);
     // streams? but without streams also leak
     spice_debug("OOM1 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
-                worker->drawable_count,
+                display->drawable_count,
                 worker->red_drawable_count,
                 worker->glz_drawable_count,
                 display->current_size,
@@ -9399,7 +9392,7 @@ static void handle_dev_oom(void *opaque, void *payload)
         worker->qxl->st->qif->flush_resources(worker->qxl);
     }
     spice_debug("OOM2 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
-                worker->drawable_count,
+                display->drawable_count,
                 worker->red_drawable_count,
                 worker->glz_drawable_count,
                 display->current_size,
@@ -9950,7 +9943,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     worker->zlib_glz_state = zlib_glz_state;
     worker->driver_cap_monitors_config = 0;
     image_surface_init(worker);
-    drawables_init(worker);
     stat_init(&worker->add_stat, add_stat_name);
     stat_init(&worker->exclude_stat, exclude_stat_name);
     stat_init(&worker->__exclude_stat, __exclude_stat_name);
