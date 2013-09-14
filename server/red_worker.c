@@ -433,8 +433,6 @@ typedef struct RedWorker {
 
     RedMemSlotInfo mem_slots;
 
-    ImageCache image_cache;
-
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
@@ -3324,65 +3322,9 @@ static void image_surface_init(RedWorker *worker)
     worker->image_surfaces.ops = &image_surfaces_ops;
 }
 
-static void localize_bitmap(RedWorker *worker, SpiceImage **image_ptr, SpiceImage *image_store,
-                            Drawable *drawable)
-{
-    SpiceImage *image = *image_ptr;
-
-    if (image == NULL) {
-        spice_assert(drawable != NULL);
-        spice_assert(drawable->red_drawable->self_bitmap_image != NULL);
-        *image_ptr = drawable->red_drawable->self_bitmap_image;
-        return;
-    }
-
-    if (image_cache_hit(&worker->image_cache, image->descriptor.id)) {
-        image_store->descriptor = image->descriptor;
-        image_store->descriptor.type = SPICE_IMAGE_TYPE_FROM_CACHE;
-        image_store->descriptor.flags = 0;
-        *image_ptr = image_store;
-        return;
-    }
-
-    switch (image->descriptor.type) {
-    case SPICE_IMAGE_TYPE_QUIC: {
-        image_store->descriptor = image->descriptor;
-        image_store->u.quic = image->u.quic;
-        *image_ptr = image_store;
-#ifdef IMAGE_CACHE_AGE
-        image_store->descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_ME;
-#else
-        if (image_store->descriptor.width * image->descriptor.height >= 640 * 480) {
-            image_store->descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_ME;
-        }
-#endif
-        break;
-    }
-    case SPICE_IMAGE_TYPE_BITMAP:
-    case SPICE_IMAGE_TYPE_SURFACE:
-        /* nothing */
-        break;
-    default:
-        spice_error("invalid image type");
-    }
-}
-
-static void localize_brush(RedWorker *worker, SpiceBrush *brush, SpiceImage *image_store)
-{
-    if (brush->type == SPICE_BRUSH_TYPE_PATTERN) {
-        localize_bitmap(worker, &brush->u.pattern.pat, image_store, NULL);
-    }
-}
-
-static void localize_mask(RedWorker *worker, SpiceQMask *mask, SpiceImage *image_store)
-{
-    if (mask->bitmap) {
-        localize_bitmap(worker, &mask->bitmap, image_store, NULL);
-    }
-}
-
 static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
 {
+    DisplayChannel *display = worker->display_channel;
     RedSurface *surface;
     SpiceCanvas *canvas;
     SpiceClip clip = drawable->red_drawable->clip;
@@ -3390,7 +3332,7 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     surface = &worker->surfaces[drawable->surface_id];
     canvas = surface->context.canvas;
 
-    image_cache_aging(&worker->image_cache);
+    image_cache_aging(&display->image_cache);
 
     region_add(&surface->draw_dirty_region, &drawable->red_drawable->bbox);
 
@@ -3398,8 +3340,8 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_FILL: {
         SpiceFill fill = drawable->red_drawable->u.fill;
         SpiceImage img1, img2;
-        localize_brush(worker, &fill.brush, &img1);
-        localize_mask(worker, &fill.mask, &img2);
+        image_cache_localize_brush(&display->image_cache, &fill.brush, &img1);
+        image_cache_localize_mask(&display->image_cache, &fill.mask, &img2);
         canvas->ops->draw_fill(canvas, &drawable->red_drawable->bbox,
                                &clip, &fill);
         break;
@@ -3407,17 +3349,17 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_OPAQUE: {
         SpiceOpaque opaque = drawable->red_drawable->u.opaque;
         SpiceImage img1, img2, img3;
-        localize_brush(worker, &opaque.brush, &img1);
-        localize_bitmap(worker, &opaque.src_bitmap, &img2, drawable);
-        localize_mask(worker, &opaque.mask, &img3);
+        image_cache_localize_brush(&display->image_cache, &opaque.brush, &img1);
+        image_cache_localize(&display->image_cache, &opaque.src_bitmap, &img2, drawable);
+        image_cache_localize_mask(&display->image_cache, &opaque.mask, &img3);
         canvas->ops->draw_opaque(canvas, &drawable->red_drawable->bbox, &clip, &opaque);
         break;
     }
     case QXL_DRAW_COPY: {
         SpiceCopy copy = drawable->red_drawable->u.copy;
         SpiceImage img1, img2;
-        localize_bitmap(worker, &copy.src_bitmap, &img1, drawable);
-        localize_mask(worker, &copy.mask, &img2);
+        image_cache_localize(&display->image_cache, &copy.src_bitmap, &img1, drawable);
+        image_cache_localize_mask(&display->image_cache, &copy.mask, &img2);
         canvas->ops->draw_copy(canvas, &drawable->red_drawable->bbox,
                                &clip, &copy);
         break;
@@ -3425,7 +3367,7 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_TRANSPARENT: {
         SpiceTransparent transparent = drawable->red_drawable->u.transparent;
         SpiceImage img1;
-        localize_bitmap(worker, &transparent.src_bitmap, &img1, drawable);
+        image_cache_localize(&display->image_cache, &transparent.src_bitmap, &img1, drawable);
         canvas->ops->draw_transparent(canvas,
                                       &drawable->red_drawable->bbox, &clip, &transparent);
         break;
@@ -3433,7 +3375,7 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_ALPHA_BLEND: {
         SpiceAlphaBlend alpha_blend = drawable->red_drawable->u.alpha_blend;
         SpiceImage img1;
-        localize_bitmap(worker, &alpha_blend.src_bitmap, &img1, drawable);
+        image_cache_localize(&display->image_cache, &alpha_blend.src_bitmap, &img1, drawable);
         canvas->ops->draw_alpha_blend(canvas,
                                       &drawable->red_drawable->bbox, &clip, &alpha_blend);
         break;
@@ -3446,8 +3388,8 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_BLEND: {
         SpiceBlend blend = drawable->red_drawable->u.blend;
         SpiceImage img1, img2;
-        localize_bitmap(worker, &blend.src_bitmap, &img1, drawable);
-        localize_mask(worker, &blend.mask, &img2);
+        image_cache_localize(&display->image_cache, &blend.src_bitmap, &img1, drawable);
+        image_cache_localize_mask(&display->image_cache, &blend.mask, &img2);
         canvas->ops->draw_blend(canvas, &drawable->red_drawable->bbox,
                                 &clip, &blend);
         break;
@@ -3455,7 +3397,7 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_BLACKNESS: {
         SpiceBlackness blackness = drawable->red_drawable->u.blackness;
         SpiceImage img1;
-        localize_mask(worker, &blackness.mask, &img1);
+        image_cache_localize_mask(&display->image_cache, &blackness.mask, &img1);
         canvas->ops->draw_blackness(canvas,
                                     &drawable->red_drawable->bbox, &clip, &blackness);
         break;
@@ -3463,7 +3405,7 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_WHITENESS: {
         SpiceWhiteness whiteness = drawable->red_drawable->u.whiteness;
         SpiceImage img1;
-        localize_mask(worker, &whiteness.mask, &img1);
+        image_cache_localize_mask(&display->image_cache, &whiteness.mask, &img1);
         canvas->ops->draw_whiteness(canvas,
                                     &drawable->red_drawable->bbox, &clip, &whiteness);
         break;
@@ -3471,7 +3413,7 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_INVERS: {
         SpiceInvers invers = drawable->red_drawable->u.invers;
         SpiceImage img1;
-        localize_mask(worker, &invers.mask, &img1);
+        image_cache_localize_mask(&display->image_cache, &invers.mask, &img1);
         canvas->ops->draw_invers(canvas,
                                  &drawable->red_drawable->bbox, &clip, &invers);
         break;
@@ -3479,9 +3421,9 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_ROP3: {
         SpiceRop3 rop3 = drawable->red_drawable->u.rop3;
         SpiceImage img1, img2, img3;
-        localize_brush(worker, &rop3.brush, &img1);
-        localize_bitmap(worker, &rop3.src_bitmap, &img2, drawable);
-        localize_mask(worker, &rop3.mask, &img3);
+        image_cache_localize_brush(&display->image_cache, &rop3.brush, &img1);
+        image_cache_localize(&display->image_cache, &rop3.src_bitmap, &img2, drawable);
+        image_cache_localize_mask(&display->image_cache, &rop3.mask, &img3);
         canvas->ops->draw_rop3(canvas, &drawable->red_drawable->bbox,
                                &clip, &rop3);
         break;
@@ -3489,9 +3431,9 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_COMPOSITE: {
         SpiceComposite composite = drawable->red_drawable->u.composite;
         SpiceImage src, mask;
-        localize_bitmap(worker, &composite.src_bitmap, &src, drawable);
+        image_cache_localize(&display->image_cache, &composite.src_bitmap, &src, drawable);
         if (composite.mask_bitmap)
-            localize_bitmap(worker, &composite.mask_bitmap, &mask, drawable);
+            image_cache_localize(&display->image_cache, &composite.mask_bitmap, &mask, drawable);
         canvas->ops->draw_composite(canvas, &drawable->red_drawable->bbox,
                                     &clip, &composite);
         break;
@@ -3499,7 +3441,7 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_STROKE: {
         SpiceStroke stroke = drawable->red_drawable->u.stroke;
         SpiceImage img1;
-        localize_brush(worker, &stroke.brush, &img1);
+        image_cache_localize_brush(&display->image_cache, &stroke.brush, &img1);
         canvas->ops->draw_stroke(canvas,
                                  &drawable->red_drawable->bbox, &clip, &stroke);
         break;
@@ -3507,8 +3449,8 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     case QXL_DRAW_TEXT: {
         SpiceText text = drawable->red_drawable->u.text;
         SpiceImage img1, img2;
-        localize_brush(worker, &text.fore_brush, &img1);
-        localize_brush(worker, &text.back_brush, &img2);
+        image_cache_localize_brush(&display->image_cache, &text.fore_brush, &img1);
+        image_cache_localize_brush(&display->image_cache, &text.back_brush, &img2);
         canvas->ops->draw_text(canvas, &drawable->red_drawable->bbox,
                                &clip, &text);
         break;
@@ -7907,10 +7849,11 @@ static void red_migrate_display(RedWorker *worker, RedChannelClient *rcc)
 static SpiceCanvas *create_ogl_context_common(RedWorker *worker, OGLCtx *ctx, uint32_t width,
                                               uint32_t height, int32_t stride, uint8_t depth)
 {
+    DisplayChannel *display = worker->display_channel;
     SpiceCanvas *canvas;
 
     oglctx_make_current(ctx);
-    if (!(canvas = gl_canvas_create(width, height, depth, &worker->image_cache.base,
+    if (!(canvas = gl_canvas_create(width, height, depth, &display->image_cache.base,
                                     &worker->image_surfaces, NULL, NULL, NULL))) {
         return NULL;
     }
@@ -7962,13 +7905,14 @@ static inline void *create_canvas_for_surface(RedWorker *worker, RedSurface *sur
                                               uint32_t renderer, uint32_t width, uint32_t height,
                                               int32_t stride, uint32_t format, void *line_0)
 {
+    DisplayChannel *display = worker->display_channel;
     SpiceCanvas *canvas;
 
     switch (renderer) {
     case RED_RENDERER_SW:
         canvas = canvas_create_for_data(width, height, format,
                                         line_0, stride,
-                                        &worker->image_cache.base,
+                                        &display->image_cache.base,
                                         &worker->image_surfaces, NULL, NULL, NULL);
         surface->context.top_down = TRUE;
         surface->context.canvas_draws_on_surface = TRUE;
@@ -9050,6 +8994,7 @@ static void display_channel_create(RedWorker *worker, int migrate)
     display_channel->num_renderers = num_renderers;
     memcpy(display_channel->renderers, renderers, sizeof(display_channel->renderers));
     display_channel->renderer = RED_RENDERER_INVALID;
+    image_cache_init(&display_channel->image_cache);
 }
 
 static void guest_set_client_capabilities(RedWorker *worker)
@@ -9638,7 +9583,10 @@ static void handle_dev_reset_cursor(void *opaque, void *payload)
 
 static void handle_dev_reset_image_cache(void *opaque, void *payload)
 {
-    image_cache_reset(&((RedWorker *)opaque)->image_cache);
+    RedWorker *worker = opaque;
+    DisplayChannel *display = worker->display_channel;
+
+    image_cache_reset(&display->image_cache);
 }
 
 static void handle_dev_destroy_surface_wait_async(void *opaque, void *payload)
@@ -10183,7 +10131,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     worker->streaming_video = streaming_video;
     worker->driver_cap_monitors_config = 0;
     ring_init(&worker->current_list);
-    image_cache_init(&worker->image_cache);
     image_surface_init(worker);
     drawables_init(worker);
     red_init_streams(worker);

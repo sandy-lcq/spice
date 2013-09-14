@@ -344,6 +344,8 @@ struct DisplayChannel {
 
     RedCompressBuf *free_compress_bufs;
 
+    ImageCache image_cache;
+
 #ifdef RED_STATISTICS
     uint64_t *cache_hits_counter;
     uint64_t *add_to_cache_counter;
