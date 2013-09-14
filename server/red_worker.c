@@ -780,7 +780,7 @@ static inline PipeItem *red_pipe_get_tail(DisplayChannelClient *dcc)
     return (PipeItem*)ring_get_tail(&RED_CHANNEL_CLIENT(dcc)->pipe);
 }
 
-static inline void red_destroy_surface(RedWorker *worker, uint32_t surface_id);
+static void red_surface_unref(RedWorker *worker, uint32_t surface_id);
 
 static inline void red_pipes_remove_drawable(Drawable *drawable)
 {
@@ -926,35 +926,37 @@ static inline void red_destroy_surface_item(RedWorker *worker,
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &destroy->pipe_item);
 }
 
-static inline void red_destroy_surface(RedWorker *worker, uint32_t surface_id)
+static void red_surface_unref(RedWorker *worker, uint32_t surface_id)
 {
     RedSurface *surface = &worker->surfaces[surface_id];
     DisplayChannelClient *dcc;
     RingItem *link, *next;
 
-    if (!--surface->refs) {
-        // only primary surface streams are supported
-        if (is_primary_surface(worker, surface_id)) {
-            red_reset_stream_trace(worker);
-        }
-        spice_assert(surface->context.canvas);
-
-        surface->context.canvas->ops->destroy(surface->context.canvas);
-        if (surface->create.info) {
-            worker->qxl->st->qif->release_resource(worker->qxl, surface->create);
-        }
-        if (surface->destroy.info) {
-            worker->qxl->st->qif->release_resource(worker->qxl, surface->destroy);
-        }
-
-        region_destroy(&surface->draw_dirty_region);
-        surface->context.canvas = NULL;
-        FOREACH_DCC(worker->display_channel, link, next, dcc) {
-            red_destroy_surface_item(worker, dcc, surface_id);
-        }
-
-        spice_warn_if(!ring_is_empty(&surface->depend_on_me));
+    if (--surface->refs != 0) {
+        return;
     }
+
+    // only primary surface streams are supported
+    if (is_primary_surface(worker, surface_id)) {
+        red_reset_stream_trace(worker);
+    }
+    spice_assert(surface->context.canvas);
+
+    surface->context.canvas->ops->destroy(surface->context.canvas);
+    if (surface->create.info) {
+        worker->qxl->st->qif->release_resource(worker->qxl, surface->create);
+    }
+    if (surface->destroy.info) {
+        worker->qxl->st->qif->release_resource(worker->qxl, surface->destroy);
+    }
+
+    region_destroy(&surface->draw_dirty_region);
+    surface->context.canvas = NULL;
+    FOREACH_DCC(worker->display_channel, link, next, dcc) {
+        red_destroy_surface_item(worker, dcc, surface_id);
+    }
+
+    spice_warn_if(!ring_is_empty(&surface->depend_on_me));
 }
 
 static inline void set_surface_release_info(QXLReleaseInfoExt *release_info_ext,
@@ -1005,7 +1007,7 @@ static inline void red_dec_surfaces_drawable_dependencies(RedWorker *worker, Dra
         if (surface_id == -1) {
             continue;
         }
-        red_destroy_surface(worker, surface_id);
+        red_surface_unref(worker, surface_id);
     }
 }
 
@@ -1039,7 +1041,7 @@ static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable)
 
     remove_drawable_dependencies(worker, drawable);
     red_dec_surfaces_drawable_dependencies(worker, drawable);
-    red_destroy_surface(worker, drawable->surface_id);
+    red_surface_unref(worker, drawable->surface_id);
 
     RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
         SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->drawable = NULL;
@@ -3293,7 +3295,7 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
            red_current_clear will remove them from the pipe. */
         red_current_clear(worker, surface_id);
         red_clear_surface_drawables_from_pipes(worker, surface_id, FALSE);
-        red_destroy_surface(worker, surface_id);
+        red_surface_unref(worker, surface_id);
         break;
     default:
             spice_error("unknown surface command");
@@ -9350,7 +9352,7 @@ static inline void dev_destroy_surfaces(RedWorker *worker)
         if (worker->surfaces[i].context.canvas) {
             destroy_surface_wait(worker, i);
             if (worker->surfaces[i].context.canvas) {
-                red_destroy_surface(worker, i);
+                red_surface_unref(worker, i);
             }
             spice_assert(!worker->surfaces[i].context.canvas);
         }
@@ -9480,7 +9482,7 @@ static void dev_destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
 
     flush_all_qxl_commands(worker);
     dev_destroy_surface_wait(worker, 0);
-    red_destroy_surface(worker, 0);
+    red_surface_unref(worker, 0);
     spice_assert(ring_is_empty(&worker->streams));
 
     spice_assert(!worker->surfaces[surface_id].context.canvas);
