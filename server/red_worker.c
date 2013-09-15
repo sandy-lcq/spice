@@ -9273,24 +9273,6 @@ static void handle_dev_update(void *opaque, void *payload)
                                   clear_dirty_region);
 }
 
-static void dev_add_memslot(RedWorker *worker, QXLDevMemSlot mem_slot)
-{
-    red_memslot_info_add_slot(&worker->mem_slots, mem_slot.slot_group_id, mem_slot.slot_id,
-                              mem_slot.addr_delta, mem_slot.virt_start, mem_slot.virt_end,
-                              mem_slot.generation);
-}
-
-static void handle_dev_add_memslot(void *opaque, void *payload)
-{
-    RedWorker *worker = opaque;
-    RedWorkerMessageAddMemslot *msg = payload;
-    QXLDevMemSlot mem_slot = msg->mem_slot;
-
-    red_memslot_info_add_slot(&worker->mem_slots, mem_slot.slot_group_id, mem_slot.slot_id,
-                              mem_slot.addr_delta, mem_slot.virt_start, mem_slot.virt_end,
-                              mem_slot.generation);
-}
-
 static void handle_dev_del_memslot(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
@@ -9875,6 +9857,24 @@ static void handle_dev_set_mouse_mode(void *opaque, void *payload)
 
     spice_info("mouse mode %u", msg->mode);
     cursor_channel_set_mouse_mode(worker->cursor_channel, msg->mode);
+}
+
+static void dev_add_memslot(RedWorker *worker, QXLDevMemSlot mem_slot)
+{
+    red_memslot_info_add_slot(&worker->mem_slots, mem_slot.slot_group_id, mem_slot.slot_id,
+                              mem_slot.addr_delta, mem_slot.virt_start, mem_slot.virt_end,
+                              mem_slot.generation);
+}
+
+static void handle_dev_add_memslot(void *opaque, void *payload)
+{
+    RedWorker *worker = opaque;
+    RedWorkerMessageAddMemslot *msg = payload;
+    QXLDevMemSlot mem_slot = msg->mem_slot;
+
+    red_memslot_info_add_slot(&worker->mem_slots, mem_slot.slot_group_id, mem_slot.slot_id,
+                              mem_slot.addr_delta, mem_slot.virt_start, mem_slot.virt_end,
+                              mem_slot.generation);
 }
 
 static void handle_dev_add_memslot_async(void *opaque, void *payload)
