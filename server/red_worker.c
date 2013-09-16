@@ -3510,7 +3510,7 @@ static void marshaller_add_compressed(SpiceMarshaller *m,
         spice_assert(comp_buf);
         now = MIN(sizeof(comp_buf->buf), max);
         max -= now;
-        spice_marshaller_add_ref(m, (uint8_t*)comp_buf->buf, now);
+        spice_marshaller_add_ref(m, comp_buf->buf.bytes, now);
         comp_buf = comp_buf->send_next;
     } while (max);
 }
@@ -3925,7 +3925,10 @@ static void glz_usr_free(GlzEncoderUsrContext *usr, void *ptr)
     free(ptr);
 }
 
-static inline int encoder_usr_more_space(EncoderData *enc_data, uint32_t **io_ptr)
+/* Allocate more space for compressed buffer.
+ * The pointer returned in io_ptr is garanteed to be aligned to 4 bytes.
+ */
+static int encoder_usr_more_space(EncoderData *enc_data, uint8_t **io_ptr)
 {
     RedCompressBuf *buf;
 
@@ -3935,46 +3938,46 @@ static inline int encoder_usr_more_space(EncoderData *enc_data, uint32_t **io_pt
     enc_data->bufs_tail->send_next = buf;
     enc_data->bufs_tail = buf;
     buf->send_next = NULL;
-    *io_ptr = buf->buf;
-    return sizeof(buf->buf) >> 2;
+    *io_ptr = buf->buf.bytes;
+    return sizeof(buf->buf);
 }
 
 static int quic_usr_more_space(QuicUsrContext *usr, uint32_t **io_ptr, int rows_completed)
 {
     EncoderData *usr_data = &(((QuicData *)usr)->data);
-    return encoder_usr_more_space(usr_data, io_ptr);
+    return encoder_usr_more_space(usr_data, (uint8_t **)io_ptr) / sizeof(uint32_t);
 }
 
 static int lz_usr_more_space(LzUsrContext *usr, uint8_t **io_ptr)
 {
     EncoderData *usr_data = &(((LzData *)usr)->data);
-    return (encoder_usr_more_space(usr_data, (uint32_t **)io_ptr) << 2);
+    return encoder_usr_more_space(usr_data, io_ptr);
 }
 
 static int glz_usr_more_space(GlzEncoderUsrContext *usr, uint8_t **io_ptr)
 {
     EncoderData *usr_data = &(((GlzData *)usr)->data);
-    return (encoder_usr_more_space(usr_data, (uint32_t **)io_ptr) << 2);
+    return encoder_usr_more_space(usr_data, io_ptr);
 }
 
 static int jpeg_usr_more_space(JpegEncoderUsrContext *usr, uint8_t **io_ptr)
 {
     EncoderData *usr_data = &(((JpegData *)usr)->data);
-    return (encoder_usr_more_space(usr_data, (uint32_t **)io_ptr) << 2);
+    return encoder_usr_more_space(usr_data, io_ptr);
 }
 
 #ifdef USE_LZ4
 static int lz4_usr_more_space(Lz4EncoderUsrContext *usr, uint8_t **io_ptr)
 {
     EncoderData *usr_data = &(((Lz4Data *)usr)->data);
-    return (encoder_usr_more_space(usr_data, (uint32_t **)io_ptr) << 2);
+    return encoder_usr_more_space(usr_data, io_ptr);
 }
 #endif
 
 static int zlib_usr_more_space(ZlibEncoderUsrContext *usr, uint8_t **io_ptr)
 {
     EncoderData *usr_data = &(((ZlibData *)usr)->data);
-    return (encoder_usr_more_space(usr_data, (uint32_t **)io_ptr) << 2);
+    return encoder_usr_more_space(usr_data, io_ptr);
 }
 
 static inline int encoder_usr_more_lines(EncoderData *enc_data, uint8_t **lines)
@@ -4049,7 +4052,7 @@ static int zlib_usr_more_input(ZlibEncoderUsrContext *usr, uint8_t** input)
         return 0;
     }
 
-    *input = (uint8_t*)usr_data->u.compressed_data.next->buf;
+    *input = usr_data->u.compressed_data.next->buf.bytes;
     buf_size = MIN(sizeof(usr_data->u.compressed_data.next->buf),
                    usr_data->u.compressed_data.size_left);
 
@@ -4212,7 +4215,7 @@ static inline int red_glz_compress_image(DisplayChannelClient *dcc,
 
     glz_size = glz_encode(dcc->glz, type, src->x, src->y,
                           (src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN), NULL, 0,
-                          src->stride, (uint8_t*)glz_data->data.bufs_head->buf,
+                          src->stride, glz_data->data.bufs_head->buf.bytes,
                           sizeof(glz_data->data.bufs_head->buf),
                           glz_drawable_instance,
                           &glz_drawable_instance->glz_instance);
@@ -4242,7 +4245,7 @@ static inline int red_glz_compress_image(DisplayChannelClient *dcc,
     zlib_data->data.u.compressed_data.size_left = glz_size;
 
     zlib_size = zlib_encode(worker->zlib, display_channel->zlib_level,
-                            glz_size, (uint8_t*)zlib_data->data.bufs_head->buf,
+                            glz_size, zlib_data->data.bufs_head->buf.bytes,
                             sizeof(zlib_data->data.bufs_head->buf));
 
     // the compressed buffer is bigger than the original data
@@ -4317,7 +4320,7 @@ static inline int red_lz_compress_image(DisplayChannelClient *dcc,
     size = lz_encode(lz, type, src->x, src->y,
                      !!(src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN),
                      NULL, 0, src->stride,
-                     (uint8_t*)lz_data->data.bufs_head->buf,
+                     lz_data->data.bufs_head->buf.bytes,
                      sizeof(lz_data->data.bufs_head->buf));
 
     // the compressed buffer is bigger than the original data
@@ -4430,7 +4433,7 @@ static int red_jpeg_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
     }
     jpeg_size = jpeg_encode(jpeg, display_channel->jpeg_quality, jpeg_in_type,
                             src->x, src->y, NULL,
-                            0, stride, (uint8_t*)jpeg_data->data.bufs_head->buf,
+                            0, stride, jpeg_data->data.bufs_head->buf.bytes,
                             sizeof(jpeg_data->data.bufs_head->buf));
 
     // the compressed buffer is bigger than the original data
@@ -4456,7 +4459,7 @@ static int red_jpeg_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
 
     comp_head_filled = jpeg_size % sizeof(lz_data->data.bufs_head->buf);
     comp_head_left = sizeof(lz_data->data.bufs_head->buf) - comp_head_filled;
-    lz_out_start_byte = ((uint8_t *)lz_data->data.bufs_head->buf) + comp_head_filled;
+    lz_out_start_byte = lz_data->data.bufs_head->buf.bytes + comp_head_filled;
 
     lz_data->data.dcc = dcc;
 
@@ -4539,7 +4542,7 @@ static int red_lz4_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
     lz4_data->data.u.lines_data.reverse = 0;
     lz4_data->usr.more_lines = lz4_usr_more_lines;
 
-    lz4_size = lz4_encode(lz4, src->y, src->stride, (uint8_t*)lz4_data->data.bufs_head->buf,
+    lz4_size = lz4_encode(lz4, src->y, src->stride, lz4_data->data.bufs_head->buf.bytes,
                           sizeof(lz4_data->data.bufs_head->buf),
                           src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN, src->format);
 
@@ -4628,8 +4631,8 @@ static inline int red_quic_compress_image(DisplayChannelClient *dcc, SpiceImage 
         stride = -src->stride;
     }
     size = quic_encode(quic, type, src->x, src->y, NULL, 0, stride,
-                       quic_data->data.bufs_head->buf,
-                       sizeof(quic_data->data.bufs_head->buf) >> 2);
+                       quic_data->data.bufs_head->buf.words,
+                       G_N_ELEMENTS(quic_data->data.bufs_head->buf.words));
 
     // the compressed buffer is bigger than the original data
     if ((size << 2) > (src->y * src->stride)) {

@@ -75,7 +75,14 @@ typedef struct DisplayChannel DisplayChannel;
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 typedef struct RedCompressBuf RedCompressBuf;
 struct RedCompressBuf {
-    uint32_t buf[RED_COMPRESS_BUF_SIZE / 4];
+    /* This buffer provide space for compression algorithms.
+     * Some algorithms access the buffer as an array of 32 bit words
+     * so is defined to make sure is always aligned that way.
+     */
+    union {
+        uint8_t  bytes[RED_COMPRESS_BUF_SIZE];
+        uint32_t words[RED_COMPRESS_BUF_SIZE / 4];
+    } buf;
     RedCompressBuf *next;
     RedCompressBuf *send_next;
 };
