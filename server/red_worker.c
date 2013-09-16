@@ -397,7 +397,6 @@ typedef struct ItemTrace {
 #define ITEMS_TRACE_MASK (NUM_TRACE_ITEMS - 1)
 
 #define NUM_DRAWABLES 1000
-#define NUM_CURSORS 100
 
 typedef struct RedWorker {
     pthread_t thread;
