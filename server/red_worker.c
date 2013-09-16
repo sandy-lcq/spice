@@ -668,7 +668,7 @@ static inline void red_handle_drawable_surfaces_client_synced(
     for (x = 0; x < 3; ++x) {
         int surface_id;
 
-        surface_id = drawable->surfaces_dest[x];
+        surface_id = drawable->surface_deps[x];
         if (surface_id != -1) {
             if (dcc->surface_client_created[surface_id] == TRUE) {
                 continue;
@@ -996,13 +996,13 @@ static void remove_depended_item(DependItem *item)
     ring_remove(&item->ring_item);
 }
 
-static inline void red_dec_surfaces_drawable_dependencies(RedWorker *worker, Drawable *drawable)
+static void drawable_unref_surface_deps(RedWorker *worker, Drawable *drawable)
 {
     int x;
     int surface_id;
 
     for (x = 0; x < 3; ++x) {
-        surface_id = drawable->surfaces_dest[x];
+        surface_id = drawable->surface_deps[x];
         if (surface_id == -1) {
             continue;
         }
@@ -1016,7 +1016,7 @@ static void remove_drawable_dependencies(RedWorker *worker, Drawable *drawable)
     int surface_id;
 
     for (x = 0; x < 3; ++x) {
-        surface_id = drawable->surfaces_dest[x];
+        surface_id = drawable->surface_deps[x];
         if (surface_id != -1 && drawable->depend_items[x].drawable) {
             remove_depended_item(&drawable->depend_items[x]);
         }
@@ -1039,7 +1039,7 @@ static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable)
     region_destroy(&drawable->tree_item.base.rgn);
 
     remove_drawable_dependencies(worker, drawable);
-    red_dec_surfaces_drawable_dependencies(worker, drawable);
+    drawable_unref_surface_deps(worker, drawable);
     red_surface_unref(worker, drawable->surface_id);
 
     RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
@@ -1119,7 +1119,7 @@ static void red_flush_source_surfaces(RedWorker *worker, Drawable *drawable)
     int surface_id;
 
     for (x = 0; x < 3; ++x) {
-        surface_id = drawable->surfaces_dest[x];
+        surface_id = drawable->surface_deps[x];
         if (surface_id != -1 && drawable->depend_items[x].drawable) {
             remove_depended_item(&drawable->depend_items[x]);
             surface_flush(worker, surface_id, &drawable->red_drawable->surfaces_rects[x]);
@@ -1238,7 +1238,7 @@ static int red_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int 
         }
 
         for (x = 0; x < 3; ++x) {
-            if (drawable->surfaces_dest[x] == surface_id) {
+            if (drawable->surface_deps[x] == surface_id) {
                 depend_found = TRUE;
                 break;
             }
@@ -2504,7 +2504,7 @@ static inline int is_drawable_independent_from_surfaces(Drawable *drawable)
     int x;
 
     for (x = 0; x < 3; ++x) {
-        if (drawable->surfaces_dest[x] != -1) {
+        if (drawable->surface_deps[x] != -1) {
             return FALSE;
         }
     }
@@ -3083,8 +3083,8 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
         return NULL;
     }
     for (x = 0; x < 3; ++x) {
-        if (red_drawable->surfaces_dest[x] != -1) {
-            VALIDATE_SURFACE_RETVAL(worker, red_drawable->surfaces_dest[x], NULL)
+        if (red_drawable->surface_deps[x] != -1) {
+            VALIDATE_SURFACE_RETVAL(worker, red_drawable->surface_deps[x], NULL)
         }
     }
 
@@ -3106,7 +3106,7 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
     drawable->group_id = group_id;
 
     drawable->surface_id = red_drawable->surface_id;
-    memcpy(drawable->surfaces_dest, red_drawable->surfaces_dest, sizeof(drawable->surfaces_dest));
+    memcpy(drawable->surface_deps, red_drawable->surface_deps, sizeof(drawable->surface_deps));
     ring_init(&drawable->pipes);
     ring_init(&drawable->glz_ring);
 
@@ -3154,11 +3154,11 @@ static inline int red_handle_surfaces_dependencies(RedWorker *worker, Drawable *
     for (x = 0; x < 3; ++x) {
         // surface self dependency is handled by shadows in "current", or by
         // handle_self_bitmap
-        if (drawable->surfaces_dest[x] != drawable->surface_id) {
-            add_to_surface_dependency(worker, drawable->surfaces_dest[x],
+        if (drawable->surface_deps[x] != drawable->surface_id) {
+            add_to_surface_dependency(worker, drawable->surface_deps[x],
                                       &drawable->depend_items[x], drawable);
 
-            if (drawable->surfaces_dest[x] == 0) {
+            if (drawable->surface_deps[x] == 0) {
                 QRegion depend_region;
                 region_init(&depend_region);
                 region_add(&depend_region, &drawable->red_drawable->surfaces_rects[x]);
@@ -3177,7 +3177,7 @@ static inline void red_inc_surfaces_drawable_dependencies(RedWorker *worker, Dra
     RedSurface *surface;
 
     for (x = 0; x < 3; ++x) {
-        surface_id = drawable->surfaces_dest[x];
+        surface_id = drawable->surface_deps[x];
         if (surface_id == -1) {
             continue;
         }
@@ -5758,7 +5758,7 @@ static inline int drawable_depends_on_areas(Drawable *drawable,
         int dep_surface_id;
 
          for (x = 0; x < 3; ++x) {
-            dep_surface_id = drawable->surfaces_dest[x];
+            dep_surface_id = drawable->surface_deps[x];
             if (dep_surface_id == surface_ids[i]) {
                 if (rect_intersects(&surface_areas[i], &red_drawable->surfaces_rects[x])) {
                     return TRUE;

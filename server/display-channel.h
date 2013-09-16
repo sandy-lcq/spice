@@ -174,7 +174,7 @@ struct Drawable {
     DependItem depend_items[3];
 
     int surface_id;
-    int surfaces_dest[3];
+    int surface_deps[3];
 
     uint32_t process_commands_generation;
 };
