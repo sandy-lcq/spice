@@ -20,7 +20,6 @@
 #endif
 
 #include <glib.h>
-#include <setjmp.h>
 
 #include "dcc-encoders.h"
 #include "display-channel.h"

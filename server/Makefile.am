@@ -138,6 +138,9 @@ libspice_server_la_SOURCES =			\
 	utils.h					\
 	stream.c					\
 	stream.h					\
+	dcc.c					\
+	dcc.h					\
+	display-limits.h			\
 	dcc-encoders.c					\
 	dcc-encoders.h					\
 	$(NULL)
