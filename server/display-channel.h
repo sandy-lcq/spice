@@ -253,11 +253,6 @@ typedef struct SurfaceDestroyItem {
     PipeItem pipe_item;
 } SurfaceDestroyItem;
 
-typedef struct SurfaceCreateItem {
-    SpiceMsgSurfaceCreate surface_create;
-    PipeItem pipe_item;
-} SurfaceCreateItem;
-
 
 void                       display_channel_set_stream_video          (DisplayChannel *display,
                                                                       int stream_video);
@@ -271,6 +266,8 @@ bool                       display_channel_surface_has_canvas        (DisplayCha
                                                                       uint32_t surface_id);
 int                        display_channel_add_drawable              (DisplayChannel *display,
                                                                       Drawable *drawable);
+void                       display_channel_current_flush             (DisplayChannel *display,
+                                                                      int surface_id);
 
 static inline int is_equal_path(SpicePath *path1, SpicePath *path2)
 {
