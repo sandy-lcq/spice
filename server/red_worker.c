@@ -1358,7 +1358,7 @@ static void exclude_region(RedWorker *worker, Ring *ring, RingItem *ring_item, Q
     }
 }
 
-static inline void __current_add_drawable(RedWorker *worker, Drawable *drawable, RingItem *pos)
+static inline void current_add_drawable(RedWorker *worker, Drawable *drawable, RingItem *pos)
 {
     DisplayChannel *display = worker->display_channel;
     RedSurface *surface;
@@ -2141,7 +2141,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
         int add_after = !!other_drawable->stream &&
                         is_drawable_independent_from_surfaces(drawable);
         display_channel_stream_maintenance(worker->display_channel, drawable, other_drawable);
-        __current_add_drawable(worker, drawable, &other->siblings_link);
+        current_add_drawable(worker, drawable, &other->siblings_link);
         other_drawable->refs++;
         current_remove_drawable(worker, other_drawable);
         if (add_after) {
@@ -2199,7 +2199,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
         break;
     case QXL_EFFECT_OPAQUE_BRUSH:
         if (is_same_geometry(drawable, other_drawable)) {
-            __current_add_drawable(worker, drawable, &other->siblings_link);
+            current_add_drawable(worker, drawable, &other->siblings_link);
             remove_drawable(worker, other_drawable);
             red_pipes_add_drawable(worker, drawable);
             return TRUE;
@@ -2269,7 +2269,7 @@ static void red_use_stream_trace(DisplayChannel *display, Drawable *drawable)
     }
 }
 
-static inline int red_current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
+static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
 {
     DrawItem *item = &drawable->tree_item;
 #ifdef RED_WORKER_STAT
@@ -2371,14 +2371,14 @@ static inline int red_current_add(RedWorker *worker, Ring *ring, Drawable *drawa
          * safety (todo: Not sure if exclude_region can affect the drawable
          * if it is added to the tree before calling exclude_region).
          */
-        __current_add_drawable(worker, drawable, ring);
+        current_add_drawable(worker, drawable, ring);
     } else {
         /*
          * red_detach_streams_behind can affect the current tree since it may
          * trigger calls to update_area. Thus, the drawable should be added to the tree
          * before calling red_detach_streams_behind
          */
-        __current_add_drawable(worker, drawable, ring);
+        current_add_drawable(worker, drawable, ring);
         if (is_primary_surface(worker->display_channel, drawable->surface_id)) {
             detach_streams_behind(worker->display_channel, &drawable->tree_item.base.rgn, drawable);
         }
@@ -2397,7 +2397,7 @@ static void add_clip_rects(QRegion *rgn, SpiceClipRects *data)
     }
 }
 
-static inline int red_current_add_with_shadow(RedWorker *worker, Ring *ring, Drawable *item)
+static inline int current_add_with_shadow(RedWorker *worker, Ring *ring, Drawable *item)
 {
     DisplayChannel *display = worker->display_channel;
 #ifdef RED_WORKER_STAT
@@ -2425,7 +2425,7 @@ static inline int red_current_add_with_shadow(RedWorker *worker, Ring *ring, Dra
     }
 
     ring_add(ring, &shadow->base.siblings_link);
-    __current_add_drawable(worker, item, ring);
+    current_add_drawable(worker, item, ring);
     if (item->tree_item.effect == QXL_EFFECT_OPAQUE) {
         QRegion exclude_rgn;
         region_clone(&exclude_rgn, &item->tree_item.base.rgn);
@@ -2519,10 +2519,10 @@ static int red_add_drawable(RedWorker *worker, Drawable *drawable)
     Ring *ring = &worker->surfaces[surface_id].current;
 
     if (has_shadow(red_drawable)) {
-        ret = red_current_add_with_shadow(worker, ring, drawable);
+        ret = current_add_with_shadow(worker, ring, drawable);
     } else {
         drawable_update_streamable(display, drawable);
-        ret = red_current_add(worker, ring, drawable);
+        ret = current_add(worker, ring, drawable);
     }
 
 #ifdef RED_WORKER_STAT
