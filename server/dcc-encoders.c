@@ -489,3 +489,12 @@ void dcc_free_glz_drawables_to_free(DisplayChannelClient* dcc)
     }
     pthread_mutex_unlock(&dcc->glz_drawables_inst_to_free_lock);
 }
+
+void dcc_freeze_glz(DisplayChannelClient *dcc)
+{
+    pthread_rwlock_wrlock(&dcc->glz_dict->encode_lock);
+    if (!dcc->glz_dict->migrate_freeze) {
+        dcc->glz_dict->migrate_freeze = TRUE;
+    }
+    pthread_rwlock_unlock(&dcc->glz_dict->encode_lock);
+}
