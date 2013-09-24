@@ -571,8 +571,8 @@ static inline void set_surface_release_info(QXLReleaseInfoExt *release_info_ext,
     release_info_ext->group_id = group_id;
 }
 
-static void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
-                               uint32_t group_id)
+void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
+                        uint32_t group_id)
 {
     QXLReleaseInfoExt release_info_ext;
 
@@ -2002,52 +2002,6 @@ static void fill_base(SpiceMarshaller *base_marshaller, Drawable *drawable)
     base.clip = drawable->red_drawable->clip;
 
     spice_marshall_DisplayBase(base_marshaller, &base);
-}
-
-/* Remove from the to_free list and the instances_list.
-   When no instance is left - the RedGlzDrawable is released too. (and the qxl drawable too, if
-   it is not used by Drawable).
-   NOTE - 1) can be called only by the display channel that created the drawable
-          2) it is assumed that the instance was already removed from the dictionary*/
-void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
-                                    GlzDrawableInstanceItem *glz_drawable_instance)
-{
-    DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    RedWorker *worker = display_channel->common.worker;
-    RedGlzDrawable *glz_drawable;
-
-    spice_assert(glz_drawable_instance);
-    spice_assert(glz_drawable_instance->glz_drawable);
-
-    glz_drawable = glz_drawable_instance->glz_drawable;
-
-    spice_assert(glz_drawable->dcc == dcc);
-    spice_assert(glz_drawable->instances_count);
-
-    ring_remove(&glz_drawable_instance->glz_link);
-    glz_drawable->instances_count--;
-    // when the remove callback is performed from the channel that the
-    // drawable belongs to, the instance is not added to the 'to_free' list
-    if (ring_item_is_linked(&glz_drawable_instance->free_link)) {
-        ring_remove(&glz_drawable_instance->free_link);
-    }
-
-    if (ring_is_empty(&glz_drawable->instances)) {
-        spice_assert(!glz_drawable->instances_count);
-
-        Drawable *drawable = glz_drawable->drawable;
-
-        if (drawable) {
-            ring_remove(&glz_drawable->drawable_link);
-        }
-        red_drawable_unref(worker, glz_drawable->red_drawable,
-                           glz_drawable->group_id);
-        display_channel->glz_drawable_count--;
-        if (ring_item_is_linked(&glz_drawable->link)) {
-            ring_remove(&glz_drawable->link);
-        }
-        free(glz_drawable);
-    }
 }
 
 static void red_display_handle_glz_drawables_to_free(DisplayChannelClient* dcc)
