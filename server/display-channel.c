@@ -838,3 +838,14 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
     }
     return FALSE;
 }
+
+void display_channel_flush_all_surfaces(DisplayChannel *display)
+{
+    int x;
+
+    for (x = 0; x < NUM_SURFACES; ++x) {
+        if (display->surfaces[x].context.canvas) {
+            display_channel_current_flush(display, x);
+        }
+    }
+}
