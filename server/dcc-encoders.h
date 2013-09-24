@@ -133,8 +133,8 @@ typedef struct RedGlzDrawable RedGlzDrawable;
 struct GlzDrawableInstanceItem {
     RingItem glz_link;
     RingItem free_link;
-    GlzEncDictImageContext *glz_instance;
-    RedGlzDrawable         *red_glz_drawable;
+    GlzEncDictImageContext *context;
+    RedGlzDrawable         *glz_drawable;
 };
 
 struct RedGlzDrawable {
