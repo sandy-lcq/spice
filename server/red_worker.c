@@ -2004,23 +2004,6 @@ static void fill_base(SpiceMarshaller *base_marshaller, Drawable *drawable)
     spice_marshall_DisplayBase(base_marshaller, &base);
 }
 
-static void red_display_handle_glz_drawables_to_free(DisplayChannelClient* dcc)
-{
-    RingItem *ring_link;
-
-    if (!dcc->glz_dict) {
-        return;
-    }
-    pthread_mutex_lock(&dcc->glz_drawables_inst_to_free_lock);
-    while ((ring_link = ring_get_head(&dcc->glz_drawables_inst_to_free))) {
-        GlzDrawableInstanceItem *drawable_instance = SPICE_CONTAINEROF(ring_link,
-                                                                 GlzDrawableInstanceItem,
-                                                                 free_link);
-        dcc_free_glz_drawable_instance(dcc, drawable_instance);
-    }
-    pthread_mutex_unlock(&dcc->glz_drawables_inst_to_free_lock);
-}
-
 /*
  * Releases all the instances of the drawable from the dictionary and the display channel client.
  * The release of the last instance will also release the drawable itself and the qxl drawable
@@ -6826,13 +6809,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     return worker;
 }
 
-static void red_display_cc_free_glz_drawables(RedChannelClient *rcc)
-{
-    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
-
-    red_display_handle_glz_drawables_to_free(dcc);
-}
-
 SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
 {
     RedWorker *worker = arg;
@@ -6868,8 +6844,7 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
             /* during migration, in the dest, the display channel can be initialized
                while the global lz data not since migrate data msg hasn't been
                received yet */
-            red_channel_apply_clients(&worker->display_channel->common.base,
-                                      red_display_cc_free_glz_drawables);
+            display_channel_free_glz_drawables_to_free(worker->display_channel);
         }
 
         worker->event_timeout = INF_EVENT_WAIT;
