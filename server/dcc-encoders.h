@@ -34,11 +34,16 @@
 
 typedef struct RedCompressBuf RedCompressBuf;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
+typedef struct RedGlzDrawable RedGlzDrawable;
+
 
 void             dcc_encoders_init                           (DisplayChannelClient *dcc);
 void             dcc_encoders_free                           (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawable_instance              (DisplayChannelClient *dcc,
                                                               GlzDrawableInstanceItem *item);
+void             dcc_free_glz_drawable                       (DisplayChannelClient *dcc,
+                                                              RedGlzDrawable *drawable);
+void             dcc_free_glz_drawables                      (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawables_to_free              (DisplayChannelClient* dcc);
 void             dcc_freeze_glz                              (DisplayChannelClient *dcc);
 
@@ -125,8 +130,6 @@ typedef struct {
 } GlzData;
 
 #define MAX_GLZ_DRAWABLE_INSTANCES 2
-
-typedef struct RedGlzDrawable RedGlzDrawable;
 
 /* for each qxl drawable, there may be several instances of lz drawables */
 /* TODO - reuse this stuff for the top level. I just added a second level of multiplicity
