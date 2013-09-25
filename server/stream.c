@@ -258,6 +258,62 @@ static int is_next_stream_frame(DisplayChannel *display,
     }
 }
 
+static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream)
+{
+    DisplayChannelClient *dcc;
+    RingItem *item, *next;
+
+    spice_assert(!drawable->stream && !stream->current);
+    spice_assert(drawable && stream);
+    stream->current = drawable;
+    drawable->stream = stream;
+    stream->last_time = drawable->creation_time;
+
+    uint64_t duration = drawable->creation_time - stream->input_fps_start_time;
+    if (duration >= RED_STREAM_INPUT_FPS_TIMEOUT) {
+        /* Round to the nearest integer, for instance 24 for 23.976 */
+        stream->input_fps = ((uint64_t)stream->num_input_frames * 1000 * 1000 * 1000 + duration / 2) / duration;
+        spice_debug("input-fps=%u", stream->input_fps);
+        stream->num_input_frames = 0;
+        stream->input_fps_start_time = drawable->creation_time;
+    } else {
+        stream->num_input_frames++;
+    }
+
+    FOREACH_DCC(display, item, next, dcc) {
+        StreamAgent *agent;
+        QRegion clip_in_draw_dest;
+
+        agent = &dcc->stream_agents[get_stream_id(display, stream)];
+        region_or(&agent->vis_region, &drawable->tree_item.base.rgn);
+
+        region_init(&clip_in_draw_dest);
+        region_add(&clip_in_draw_dest, &drawable->red_drawable->bbox);
+        region_and(&clip_in_draw_dest, &agent->clip);
+
+        if (!region_is_equal(&clip_in_draw_dest, &drawable->tree_item.base.rgn)) {
+            region_remove(&agent->clip, &drawable->red_drawable->bbox);
+            region_or(&agent->clip, &drawable->tree_item.base.rgn);
+            dcc_stream_agent_clip(dcc, agent);
+        }
+#ifdef STREAM_STATS
+        agent->stats.num_input_frames++;
+#endif
+    }
+}
+
+void detach_stream(DisplayChannel *display, Stream *stream,
+                   int detach_sized)
+{
+    spice_assert(stream->current && stream->current->stream);
+    spice_assert(stream->current->stream == stream);
+    stream->current->stream = NULL;
+    if (detach_sized) {
+        stream->current->sized_stream = NULL;
+    }
+    stream->current = NULL;
+}
+
 static void before_reattach_stream(DisplayChannel *display,
                                    Stream *stream, Drawable *new_frame)
 {

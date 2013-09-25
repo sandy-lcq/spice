@@ -154,7 +154,6 @@ void                  stream_agent_unref                            (DisplayChan
 void                  stream_agent_stats_print                      (StreamAgent *agent);
 void                  stream_agent_stop                             (StreamAgent *agent);
 
-void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream);
 void detach_stream(DisplayChannel *display, Stream *stream, int detach_sized);
 
 #endif /* STREAM_H */
