@@ -67,12 +67,6 @@ esac
 
 dnl =========================================================================
 dnl Check optional features
-SPICE_CHECK_OPENGL
-AS_IF([test x"$enable_opengl" != "xno"], [
-      AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
-])
-
-
 SPICE_CHECK_SMARTCARD
 
 AC_ARG_ENABLE([automated_tests],
@@ -294,7 +288,6 @@ AC_MSG_NOTICE([
         c++ compiler:             ${CXX}
         python:                   ${PYTHON}
 
-        OpenGL:                   ${enable_opengl}
         LZ4 support:              ${enable_lz4}
         Smartcard:                ${have_smartcard}
         SASL support:             ${enable_sasl}
