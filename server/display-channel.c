@@ -325,6 +325,50 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
     }
 }
 
+static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
+{
+    DisplayChannelClient *dcc;
+    RingItem *dcc_ring_item, *next;
+
+    spice_warn_if(!ring_is_empty(&drawable->pipes));
+    FOREACH_DCC(display, dcc_ring_item, next, dcc) {
+        dcc_prepend_drawable(dcc, drawable);
+    }
+}
+
+static void pipes_add_drawable_after(DisplayChannel *display,
+                                     Drawable *drawable, Drawable *pos_after)
+{
+    DrawablePipeItem *dpi_pos_after;
+    RingItem *dpi_link, *dpi_next;
+    DisplayChannelClient *dcc;
+    int num_other_linked = 0;
+
+    DRAWABLE_FOREACH_DPI_SAFE(pos_after, dpi_link, dpi_next, dpi_pos_after) {
+        num_other_linked++;
+        dcc_add_drawable_after(dpi_pos_after->dcc, drawable, &dpi_pos_after->dpi_pipe_item);
+    }
+    if (num_other_linked == 0) {
+        pipes_add_drawable(display, drawable);
+        return;
+    }
+    if (num_other_linked != display->common.base.clients_num) {
+        RingItem *item, *next;
+        spice_debug("TODO: not O(n^2)");
+        FOREACH_DCC(display, item, next, dcc) {
+            int sent = 0;
+            DRAWABLE_FOREACH_DPI_SAFE(pos_after, dpi_link, dpi_next, dpi_pos_after) {
+                if (dpi_pos_after->dcc == dcc) {
+                    sent = 1;
+                    break;
+                }
+            }
+            if (!sent) {
+                dcc_prepend_drawable(dcc, drawable);
+            }
+        }
+    }
+}
 
 static void current_add_drawable(DisplayChannel *display,
                                  Drawable *drawable, RingItem *pos)
@@ -366,9 +410,9 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
         other_drawable->refs++;
         current_remove_drawable(display, other_drawable);
         if (add_after) {
-            red_pipes_add_drawable_after(display, drawable, other_drawable);
+            pipes_add_drawable_after(display, drawable, other_drawable);
         } else {
-            red_pipes_add_drawable(display, drawable);
+            pipes_add_drawable(display, drawable);
         }
         red_pipes_remove_drawable(other_drawable);
         display_channel_drawable_unref(display, other_drawable);
@@ -396,7 +440,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
                                         common.base.channel_link);
                 dpi = SPICE_CONTAINEROF(dpi_ring_item, DrawablePipeItem, base);
                 while (worker_ring_item && (!dpi || dcc != dpi->dcc)) {
-                    dcc_add_drawable(dcc, drawable);
+                    dcc_prepend_drawable(dcc, drawable);
                     worker_ring_item = ring_next(&RED_CHANNEL(display)->clients,
                                                  worker_ring_item);
                     dcc = SPICE_CONTAINEROF(worker_ring_item, DisplayChannelClient,
@@ -423,7 +467,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             current_add_drawable(display, drawable, &other->siblings_link);
             red_pipes_remove_drawable(other_drawable);
             current_remove_drawable(display, other_drawable);
-            red_pipes_add_drawable(display, drawable);
+            pipes_add_drawable(display, drawable);
             return TRUE;
         }
         break;
@@ -788,25 +832,26 @@ void display_channel_print_stats(DisplayChannel *display)
 #endif
 }
 
-int display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
+void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
-    int ret = FALSE, surface_id = drawable->surface_id;
+    int success = FALSE, surface_id = drawable->surface_id;
     RedDrawable *red_drawable = drawable->red_drawable;
     Ring *ring = &display->surfaces[surface_id].current;
 
     if (has_shadow(red_drawable)) {
-        ret = current_add_with_shadow(display, ring, drawable);
+        success = current_add_with_shadow(display, ring, drawable);
     } else {
         drawable->streamable = drawable_can_stream(display, drawable);
-        ret = current_add(display, ring, drawable);
+        success = current_add(display, ring, drawable);
     }
+
+    if (success)
+        pipes_add_drawable(display, drawable);
 
 #ifdef RED_WORKER_STAT
     if ((++display->add_count % 100) == 0)
         display_channel_print_stats(display);
 #endif
-
-    return ret;
 }
 
 int display_channel_wait_for_migrate_data(DisplayChannel *display)
