@@ -135,6 +135,7 @@ libspice_server_la_SOURCES =			\
 	tree.c				\
 	spice-bitmap-utils.h			\
 	spice-bitmap-utils.c			\
+	utils.c					\
 	utils.h					\
 	stream.c					\
 	stream.h					\
