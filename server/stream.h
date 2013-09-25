@@ -107,8 +107,10 @@ typedef struct StreamClipItem {
     SpiceClipRects *rects;
 } StreamClipItem;
 
-StreamClipItem *stream_clip_item_new(DisplayChannelClient* dcc,
-                                     StreamAgent *agent);
+StreamClipItem *      stream_clip_item_new                          (DisplayChannelClient* dcc,
+                                                                     StreamAgent *agent);
+void                  stream_clip_item_unref                        (DisplayChannelClient *dcc,
+                                                                     StreamClipItem *item);
 
 typedef struct ItemTrace {
     red_time_t time;
