@@ -4359,17 +4359,16 @@ static void handle_new_display_channel(RedWorker *worker, RedClient *client, Red
     dcc_start(dcc);
 }
 
-static void red_connect_cursor(RedWorker *worker, RedClient *client, RedsStream *stream,
-                               int migrate,
-                               uint32_t *common_caps, int num_common_caps,
-                               uint32_t *caps, int num_caps)
+static void cursor_connect(RedWorker *worker, RedClient *client, RedsStream *stream,
+                           int migrate,
+                           uint32_t *common_caps, int num_common_caps,
+                           uint32_t *caps, int num_caps)
 {
-    CursorChannel *channel;
+    CursorChannel *channel = worker->cursor_channel;
     CursorChannelClient *ccc;
 
-    spice_return_if_fail(worker->cursor_channel != NULL);
+    spice_return_if_fail(channel != NULL);
 
-    channel = worker->cursor_channel;
     spice_info("add cursor channel client");
     ccc = cursor_channel_client_new(channel, client, stream,
                                     migrate,
@@ -4897,14 +4896,12 @@ static void handle_dev_cursor_connect(void *opaque, void *payload)
 {
     RedWorkerMessageCursorConnect *msg = payload;
     RedWorker *worker = opaque;
-    RedsStream *stream = msg->stream;
-    RedClient *client = msg->client;
-    int migration = msg->migration;
 
     spice_info("cursor connect");
-    red_connect_cursor(worker, client, stream, migration,
-                       msg->common_caps, msg->num_common_caps,
-                       msg->caps, msg->num_caps);
+    cursor_connect(worker,
+                   msg->client, msg->stream, msg->migration,
+                   msg->common_caps, msg->num_common_caps,
+                   msg->caps, msg->num_caps);
     free(msg->caps);
     free(msg->common_caps);
 }
