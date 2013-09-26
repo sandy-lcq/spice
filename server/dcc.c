@@ -1091,3 +1091,84 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
     cache->sync[dcc->common.id] = serial;
     return TRUE;
 }
+
+static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init)
+{
+    spice_return_val_if_fail(dcc->expect_init, FALSE);
+    dcc->expect_init = FALSE;
+
+    spice_return_val_if_fail(!dcc->pixmap_cache, FALSE);
+    dcc->pixmap_cache = pixmap_cache_get(RED_CHANNEL_CLIENT(dcc)->client,
+                                         init->pixmap_cache_id,
+                                         init->pixmap_cache_size);
+    spice_return_val_if_fail(dcc->pixmap_cache, FALSE);
+
+    spice_return_val_if_fail(!dcc->glz_dict, FALSE);
+    ring_init(&dcc->glz_drawables);
+    ring_init(&dcc->glz_drawables_inst_to_free);
+    pthread_mutex_init(&dcc->glz_drawables_inst_to_free_lock, NULL);
+    dcc->glz_dict = dcc_get_glz_dictionary(dcc,
+                                           init->glz_dictionary_id,
+                                           init->glz_dictionary_window_size);
+    spice_return_val_if_fail(dcc->glz_dict, FALSE);
+
+    return TRUE;
+}
+
+static int dcc_handle_stream_report(DisplayChannelClient *dcc,
+                                    SpiceMsgcDisplayStreamReport *report)
+{
+    StreamAgent *agent;
+
+    spice_return_val_if_fail(report->stream_id < NUM_STREAMS, FALSE);
+    agent = &dcc->stream_agents[report->stream_id];
+    spice_return_val_if_fail(agent->mjpeg_encoder, TRUE);
+    spice_return_val_if_fail(report->unique_id == agent->report_id, TRUE);
+
+    mjpeg_encoder_client_stream_report(agent->mjpeg_encoder,
+                                       report->num_frames,
+                                       report->num_drops,
+                                       report->start_frame_mm_time,
+                                       report->end_frame_mm_time,
+                                       report->last_frame_delay,
+                                       report->audio_delay);
+    return TRUE;
+}
+
+static int dcc_handle_preferred_compression(DisplayChannelClient *dcc,
+        SpiceMsgcDisplayPreferredCompression *pc)
+{
+    switch (pc->image_compression) {
+    case SPICE_IMAGE_COMPRESSION_AUTO_LZ:
+    case SPICE_IMAGE_COMPRESSION_AUTO_GLZ:
+    case SPICE_IMAGE_COMPRESSION_QUIC:
+#ifdef USE_LZ4
+    case SPICE_IMAGE_COMPRESSION_LZ4:
+#endif
+    case SPICE_IMAGE_COMPRESSION_LZ:
+    case SPICE_IMAGE_COMPRESSION_GLZ:
+    case SPICE_IMAGE_COMPRESSION_OFF:
+        dcc->image_compression = pc->image_compression;
+        return TRUE;
+    default:
+        spice_warning("preferred-compression: unsupported image compression setting");
+        return FALSE;
+    }
+}
+
+int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void *msg)
+{
+    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+
+    switch (type) {
+    case SPICE_MSGC_DISPLAY_INIT:
+        return dcc_handle_init(dcc, (SpiceMsgcDisplayInit *)msg);
+    case SPICE_MSGC_DISPLAY_STREAM_REPORT:
+        return dcc_handle_stream_report(dcc, (SpiceMsgcDisplayStreamReport *)msg);
+    case SPICE_MSGC_DISPLAY_PREFERRED_COMPRESSION:
+        return dcc_handle_preferred_compression(dcc,
+            (SpiceMsgcDisplayPreferredCompression *)msg);
+    default:
+        return red_channel_client_handle_message(rcc, size, type, msg);
+    }
+}

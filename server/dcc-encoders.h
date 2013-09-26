@@ -46,6 +46,7 @@ int              dcc_free_some_independent_glz_drawables     (DisplayChannelClie
 void             dcc_free_glz_drawables                      (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawables_to_free              (DisplayChannelClient* dcc);
 void             dcc_freeze_glz                              (DisplayChannelClient *dcc);
+void             dcc_release_glz                             (DisplayChannelClient *dcc);
 
 void             marshaller_add_compressed                   (SpiceMarshaller *m,
                                                               RedCompressBuf *comp_buf,
@@ -76,6 +77,12 @@ typedef struct GlzSharedDictionary {
     int migrate_freeze;
     RedClient *client; // channel clients of the same client share the dict
 } GlzSharedDictionary;
+
+GlzSharedDictionary* dcc_get_glz_dictionary                  (DisplayChannelClient *dcc,
+                                                              uint8_t id, int window_size);
+GlzSharedDictionary* dcc_restore_glz_dictionary              (DisplayChannelClient *dcc,
+                                                              uint8_t id,
+                                                              GlzEncDictRestoreData *restore_data);
 
 typedef struct  {
     DisplayChannelClient *dcc;
