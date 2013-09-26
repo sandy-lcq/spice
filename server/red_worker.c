@@ -4810,8 +4810,8 @@ static int display_channel_handle_stream_report(DisplayChannelClient *dcc,
 }
 
 static int display_channel_handle_preferred_compression(DisplayChannelClient *dcc,
-        SpiceMsgcDisplayPreferredCompression *pc) {
-    DisplayChannel *display_channel = DCC_TO_DC(dcc);
+        SpiceMsgcDisplayPreferredCompression *pc)
+{
     switch (pc->image_compression) {
     case SPICE_IMAGE_COMPRESSION_AUTO_LZ:
     case SPICE_IMAGE_COMPRESSION_AUTO_GLZ:
@@ -4822,7 +4822,6 @@ static int display_channel_handle_preferred_compression(DisplayChannelClient *dc
     case SPICE_IMAGE_COMPRESSION_LZ:
     case SPICE_IMAGE_COMPRESSION_GLZ:
     case SPICE_IMAGE_COMPRESSION_OFF:
-        display_channel->common.worker->image_compression = pc->image_compression;
         dcc->image_compression = pc->image_compression;
         return TRUE;
     default:
