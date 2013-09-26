@@ -36,13 +36,13 @@ typedef struct RedCompressBuf RedCompressBuf;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 typedef struct RedGlzDrawable RedGlzDrawable;
 
-
 void             dcc_encoders_init                           (DisplayChannelClient *dcc);
 void             dcc_encoders_free                           (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawable_instance              (DisplayChannelClient *dcc,
                                                               GlzDrawableInstanceItem *item);
 void             dcc_free_glz_drawable                       (DisplayChannelClient *dcc,
                                                               RedGlzDrawable *drawable);
+int              dcc_free_some_independent_glz_drawables     (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawables                      (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawables_to_free              (DisplayChannelClient* dcc);
 void             dcc_freeze_glz                              (DisplayChannelClient *dcc);
@@ -157,5 +157,6 @@ struct RedGlzDrawable {
     DisplayChannelClient *dcc;
 };
 
+#define RED_RELEASE_BUNCH_SIZE 64
 
 #endif /* DCC_ENCODERS_H_ */
