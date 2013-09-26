@@ -708,9 +708,10 @@ static int current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
         current_add_drawable(display, drawable, ring);
     } else {
         /*
-         * red_detach_streams_behind can affect the current tree since it may
-         * trigger calls to update_area. Thus, the drawable should be added to the tree
-         * before calling red_detach_streams_behind
+         * red_detach_streams_behind can affect the current tree since
+         * it may trigger calls to display_channel_draw. Thus, the
+         * drawable should be added to the tree before calling
+         * red_detach_streams_behind
          */
         current_add_drawable(display, drawable, ring);
         if (is_primary_surface(display, drawable->surface_id)) {
