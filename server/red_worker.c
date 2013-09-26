@@ -74,29 +74,6 @@
 
 #define DISPLAY_CLIENT_SHORT_TIMEOUT 15000000000ULL //nano
 
-#define VALIDATE_SURFACE_RET(worker, surface_id) \
-    if (!validate_surface(worker, surface_id)) { \
-        rendering_incorrect(__func__); \
-        return; \
-    }
-
-#define VALIDATE_SURFACE_RETVAL(worker, surface_id, ret) \
-    if (!validate_surface(worker, surface_id)) { \
-        rendering_incorrect(__func__); \
-        return ret; \
-    }
-
-#define VALIDATE_SURFACE_BREAK(worker, surface_id) \
-    if (!validate_surface(worker, surface_id)) { \
-        rendering_incorrect(__func__); \
-        break; \
-    }
-
-static void rendering_incorrect(const char *msg)
-{
-    spice_warning("rendering incorrect from now on: %s", msg);
-}
-
 #define MAX_EVENT_SOURCES 20
 #define INF_EVENT_WAIT ~0
 
@@ -279,7 +256,7 @@ QXLInstance* red_worker_get_qxl(RedWorker *worker)
     return worker->qxl;
 }
 
-static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
+static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable)
 {
         DrawContext *context;
         uint32_t surface_id = drawable->surface_id;
@@ -287,8 +264,10 @@ static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
         /* surface_id must be validated before calling into
          * validate_drawable_bbox
          */
-        VALIDATE_SURFACE_RETVAL(worker->display_channel, surface_id, FALSE);
-        context = &worker->display_channel->surfaces[surface_id].context;
+        if (!validate_surface(display, drawable->surface_id)) {
+            return FALSE;
+        }
+        context = &display->surfaces[surface_id].context;
 
         if (drawable->bbox.top < 0)
                 return FALSE;
@@ -1101,14 +1080,13 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
     Drawable *drawable;
     int x;
 
-    VALIDATE_SURFACE_RETVAL(display, red_drawable->surface_id, NULL)
-    if (!validate_drawable_bbox(worker, red_drawable)) {
-        rendering_incorrect(__func__);
+    if (!validate_drawable_bbox(display, red_drawable)) {
         return NULL;
     }
     for (x = 0; x < 3; ++x) {
-        if (red_drawable->surface_deps[x] != -1) {
-            VALIDATE_SURFACE_RETVAL(display, red_drawable->surface_deps[x], NULL)
+        if (red_drawable->surface_deps[x] != -1
+            && !validate_surface(display, red_drawable->surface_deps[x])) {
+            return NULL;
         }
     }
 
@@ -1328,13 +1306,11 @@ exit:
     free(surface);
 }
 
-static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces,
-                                       uint32_t surface_id)
+static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t surface_id)
 {
-    DisplayChannel *display;
+    DisplayChannel *display = SPICE_CONTAINEROF(surfaces, DisplayChannel, image_surfaces);
 
-    display = SPICE_CONTAINEROF(surfaces, DisplayChannel, image_surfaces);
-    VALIDATE_SURFACE_RETVAL(display, surface_id, NULL);
+    spice_return_val_if_fail(validate_surface(display, surface_id), NULL);
 
     return display->surfaces[surface_id].context.canvas;
 }
@@ -1762,7 +1738,7 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
                 break;
             }
             if (!validate_surface(worker->display_channel, update.surface_id)) {
-                rendering_incorrect("QXL_CMD_UPDATE");
+                spice_warning("Invalid surface in QXL_CMD_UPDATE");
                 break;
             }
             red_update_area(worker->display_channel, &update.area, update.surface_id);
@@ -2026,7 +2002,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
 
         surface_id = simage->u.surface.surface_id;
         if (!validate_surface(display, surface_id)) {
-            rendering_incorrect("SPICE_IMAGE_TYPE_SURFACE");
+            spice_warning("Invalid surface in SPICE_IMAGE_TYPE_SURFACE");
             pthread_mutex_unlock(&dcc->pixmap_cache->lock);
             return FILL_BITS_TYPE_SURFACE;
         }
@@ -2160,7 +2136,8 @@ static int is_surface_area_lossy(DisplayChannelClient *dcc, uint32_t surface_id,
     QRegion lossy_region;
     DisplayChannel *display = DCC_TO_DC(dcc);
 
-    VALIDATE_SURFACE_RETVAL(display, surface_id, FALSE);
+    spice_return_val_if_fail(validate_surface(display, surface_id), FALSE);
+
     surface = &display->surfaces[surface_id];
     surface_lossy_region = &dcc->surface_client_lossy_region[surface_id];
 
@@ -5573,7 +5550,8 @@ static void handle_dev_del_memslot(void *opaque, void *payload)
 
 void display_channel_destroy_surface_wait(DisplayChannel *display, int surface_id)
 {
-    VALIDATE_SURFACE_RET(display, surface_id);
+    if (!validate_surface(display, surface_id))
+        return;
     if (!display->surfaces[surface_id].context.canvas)
         return;
 
@@ -5728,7 +5706,8 @@ static void destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
 {
     DisplayChannel *display = worker->display_channel;
 
-    VALIDATE_SURFACE_RET(display, surface_id);
+    if (!validate_surface(display, surface_id))
+        return;
     spice_warn_if(surface_id != 0);
 
     spice_debug(NULL);
