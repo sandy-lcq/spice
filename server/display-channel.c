@@ -1205,11 +1205,14 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
     RedChannel *channel = &display->common.base;
     RedChannelClient *rcc;
 
+    if (!red_channel_waits_for_migrate_data(&display->common.base)) {
+        return FALSE;
+    }
+
     spice_debug(NULL);
-    spice_assert(channel->clients_num == 1);
+    spice_warn_if_fail(channel->clients_num == 1);
 
     rcc = SPICE_CONTAINEROF(ring_get_head(&channel->clients), RedChannelClient, channel_link);
-    spice_assert(red_channel_client_waits_for_migrate_data(rcc));
 
     for (;;) {
         red_channel_client_receive(rcc);

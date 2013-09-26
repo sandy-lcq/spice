@@ -973,9 +973,7 @@ static void handle_dev_start(void *opaque, void *payload)
     }
     if (worker->display_channel) {
         worker->display_channel->common.during_target_migrate = FALSE;
-        if (red_channel_waits_for_migrate_data(&worker->display_channel->common.base)) {
-            display_channel_wait_for_migrate_data(worker->display_channel);
-        }
+        display_channel_wait_for_migrate_data(worker->display_channel);
     }
     worker->running = TRUE;
     guest_set_client_capabilities(worker);
