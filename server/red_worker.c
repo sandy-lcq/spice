@@ -4260,7 +4260,7 @@ static int display_channel_handle_migrate_mark(RedChannelClient *rcc)
     return TRUE;
 }
 
-static uint64_t display_channel_handle_migrate_data_get_serial(RedChannelClient *rcc, uint32_t size, void *message)
+static uint64_t handle_migrate_data_get_serial(RedChannelClient *rcc, uint32_t size, void *message)
 {
     SpiceMigrateDataDisplay *migrate_data;
 
@@ -4269,7 +4269,7 @@ static uint64_t display_channel_handle_migrate_data_get_serial(RedChannelClient 
     return migrate_data->message_serial;
 }
 
-static int display_channel_handle_migrate_data(RedChannelClient *rcc, uint32_t size, void *message)
+static int handle_migrate_data(RedChannelClient *rcc, uint32_t size, void *message)
 {
     return dcc_handle_migrate_data(RCC_TO_DCC(rcc), size, message);
 }
@@ -4599,8 +4599,8 @@ static void display_channel_create(RedWorker *worker, int migrate, int stream_vi
         .hold_item = display_channel_hold_pipe_item,
         .release_item = display_channel_release_item,
         .handle_migrate_flush_mark = display_channel_handle_migrate_mark,
-        .handle_migrate_data = display_channel_handle_migrate_data,
-        .handle_migrate_data_get_serial = display_channel_handle_migrate_data_get_serial
+        .handle_migrate_data = handle_migrate_data,
+        .handle_migrate_data_get_serial = handle_migrate_data_get_serial
     };
 
     spice_return_if_fail(num_renderers > 0);
