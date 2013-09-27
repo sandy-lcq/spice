@@ -1344,8 +1344,8 @@ void display_channel_draw_till(DisplayChannel *display, const SpiceRect *area, i
     Drawable *now;
     QRegion rgn;
 
-    spice_assert(last);
-    spice_assert(ring_item_is_linked(&last->list_link));
+    spice_return_if_fail(last);
+    spice_return_if_fail(ring_item_is_linked(&last->list_link));
 
     surface = &display->surfaces[surface_id];
 
