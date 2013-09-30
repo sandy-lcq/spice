@@ -21,11 +21,11 @@
 #include "spice-bitmap-utils.h"
 
 #define RED_BITMAP_UTILS_RGB16
-#include "red_bitmap_utils_tmpl.c"
+#include "spice-bitmap-utils.tmpl.c"
 #define RED_BITMAP_UTILS_RGB24
-#include "red_bitmap_utils_tmpl.c"
+#include "spice-bitmap-utils.tmpl.c"
 #define RED_BITMAP_UTILS_RGB32
-#include "red_bitmap_utils_tmpl.c"
+#include "spice-bitmap-utils.tmpl.c"
 
 #define GRADUAL_HIGH_RGB24_TH -0.03
 #define GRADUAL_HIGH_RGB16_TH 0

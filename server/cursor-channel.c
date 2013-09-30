@@ -86,7 +86,7 @@ struct CursorChannelClient {
 #define RCC_TO_CCC(rcc) SPICE_CONTAINEROF((rcc), CursorChannelClient, common.base)
 
 #define CLIENT_CURSOR_CACHE
-#include "cache_item.tmpl.c"
+#include "cache-item.tmpl.c"
 #undef CLIENT_CURSOR_CACHE
 
 static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd, uint32_t group_id)

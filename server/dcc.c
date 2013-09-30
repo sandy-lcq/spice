@@ -1170,7 +1170,7 @@ int dcc_compress_image(DisplayChannelClient *dcc,
 }
 
 #define CLIENT_PALETTE_CACHE
-#include "cache_item.tmpl.c"
+#include "cache-item.tmpl.c"
 #undef CLIENT_PALETTE_CACHE
 
 void dcc_palette_cache_palette(DisplayChannelClient *dcc, SpicePalette *palette,
