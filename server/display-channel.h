@@ -165,6 +165,7 @@ struct _Drawable {
 
 struct DisplayChannel {
     CommonChannel common; // Must be the first thing
+    uint32_t bits_unique;
 
     MonitorsConfig *monitors_config;
 
@@ -299,6 +300,7 @@ void                       display_channel_destroy_surface_wait      (DisplayCha
 void                       display_channel_destroy_surfaces          (DisplayChannel *display);
 void                       display_channel_destroy_surface           (DisplayChannel *display,
                                                                       uint32_t surface_id);
+uint32_t                   display_channel_generate_uid              (DisplayChannel *display);
 
 static inline int validate_surface(DisplayChannel *display, uint32_t surface_id)
 {

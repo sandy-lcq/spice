@@ -140,6 +140,7 @@ libspice_server_la_SOURCES =			\
 	stream.c					\
 	stream.h					\
 	dcc.c					\
+	dcc-send.c					\
 	dcc.h					\
 	display-limits.h			\
 	dcc-encoders.c					\

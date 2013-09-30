@@ -22,6 +22,13 @@
 
 static void drawable_draw(DisplayChannel *display, Drawable *drawable);
 
+uint32_t display_channel_generate_uid(DisplayChannel *display)
+{
+    spice_return_val_if_fail(display != NULL, 0);
+
+    return ++display->bits_unique;
+}
+
 static stat_time_t display_channel_stat_now(DisplayChannel *display)
 {
 #ifdef RED_WORKER_STAT
