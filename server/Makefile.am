@@ -126,7 +126,6 @@ libspice_server_la_SOURCES =			\
 	zlib_encoder.h				\
 	spice_bitmap_utils.h		\
 	spice_bitmap_utils.c		\
-	spice_server_utils.h		\
 	spice_image_cache.h			\
 	spice_image_cache.c			\
 	pixmap-cache.h				\

@@ -20,6 +20,7 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include "utils.h"
 #include "red_common.h"
 #include "red_dispatcher.h"
 #include "red_parse_qxl.h"
@@ -30,7 +31,7 @@ typedef struct CommonChannelClient {
     RedChannelClient base;
 
     uint32_t id;
-    struct RedWorker *worker;
+    RedWorker *worker;
     int is_low_bandwidth;
 } CommonChannelClient;
 
@@ -78,16 +79,6 @@ static inline void red_pipe_add_verb(RedChannelClient* rcc, uint16_t verb)
     item->verb = verb;
     red_channel_client_pipe_add(rcc, &item->base);
 }
-
-/* a generic safe for loop macro  */
-#define SAFE_FOREACH(link, next, cond, ring, data, get_data)               \
-    for ((((link) = ((cond) ? ring_get_head(ring) : NULL)), \
-          ((next) = ((link) ? ring_next((ring), (link)) : NULL)),          \
-          ((data) = ((link)? (get_data) : NULL)));                         \
-         (link);                                                           \
-         (((link) = (next)),                                               \
-          ((next) = ((link) ? ring_next((ring), (link)) : NULL)),          \
-          ((data) = ((link)? (get_data) : NULL))))
 
 #define LINK_TO_RCC(ptr) SPICE_CONTAINEROF(ptr, RedChannelClient, channel_link)
 #define RCC_FOREACH_SAFE(link, next, rcc, channel) \

@@ -21,16 +21,6 @@
 
 #define SPICE_LOG_DOMAIN "SpiceWorker"
 
-/* Common variable abbreviations:
- *
- * rcc - RedChannelClient
- * ccc - CursorChannelClient (not to be confused with common_cc)
- * common_cc - CommonChannelClient
- * dcc - DisplayChannelClient
- * cursor_red_channel - downcast of CursorChannel to RedChannel
- * display_red_channel - downcast of DisplayChannel to RedChannel
- */
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <fcntl.h>
@@ -62,10 +52,6 @@
 #include "spice_timer_queue.h"
 #include "cursor-channel.h"
 #include "tree.h"
-
-//#define COMPRESS_STAT
-//#define DUMP_BITMAP
-//#define COMPRESS_DEBUG
 
 #define CMD_RING_POLL_TIMEOUT 10 //milli
 #define CMD_RING_POLL_RETRIES 200

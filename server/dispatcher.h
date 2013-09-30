@@ -19,6 +19,7 @@
 #define DISPATCHER_H
 
 #include <spice.h>
+#include "utils.h"
 
 typedef struct Dispatcher Dispatcher;
 

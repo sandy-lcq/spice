@@ -19,7 +19,6 @@
 # define _PIXMAP_CACHE_H
 
 #include "red_channel.h"
-#include "spice_server_utils.h"
 
 #define MAX_CACHE_CLIENTS 4
 
