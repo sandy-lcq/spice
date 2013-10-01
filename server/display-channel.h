@@ -445,6 +445,4 @@ static inline void draw_depend_on_me(DisplayChannel *display, uint32_t surface_i
     }
 }
 
-void red_pipes_remove_drawable(Drawable *drawable);
-
 #endif /* DISPLAY_CHANNEL_H_ */
