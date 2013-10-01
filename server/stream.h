@@ -148,6 +148,8 @@ void                  stream_trace_update                           (DisplayChan
 void                  stream_maintenance                            (DisplayChannel *display,
                                                                      Drawable *candidate,
                                                                      Drawable *prev);
+void                  stream_timeout                                (DisplayChannel *display);
+void                  stream_detach_and_stop                        (DisplayChannel *display);
 
 void                  stream_agent_unref                            (DisplayChannel *display,
                                                                      StreamAgent *agent);
@@ -155,5 +157,6 @@ void                  stream_agent_stats_print                      (StreamAgent
 void                  stream_agent_stop                             (StreamAgent *agent);
 
 void detach_stream(DisplayChannel *display, Stream *stream, int detach_sized);
+void detach_streams_behind(DisplayChannel *display, QRegion *region, Drawable *drawable);
 
 #endif /* STREAM_H */

@@ -448,7 +448,6 @@ static inline void draw_depend_on_me(DisplayChannel *display, uint32_t surface_i
 void current_remove_drawable(DisplayChannel *display, Drawable *item);
 void red_pipes_remove_drawable(Drawable *drawable);
 void current_remove(DisplayChannel *display, TreeItem *item);
-void detach_streams_behind(DisplayChannel *display, QRegion *region, Drawable *drawable);
 void current_remove_all(DisplayChannel *display, int surface_id);
 
 #endif /* DISPLAY_CHANNEL_H_ */
