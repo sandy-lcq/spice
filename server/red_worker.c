@@ -333,7 +333,7 @@ static inline int red_handle_surfaces_dependencies(DisplayChannel *display, Draw
                 QRegion depend_region;
                 region_init(&depend_region);
                 region_add(&depend_region, &drawable->red_drawable->surfaces_rects[x]);
-                detach_streams_behind(display, &depend_region, NULL);
+                stream_detach_behind(display, &depend_region, NULL);
             }
         }
     }
