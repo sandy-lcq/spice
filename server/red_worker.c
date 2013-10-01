@@ -4083,7 +4083,6 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
         free_one_drawable(worker, FALSE);
     }
     worker->drawable_count++;
-    worker->red_drawable_count++;
     memset(drawable, 0, sizeof(Drawable));
     drawable->refs = 1;
     clock_gettime(CLOCK_MONOTONIC, &time);
@@ -4998,11 +4997,13 @@ static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ri
     return n;
 }
 
-static RedDrawable *red_drawable_new(void)
+static RedDrawable *red_drawable_new(RedWorker *worker)
 {
     RedDrawable * red = spice_new0(RedDrawable, 1);
 
     red->refs = 1;
+    worker->red_drawable_count++;
+
     return red;
 }
 
@@ -5045,7 +5046,7 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
         worker->repoll_cmd_ring = 0;
         switch (ext_cmd.cmd.type) {
         case QXL_CMD_DRAW: {
-            RedDrawable *red_drawable = red_drawable_new(); // returns with 1 ref
+            RedDrawable *red_drawable = red_drawable_new(worker); // returns with 1 ref
 
             if (!red_get_drawable(&worker->mem_slots, ext_cmd.group_id,
                                  red_drawable, ext_cmd.cmd.data, ext_cmd.flags)) {
