@@ -449,8 +449,6 @@ void current_remove_drawable(DisplayChannel *display, Drawable *item);
 void red_pipes_remove_drawable(Drawable *drawable);
 void current_remove(DisplayChannel *display, TreeItem *item);
 void detach_streams_behind(DisplayChannel *display, QRegion *region, Drawable *drawable);
-void drawable_draw(DisplayChannel *display, Drawable *item);
 void current_remove_all(DisplayChannel *display, int surface_id);
-void drawables_init(DisplayChannel *display);
 
 #endif /* DISPLAY_CHANNEL_H_ */

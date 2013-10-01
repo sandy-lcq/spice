@@ -20,6 +20,8 @@
 
 #include "display-channel.h"
 
+static void drawable_draw(DisplayChannel *display, Drawable *drawable);
+
 static stat_time_t display_channel_stat_now(DisplayChannel *display)
 {
 #ifdef RED_WORKER_STAT
@@ -1006,7 +1008,7 @@ static void drawable_free(DisplayChannel *display, Drawable *drawable)
     display->free_drawables = (_Drawable *)drawable;
 }
 
-void drawables_init(DisplayChannel *display)
+static void drawables_init(DisplayChannel *display)
 {
     int i;
 
@@ -1122,7 +1124,7 @@ static void drawable_deps_draw(DisplayChannel *display, Drawable *drawable)
     }
 }
 
-void drawable_draw(DisplayChannel *display, Drawable *drawable)
+static void drawable_draw(DisplayChannel *display, Drawable *drawable)
 {
     RedSurface *surface;
     SpiceCanvas *canvas;
