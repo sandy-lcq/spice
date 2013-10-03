@@ -87,7 +87,7 @@ struct RedWorker {
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
 
-    uint32_t process_commands_generation;
+    uint32_t process_display_generation;
 #ifdef RED_STATISTICS
     StatNodeRef stat;
     uint64_t *wakeup_counter;
@@ -171,7 +171,7 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
     DisplayChannel *display = worker->display_channel;
     Drawable *drawable =
         display_channel_get_drawable(display, red_drawable->effect, red_drawable, group_id,
-                                     worker->process_commands_generation);
+                                     worker->process_display_generation);
 
     if (!drawable) {
         return;
@@ -241,7 +241,7 @@ static RedDrawable *red_drawable_new(RedWorker *worker)
     return red;
 }
 
-static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
+static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
 {
     QXLCommandExt ext_cmd;
     int n = 0;
@@ -252,7 +252,7 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
         return n;
     }
 
-    worker->process_commands_generation++;
+    worker->process_display_generation++;
     *ring_is_empty = FALSE;
     while (!display_is_connected(worker) ||
            // TODO: change to average pipe size?
@@ -402,12 +402,12 @@ static void flush_display_commands(RedWorker *worker)
         uint64_t end_time;
         int ring_is_empty;
 
-        red_process_commands(worker, MAX_PIPE_SIZE, &ring_is_empty);
+        red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty);
         if (ring_is_empty) {
             break;
         }
 
-        while (red_process_commands(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
+        while (red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
             red_channel_push(RED_CHANNEL(worker->display_channel));
         }
 
@@ -1022,7 +1022,7 @@ static void handle_dev_oom(void *opaque, void *payload)
                 display->glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
-    while (red_process_commands(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
+    while (red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
         red_channel_push(display_red_channel);
     }
     if (worker->qxl->st->qif->flush_resources(worker->qxl) == 0) {
@@ -1699,7 +1699,7 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
         if (worker->running) {
             int ring_is_empty;
             red_process_cursor(worker, MAX_PIPE_SIZE, &ring_is_empty);
-            red_process_commands(worker, MAX_PIPE_SIZE, &ring_is_empty);
+            red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty);
         }
         red_push(worker);
     }
