@@ -1816,3 +1816,62 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
 
     return display;
 }
+
+static inline void set_surface_release_info(QXLReleaseInfoExt *release_info_ext,
+                                            QXLReleaseInfo *release_info, uint32_t group_id)
+{
+    release_info_ext->info = release_info;
+    release_info_ext->group_id = group_id;
+}
+
+void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd *surface,
+                                         uint32_t group_id, int loadvm)
+{
+    uint32_t surface_id;
+    RedSurface *red_surface;
+    uint8_t *data;
+
+    surface_id = surface->surface_id;
+    if SPICE_UNLIKELY(surface_id >= display->n_surfaces) {
+        goto exit;
+    }
+
+    red_surface = &display->surfaces[surface_id];
+
+    switch (surface->type) {
+    case QXL_SURFACE_CMD_CREATE: {
+        uint32_t height = surface->u.surface_create.height;
+        int32_t stride = surface->u.surface_create.stride;
+        int reloaded_surface = loadvm || (surface->flags & QXL_SURF_FLAG_KEEP_DATA);
+
+        if (red_surface->refs) {
+            spice_warning("avoiding creating a surface twice");
+            break;
+        }
+        data = surface->u.surface_create.data;
+        if (stride < 0) {
+            data -= (int32_t)(stride * (height - 1));
+        }
+        display_channel_create_surface(display, surface_id, surface->u.surface_create.width,
+                                       height, stride, surface->u.surface_create.format, data,
+                                       reloaded_surface,
+                                       // reloaded surfaces will be sent on demand
+                                       !reloaded_surface);
+        set_surface_release_info(&red_surface->create, surface->release_info, group_id);
+        break;
+    }
+    case QXL_SURFACE_CMD_DESTROY:
+        if (!red_surface->refs) {
+            spice_warning("avoiding destroying a surface twice");
+            break;
+        }
+        set_surface_release_info(&red_surface->destroy, surface->release_info, group_id);
+        display_channel_destroy_surface(display, surface_id);
+        break;
+    default:
+        spice_warn_if_reached();
+    };
+exit:
+    red_put_surface_cmd(surface);
+    free(surface);
+}

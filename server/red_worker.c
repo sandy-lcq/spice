@@ -178,13 +178,6 @@ static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
     }
 }
 
-static inline void set_surface_release_info(QXLReleaseInfoExt *release_info_ext,
-                                            QXLReleaseInfo *release_info, uint32_t group_id)
-{
-    release_info_ext->info = release_info;
-    release_info_ext->group_id = group_id;
-}
-
 void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
                         uint32_t group_id)
 {
@@ -419,60 +412,6 @@ cleanup:
     display_channel_drawable_unref(display, drawable);
 }
 
-
-static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface,
-                                       uint32_t group_id, int loadvm)
-{
-    DisplayChannel *display = worker->display_channel;
-    uint32_t surface_id;
-    RedSurface *red_surface;
-    uint8_t *data;
-
-    surface_id = surface->surface_id;
-    if SPICE_UNLIKELY(surface_id >= display->n_surfaces) {
-        goto exit;
-    }
-
-    red_surface = &display->surfaces[surface_id];
-
-    switch (surface->type) {
-    case QXL_SURFACE_CMD_CREATE: {
-        uint32_t height = surface->u.surface_create.height;
-        int32_t stride = surface->u.surface_create.stride;
-        int reloaded_surface = loadvm || (surface->flags & QXL_SURF_FLAG_KEEP_DATA);
-
-        if (red_surface->refs) {
-            spice_warning("avoiding creating a surface twice");
-            break;
-        }
-        data = surface->u.surface_create.data;
-        if (stride < 0) {
-            data -= (int32_t)(stride * (height - 1));
-        }
-        display_channel_create_surface(worker->display_channel, surface_id, surface->u.surface_create.width,
-                                       height, stride, surface->u.surface_create.format, data,
-                                       reloaded_surface,
-                                       // reloaded surfaces will be sent on demand
-                                       !reloaded_surface);
-        set_surface_release_info(&red_surface->create, surface->release_info, group_id);
-        break;
-    }
-    case QXL_SURFACE_CMD_DESTROY:
-        if (!red_surface->refs) {
-            spice_warning("avoiding destroying a surface twice");
-            break;
-        }
-        set_surface_release_info(&red_surface->destroy, surface->release_info, group_id);
-        display_channel_destroy_surface(display, surface_id);
-        break;
-    default:
-        spice_warn_if_reached();
-    };
-exit:
-    red_put_surface_cmd(surface);
-    free(surface);
-}
-
 static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
 {
     QXLCommandExt ext_cmd;
@@ -627,7 +566,8 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
                 free(surface);
                 break;
             }
-            red_process_surface(worker, surface, ext_cmd.group_id, FALSE);
+            display_channel_process_surface_cmd(worker->display_channel, surface,
+                                                ext_cmd.group_id, FALSE);
             break;
         }
         default:
@@ -1644,7 +1584,8 @@ static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
             free(surface_cmd);
             return FALSE;
         }
-        red_process_surface(worker, surface_cmd, ext->group_id, TRUE);
+        display_channel_process_surface_cmd(worker->display_channel, surface_cmd,
+                                            ext->group_id, TRUE);
         break;
     default:
         spice_warning("unhandled loadvm command type (%d)", ext->cmd.type);
