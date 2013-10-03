@@ -4966,12 +4966,12 @@ static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ri
             if (worker->repoll_cursor_ring < CMD_RING_POLL_RETRIES) {
                 worker->repoll_cursor_ring++;
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
-                break;
+                return n;
             }
             if (worker->repoll_cursor_ring > CMD_RING_POLL_RETRIES ||
                 worker->qxl->st->qif->req_cursor_notification(worker->qxl)) {
                 worker->repoll_cursor_ring++;
-                break;
+                return n;
             }
             continue;
         }
@@ -5028,12 +5028,12 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
             if (worker->repoll_cmd_ring < CMD_RING_POLL_RETRIES) {
                 worker->repoll_cmd_ring++;
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
-                break;
+                return n;
             }
             if (worker->repoll_cmd_ring > CMD_RING_POLL_RETRIES ||
                          worker->qxl->st->qif->req_cmd_notification(worker->qxl)) {
                 worker->repoll_cmd_ring++;
-                break;
+                return n;
             }
             continue;
         }
