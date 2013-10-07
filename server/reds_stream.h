@@ -101,6 +101,7 @@ void reds_stream_free(RedsStream *s);
 
 void reds_stream_push_channel_event(RedsStream *s, int event);
 void reds_stream_remove_watch(RedsStream* s);
+RedsStream *reds_stream_new(int socket);
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream);
 int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx);
 

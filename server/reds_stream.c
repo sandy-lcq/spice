@@ -149,6 +149,35 @@ void reds_stream_push_channel_event(RedsStream *s, int event)
     main_dispatcher_channel_event(event, s->info);
 }
 
+static void reds_stream_set_socket(RedsStream *stream, int socket)
+{
+    stream->socket = socket;
+    /* deprecated fields. Filling them for backward compatibility */
+    stream->info->llen = sizeof(stream->info->laddr);
+    stream->info->plen = sizeof(stream->info->paddr);
+    getsockname(stream->socket, (struct sockaddr*)(&stream->info->laddr), &stream->info->llen);
+    getpeername(stream->socket, (struct sockaddr*)(&stream->info->paddr), &stream->info->plen);
+
+    stream->info->flags |= SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT;
+    stream->info->llen_ext = sizeof(stream->info->laddr_ext);
+    stream->info->plen_ext = sizeof(stream->info->paddr_ext);
+    getsockname(stream->socket, (struct sockaddr*)(&stream->info->laddr_ext),
+                &stream->info->llen_ext);
+    getpeername(stream->socket, (struct sockaddr*)(&stream->info->paddr_ext),
+                &stream->info->plen_ext);
+}
+
+RedsStream *reds_stream_new(int socket)
+{
+    RedsStream *stream;
+
+    stream = spice_new0(RedsStream, 1);
+    stream->info = spice_new0(SpiceChannelEventInfo, 1);
+    reds_stream_set_socket(stream, socket);
+
+    return stream;
+}
+
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
 {
     int ssl_error;
