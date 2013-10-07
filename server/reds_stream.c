@@ -57,6 +57,24 @@ ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte)
     return ret;
 }
 
+bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n)
+{
+    const uint8_t *buf = (uint8_t *)in_buf;
+
+    while (n) {
+        int now = reds_stream_write(stream, buf, n);
+        if (now <= 0) {
+            if (now == -1 && (errno == EINTR || errno == EAGAIN)) {
+                continue;
+            }
+            return FALSE;
+        }
+        n -= now;
+        buf += now;
+    }
+    return TRUE;
+}
+
 static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nbyte);
 
 ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
@@ -132,6 +150,16 @@ void reds_stream_push_channel_event(RedsStream *s, int event)
 }
 
 #if HAVE_SASL
+bool reds_stream_write_u8(RedsStream *s, uint8_t n)
+{
+    return reds_stream_write_all(s, &n, sizeof(uint8_t));
+}
+
+bool reds_stream_write_u32(RedsStream *s, uint32_t n)
+{
+    return reds_stream_write_all(s, &n, sizeof(uint32_t));
+}
+
 static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nbyte)
 {
     ssize_t ret;

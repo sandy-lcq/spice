@@ -1396,24 +1396,6 @@ int reds_handle_migrate_data(MainChannelClient *mcc, SpiceMigrateDataMain *mig_d
     return TRUE;
 }
 
-static int sync_write(RedsStream *stream, const void *in_buf, size_t n)
-{
-    const uint8_t *buf = (uint8_t *)in_buf;
-
-    while (n) {
-        int now = reds_stream_write(stream, buf, n);
-        if (now <= 0) {
-            if (now == -1 && (errno == EINTR || errno == EAGAIN)) {
-                continue;
-            }
-            return FALSE;
-        }
-        n -= now;
-        buf += now;
-    }
-    return TRUE;
-}
-
 static void reds_channel_init_auth_caps(RedLinkInfo *link, RedChannel *channel)
 {
     if (sasl_enabled && !link->skip_auth) {
@@ -1474,13 +1456,13 @@ static int reds_send_link_ack(RedLinkInfo *link)
     BIO_get_mem_ptr(bio, &bmBuf);
     memcpy(ack.pub_key, bmBuf->data, sizeof(ack.pub_key));
 
-    if (!sync_write(link->stream, &header, sizeof(header)))
+    if (!reds_stream_write_all(link->stream, &header, sizeof(header)))
         goto end;
-    if (!sync_write(link->stream, &ack, sizeof(ack)))
+    if (!reds_stream_write_all(link->stream, &ack, sizeof(ack)))
         goto end;
-    if (!sync_write(link->stream, channel_caps->common_caps, channel_caps->num_common_caps * sizeof(uint32_t)))
+    if (!reds_stream_write_all(link->stream, channel_caps->common_caps, channel_caps->num_common_caps * sizeof(uint32_t)))
         goto end;
-    if (!sync_write(link->stream, channel_caps->caps, channel_caps->num_caps * sizeof(uint32_t)))
+    if (!reds_stream_write_all(link->stream, channel_caps->caps, channel_caps->num_caps * sizeof(uint32_t)))
         goto end;
 
     ret = TRUE;
@@ -1490,7 +1472,7 @@ end:
     return ret;
 }
 
-static int reds_send_link_error(RedLinkInfo *link, uint32_t error)
+static bool reds_send_link_error(RedLinkInfo *link, uint32_t error)
 {
     SpiceLinkHeader header;
     SpiceLinkReply reply;
@@ -1501,7 +1483,7 @@ static int reds_send_link_error(RedLinkInfo *link, uint32_t error)
     header.minor_version = SPICE_VERSION_MINOR;
     memset(&reply, 0, sizeof(reply));
     reply.error = error;
-    return sync_write(link->stream, &header, sizeof(header)) && sync_write(link->stream, &reply,
+    return reds_stream_write_all(link->stream, &header, sizeof(header)) && reds_stream_write_all(link->stream, &reply,
                                                                          sizeof(reply));
 }
 
@@ -1523,7 +1505,7 @@ static void reds_info_new_channel(RedLinkInfo *link, int connection_id)
 
 static void reds_send_link_result(RedLinkInfo *link, uint32_t error)
 {
-    sync_write(link->stream, &error, sizeof(error));
+    reds_stream_write_all(link->stream, &error, sizeof(error));
 }
 
 int reds_expects_link_id(uint32_t connection_id)
@@ -1978,18 +1960,6 @@ static inline void async_read_clear_handlers(AsyncRead *obj)
     reds_stream_remove_watch(obj->stream);
 }
 
-#if HAVE_SASL
-static int sync_write_u8(RedsStream *s, uint8_t n)
-{
-    return sync_write(s, &n, sizeof(uint8_t));
-}
-
-static int sync_write_u32(RedsStream *s, uint32_t n)
-{
-    return sync_write(s, &n, sizeof(uint32_t));
-}
-#endif
-
 static void async_read_handler(int fd, int event, void *data)
 {
     AsyncRead *obj = (AsyncRead *)data;
@@ -2158,14 +2128,14 @@ static void reds_handle_auth_sasl_step(void *opaque)
 
     if (serveroutlen) {
         serveroutlen += 1;
-        sync_write(link->stream, &serveroutlen, sizeof(uint32_t));
-        sync_write(link->stream, serverout, serveroutlen);
+        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
+        reds_stream_write_all(link->stream, serverout, serveroutlen);
     } else {
-        sync_write(link->stream, &serveroutlen, sizeof(uint32_t));
+        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
     }
 
     /* Whether auth is complete */
-    sync_write_u8(link->stream, err == SASL_CONTINUE ? 0 : 1);
+    reds_stream_write_u8(link->stream, err == SASL_CONTINUE ? 0 : 1);
 
     if (err == SASL_CONTINUE) {
         spice_info("%s", "Authentication must continue (step)");
@@ -2183,7 +2153,7 @@ static void reds_handle_auth_sasl_step(void *opaque)
         }
 
         spice_info("Authentication successful");
-        sync_write_u32(link->stream, SPICE_LINK_ERR_OK); /* Accept auth */
+        reds_stream_write_u32(link->stream, SPICE_LINK_ERR_OK); /* Accept auth */
 
         /*
          * Delay writing in SSF encoded until now
@@ -2197,9 +2167,9 @@ static void reds_handle_auth_sasl_step(void *opaque)
     return;
 
 authreject:
-    sync_write_u32(link->stream, 1); /* Reject auth */
-    sync_write_u32(link->stream, sizeof("Authentication failed"));
-    sync_write(link->stream, "Authentication failed", sizeof("Authentication failed"));
+    reds_stream_write_u32(link->stream, 1); /* Reject auth */
+    reds_stream_write_u32(link->stream, sizeof("Authentication failed"));
+    reds_stream_write_all(link->stream, "Authentication failed", sizeof("Authentication failed"));
 
 authabort:
     reds_link_free(link);
@@ -2289,14 +2259,14 @@ static void reds_handle_auth_sasl_start(void *opaque)
 
     if (serveroutlen) {
         serveroutlen += 1;
-        sync_write(link->stream, &serveroutlen, sizeof(uint32_t));
-        sync_write(link->stream, serverout, serveroutlen);
+        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
+        reds_stream_write_all(link->stream, serverout, serveroutlen);
     } else {
-        sync_write(link->stream, &serveroutlen, sizeof(uint32_t));
+        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
     }
 
     /* Whether auth is complete */
-    sync_write_u8(link->stream, err == SASL_CONTINUE ? 0 : 1);
+    reds_stream_write_u8(link->stream, err == SASL_CONTINUE ? 0 : 1);
 
     if (err == SASL_CONTINUE) {
         spice_info("%s", "Authentication must continue (start)");
@@ -2314,7 +2284,7 @@ static void reds_handle_auth_sasl_start(void *opaque)
         }
 
         spice_info("Authentication successful");
-        sync_write_u32(link->stream, SPICE_LINK_ERR_OK); /* Accept auth */
+        reds_stream_write_u32(link->stream, SPICE_LINK_ERR_OK); /* Accept auth */
 
         /*
          * Delay writing in SSF encoded until now
@@ -2328,9 +2298,9 @@ static void reds_handle_auth_sasl_start(void *opaque)
     return;
 
 authreject:
-    sync_write_u32(link->stream, 1); /* Reject auth */
-    sync_write_u32(link->stream, sizeof("Authentication failed"));
-    sync_write(link->stream, "Authentication failed", sizeof("Authentication failed"));
+    reds_stream_write_u32(link->stream, 1); /* Reject auth */
+    reds_stream_write_u32(link->stream, sizeof("Authentication failed"));
+    reds_stream_write_all(link->stream, "Authentication failed", sizeof("Authentication failed"));
 
 authabort:
     reds_link_free(link);
@@ -2530,8 +2500,8 @@ static void reds_start_auth_sasl(RedLinkInfo *link)
     sasl->mechlist = spice_strdup(mechlist);
 
     mechlistlen = strlen(mechlist);
-    if (!sync_write(link->stream, &mechlistlen, sizeof(uint32_t))
-        || !sync_write(link->stream, sasl->mechlist, mechlistlen)) {
+    if (!reds_stream_write_all(link->stream, &mechlistlen, sizeof(uint32_t))
+        || !reds_stream_write_all(link->stream, sasl->mechlist, mechlistlen)) {
         spice_warning("SASL mechanisms write error");
         goto error;
     }
