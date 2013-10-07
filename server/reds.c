@@ -37,12 +37,8 @@
 #include <ctype.h>
 #include <stdbool.h>
 
-#include <openssl/bio.h>
-#include <openssl/pem.h>
-#include <openssl/bn.h>
-#include <openssl/rsa.h>
-#include <openssl/ssl.h>
 #include <openssl/err.h>
+
 #if HAVE_SASL
 #include <sasl/sasl.h>
 #endif
@@ -2677,24 +2673,22 @@ static void reds_handle_new_link(RedLinkInfo *link)
 static void reds_handle_ssl_accept(int fd, int event, void *data)
 {
     RedLinkInfo *link = (RedLinkInfo *)data;
-    int return_code;
+    int return_code = reds_stream_ssl_accept(link->stream);
 
-    if ((return_code = SSL_accept(link->stream->ssl)) != 1) {
-        int ssl_error = SSL_get_error(link->stream->ssl, return_code);
-        if (ssl_error != SSL_ERROR_WANT_READ && ssl_error != SSL_ERROR_WANT_WRITE) {
-            spice_warning("SSL_accept failed, error=%d", ssl_error);
+    switch (return_code) {
+        case REDS_STREAM_SSL_STATUS_ERROR:
             reds_link_free(link);
-        } else {
-            if (ssl_error == SSL_ERROR_WANT_READ) {
-                core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_READ);
-            } else {
-                core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_WRITE);
-            }
-        }
-        return;
+            return;
+        case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
+            core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_READ);
+            return;
+        case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
+            core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_WRITE);
+            return;
+        case REDS_STREAM_SSL_STATUS_OK:
+            reds_stream_remove_watch(link->stream);
+            reds_handle_new_link(link);
     }
-    reds_stream_remove_watch(link->stream);
-    reds_handle_new_link(link);
 }
 
 static RedLinkInfo *reds_init_client_connection(int socket)
@@ -2756,52 +2750,33 @@ error:
 static RedLinkInfo *reds_init_client_ssl_connection(int socket)
 {
     RedLinkInfo *link;
-    int return_code;
-    int ssl_error;
-    BIO *sbio;
+    int ssl_status;
 
     link = reds_init_client_connection(socket);
     if (link == NULL)
         goto error;
 
-    // Handle SSL handshaking
-    if (!(sbio = BIO_new_socket(link->stream->socket, BIO_NOCLOSE))) {
-        spice_warning("could not allocate ssl bio socket");
-        goto error;
-    }
-
-    link->stream->ssl = SSL_new(reds->ctx);
-    if (!link->stream->ssl) {
-        spice_warning("could not allocate ssl context");
-        BIO_free(sbio);
-        goto error;
-    }
-
-    SSL_set_bio(link->stream->ssl, sbio, sbio);
-
     link->stream->write = stream_ssl_write_cb;
     link->stream->read = stream_ssl_read_cb;
     link->stream->writev = NULL;
 
-    return_code = SSL_accept(link->stream->ssl);
-    if (return_code == 1) {
-        reds_handle_new_link(link);
-        return link;
-    }
-
-    ssl_error = SSL_get_error(link->stream->ssl, return_code);
-    if (return_code == -1 && (ssl_error == SSL_ERROR_WANT_READ ||
-                              ssl_error == SSL_ERROR_WANT_WRITE)) {
-        int eventmask = ssl_error == SSL_ERROR_WANT_READ ?
-            SPICE_WATCH_EVENT_READ : SPICE_WATCH_EVENT_WRITE;
-        link->stream->watch = core->watch_add(link->stream->socket, eventmask,
+    ssl_status = reds_stream_enable_ssl(link->stream, reds->ctx);
+    switch (ssl_status) {
+        case REDS_STREAM_SSL_STATUS_OK:
+            reds_handle_new_link(link);
+            return link;
+        case REDS_STREAM_SSL_STATUS_ERROR:
+            goto error;
+        case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
+            link->stream->watch = core->watch_add(link->stream->socket, SPICE_WATCH_EVENT_READ,
                                             reds_handle_ssl_accept, link);
-        return link;
+            break;
+        case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
+            link->stream->watch = core->watch_add(link->stream->socket, SPICE_WATCH_EVENT_WRITE,
+                                                  reds_handle_ssl_accept, link);
+            break;
     }
-
-    ERR_print_errors_fp(stderr);
-    spice_warning("SSL_accept failed, error=%d", ssl_error);
-    SSL_free(link->stream->ssl);
+    return link;
 
 error:
     free(link->stream);

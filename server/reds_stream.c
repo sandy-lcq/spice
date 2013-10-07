@@ -149,6 +149,56 @@ void reds_stream_push_channel_event(RedsStream *s, int event)
     main_dispatcher_channel_event(event, s->info);
 }
 
+RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
+{
+    int ssl_error;
+    int return_code;
+
+    return_code = SSL_accept(stream->ssl);
+    if (return_code == 1) {
+        return REDS_STREAM_SSL_STATUS_OK;
+    }
+
+    ssl_error = SSL_get_error(stream->ssl, return_code);
+    if (return_code == -1 && (ssl_error == SSL_ERROR_WANT_READ ||
+                              ssl_error == SSL_ERROR_WANT_WRITE)) {
+        if (ssl_error == SSL_ERROR_WANT_READ) {
+            return REDS_STREAM_SSL_STATUS_WAIT_FOR_READ;
+        } else {
+            return REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE;
+        }
+    }
+
+    ERR_print_errors_fp(stderr);
+    spice_warning("SSL_accept failed, error=%d", ssl_error);
+    SSL_free(stream->ssl);
+    stream->ssl = NULL;
+
+    return REDS_STREAM_SSL_STATUS_ERROR;
+}
+
+int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
+{
+    BIO *sbio;
+
+    // Handle SSL handshaking
+    if (!(sbio = BIO_new_socket(stream->socket, BIO_NOCLOSE))) {
+        spice_warning("could not allocate ssl bio socket");
+        return REDS_STREAM_SSL_STATUS_ERROR;
+    }
+
+    stream->ssl = SSL_new(ctx);
+    if (!stream->ssl) {
+        spice_warning("could not allocate ssl context");
+        BIO_free(sbio);
+        return REDS_STREAM_SSL_STATUS_ERROR;
+    }
+
+    SSL_set_bio(stream->ssl, sbio, sbio);
+
+    return reds_stream_ssl_accept(stream);
+}
+
 #if HAVE_SASL
 bool reds_stream_write_u8(RedsStream *s, uint8_t n)
 {
