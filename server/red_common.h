@@ -29,6 +29,8 @@
 
 #include "spice.h"
 
+#define SPICE_GNUC_VISIBLE __attribute__ ((visibility ("default")))
+
 enum {
     STREAM_VIDEO_INVALID,
     STREAM_VIDEO_OFF,

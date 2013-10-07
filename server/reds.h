@@ -34,8 +34,6 @@
 #include "red_channel.h"
 #include "migration_protocol.h"
 
-#define SPICE_GNUC_VISIBLE __attribute__ ((visibility ("default")))
-
 #if HAVE_SASL
 typedef struct RedsSASL {
     sasl_conn_t *conn;
