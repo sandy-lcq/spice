@@ -28,6 +28,9 @@
 #if HAVE_SASL
 #include <sasl/sasl.h>
 
+typedef void (*AsyncReadDone)(void *opaque);
+typedef void (*AsyncReadError)(void *opaque, int err);
+
 typedef struct RedsSASL {
     sasl_conn_t *conn;
 
@@ -57,6 +60,19 @@ typedef struct RedsSASL {
 #endif
 
 typedef struct RedsStream RedsStream;
+typedef struct AsyncRead {
+    RedsStream *stream;
+    void *opaque;
+    uint8_t *now;
+    uint8_t *end;
+    AsyncReadDone done;
+    AsyncReadError error;
+} AsyncRead;
+
+void async_read_handler(int fd, int event, void *data);
+void async_read_set_error_handler(AsyncRead *async,
+                                  AsyncReadError error_handler,
+                                  void *opaque);
 
 struct RedsStream {
     int socket;
@@ -66,6 +82,8 @@ struct RedsStream {
        receive may return data afterward. check the flag before calling receive*/
     int shutdown;
     SSL *ssl;
+
+    AsyncRead async_read;
 
 #if HAVE_SASL
     RedsSASL sasl;

@@ -246,6 +246,8 @@ RedsStream *reds_stream_new(int socket)
     stream->write = stream_write_cb;
     stream->writev = stream_writev_cb;
 
+    stream->async_read.stream = stream;
+
     return stream;
 }
 
@@ -301,6 +303,68 @@ int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
     stream->writev = NULL;
 
     return reds_stream_ssl_accept(stream);
+}
+
+void async_read_set_error_handler(AsyncRead *async,
+                                  AsyncReadError error_handler,
+                                 void *opaque)
+{
+    async->error = error_handler;
+}
+
+static inline void async_read_clear_handlers(AsyncRead *obj)
+{
+    if (!obj->stream->watch) {
+        return;
+    }
+
+    reds_stream_remove_watch(obj->stream);
+}
+
+void async_read_handler(int fd, int event, void *data)
+{
+    AsyncRead *obj = (AsyncRead *)data;
+
+    for (;;) {
+        int n = obj->end - obj->now;
+
+        spice_assert(n > 0);
+        n = reds_stream_read(obj->stream, obj->now, n);
+        if (n <= 0) {
+            if (n < 0) {
+                switch (errno) {
+                case EAGAIN:
+                    if (!obj->stream->watch) {
+                        obj->stream->watch = core->watch_add(obj->stream->socket,
+                                                           SPICE_WATCH_EVENT_READ,
+                                                           async_read_handler, obj);
+                    }
+                    return;
+                case EINTR:
+                    break;
+                default:
+                    async_read_clear_handlers(obj);
+		    if (obj->error) {
+                        obj->error(obj->opaque, errno);
+		    }
+                    return;
+                }
+            } else {
+                async_read_clear_handlers(obj);
+		if (obj->error) {
+		    obj->error(obj->opaque, 0);
+		}
+                return;
+            }
+        } else {
+            obj->now += n;
+            if (obj->now == obj->end) {
+                async_read_clear_handlers(obj);
+                obj->done(obj->opaque);
+                return;
+            }
+        }
+    }
 }
 
 #if HAVE_SASL
