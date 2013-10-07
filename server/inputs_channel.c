@@ -37,6 +37,7 @@
 #include "spice.h"
 #include "red_common.h"
 #include "reds.h"
+#include "reds_stream.h"
 #include "red_channel.h"
 #include "main_channel.h"
 #include "inputs_channel.h"

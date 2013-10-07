@@ -19,74 +19,16 @@
 #define _H_REDS
 
 #include <stdint.h>
-#include <openssl/ssl.h>
 #include <sys/uio.h>
 #include <spice/vd_agent.h>
 #include <config.h>
 
-#if HAVE_SASL
-#include <sasl/sasl.h>
-#endif
 
 #include "common/marshaller.h"
 #include "common/messages.h"
 #include "spice.h"
 #include "red_channel.h"
 #include "migration_protocol.h"
-
-#if HAVE_SASL
-typedef struct RedsSASL {
-    sasl_conn_t *conn;
-
-    /* If we want to negotiate an SSF layer with client */
-    int wantSSF :1;
-    /* If we are now running the SSF layer */
-    int runSSF :1;
-
-    /*
-     * Buffering encoded data to allow more clear data
-     * to be stuffed onto the output buffer
-     */
-    const uint8_t *encoded;
-    unsigned int encodedLength;
-    unsigned int encodedOffset;
-
-    SpiceBuffer inbuffer;
-
-    char *username;
-    char *mechlist;
-    char *mechname;
-
-    /* temporary data during authentication */
-    unsigned int len;
-    char *data;
-} RedsSASL;
-#endif
-
-struct RedsStream {
-    int socket;
-    SpiceWatch *watch;
-
-    /* set it to TRUE if you shutdown the socket. shutdown read doesn't work as accepted -
-       receive may return data afterward. check the flag before calling receive*/
-    int shutdown;
-    SSL *ssl;
-
-#if HAVE_SASL
-    RedsSASL sasl;
-#endif
-
-    /* life time of info:
-     * allocated when creating RedsStream.
-     * deallocated when main_dispatcher handles the SPICE_CHANNEL_EVENT_DISCONNECTED
-     * event, either from same thread or by call back from main thread. */
-    SpiceChannelEventInfo* info;
-
-    /* private */
-    ssize_t (*read)(RedsStream *s, void *buf, size_t nbyte);
-    ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
-    ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
-};
 
 struct QXLState {
     QXLInterface          *qif;
@@ -108,12 +50,6 @@ typedef struct RedsMigSpice {
     int port;
     int sport;
 } RedsMigSpice;
-
-/* any thread */
-ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte);
-ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte);
-ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt);
-void reds_stream_free(RedsStream *s);
 
 /* main thread only */
 void reds_handle_channel_event(int event, SpiceChannelEventInfo *info);

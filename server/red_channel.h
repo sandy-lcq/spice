@@ -31,6 +31,7 @@
 #include "spice.h"
 #include "red_common.h"
 #include "demarshallers.h"
+#include "reds_stream.h"
 
 #define MAX_SEND_BUFS 1000
 #define CLIENT_ACK_WINDOW 20
@@ -131,7 +132,6 @@ typedef struct BufDescriptor {
     uint8_t *data;
 } BufDescriptor;
 
-typedef struct RedsStream RedsStream;
 typedef struct RedChannel RedChannel;
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;

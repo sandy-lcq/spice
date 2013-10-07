@@ -64,6 +64,7 @@
 
 #include "spice.h"
 #include "red_worker.h"
+#include "reds_stream.h"
 #include "reds_sw_canvas.h"
 #include "glz_encoder_dictionary.h"
 #include "glz_encoder.h"
