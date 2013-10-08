@@ -251,6 +251,11 @@ RedsStream *reds_stream_new(int socket)
     return stream;
 }
 
+void reds_stream_disable_writev(RedsStream *stream)
+{
+    stream->writev = NULL;
+}
+
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
 {
     int ssl_error;
@@ -462,5 +467,510 @@ static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte)
     memcpy(buf, decoded, n);
     spice_buffer_append(&s->sasl.inbuffer, decoded + n, decodedlen - n);
     return n;
+}
+
+static char *addr_to_string(const char *format,
+                            struct sockaddr_storage *sa,
+                            socklen_t salen)
+{
+    char *addr;
+    char host[NI_MAXHOST];
+    char serv[NI_MAXSERV];
+    int err;
+    size_t addrlen;
+
+    if ((err = getnameinfo((struct sockaddr *)sa, salen,
+                           host, sizeof(host),
+                           serv, sizeof(serv),
+                           NI_NUMERICHOST | NI_NUMERICSERV)) != 0) {
+        spice_warning("Cannot resolve address %d: %s",
+                      err, gai_strerror(err));
+        return NULL;
+    }
+
+    /* Enough for the existing format + the 2 vars we're
+     * substituting in. */
+    addrlen = strlen(format) + strlen(host) + strlen(serv);
+    addr = spice_malloc(addrlen + 1);
+    snprintf(addr, addrlen, format, host, serv);
+    addr[addrlen] = '\0';
+
+    return addr;
+}
+
+static char *reds_stream_get_local_address(RedsStream *stream)
+{
+    return addr_to_string("%s;%s", &stream->info->laddr_ext,
+                          stream->info->llen_ext);
+}
+
+static char *reds_stream_get_remote_address(RedsStream *stream)
+{
+    return addr_to_string("%s;%s", &stream->info->paddr_ext,
+                          stream->info->plen_ext);
+}
+
+static int auth_sasl_check_ssf(RedsSASL *sasl, int *runSSF)
+{
+    const void *val;
+    int err, ssf;
+
+    *runSSF = 0;
+    if (!sasl->wantSSF) {
+        return 1;
+    }
+
+    err = sasl_getprop(sasl->conn, SASL_SSF, &val);
+    if (err != SASL_OK) {
+        return 0;
+    }
+
+    ssf = *(const int *)val;
+    spice_info("negotiated an SSF of %d", ssf);
+    if (ssf < 56) {
+        return 0; /* 56 is good for Kerberos */
+    }
+
+    *runSSF = 1;
+
+    /* We have a SSF that's good enough */
+    return 1;
+}
+
+/*
+ * Step Msg
+ *
+ * Input from client:
+ *
+ * u32 clientin-length
+ * u8-array clientin-string
+ *
+ * Output to client:
+ *
+ * u32 serverout-length
+ * u8-array serverout-strin
+ * u8 continue
+ */
+#define SASL_DATA_MAX_LEN (1024 * 1024)
+
+RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+{
+    const char *serverout;
+    unsigned int serveroutlen;
+    int err;
+    char *clientdata = NULL;
+    RedsSASL *sasl = &stream->sasl;
+    uint32_t datalen = sasl->len;
+    AsyncRead *obj = &stream->async_read;
+
+    /* NB, distinction of NULL vs "" is *critical* in SASL */
+    if (datalen) {
+        clientdata = sasl->data;
+        clientdata[datalen - 1] = '\0'; /* Wire includes '\0', but make sure */
+        datalen--; /* Don't count NULL byte when passing to _start() */
+    }
+
+    spice_info("Step using SASL Data %p (%d bytes)",
+               clientdata, datalen);
+    err = sasl_server_step(sasl->conn,
+                           clientdata,
+                           datalen,
+                           &serverout,
+                           &serveroutlen);
+    if (err != SASL_OK &&
+        err != SASL_CONTINUE) {
+        spice_warning("sasl step failed %d (%s)",
+                      err, sasl_errdetail(sasl->conn));
+        return REDS_SASL_ERROR_GENERIC;
+    }
+
+    if (serveroutlen > SASL_DATA_MAX_LEN) {
+        spice_warning("sasl step reply data too long %d",
+                      serveroutlen);
+        return REDS_SASL_ERROR_INVALID_DATA;
+    }
+
+    spice_info("SASL return data %d bytes, %p", serveroutlen, serverout);
+
+    if (serveroutlen) {
+        serveroutlen += 1;
+        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+        reds_stream_write_all(stream, serverout, serveroutlen);
+    } else {
+        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+    }
+
+    /* Whether auth is complete */
+    reds_stream_write_u8(stream, err == SASL_CONTINUE ? 0 : 1);
+
+    if (err == SASL_CONTINUE) {
+        spice_info("%s", "Authentication must continue (step)");
+        /* Wait for step length */
+        obj->now = (uint8_t *)&sasl->len;
+        obj->end = obj->now + sizeof(uint32_t);
+        obj->done = read_cb;
+        async_read_handler(0, 0, &stream->async_read);
+        return REDS_SASL_ERROR_CONTINUE;
+    } else {
+        int ssf;
+
+        if (auth_sasl_check_ssf(sasl, &ssf) == 0) {
+            spice_warning("Authentication rejected for weak SSF");
+            goto authreject;
+        }
+
+        spice_info("Authentication successful");
+        reds_stream_write_u32(stream, SPICE_LINK_ERR_OK); /* Accept auth */
+
+        /*
+         * Delay writing in SSF encoded until now
+         */
+        sasl->runSSF = ssf;
+        reds_stream_disable_writev(stream); /* make sure writev isn't called directly anymore */
+
+        return REDS_SASL_ERROR_OK;
+    }
+
+authreject:
+    reds_stream_write_u32(stream, 1); /* Reject auth */
+    reds_stream_write_u32(stream, sizeof("Authentication failed"));
+    reds_stream_write_all(stream, "Authentication failed", sizeof("Authentication failed"));
+
+    return REDS_SASL_ERROR_AUTH_FAILED;
+}
+
+RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+{
+    AsyncRead *obj = &stream->async_read;
+    RedsSASL *sasl = &stream->sasl;
+
+    spice_info("Got steplen %d", sasl->len);
+    if (sasl->len > SASL_DATA_MAX_LEN) {
+        spice_warning("Too much SASL data %d", sasl->len);
+        return REDS_SASL_ERROR_INVALID_DATA;
+    }
+
+    if (sasl->len == 0) {
+        read_cb(opaque);
+        /* FIXME: can't report potential errors correctly here,
+         * but read_cb() will have done the needed RedLinkInfo cleanups
+         * if an error occurs, so the caller should not need to do more
+         * treatment */
+        return REDS_SASL_ERROR_OK;
+    } else {
+        sasl->data = spice_realloc(sasl->data, sasl->len);
+        obj->now = (uint8_t *)sasl->data;
+        obj->end = obj->now + sasl->len;
+        obj->done = read_cb;
+        async_read_handler(0, 0, obj);
+        return REDS_SASL_ERROR_OK;
+    }
+}
+
+/*
+ * Start Msg
+ *
+ * Input from client:
+ *
+ * u32 clientin-length
+ * u8-array clientin-string
+ *
+ * Output to client:
+ *
+ * u32 serverout-length
+ * u8-array serverout-strin
+ * u8 continue
+ */
+
+RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+{
+    AsyncRead *obj = &stream->async_read;
+    const char *serverout;
+    unsigned int serveroutlen;
+    int err;
+    char *clientdata = NULL;
+    RedsSASL *sasl = &stream->sasl;
+    uint32_t datalen = sasl->len;
+
+    /* NB, distinction of NULL vs "" is *critical* in SASL */
+    if (datalen) {
+        clientdata = sasl->data;
+        clientdata[datalen - 1] = '\0'; /* Should be on wire, but make sure */
+        datalen--; /* Don't count NULL byte when passing to _start() */
+    }
+
+    spice_info("Start SASL auth with mechanism %s. Data %p (%d bytes)",
+               sasl->mechlist, clientdata, datalen);
+    err = sasl_server_start(sasl->conn,
+                            sasl->mechlist,
+                            clientdata,
+                            datalen,
+                            &serverout,
+                            &serveroutlen);
+    if (err != SASL_OK &&
+        err != SASL_CONTINUE) {
+        spice_warning("sasl start failed %d (%s)",
+                    err, sasl_errdetail(sasl->conn));
+        return REDS_SASL_ERROR_INVALID_DATA;
+    }
+
+    if (serveroutlen > SASL_DATA_MAX_LEN) {
+        spice_warning("sasl start reply data too long %d",
+                    serveroutlen);
+        return REDS_SASL_ERROR_INVALID_DATA;
+    }
+
+    spice_info("SASL return data %d bytes, %p", serveroutlen, serverout);
+
+    if (serveroutlen) {
+        serveroutlen += 1;
+        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+        reds_stream_write_all(stream, serverout, serveroutlen);
+    } else {
+        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+    }
+
+    /* Whether auth is complete */
+    reds_stream_write_u8(stream, err == SASL_CONTINUE ? 0 : 1);
+
+    if (err == SASL_CONTINUE) {
+        spice_info("%s", "Authentication must continue (start)");
+        /* Wait for step length */
+        obj->now = (uint8_t *)&sasl->len;
+        obj->end = obj->now + sizeof(uint32_t);
+        obj->done = read_cb;
+        async_read_handler(0, 0, &stream->async_read);
+        return REDS_SASL_ERROR_CONTINUE;
+    } else {
+        int ssf;
+
+        if (auth_sasl_check_ssf(sasl, &ssf) == 0) {
+            spice_warning("Authentication rejected for weak SSF");
+            goto authreject;
+        }
+
+        spice_info("Authentication successful");
+        reds_stream_write_u32(stream, SPICE_LINK_ERR_OK); /* Accept auth */
+
+        /*
+         * Delay writing in SSF encoded until now
+         */
+        sasl->runSSF = ssf;
+        reds_stream_disable_writev(stream); /* make sure writev isn't called directly anymore */
+        return REDS_SASL_ERROR_OK;
+    }
+
+authreject:
+    reds_stream_write_u32(stream, 1); /* Reject auth */
+    reds_stream_write_u32(stream, sizeof("Authentication failed"));
+    reds_stream_write_all(stream, "Authentication failed", sizeof("Authentication failed"));
+
+    return REDS_SASL_ERROR_AUTH_FAILED;
+}
+
+RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+{
+    AsyncRead *obj = &stream->async_read;
+    RedsSASL *sasl = &stream->sasl;
+
+    spice_info("Got client start len %d", sasl->len);
+    if (sasl->len > SASL_DATA_MAX_LEN) {
+        spice_warning("Too much SASL data %d", sasl->len);
+        return REDS_SASL_ERROR_INVALID_DATA;
+    }
+
+    if (sasl->len == 0) {
+        return REDS_SASL_ERROR_RETRY;
+    }
+
+    sasl->data = spice_realloc(sasl->data, sasl->len);
+    obj->now = (uint8_t *)sasl->data;
+    obj->end = obj->now + sasl->len;
+    obj->done = read_cb;
+    async_read_handler(0, 0, obj);
+
+    return REDS_SASL_ERROR_OK;
+}
+
+bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+{
+    AsyncRead *obj = &stream->async_read;
+    RedsSASL *sasl = &stream->sasl;
+
+    sasl->mechname[sasl->len] = '\0';
+    spice_info("Got client mechname '%s' check against '%s'",
+               sasl->mechname, sasl->mechlist);
+
+    if (strncmp(sasl->mechlist, sasl->mechname, sasl->len) == 0) {
+        if (sasl->mechlist[sasl->len] != '\0' &&
+            sasl->mechlist[sasl->len] != ',') {
+            spice_info("One %d", sasl->mechlist[sasl->len]);
+            return FALSE;
+        }
+    } else {
+        char *offset = strstr(sasl->mechlist, sasl->mechname);
+        spice_info("Two %p", offset);
+        if (!offset) {
+            return FALSE;
+        }
+        spice_info("Two '%s'", offset);
+        if (offset[-1] != ',' ||
+            (offset[sasl->len] != '\0'&&
+             offset[sasl->len] != ',')) {
+            return FALSE;
+        }
+    }
+
+    free(sasl->mechlist);
+    sasl->mechlist = spice_strdup(sasl->mechname);
+
+    spice_info("Validated mechname '%s'", sasl->mechname);
+
+    obj->now = (uint8_t *)&sasl->len;
+    obj->end = obj->now + sizeof(uint32_t);
+    obj->done = read_cb;
+    async_read_handler(0, 0, &stream->async_read);
+
+    return TRUE;
+}
+
+bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+{
+    AsyncRead *obj = &stream->async_read;
+    RedsSASL *sasl = &stream->sasl;
+
+    if (sasl->len < 1 || sasl->len > 100) {
+        spice_warning("Got bad client mechname len %d", sasl->len);
+        return FALSE;
+    }
+
+    sasl->mechname = spice_malloc(sasl->len + 1);
+
+    spice_info("Wait for client mechname");
+    obj->now = (uint8_t *)sasl->mechname;
+    obj->end = obj->now + sasl->len;
+    obj->done = read_cb;
+    async_read_handler(0, 0, &stream->async_read);
+
+    return TRUE;
+}
+
+bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+{
+    const char *mechlist = NULL;
+    sasl_security_properties_t secprops;
+    int err;
+    char *localAddr, *remoteAddr;
+    int mechlistlen;
+    AsyncRead *obj = &stream->async_read;
+    RedsSASL *sasl = &stream->sasl;
+
+    if (!(localAddr = reds_stream_get_local_address(stream))) {
+        goto error;
+    }
+
+    if (!(remoteAddr = reds_stream_get_remote_address(stream))) {
+        free(localAddr);
+        goto error;
+    }
+
+    err = sasl_server_new("spice",
+                          NULL, /* FQDN - just delegates to gethostname */
+                          NULL, /* User realm */
+                          localAddr,
+                          remoteAddr,
+                          NULL, /* Callbacks, not needed */
+                          SASL_SUCCESS_DATA,
+                          &sasl->conn);
+    free(localAddr);
+    free(remoteAddr);
+    localAddr = remoteAddr = NULL;
+
+    if (err != SASL_OK) {
+        spice_warning("sasl context setup failed %d (%s)",
+                    err, sasl_errstring(err, NULL, NULL));
+        sasl->conn = NULL;
+        goto error;
+    }
+
+    /* Inform SASL that we've got an external SSF layer from TLS */
+    if (stream->ssl) {
+        sasl_ssf_t ssf;
+
+        ssf = SSL_get_cipher_bits(stream->ssl, NULL);
+        err = sasl_setprop(sasl->conn, SASL_SSF_EXTERNAL, &ssf);
+        if (err != SASL_OK) {
+            spice_warning("cannot set SASL external SSF %d (%s)",
+                        err, sasl_errstring(err, NULL, NULL));
+            goto error_dispose;
+        }
+    } else {
+        sasl->wantSSF = 1;
+    }
+
+    memset(&secprops, 0, sizeof secprops);
+    /* Inform SASL that we've got an external SSF layer from TLS */
+    if (stream->ssl) {
+        /* If we've got TLS (or UNIX domain sock), we don't care about SSF */
+        secprops.min_ssf = 0;
+        secprops.max_ssf = 0;
+        secprops.maxbufsize = 8192;
+        secprops.security_flags = 0;
+    } else {
+        /* Plain TCP, better get an SSF layer */
+        secprops.min_ssf = 56; /* Good enough to require kerberos */
+        secprops.max_ssf = 100000; /* Arbitrary big number */
+        secprops.maxbufsize = 8192;
+        /* Forbid any anonymous or trivially crackable auth */
+        secprops.security_flags =
+            SASL_SEC_NOANONYMOUS | SASL_SEC_NOPLAINTEXT;
+    }
+
+    err = sasl_setprop(sasl->conn, SASL_SEC_PROPS, &secprops);
+    if (err != SASL_OK) {
+        spice_warning("cannot set SASL security props %d (%s)",
+                      err, sasl_errstring(err, NULL, NULL));
+        goto error_dispose;
+    }
+
+    err = sasl_listmech(sasl->conn,
+                        NULL, /* Don't need to set user */
+                        "", /* Prefix */
+                        ",", /* Separator */
+                        "", /* Suffix */
+                        &mechlist,
+                        NULL,
+                        NULL);
+    if (err != SASL_OK || mechlist == NULL) {
+        spice_warning("cannot list SASL mechanisms %d (%s)",
+                      err, sasl_errdetail(sasl->conn));
+        goto error_dispose;
+    }
+
+    spice_info("Available mechanisms for client: '%s'", mechlist);
+
+    sasl->mechlist = spice_strdup(mechlist);
+
+    mechlistlen = strlen(mechlist);
+    if (!reds_stream_write_all(stream, &mechlistlen, sizeof(uint32_t))
+        || !reds_stream_write_all(stream, sasl->mechlist, mechlistlen)) {
+        spice_warning("SASL mechanisms write error");
+        goto error;
+    }
+
+    spice_info("Wait for client mechname length");
+    obj->now = (uint8_t *)&sasl->len;
+    obj->end = obj->now + sizeof(uint32_t);
+    obj->done = read_cb;
+    obj->opaque = opaque;
+    async_read_handler(0, 0, obj);
+
+    return TRUE;
+
+error_dispose:
+    sasl_dispose(&sasl->conn);
+    sasl->conn = NULL;
+error:
+    return FALSE;
 }
 #endif

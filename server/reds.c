@@ -1882,61 +1882,6 @@ static void reds_get_spice_ticket(RedLinkInfo *link)
 }
 
 #if HAVE_SASL
-static char *addr_to_string(const char *format,
-                            struct sockaddr_storage *sa,
-                            socklen_t salen) {
-    char *addr;
-    char host[NI_MAXHOST];
-    char serv[NI_MAXSERV];
-    int err;
-    size_t addrlen;
-
-    if ((err = getnameinfo((struct sockaddr *)sa, salen,
-                           host, sizeof(host),
-                           serv, sizeof(serv),
-                           NI_NUMERICHOST | NI_NUMERICSERV)) != 0) {
-        spice_warning("Cannot resolve address %d: %s",
-                      err, gai_strerror(err));
-        return NULL;
-    }
-
-    /* Enough for the existing format + the 2 vars we're
-     * substituting in. */
-    addrlen = strlen(format) + strlen(host) + strlen(serv);
-    addr = spice_malloc(addrlen + 1);
-    snprintf(addr, addrlen, format, host, serv);
-    addr[addrlen] = '\0';
-
-    return addr;
-}
-
-static int auth_sasl_check_ssf(RedsSASL *sasl, int *runSSF)
-{
-    const void *val;
-    int err, ssf;
-
-    *runSSF = 0;
-    if (!sasl->wantSSF) {
-        return 1;
-    }
-
-    err = sasl_getprop(sasl->conn, SASL_SSF, &val);
-    if (err != SASL_OK) {
-        return 0;
-    }
-
-    ssf = *(const int *)val;
-    spice_info("negotiated an SSF of %d", ssf);
-    if (ssf < 56) {
-        return 0; /* 56 is good for Kerberos */
-    }
-
-    *runSSF = 1;
-
-    /* We have a SSF that's good enough */
-    return 1;
-}
-
 /*
  * Step Msg
  *
@@ -1957,115 +1902,25 @@ static void reds_handle_auth_sasl_steplen(void *opaque);
 
 static void reds_handle_auth_sasl_step(void *opaque)
 {
-    const char *serverout;
-    unsigned int serveroutlen;
-    int err;
-    char *clientdata = NULL;
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedsSASL *sasl = &link->stream->sasl;
-    uint32_t datalen = sasl->len;
-    AsyncRead *obj = &link->async_read;
+    RedsSaslError status;
 
-    /* NB, distinction of NULL vs "" is *critical* in SASL */
-    if (datalen) {
-        clientdata = sasl->data;
-        clientdata[datalen - 1] = '\0'; /* Wire includes '\0', but make sure */
-        datalen--; /* Don't count NULL byte when passing to _start() */
-    }
-
-    spice_info("Step using SASL Data %p (%d bytes)",
-               clientdata, datalen);
-    err = sasl_server_step(sasl->conn,
-                           clientdata,
-                           datalen,
-                           &serverout,
-                           &serveroutlen);
-    if (err != SASL_OK &&
-        err != SASL_CONTINUE) {
-        spice_warning("sasl step failed %d (%s)",
-                      err, sasl_errdetail(sasl->conn));
-        goto authabort;
-    }
-
-    if (serveroutlen > SASL_DATA_MAX_LEN) {
-        spice_warning("sasl step reply data too long %d",
-                      serveroutlen);
-        goto authabort;
-    }
-
-    spice_info("SASL return data %d bytes, %p", serveroutlen, serverout);
-
-    if (serveroutlen) {
-        serveroutlen += 1;
-        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
-        reds_stream_write_all(link->stream, serverout, serveroutlen);
-    } else {
-        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
-    }
-
-    /* Whether auth is complete */
-    reds_stream_write_u8(link->stream, err == SASL_CONTINUE ? 0 : 1);
-
-    if (err == SASL_CONTINUE) {
-        spice_info("%s", "Authentication must continue (step)");
-        /* Wait for step length */
-        obj->now = (uint8_t *)&sasl->len;
-        obj->end = obj->now + sizeof(uint32_t);
-        obj->done = reds_handle_auth_sasl_steplen;
-        async_read_handler(0, 0, &link->async_read);
-    } else {
-        int ssf;
-
-        if (auth_sasl_check_ssf(sasl, &ssf) == 0) {
-            spice_warning("Authentication rejected for weak SSF");
-            goto authreject;
-        }
-
-        spice_info("Authentication successful");
-        reds_stream_write_u32(link->stream, SPICE_LINK_ERR_OK); /* Accept auth */
-
-        /*
-         * Delay writing in SSF encoded until now
-         */
-        sasl->runSSF = ssf;
-        link->stream->writev = NULL; /* make sure writev isn't called directly anymore */
-
+    status = reds_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
+    if (status == REDS_SASL_ERROR_OK) {
         reds_handle_link(link);
+    } else if (status != REDS_SASL_ERROR_CONTINUE) {
+        reds_link_free(link);
     }
-
-    return;
-
-authreject:
-    reds_stream_write_u32(link->stream, 1); /* Reject auth */
-    reds_stream_write_u32(link->stream, sizeof("Authentication failed"));
-    reds_stream_write_all(link->stream, "Authentication failed", sizeof("Authentication failed"));
-
-authabort:
-    reds_link_free(link);
-    return;
 }
 
 static void reds_handle_auth_sasl_steplen(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    AsyncRead *obj = &link->async_read;
-    RedsSASL *sasl = &link->stream->sasl;
+    RedsSaslError status;
 
-    spice_info("Got steplen %d", sasl->len);
-    if (sasl->len > SASL_DATA_MAX_LEN) {
-        spice_warning("Too much SASL data %d", sasl->len);
+    status = reds_sasl_handle_auth_steplen(link->stream, reds_handle_auth_sasl_step, link);
+    if (status != REDS_SASL_ERROR_OK) {
         reds_link_free(link);
-        return;
-    }
-
-    if (sasl->len == 0) {
-        return reds_handle_auth_sasl_step(opaque);
-    } else {
-        sasl->data = spice_realloc(sasl->data, sasl->len);
-        obj->now = (uint8_t *)sasl->data;
-        obj->end = obj->now + sasl->len;
-        obj->done = reds_handle_auth_sasl_step;
-        async_read_handler(0, 0, &link->async_read);
     }
 }
 
@@ -2088,307 +1943,64 @@ static void reds_handle_auth_sasl_steplen(void *opaque)
 static void reds_handle_auth_sasl_start(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    AsyncRead *obj = &link->async_read;
-    const char *serverout;
-    unsigned int serveroutlen;
-    int err;
-    char *clientdata = NULL;
-    RedsSASL *sasl = &link->stream->sasl;
-    uint32_t datalen = sasl->len;
+    RedsSaslError status;
 
-    /* NB, distinction of NULL vs "" is *critical* in SASL */
-    if (datalen) {
-        clientdata = sasl->data;
-        clientdata[datalen - 1] = '\0'; /* Should be on wire, but make sure */
-        datalen--; /* Don't count NULL byte when passing to _start() */
-    }
-
-    spice_info("Start SASL auth with mechanism %s. Data %p (%d bytes)",
-               sasl->mechlist, clientdata, datalen);
-    err = sasl_server_start(sasl->conn,
-                            sasl->mechlist,
-                            clientdata,
-                            datalen,
-                            &serverout,
-                            &serveroutlen);
-    if (err != SASL_OK &&
-        err != SASL_CONTINUE) {
-        spice_warning("sasl start failed %d (%s)",
-                    err, sasl_errdetail(sasl->conn));
-        goto authabort;
-    }
-
-    if (serveroutlen > SASL_DATA_MAX_LEN) {
-        spice_warning("sasl start reply data too long %d",
-                    serveroutlen);
-        goto authabort;
-    }
-
-    spice_info("SASL return data %d bytes, %p", serveroutlen, serverout);
-
-    if (serveroutlen) {
-        serveroutlen += 1;
-        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
-        reds_stream_write_all(link->stream, serverout, serveroutlen);
-    } else {
-        reds_stream_write_all(link->stream, &serveroutlen, sizeof(uint32_t));
-    }
-
-    /* Whether auth is complete */
-    reds_stream_write_u8(link->stream, err == SASL_CONTINUE ? 0 : 1);
-
-    if (err == SASL_CONTINUE) {
-        spice_info("%s", "Authentication must continue (start)");
-        /* Wait for step length */
-        obj->now = (uint8_t *)&sasl->len;
-        obj->end = obj->now + sizeof(uint32_t);
-        obj->done = reds_handle_auth_sasl_steplen;
-        async_read_handler(0, 0, &link->async_read);
-    } else {
-        int ssf;
-
-        if (auth_sasl_check_ssf(sasl, &ssf) == 0) {
-            spice_warning("Authentication rejected for weak SSF");
-            goto authreject;
-        }
-
-        spice_info("Authentication successful");
-        reds_stream_write_u32(link->stream, SPICE_LINK_ERR_OK); /* Accept auth */
-
-        /*
-         * Delay writing in SSF encoded until now
-         */
-        sasl->runSSF = ssf;
-        link->stream->writev = NULL; /* make sure writev isn't called directly anymore */
-
+    status = reds_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
+    if (status == REDS_SASL_ERROR_OK) {
         reds_handle_link(link);
+    } else if (status != REDS_SASL_ERROR_CONTINUE) {
+        reds_link_free(link);
     }
-
-    return;
-
-authreject:
-    reds_stream_write_u32(link->stream, 1); /* Reject auth */
-    reds_stream_write_u32(link->stream, sizeof("Authentication failed"));
-    reds_stream_write_all(link->stream, "Authentication failed", sizeof("Authentication failed"));
-
-authabort:
-    reds_link_free(link);
-    return;
 }
 
 static void reds_handle_auth_startlen(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    AsyncRead *obj = &link->async_read;
-    RedsSASL *sasl = &link->stream->sasl;
+    RedsSaslError status;
 
-    spice_info("Got client start len %d", sasl->len);
-    if (sasl->len > SASL_DATA_MAX_LEN) {
-        spice_warning("Too much SASL data %d", sasl->len);
-        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
-        reds_link_free(link);
-        return;
+    status = reds_sasl_handle_auth_startlen(link->stream, reds_handle_auth_sasl_start, link);
+    switch (status) {
+        case REDS_SASL_ERROR_OK:
+            break;
+        case REDS_SASL_ERROR_RETRY:
+            reds_handle_auth_sasl_start(opaque);
+            break;
+        case REDS_SASL_ERROR_GENERIC:
+        case REDS_SASL_ERROR_INVALID_DATA:
+            reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
+            reds_link_free(link);
+            break;
+        default:
+            g_warn_if_reached();
+            reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
+            reds_link_free(link);
+            break;
     }
-
-    if (sasl->len == 0) {
-        reds_handle_auth_sasl_start(opaque);
-        return;
-    }
-
-    sasl->data = spice_realloc(sasl->data, sasl->len);
-    obj->now = (uint8_t *)sasl->data;
-    obj->end = obj->now + sasl->len;
-    obj->done = reds_handle_auth_sasl_start;
-    async_read_handler(0, 0, &link->async_read);
 }
 
 static void reds_handle_auth_mechname(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    AsyncRead *obj = &link->async_read;
-    RedsSASL *sasl = &link->stream->sasl;
 
-    sasl->mechname[sasl->len] = '\0';
-    spice_info("Got client mechname '%s' check against '%s'",
-               sasl->mechname, sasl->mechlist);
-
-    if (strncmp(sasl->mechlist, sasl->mechname, sasl->len) == 0) {
-        if (sasl->mechlist[sasl->len] != '\0' &&
-            sasl->mechlist[sasl->len] != ',') {
-            spice_info("One %d", sasl->mechlist[sasl->len]);
-            reds_link_free(link);
-            return;
-        }
-    } else {
-        char *offset = strstr(sasl->mechlist, sasl->mechname);
-        spice_info("Two %p", offset);
-        if (!offset) {
+    if (!reds_sasl_handle_auth_mechname(link->stream, reds_handle_auth_startlen, link)) {
             reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
-            return;
-        }
-        spice_info("Two '%s'", offset);
-        if (offset[-1] != ',' ||
-            (offset[sasl->len] != '\0'&&
-             offset[sasl->len] != ',')) {
-            reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
-            return;
-        }
     }
-
-    free(sasl->mechlist);
-    sasl->mechlist = spice_strdup(sasl->mechname);
-
-    spice_info("Validated mechname '%s'", sasl->mechname);
-
-    obj->now = (uint8_t *)&sasl->len;
-    obj->end = obj->now + sizeof(uint32_t);
-    obj->done = reds_handle_auth_startlen;
-    async_read_handler(0, 0, &link->async_read);
-
-    return;
 }
 
 static void reds_handle_auth_mechlen(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    AsyncRead *obj = &link->async_read;
-    RedsSASL *sasl = &link->stream->sasl;
 
-    if (sasl->len < 1 || sasl->len > 100) {
-        spice_warning("Got bad client mechname len %d", sasl->len);
+    if (!reds_sasl_handle_auth_mechlen(link->stream, reds_handle_auth_mechname, link)) {
         reds_link_free(link);
-        return;
     }
-
-    sasl->mechname = spice_malloc(sasl->len + 1);
-
-    spice_info("Wait for client mechname");
-    obj->now = (uint8_t *)sasl->mechname;
-    obj->end = obj->now + sasl->len;
-    obj->done = reds_handle_auth_mechname;
-    async_read_handler(0, 0, &link->async_read);
 }
 
 static void reds_start_auth_sasl(RedLinkInfo *link)
 {
-    const char *mechlist = NULL;
-    sasl_security_properties_t secprops;
-    int err;
-    char *localAddr, *remoteAddr;
-    int mechlistlen;
-    AsyncRead *obj = &link->async_read;
-    RedsSASL *sasl = &link->stream->sasl;
-
-    /* Get local & remote client addresses in form  IPADDR;PORT */
-    if (!(localAddr = addr_to_string("%s;%s", &link->stream->info->laddr_ext,
-                                              link->stream->info->llen_ext))) {
-        goto error;
+    if (!reds_sasl_start_auth(link->stream, reds_handle_auth_mechlen, link)) {
+        reds_link_free(link);
     }
-
-    if (!(remoteAddr = addr_to_string("%s;%s", &link->stream->info->paddr_ext,
-                                               link->stream->info->plen_ext))) {
-        free(localAddr);
-        goto error;
-    }
-
-    err = sasl_server_new("spice",
-                          NULL, /* FQDN - just delegates to gethostname */
-                          NULL, /* User realm */
-                          localAddr,
-                          remoteAddr,
-                          NULL, /* Callbacks, not needed */
-                          SASL_SUCCESS_DATA,
-                          &sasl->conn);
-    free(localAddr);
-    free(remoteAddr);
-    localAddr = remoteAddr = NULL;
-
-    if (err != SASL_OK) {
-        spice_warning("sasl context setup failed %d (%s)",
-                    err, sasl_errstring(err, NULL, NULL));
-        sasl->conn = NULL;
-        goto error;
-    }
-
-    /* Inform SASL that we've got an external SSF layer from TLS */
-    if (link->stream->ssl) {
-        sasl_ssf_t ssf;
-
-        ssf = SSL_get_cipher_bits(link->stream->ssl, NULL);
-        err = sasl_setprop(sasl->conn, SASL_SSF_EXTERNAL, &ssf);
-        if (err != SASL_OK) {
-            spice_warning("cannot set SASL external SSF %d (%s)",
-                        err, sasl_errstring(err, NULL, NULL));
-            goto error_dispose;
-        }
-    } else {
-        sasl->wantSSF = 1;
-    }
-
-    memset(&secprops, 0, sizeof secprops);
-    /* Inform SASL that we've got an external SSF layer from TLS */
-    if (link->stream->ssl) {
-        /* If we've got TLS (or UNIX domain sock), we don't care about SSF */
-        secprops.min_ssf = 0;
-        secprops.max_ssf = 0;
-        secprops.maxbufsize = 8192;
-        secprops.security_flags = 0;
-    } else {
-        /* Plain TCP, better get an SSF layer */
-        secprops.min_ssf = 56; /* Good enough to require kerberos */
-        secprops.max_ssf = 100000; /* Arbitrary big number */
-        secprops.maxbufsize = 8192;
-        /* Forbid any anonymous or trivially crackable auth */
-        secprops.security_flags =
-            SASL_SEC_NOANONYMOUS | SASL_SEC_NOPLAINTEXT;
-    }
-
-    err = sasl_setprop(sasl->conn, SASL_SEC_PROPS, &secprops);
-    if (err != SASL_OK) {
-        spice_warning("cannot set SASL security props %d (%s)",
-                      err, sasl_errstring(err, NULL, NULL));
-        goto error_dispose;
-    }
-
-    err = sasl_listmech(sasl->conn,
-                        NULL, /* Don't need to set user */
-                        "", /* Prefix */
-                        ",", /* Separator */
-                        "", /* Suffix */
-                        &mechlist,
-                        NULL,
-                        NULL);
-    if (err != SASL_OK || mechlist == NULL) {
-        spice_warning("cannot list SASL mechanisms %d (%s)",
-                      err, sasl_errdetail(sasl->conn));
-        goto error_dispose;
-    }
-
-    spice_info("Available mechanisms for client: '%s'", mechlist);
-
-    sasl->mechlist = spice_strdup(mechlist);
-
-    mechlistlen = strlen(mechlist);
-    if (!reds_stream_write_all(link->stream, &mechlistlen, sizeof(uint32_t))
-        || !reds_stream_write_all(link->stream, sasl->mechlist, mechlistlen)) {
-        spice_warning("SASL mechanisms write error");
-        goto error;
-    }
-
-    spice_info("Wait for client mechname length");
-    obj->now = (uint8_t *)&sasl->len;
-    obj->end = obj->now + sizeof(uint32_t);
-    obj->done = reds_handle_auth_mechlen;
-    async_read_handler(0, 0, &link->async_read);
-
-    return;
-
-error_dispose:
-    sasl_dispose(&sasl->conn);
-    sasl->conn = NULL;
-error:
-    reds_link_free(link);
-    return;
 }
 #endif
 

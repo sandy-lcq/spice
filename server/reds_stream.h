@@ -115,6 +115,7 @@ ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt);
 bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n);
 bool reds_stream_write_u8(RedsStream *s, uint8_t n);
 bool reds_stream_write_u32(RedsStream *s, uint32_t n);
+void reds_stream_disable_writev(RedsStream *stream);
 void reds_stream_free(RedsStream *s);
 
 void reds_stream_push_channel_event(RedsStream *s, int event);
@@ -122,5 +123,22 @@ void reds_stream_remove_watch(RedsStream* s);
 RedsStream *reds_stream_new(int socket);
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream);
 int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx);
+
+typedef enum {
+    REDS_SASL_ERROR_OK,
+    REDS_SASL_ERROR_GENERIC,
+    REDS_SASL_ERROR_INVALID_DATA,
+    REDS_SASL_ERROR_RETRY,
+    REDS_SASL_ERROR_CONTINUE,
+    REDS_SASL_ERROR_AUTH_FAILED
+} RedsSaslError;
+
+RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
+RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
+RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
+RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
+bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
+bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
+bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
 
 #endif
