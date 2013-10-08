@@ -191,73 +191,6 @@ void reds_handle_channel_event(int event, SpiceChannelEventInfo *info)
     }
 }
 
-static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
-{
-    return write(s->socket, buf, size);
-}
-
-static ssize_t stream_writev_cb(RedsStream *s, const struct iovec *iov, int iovcnt)
-{
-    ssize_t ret = 0;
-    do {
-        int tosend;
-        ssize_t n, expected = 0;
-        int i;
-#ifdef IOV_MAX
-        tosend = MIN(iovcnt, IOV_MAX);
-#else
-        tosend = iovcnt;
-#endif
-        for (i = 0; i < tosend; i++) {
-            expected += iov[i].iov_len;
-        }
-        n = writev(s->socket, iov, tosend);
-        if (n <= expected) {
-            if (n > 0)
-                ret += n;
-            return ret == 0 ? n : ret;
-        }
-        ret += n;
-        iov += tosend;
-        iovcnt -= tosend;
-    } while(iovcnt > 0);
-
-    return ret;
-}
-
-static ssize_t stream_read_cb(RedsStream *s, void *buf, size_t size)
-{
-    return read(s->socket, buf, size);
-}
-
-static ssize_t stream_ssl_write_cb(RedsStream *s, const void *buf, size_t size)
-{
-    int return_code;
-    SPICE_GNUC_UNUSED int ssl_error;
-
-    return_code = SSL_write(s->ssl, buf, size);
-
-    if (return_code < 0) {
-        ssl_error = SSL_get_error(s->ssl, return_code);
-    }
-
-    return return_code;
-}
-
-static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
-{
-    int return_code;
-    SPICE_GNUC_UNUSED int ssl_error;
-
-    return_code = SSL_read(s->ssl, buf, size);
-
-    if (return_code < 0) {
-        ssl_error = SSL_get_error(s->ssl, return_code);
-    }
-
-    return return_code;
-}
-
 static void reds_link_free(RedLinkInfo *link)
 {
     reds_stream_free(link->stream);
@@ -2738,10 +2671,6 @@ static RedLinkInfo *reds_init_client_ssl_connection(int socket)
     if (link == NULL)
         goto error;
 
-    link->stream->write = stream_ssl_write_cb;
-    link->stream->read = stream_ssl_read_cb;
-    link->stream->writev = NULL;
-
     ssl_status = reds_stream_enable_ssl(link->stream, reds->ctx);
     switch (ssl_status) {
         case REDS_STREAM_SSL_STATUS_OK:
@@ -2801,7 +2730,6 @@ static void reds_accept(int fd, int event, void *data)
 SPICE_GNUC_VISIBLE int spice_server_add_client(SpiceServer *s, int socket, int skip_auth)
 {
     RedLinkInfo *link;
-    RedsStream *stream;
 
     spice_assert(reds == s);
     if (!(link = reds_init_client_connection(socket))) {
@@ -2810,11 +2738,6 @@ SPICE_GNUC_VISIBLE int spice_server_add_client(SpiceServer *s, int socket, int s
     }
 
     link->skip_auth = skip_auth;
-
-    stream = link->stream;
-    stream->read = stream_read_cb;
-    stream->write = stream_write_cb;
-    stream->writev = stream_writev_cb;
 
     reds_handle_new_link(link);
     return 0;

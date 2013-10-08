@@ -33,6 +33,73 @@
 
 extern SpiceCoreInterface *core;
 
+static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
+{
+    return write(s->socket, buf, size);
+}
+
+static ssize_t stream_writev_cb(RedsStream *s, const struct iovec *iov, int iovcnt)
+{
+    ssize_t ret = 0;
+    do {
+        int tosend;
+        ssize_t n, expected = 0;
+        int i;
+#ifdef IOV_MAX
+        tosend = MIN(iovcnt, IOV_MAX);
+#else
+        tosend = iovcnt;
+#endif
+        for (i = 0; i < tosend; i++) {
+            expected += iov[i].iov_len;
+        }
+        n = writev(s->socket, iov, tosend);
+        if (n <= expected) {
+            if (n > 0)
+                ret += n;
+            return ret == 0 ? n : ret;
+        }
+        ret += n;
+        iov += tosend;
+        iovcnt -= tosend;
+    } while(iovcnt > 0);
+
+    return ret;
+}
+
+static ssize_t stream_read_cb(RedsStream *s, void *buf, size_t size)
+{
+    return read(s->socket, buf, size);
+}
+
+static ssize_t stream_ssl_write_cb(RedsStream *s, const void *buf, size_t size)
+{
+    int return_code;
+    SPICE_GNUC_UNUSED int ssl_error;
+
+    return_code = SSL_write(s->ssl, buf, size);
+
+    if (return_code < 0) {
+        ssl_error = SSL_get_error(s->ssl, return_code);
+    }
+
+    return return_code;
+}
+
+static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
+{
+    int return_code;
+    SPICE_GNUC_UNUSED int ssl_error;
+
+    return_code = SSL_read(s->ssl, buf, size);
+
+    if (return_code < 0) {
+        ssl_error = SSL_get_error(s->ssl, return_code);
+    }
+
+    return return_code;
+}
+
 void reds_stream_remove_watch(RedsStream* s)
 {
     if (s->watch) {
@@ -175,6 +242,10 @@ RedsStream *reds_stream_new(int socket)
     stream->info = spice_new0(SpiceChannelEventInfo, 1);
     reds_stream_set_socket(stream, socket);
 
+    stream->read = stream_read_cb;
+    stream->write = stream_write_cb;
+    stream->writev = stream_writev_cb;
+
     return stream;
 }
 
@@ -224,6 +295,10 @@ int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
     }
 
     SSL_set_bio(stream->ssl, sbio, sbio);
+
+    stream->write = stream_ssl_write_cb;
+    stream->read = stream_ssl_read_cb;
+    stream->writev = NULL;
 
     return reds_stream_ssl_accept(stream);
 }
