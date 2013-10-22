@@ -75,6 +75,12 @@ struct RedsStreamPrivate {
 
     AsyncRead async_read;
 
+    /* life time of info:
+     * allocated when creating RedsStream.
+     * deallocated when main_dispatcher handles the SPICE_CHANNEL_EVENT_DISCONNECTED
+     * event, either from same thread or by call back from main thread. */
+    SpiceChannelEventInfo* info;
+
     ssize_t (*read)(RedsStream *s, void *buf, size_t nbyte);
     ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
     ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
@@ -261,34 +267,34 @@ void reds_stream_free(RedsStream *s)
 
 void reds_stream_push_channel_event(RedsStream *s, int event)
 {
-    main_dispatcher_channel_event(event, s->info);
+    main_dispatcher_channel_event(event, s->priv->info);
 }
 
 static void reds_stream_set_socket(RedsStream *stream, int socket)
 {
     stream->socket = socket;
     /* deprecated fields. Filling them for backward compatibility */
-    stream->info->llen = sizeof(stream->info->laddr);
-    stream->info->plen = sizeof(stream->info->paddr);
-    getsockname(stream->socket, (struct sockaddr*)(&stream->info->laddr), &stream->info->llen);
-    getpeername(stream->socket, (struct sockaddr*)(&stream->info->paddr), &stream->info->plen);
+    stream->priv->info->llen = sizeof(stream->priv->info->laddr);
+    stream->priv->info->plen = sizeof(stream->priv->info->paddr);
+    getsockname(stream->socket, (struct sockaddr*)(&stream->priv->info->laddr), &stream->priv->info->llen);
+    getpeername(stream->socket, (struct sockaddr*)(&stream->priv->info->paddr), &stream->priv->info->plen);
 
-    stream->info->flags |= SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT;
-    stream->info->llen_ext = sizeof(stream->info->laddr_ext);
-    stream->info->plen_ext = sizeof(stream->info->paddr_ext);
-    getsockname(stream->socket, (struct sockaddr*)(&stream->info->laddr_ext),
-                &stream->info->llen_ext);
-    getpeername(stream->socket, (struct sockaddr*)(&stream->info->paddr_ext),
-                &stream->info->plen_ext);
+    stream->priv->info->flags |= SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT;
+    stream->priv->info->llen_ext = sizeof(stream->priv->info->laddr_ext);
+    stream->priv->info->plen_ext = sizeof(stream->priv->info->paddr_ext);
+    getsockname(stream->socket, (struct sockaddr*)(&stream->priv->info->laddr_ext),
+                &stream->priv->info->llen_ext);
+    getpeername(stream->socket, (struct sockaddr*)(&stream->priv->info->paddr_ext),
+                &stream->priv->info->plen_ext);
 }
 
 
 void reds_stream_set_channel(RedsStream *stream, int connection_id,
                              int channel_type, int channel_id)
 {
-    stream->info->connection_id = connection_id;
-    stream->info->type = channel_type;
-    stream->info->id   = channel_id;
+    stream->priv->info->connection_id = connection_id;
+    stream->priv->info->type = channel_type;
+    stream->priv->info->id   = channel_id;
 }
 
 RedsStream *reds_stream_new(int socket)
@@ -297,7 +303,7 @@ RedsStream *reds_stream_new(int socket)
 
     stream = spice_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
     stream->priv = (RedsStreamPrivate *)(((char *)stream) + sizeof(RedsStream));
-    stream->info = spice_new0(SpiceChannelEventInfo, 1);
+    stream->priv->info = spice_new0(SpiceChannelEventInfo, 1);
     reds_stream_set_socket(stream, socket);
 
     stream->priv->read = stream_read_cb;
@@ -319,7 +325,7 @@ void reds_stream_set_info_flag(RedsStream *stream, unsigned int flag)
     g_return_if_fail((flag == SPICE_CHANNEL_EVENT_FLAG_TLS)
                      || (flag == SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT));
 
-    stream->info->flags |= flag;
+    stream->priv->info->flags |= flag;
 }
 
 void reds_stream_disable_writev(RedsStream *stream)
@@ -571,14 +577,14 @@ static char *addr_to_string(const char *format,
 
 static char *reds_stream_get_local_address(RedsStream *stream)
 {
-    return addr_to_string("%s;%s", &stream->info->laddr_ext,
-                          stream->info->llen_ext);
+    return addr_to_string("%s;%s", &stream->priv->info->laddr_ext,
+                          stream->priv->info->llen_ext);
 }
 
 static char *reds_stream_get_remote_address(RedsStream *stream)
 {
-    return addr_to_string("%s;%s", &stream->info->paddr_ext,
-                          stream->info->plen_ext);
+    return addr_to_string("%s;%s", &stream->priv->info->paddr_ext,
+                          stream->priv->info->plen_ext);
 }
 
 static int auth_sasl_check_ssf(RedsSASL *sasl, int *runSSF)
