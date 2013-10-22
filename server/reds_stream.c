@@ -35,6 +35,11 @@ extern SpiceCoreInterface *core;
 
 struct RedsStreamPrivate {
     SSL *ssl;
+
+    ssize_t (*read)(RedsStream *s, void *buf, size_t nbyte);
+    ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
+    ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
+
 };
 
 static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
@@ -123,7 +128,7 @@ ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte)
         ret = reds_stream_sasl_read(s, buf, nbyte);
     } else
 #endif
-        ret = s->read(s, buf, nbyte);
+        ret = s->priv->read(s, buf, nbyte);
 
     return ret;
 }
@@ -157,7 +162,7 @@ ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
         ret = reds_stream_sasl_write(s, buf, nbyte);
     } else
 #endif
-        ret = s->write(s, buf, nbyte);
+        ret = s->priv->write(s, buf, nbyte);
 
     return ret;
 }
@@ -168,8 +173,8 @@ ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt)
     int n;
     ssize_t ret = 0;
 
-    if (s->writev != NULL) {
-        return s->writev(s, iov, iovcnt);
+    if (s->priv->writev != NULL) {
+        return s->priv->writev(s, iov, iovcnt);
     }
 
     for (i = 0; i < iovcnt; ++i) {
@@ -247,9 +252,9 @@ RedsStream *reds_stream_new(int socket)
     stream->info = spice_new0(SpiceChannelEventInfo, 1);
     reds_stream_set_socket(stream, socket);
 
-    stream->read = stream_read_cb;
-    stream->write = stream_write_cb;
-    stream->writev = stream_writev_cb;
+    stream->priv->read = stream_read_cb;
+    stream->priv->write = stream_write_cb;
+    stream->priv->writev = stream_writev_cb;
 
     stream->async_read.stream = stream;
 
@@ -263,7 +268,7 @@ bool reds_stream_is_ssl(RedsStream *stream)
 
 void reds_stream_disable_writev(RedsStream *stream)
 {
-    stream->writev = NULL;
+    stream->priv->writev = NULL;
 }
 
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
@@ -313,9 +318,9 @@ int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
 
     SSL_set_bio(stream->priv->ssl, sbio, sbio);
 
-    stream->write = stream_ssl_write_cb;
-    stream->read = stream_ssl_read_cb;
-    stream->writev = NULL;
+    stream->priv->write = stream_ssl_write_cb;
+    stream->priv->read = stream_ssl_read_cb;
+    stream->priv->writev = NULL;
 
     return reds_stream_ssl_accept(stream);
 }
@@ -419,8 +424,8 @@ static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nby
         s->sasl.encodedOffset = 0;
     }
 
-    ret = s->write(s, s->sasl.encoded + s->sasl.encodedOffset,
-                   s->sasl.encodedLength - s->sasl.encodedOffset);
+    ret = s->priv->write(s, s->sasl.encoded + s->sasl.encodedOffset,
+                         s->sasl.encodedLength - s->sasl.encodedOffset);
 
     if (ret <= 0) {
         return ret;
@@ -455,7 +460,7 @@ static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte)
         buf += n;
     }
 
-    n = s->read(s, encoded, sizeof(encoded));
+    n = s->priv->read(s, encoded, sizeof(encoded));
     if (n <= 0) {
         return n;
     }

@@ -96,11 +96,6 @@ struct RedsStream {
      * event, either from same thread or by call back from main thread. */
     SpiceChannelEventInfo* info;
 
-    /* private */
-    ssize_t (*read)(RedsStream *s, void *buf, size_t nbyte);
-    ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
-    ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
-
     RedsStreamPrivate *priv;
 };
 
