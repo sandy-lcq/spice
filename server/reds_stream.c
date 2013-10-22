@@ -33,6 +33,9 @@
 
 extern SpiceCoreInterface *core;
 
+struct RedsStreamPrivate {
+};
+
 static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
 {
     return write(s->socket, buf, size);
@@ -238,7 +241,8 @@ RedsStream *reds_stream_new(int socket)
 {
     RedsStream *stream;
 
-    stream = spice_new0(RedsStream, 1);
+    stream = spice_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
+    stream->priv = (RedsStreamPrivate *)(((char *)stream) + sizeof(RedsStream));
     stream->info = spice_new0(SpiceChannelEventInfo, 1);
     reds_stream_set_socket(stream, socket);
 

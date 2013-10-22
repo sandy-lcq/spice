@@ -74,6 +74,8 @@ void async_read_set_error_handler(AsyncRead *async,
                                   AsyncReadError error_handler,
                                   void *opaque);
 
+typedef struct RedsStreamPrivate RedsStreamPrivate;
+
 struct RedsStream {
     int socket;
     SpiceWatch *watch;
@@ -99,6 +101,8 @@ struct RedsStream {
     ssize_t (*read)(RedsStream *s, void *buf, size_t nbyte);
     ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
     ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
+
+    RedsStreamPrivate *priv;
 };
 
 typedef enum {
