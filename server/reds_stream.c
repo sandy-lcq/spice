@@ -34,6 +34,7 @@
 extern SpiceCoreInterface *core;
 
 struct RedsStreamPrivate {
+    SSL *ssl;
 };
 
 static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
@@ -80,10 +81,10 @@ static ssize_t stream_ssl_write_cb(RedsStream *s, const void *buf, size_t size)
     int return_code;
     SPICE_GNUC_UNUSED int ssl_error;
 
-    return_code = SSL_write(s->ssl, buf, size);
+    return_code = SSL_write(s->priv->ssl, buf, size);
 
     if (return_code < 0) {
-        ssl_error = SSL_get_error(s->ssl, return_code);
+        ssl_error = SSL_get_error(s->priv->ssl, return_code);
     }
 
     return return_code;
@@ -94,10 +95,10 @@ static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
     int return_code;
     SPICE_GNUC_UNUSED int ssl_error;
 
-    return_code = SSL_read(s->ssl, buf, size);
+    return_code = SSL_read(s->priv->ssl, buf, size);
 
     if (return_code < 0) {
-        ssl_error = SSL_get_error(s->ssl, return_code);
+        ssl_error = SSL_get_error(s->priv->ssl, return_code);
     }
 
     return return_code;
@@ -203,8 +204,8 @@ void reds_stream_free(RedsStream *s)
     }
 #endif
 
-    if (s->ssl) {
-        SSL_free(s->ssl);
+    if (s->priv->ssl) {
+        SSL_free(s->priv->ssl);
     }
 
     reds_stream_remove_watch(s);
@@ -257,7 +258,7 @@ RedsStream *reds_stream_new(int socket)
 
 bool reds_stream_is_ssl(RedsStream *stream)
 {
-    return (stream->ssl != NULL);
+    return (stream->priv->ssl != NULL);
 }
 
 void reds_stream_disable_writev(RedsStream *stream)
@@ -270,12 +271,12 @@ RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
     int ssl_error;
     int return_code;
 
-    return_code = SSL_accept(stream->ssl);
+    return_code = SSL_accept(stream->priv->ssl);
     if (return_code == 1) {
         return REDS_STREAM_SSL_STATUS_OK;
     }
 
-    ssl_error = SSL_get_error(stream->ssl, return_code);
+    ssl_error = SSL_get_error(stream->priv->ssl, return_code);
     if (return_code == -1 && (ssl_error == SSL_ERROR_WANT_READ ||
                               ssl_error == SSL_ERROR_WANT_WRITE)) {
         if (ssl_error == SSL_ERROR_WANT_READ) {
@@ -287,8 +288,8 @@ RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
 
     ERR_print_errors_fp(stderr);
     spice_warning("SSL_accept failed, error=%d", ssl_error);
-    SSL_free(stream->ssl);
-    stream->ssl = NULL;
+    SSL_free(stream->priv->ssl);
+    stream->priv->ssl = NULL;
 
     return REDS_STREAM_SSL_STATUS_ERROR;
 }
@@ -303,14 +304,14 @@ int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
         return REDS_STREAM_SSL_STATUS_ERROR;
     }
 
-    stream->ssl = SSL_new(ctx);
-    if (!stream->ssl) {
+    stream->priv->ssl = SSL_new(ctx);
+    if (!stream->priv->ssl) {
         spice_warning("could not allocate ssl context");
         BIO_free(sbio);
         return REDS_STREAM_SSL_STATUS_ERROR;
     }
 
-    SSL_set_bio(stream->ssl, sbio, sbio);
+    SSL_set_bio(stream->priv->ssl, sbio, sbio);
 
     stream->write = stream_ssl_write_cb;
     stream->read = stream_ssl_read_cb;
@@ -903,10 +904,10 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
     }
 
     /* Inform SASL that we've got an external SSF layer from TLS */
-    if (stream->ssl) {
+    if (stream->priv->ssl) {
         sasl_ssf_t ssf;
 
-        ssf = SSL_get_cipher_bits(stream->ssl, NULL);
+        ssf = SSL_get_cipher_bits(stream->priv->ssl, NULL);
         err = sasl_setprop(sasl->conn, SASL_SSF_EXTERNAL, &ssf);
         if (err != SASL_OK) {
             spice_warning("cannot set SASL external SSF %d (%s)",
@@ -919,7 +920,7 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
 
     memset(&secprops, 0, sizeof secprops);
     /* Inform SASL that we've got an external SSF layer from TLS */
-    if (stream->ssl) {
+    if (stream->priv->ssl) {
         /* If we've got TLS (or UNIX domain sock), we don't care about SSF */
         secprops.min_ssf = 0;
         secprops.max_ssf = 0;
