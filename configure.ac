@@ -246,12 +246,6 @@ fi
 AC_MSG_RESULT([found])
 fi
 
-if test "$os_linux" = yes; then
-	PKG_CHECK_MODULES(ALSA, alsa)
-	AC_SUBST(ALSA_CFLAGS)
-	AC_SUBST(ALSA_LIBS)
-fi
-
 PKG_CHECK_MODULES(SSL, openssl)
 AC_SUBST(SSL_CFLAGS)
 AC_SUBST(SSL_LIBS)
@@ -280,6 +274,12 @@ AC_SUBST(GL_LIBS)
 SPICE_NONPKGCONFIG_LIBS+=" $GL_LIBS"
 
 if test "x$red_target" = "xx11" && test "x$enable_client" = "xyes" ; then
+	if test "$os_linux" = yes; then
+		PKG_CHECK_MODULES(ALSA, alsa)
+		AC_SUBST(ALSA_CFLAGS)
+		AC_SUBST(ALSA_LIBS)
+	fi
+
 	PKG_CHECK_MODULES(XRANDR, xrandr)
 	PKG_CHECK_MODULES(XFIXES, xfixes)
 	PKG_CHECK_MODULES(MISC_X, x11 xext xrender)
