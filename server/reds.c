@@ -2794,11 +2794,6 @@ uint32_t reds_get_mm_time(void)
     return time_space.tv_sec * 1000 + time_space.tv_nsec / 1000 / 1000;
 }
 
-void reds_update_mm_timer(uint32_t mm_time)
-{
-    red_dispatcher_set_mm_time(mm_time);
-}
-
 void reds_enable_mm_timer(void)
 {
     core->timer_start(reds->mm_timer, MM_TIMER_GRANULARITY_MS);
