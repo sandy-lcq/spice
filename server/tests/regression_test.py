@@ -4,8 +4,8 @@ import Image
 import ImageChops
 
 
-def snappy():
-    cmd = "snappy -h localhost -p 5912 -o output.ppm"
+def spicy_screenshot():
+    cmd = "spicy-screenshot -h localhost -p 5912 -o output.ppm"
     p = Popen(cmd, shell=True)
     p.wait()
 
@@ -15,7 +15,7 @@ def verify():
     return ImageChops.difference(base, output).getbbox()
 
 if __name__ == "__main__":
-    snappy()
+    spicy_screenshot()
     diff = verify()
 
     if diff is None:
