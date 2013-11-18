@@ -1342,7 +1342,8 @@ static int reds_send_link_ack(RedLinkInfo *link)
 
     ack.error = SPICE_LINK_ERR_OK;
 
-    channel = reds_find_channel(link->link_mess->channel_type, 0);
+    channel = reds_find_channel(link->link_mess->channel_type,
+                                link->link_mess->channel_id);
     if (!channel) {
         spice_assert(link->link_mess->channel_type == SPICE_CHANNEL_MAIN);
         spice_assert(reds->main_channel);
