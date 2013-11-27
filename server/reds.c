@@ -3221,6 +3221,8 @@ static int reds_init_ssl(void)
     SSL_METHOD *ssl_method;
 #endif
     int return_code;
+    /* When some other SSL/TLS version becomes obsolete, add it to this
+     * variable. */
     long ssl_options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 
     /* Global system initialization*/
@@ -3228,7 +3230,8 @@ static int reds_init_ssl(void)
     SSL_load_error_strings();
 
     /* Create our context*/
-    ssl_method = TLSv1_method();
+    /* SSLv23_method() handles TLSv1.x in addition to SSLv2/v3 */
+    ssl_method = SSLv23_method();
     reds->ctx = SSL_CTX_new(ssl_method);
     if (!reds->ctx) {
         spice_warning("Could not allocate new SSL context");
