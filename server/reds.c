@@ -2975,7 +2975,11 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
         dev_state = spicevmc_device_connect(char_device, SPICE_CHANNEL_USBREDIR);
     }
     else if (strcmp(char_device->subtype, SUBTYPE_PORT) == 0) {
-        dev_state = spicevmc_device_connect(char_device, SPICE_CHANNEL_PORT);
+        if (strcmp(char_device->portname, "org.spice-space.webdav.0") == 0) {
+            dev_state = spicevmc_device_connect(char_device, SPICE_CHANNEL_WEBDAV);
+        } else {
+            dev_state = spicevmc_device_connect(char_device, SPICE_CHANNEL_PORT);
+        }
     }
 
     if (dev_state) {
@@ -3513,6 +3517,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_channel_security(SpiceServer *s, const c
         [ SPICE_CHANNEL_SMARTCARD] = "smartcard",
 #endif
         [ SPICE_CHANNEL_USBREDIR ] = "usbredir",
+        [ SPICE_CHANNEL_WEBDAV ] = "webdav",
     };
     int i;
 
