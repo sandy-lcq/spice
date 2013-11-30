@@ -68,10 +68,12 @@ public:
     static WaveRecordAbstract* create_recorder(RecordClient& client,
                                                uint32_t sampels_per_sec,
                                                uint32_t bits_per_sample,
-                                               uint32_t channels);
+                                               uint32_t channels,
+                                               uint32_t frame_size);
     static WavePlaybackAbstract* create_player(uint32_t sampels_per_sec,
                                                uint32_t bits_per_sample,
-                                               uint32_t channels);
+                                               uint32_t channels,
+                                               uint32_t frame_size);
 
     enum {
         SCROLL_LOCK_MODIFIER_SHIFT,

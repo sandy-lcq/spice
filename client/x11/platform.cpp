@@ -3433,16 +3433,18 @@ void Platform::reset_cursor_pos()
 WaveRecordAbstract* Platform::create_recorder(RecordClient& client,
                                               uint32_t sampels_per_sec,
                                               uint32_t bits_per_sample,
-                                              uint32_t channels)
+                                              uint32_t channels,
+                                              uint32_t frame_size)
 {
-    return new WaveRecorder(client, sampels_per_sec, bits_per_sample, channels);
+    return new WaveRecorder(client, sampels_per_sec, bits_per_sample, channels, frame_size);
 }
 
 WavePlaybackAbstract* Platform::create_player(uint32_t sampels_per_sec,
                                               uint32_t bits_per_sample,
-                                              uint32_t channels)
+                                              uint32_t channels,
+                                              uint32_t frame_size)
 {
-    return new WavePlayer(sampels_per_sec, bits_per_sample, channels);
+    return new WavePlayer(sampels_per_sec, bits_per_sample, channels, frame_size);
 }
 
 void XPlatform::on_focus_in()

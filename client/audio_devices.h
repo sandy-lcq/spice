@@ -27,10 +27,6 @@ public:
     virtual bool abort() = 0;
     virtual void stop() = 0;
     virtual uint32_t get_delay_ms() = 0;
-
-    enum {
-        FRAME_SIZE = 256,
-    };
 };
 
 class WaveRecordAbstract {
@@ -42,10 +38,6 @@ public:
     virtual void start() = 0;
     virtual void stop() = 0;
     virtual bool abort() = 0;
-
-    enum {
-        FRAME_SIZE = 256,
-    };
 };
 
 #endif

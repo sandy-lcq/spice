@@ -48,18 +48,19 @@ void WaveRecorder::EventTrigger::on_event()
 WaveRecorder::WaveRecorder(Platform::RecordClient& client,
                            uint32_t sampels_per_sec,
                            uint32_t bits_per_sample,
-                           uint32_t channels)
+                           uint32_t channels,
+                           uint32_t frame_size)
     : _client (client)
     , _pcm (NULL)
     , _hw_params (NULL)
     , _sw_params (NULL)
     , _sample_bytes (bits_per_sample * channels / 8)
-    , _frame (new uint8_t[_sample_bytes * WaveRecordAbstract::FRAME_SIZE])
+    , _frame (new uint8_t[_sample_bytes * frame_size])
     , _frame_pos (_frame)
-    , _frame_end (_frame + _sample_bytes * WaveRecordAbstract::FRAME_SIZE)
+    , _frame_end (_frame + _sample_bytes * frame_size)
     , _event_trigger (NULL)
 {
-    if (!init(sampels_per_sec, bits_per_sample, channels)) {
+    if (!init(sampels_per_sec, bits_per_sample, channels, frame_size)) {
         cleanup();
         THROW("failed");
     }
@@ -93,12 +94,14 @@ void WaveRecorder::cleanup()
 
 bool WaveRecorder::init(uint32_t sampels_per_sec,
                         uint32_t bits_per_sample,
-                        uint32_t channels)
+                        uint32_t channels,
+                        uint32_t frame_size)
 {
-    const int frame_size = WaveRecordAbstract::FRAME_SIZE;
     const char* pcm_device = "default";
     snd_pcm_format_t format;
     int err;
+
+    _frame_size = frame_size;
 
     switch (bits_per_sample) {
     case 8:

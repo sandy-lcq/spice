@@ -72,7 +72,6 @@ public:
     static ChannelFactory& Factory();
 
 protected:
-    virtual void on_connect();
     virtual void on_disconnect();
 
 private:
@@ -85,6 +84,8 @@ private:
     virtual void remove_event_source(EventSources::Trigger& event_source);
     virtual void push_frame(uint8_t *frame);
 
+    void set_desired_mode(int frequency);
+    void send_record_mode();
     void send_start_mark();
     void release_message(RecordSamplesMessage *message);
     RecordSamplesMessage * get_message();

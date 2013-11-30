@@ -24,12 +24,12 @@
 
 #define REING_SIZE_MS 300
 
-WavePlayer::WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channels)
+WavePlayer::WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channels, uint32_t frame_size)
     : _pcm (NULL)
     , _hw_params (NULL)
     , _sw_params (NULL)
 {
-    if (!init(sampels_per_sec, bits_per_sample, channels)) {
+    if (!init(sampels_per_sec, bits_per_sample, channels, frame_size)) {
         cleanup();
         THROW("failed");
     }
@@ -57,9 +57,9 @@ WavePlayer::~WavePlayer()
 
 bool WavePlayer::init(uint32_t sampels_per_sec,
                       uint32_t bits_per_sample,
-                      uint32_t channels)
+                      uint32_t channels,
+                      uint32_t frame_size)
 {
-    const int frame_size = WavePlaybackAbstract::FRAME_SIZE;
     const char* pcm_device = "default";
     snd_pcm_format_t format;
     int err;
@@ -75,6 +75,7 @@ bool WavePlayer::init(uint32_t sampels_per_sec,
         return false;
     }
     _sampels_per_ms = sampels_per_sec / 1000;
+    _frame_size = frame_size;
 
     if ((err = snd_pcm_open(&_pcm, pcm_device, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)) < 0) {
         LOG_ERROR("cannot open audio playback device %s %s", pcm_device, snd_strerror(err));
@@ -183,14 +184,14 @@ bool WavePlayer::init(uint32_t sampels_per_sec,
 
 bool WavePlayer::write(uint8_t* frame)
 {
-    snd_pcm_sframes_t ret = snd_pcm_writei(_pcm, frame, WavePlaybackAbstract::FRAME_SIZE);
+    snd_pcm_sframes_t ret = snd_pcm_writei(_pcm, frame, _frame_size);
     if (ret < 0) {
         if (ret == -EAGAIN) {
             return false;
         }
         DBG(0, "err %s", snd_strerror(-ret));
         if (snd_pcm_recover(_pcm, ret, 1) == 0) {
-            snd_pcm_writei(_pcm, frame, WavePlaybackAbstract::FRAME_SIZE);
+            snd_pcm_writei(_pcm, frame, _frame_size);
         }
     }
     return true;

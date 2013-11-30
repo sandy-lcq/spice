@@ -25,7 +25,7 @@
 
 class WavePlayer: public WavePlaybackAbstract {
 public:
-    WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channels);
+    WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channels, uint32_t frame_size);
     virtual ~WavePlayer();
 
     virtual bool write(uint8_t* frame);
@@ -34,7 +34,7 @@ public:
     virtual uint32_t get_delay_ms();
 
 private:
-    bool init(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channel);
+    bool init(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channel, uint32_t frame_size);
     void cleanup();
 
 private:
@@ -42,6 +42,7 @@ private:
     snd_pcm_hw_params_t* _hw_params;
     snd_pcm_sw_params_t* _sw_params;
     uint32_t _sampels_per_ms;
+    uint32_t _frame_size;
 };
 
 #endif

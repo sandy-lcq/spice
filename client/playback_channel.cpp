@@ -168,8 +168,10 @@ PlaybackChannel::PlaybackChannel(RedClient& client, uint32_t id)
 
     handler->set_handler(SPICE_MSG_PLAYBACK_MODE, &PlaybackChannel::handle_mode);
 
-    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1))
+    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY))
         set_capability(SPICE_PLAYBACK_CAP_CELT_0_5_1);
+    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, SND_CODEC_ANY_FREQUENCY))
+        set_capability(SPICE_PLAYBACK_CAP_OPUS);
 }
 
 void PlaybackChannel::clear()
@@ -206,7 +208,7 @@ void PlaybackChannel::set_data_handler()
 
     if (_mode == SPICE_AUDIO_DATA_MODE_RAW) {
         handler->set_handler(SPICE_MSG_PLAYBACK_DATA, &PlaybackChannel::handle_raw_data);
-    } else if (snd_codec_is_capable(_mode)) {
+    } else if (snd_codec_is_capable(_mode, SND_CODEC_ANY_FREQUENCY)) {
         handler->set_handler(SPICE_MSG_PLAYBACK_DATA, &PlaybackChannel::handle_compressed_data);
     } else {
         THROW("invalid mode");
@@ -218,7 +220,7 @@ void PlaybackChannel::handle_mode(RedPeer::InMessage* message)
 {
     SpiceMsgPlaybackMode* playback_mode = (SpiceMsgPlaybackMode*)message->data();
     if (playback_mode->mode != SPICE_AUDIO_DATA_MODE_RAW
-        && !snd_codec_is_capable(playback_mode->mode) ) {
+        && !snd_codec_is_capable(playback_mode->mode, SND_CODEC_ANY_FREQUENCY) ) {
         THROW("invalid mode");
     }
 
@@ -266,20 +268,21 @@ void PlaybackChannel::handle_start(RedPeer::InMessage* message)
         }
         int bits_per_sample = 16;
         int frame_size = SND_CODEC_MAX_FRAME_SIZE;
-        try {
-            _wave_player = Platform::create_player(start->frequency, bits_per_sample,
-                                                   start->channels);
-        } catch (...) {
-            LOG_WARN("create player failed");
-            //todo: support disconnecting single channel
-            disable();
-            return;
-        }
 
         if (_mode != SPICE_AUDIO_DATA_MODE_RAW) {
             if (snd_codec_create(&_codec, _mode, start->frequency, SND_CODEC_DECODE) != SND_CODEC_OK)
                 THROW("create decoder");
             frame_size = snd_codec_frame_size(_codec);
+        }
+
+        try {
+            _wave_player = Platform::create_player(start->frequency, bits_per_sample,
+                                                   start->channels, frame_size);
+        } catch (...) {
+            LOG_WARN("create player failed");
+            //todo: support disconnecting single channel
+            disable();
+            return;
         }
 
         _frame_bytes = frame_size * start->channels * bits_per_sample / 8;

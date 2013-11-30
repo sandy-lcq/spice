@@ -145,3 +145,11 @@ SPICE_SERVER_0.12.4 {
 global:
     spice_server_set_agent_file_xfer;
 } SPICE_SERVER_0.12.3;
+
+SPICE_SERVER_0.12.5 {
+global:
+    spice_server_get_best_playback_rate;
+    spice_server_set_playback_rate;
+    spice_server_get_best_record_rate;
+    spice_server_set_record_rate;
+} SPICE_SERVER_0.12.4;

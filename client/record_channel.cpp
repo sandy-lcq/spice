@@ -87,8 +87,10 @@ RecordChannel::RecordChannel(RedClient& client, uint32_t id)
 
     handler->set_handler(SPICE_MSG_RECORD_START, &RecordChannel::handle_start);
 
-    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1))
+    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY))
         set_capability(SPICE_RECORD_CAP_CELT_0_5_1);
+    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, SND_CODEC_ANY_FREQUENCY))
+        set_capability(SPICE_RECORD_CAP_OPUS);
 }
 
 RecordChannel::~RecordChannel(void)
@@ -107,16 +109,23 @@ bool RecordChannel::abort(void)
     return (!_wave_recorder || _wave_recorder->abort()) && RedChannel::abort();
 }
 
-void RecordChannel::on_connect()
+void RecordChannel::set_desired_mode(int frequency)
 {
-    Message* message = new Message(SPICE_MSGC_RECORD_MODE);
-    SpiceMsgcRecordMode mode;
-    mode.time = get_mm_time();
-    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1) &&
+    if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, frequency) &&
+      test_capability(SPICE_RECORD_CAP_OPUS))
+          _mode = SPICE_AUDIO_DATA_MODE_OPUS;
+    else if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, frequency) &&
       test_capability(SPICE_RECORD_CAP_CELT_0_5_1))
           _mode = SPICE_AUDIO_DATA_MODE_CELT_0_5_1;
       else
           _mode = SPICE_AUDIO_DATA_MODE_RAW;
+}
+
+void RecordChannel::send_record_mode()
+{
+    Message* message = new Message(SPICE_MSGC_RECORD_MODE);
+    SpiceMsgcRecordMode mode;
+    mode.time = get_mm_time();
     mode.mode = _mode;
     _marshallers->msgc_record_mode(message->marshaller(), &mode);
     post_message(message);
@@ -153,15 +162,7 @@ void RecordChannel::handle_start(RedPeer::InMessage* message)
         THROW("unexpected number of channels");
     }
 
-    int bits_per_sample = 16;
-    try {
-        _wave_recorder = Platform::create_recorder(*this, start->frequency,
-                                                   bits_per_sample,
-                                                   start->channels);
-    } catch (...) {
-        LOG_WARN("create recorder failed");
-        return;
-    }
+    set_desired_mode(start->frequency);
 
     int frame_size = SND_CODEC_MAX_FRAME_SIZE;
     if (_mode != SPICE_AUDIO_DATA_MODE_RAW) {
@@ -169,8 +170,21 @@ void RecordChannel::handle_start(RedPeer::InMessage* message)
             THROW("create encoder failed");
         frame_size = snd_codec_frame_size(_codec);
     }
+
+    int bits_per_sample = 16;
+    try {
+        _wave_recorder = Platform::create_recorder(*this, start->frequency,
+                                                   bits_per_sample,
+                                                   start->channels,
+                                                   frame_size);
+    } catch (...) {
+        LOG_WARN("create recorder failed");
+        return;
+    }
+
     _frame_bytes = frame_size * bits_per_sample * start->channels / 8;
 
+    send_record_mode();
     send_start_mark();
     _wave_recorder->start();
 }
@@ -237,7 +251,6 @@ void RecordChannel::remove_event_source(EventSources::Trigger& event_source)
 void RecordChannel::push_frame(uint8_t *frame)
 {
     RecordSamplesMessage *message;
-    ASSERT(_frame_bytes == FRAME_SIZE * 4);
     if (!(message = get_message())) {
         DBG(0, "blocked");
         return;
