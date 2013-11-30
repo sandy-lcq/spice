@@ -4,7 +4,6 @@ SUBDIRS = . tests
 AM_CPPFLAGS =					\
 	-DSPICE_SERVER_INTERNAL			\
 	-DRED_STATISTICS			\
-	$(CELT051_CFLAGS)			\
 	$(COMMON_CFLAGS)			\
 	$(GLIB2_CFLAGS)				\
 	$(PIXMAN_CFLAGS)			\
@@ -33,7 +32,6 @@ endif
 libspice_server_la_LIBADD =						\
 	$(top_builddir)/spice-common/common/libspice-common.la		\
 	$(top_builddir)/spice-common/common/libspice-common-server.la	\
-	$(CELT051_LIBS)							\
 	$(GL_LIBS)							\
 	$(GLIB2_LIBS)							\
 	$(JPEG_LIBS)							\

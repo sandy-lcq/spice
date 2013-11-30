@@ -230,11 +230,13 @@ AC_SUBST(PIXMAN_CFLAGS)
 AC_SUBST(PIXMAN_LIBS)
 SPICE_REQUIRES+=" pixman-1 >= 0.17.7"
 
-PKG_CHECK_MODULES(CELT051, celt051 >= 0.5.1.1)
-AC_SUBST(CELT051_CFLAGS)
-AC_SUBST(CELT051_LIBS)
-AC_SUBST(CELT051_LIBDIR)
-SPICE_REQUIRES+=" celt051 >= 0.5.1.1"
+AC_ARG_ENABLE(celt051,
+    [  --disable-celt051       Disable celt051 audio codec (enabled by default)],,
+        [enable_celt051="yes"])
+
+if test "x$enable_celt051" = "xyes"; then
+    PKG_CHECK_MODULES(CELT051, celt051 >= 0.5.1.1, SPICE_REQUIRES+=" celt051 >= 0.5.1.1")
+fi
 
 if test ! -e client/generated_marshallers.cpp; then
 AC_MSG_CHECKING([for pyparsing python module])
