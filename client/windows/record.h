@@ -23,7 +23,7 @@
 
 class WaveRecorder: public WaveRecordAbstract, public EventSources::Trigger {
 public:
-    WaveRecorder(Platform::RecordClient& client, uint32_t sampels_per_sec,
+    WaveRecorder(Platform::RecordClient& client, uint32_t samples_per_sec,
                  uint32_t bits_per_sample, uint32_t channels);
     virtual ~WaveRecorder();
 
@@ -34,7 +34,7 @@ public:
     virtual void on_event();
 
 private:
-    void init_ring(uint32_t sampels_per_sec, uint32_t frame_bytes, uint32_t frame_align);
+    void init_ring(uint32_t samples_per_sec, uint32_t frame_bytes, uint32_t frame_align);
     WAVEHDR* wave_hader(uint32_t position);
     void move_head();
 

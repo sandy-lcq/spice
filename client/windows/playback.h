@@ -22,7 +22,7 @@
 
 class WavePlayer: public WavePlaybackAbstract {
 public:
-    WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channels);
+    WavePlayer(uint32_t samples_per_sec, uint32_t bits_per_sample, uint32_t channels);
     virtual ~WavePlayer();
 
     virtual bool write(uint8_t* frame);
@@ -40,7 +40,7 @@ private:
 
 private:
     HWAVEOUT _wave_out;
-    uint32_t _sampels_per_ms;
+    uint32_t _samples_per_ms;
     uint32_t _frame_bytes;
     uint32_t _start_mark;
     uint32_t _ring_item_size;

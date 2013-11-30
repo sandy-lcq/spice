@@ -640,18 +640,18 @@ void Platform::set_process_loop(ProcessLoop& main_process_loop)
 }
 
 WaveRecordAbstract* Platform::create_recorder(RecordClient& client,
-                                              uint32_t sampels_per_sec,
+                                              uint32_t samples_per_sec,
                                               uint32_t bits_per_sample,
                                               uint32_t channels)
 {
-    return new WaveRecorder(client, sampels_per_sec, bits_per_sample, channels);
+    return new WaveRecorder(client, samples_per_sec, bits_per_sample, channels);
 }
 
-WavePlaybackAbstract* Platform::create_player(uint32_t sampels_per_sec,
+WavePlaybackAbstract* Platform::create_player(uint32_t samples_per_sec,
                                               uint32_t bits_per_sample,
                                               uint32_t channels)
 {
-    return new WavePlayer(sampels_per_sec, bits_per_sample, channels);
+    return new WavePlayer(samples_per_sec, bits_per_sample, channels);
 }
 
 static void toggle_modifier(int key)

@@ -32,7 +32,7 @@ static void CALLBACK in_proc(HWAVEIN handle, UINT msg, DWORD user_data, DWORD pa
     recorder->trigger();
 }
 
-WaveRecorder::WaveRecorder(Platform::RecordClient& client, uint32_t sampels_per_sec,
+WaveRecorder::WaveRecorder(Platform::RecordClient& client, uint32_t samples_per_sec,
                            uint32_t bits_per_sample, uint32_t channels)
     : _client (client)
     , _ring (NULL)
@@ -45,9 +45,9 @@ WaveRecorder::WaveRecorder(Platform::RecordClient& client, uint32_t sampels_per_
 
     info.wFormatTag = WAVE_FORMAT_PCM;
     info.nChannels = channels;
-    info.nSamplesPerSec = sampels_per_sec;
+    info.nSamplesPerSec = samples_per_sec;
     info.nBlockAlign = frame_align = channels * bits_per_sample / 8;
-    info.nAvgBytesPerSec = sampels_per_sec * info.nBlockAlign;
+    info.nAvgBytesPerSec = samples_per_sec * info.nBlockAlign;
     info.wBitsPerSample = bits_per_sample;
 
 
@@ -63,7 +63,7 @@ WaveRecorder::WaveRecorder(Platform::RecordClient& client, uint32_t sampels_per_
         _frame = new uint8_t[frame_bytes];
         _frame_pos = _frame;
         _frame_end = _frame + frame_bytes;
-        init_ring(sampels_per_sec, frame_bytes, frame_align);
+        init_ring(samples_per_sec, frame_bytes, frame_align);
         _client.add_event_source(*this);
     } catch (...) {
         delete[] _ring;
@@ -83,11 +83,11 @@ WaveRecorder::~WaveRecorder()
     delete[] _frame;
 }
 
-void WaveRecorder::init_ring(uint32_t sampels_per_sec, uint32_t frame_bytes, uint32_t frame_align)
+void WaveRecorder::init_ring(uint32_t samples_per_sec, uint32_t frame_bytes, uint32_t frame_align)
 {
     const int frame_size = WavePlaybackAbstract::FRAME_SIZE;
 
-    _ring_size = (sampels_per_sec * RING_SIZE_MS / 1000) / frame_size;
+    _ring_size = (samples_per_sec * RING_SIZE_MS / 1000) / frame_size;
     _ring_item_size = sizeof(WAVEHDR) + frame_bytes + frame_align;
 
     int ring_bytes = _ring_size * _ring_item_size;

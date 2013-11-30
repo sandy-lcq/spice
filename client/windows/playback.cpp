@@ -29,9 +29,9 @@
 #define LOW_MARK_MS 40
 
 
-WavePlayer::WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint32_t channels)
+WavePlayer::WavePlayer(uint32_t samples_per_sec, uint32_t bits_per_sample, uint32_t channels)
     : _wave_out (NULL)
-    , _sampels_per_ms (sampels_per_sec / 1000)
+    , _samples_per_ms (samples_per_sec / 1000)
     , _ring (NULL)
     , _head (0)
     , _in_use (0)
@@ -42,9 +42,9 @@ WavePlayer::WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint3
 
     info.wFormatTag = WAVE_FORMAT_PCM;
     info.nChannels = channels;
-    info.nSamplesPerSec = sampels_per_sec;
+    info.nSamplesPerSec = samples_per_sec;
     sample_bytes = info.nBlockAlign = channels * bits_per_sample / 8;
-    info.nAvgBytesPerSec = sampels_per_sec * info.nBlockAlign;
+    info.nAvgBytesPerSec = samples_per_sec * info.nBlockAlign;
     info.wBitsPerSample = bits_per_sample;
 
     if (waveOutOpen(&_wave_out, WAVE_MAPPER, &info, 0, 0, CALLBACK_NULL)
@@ -53,8 +53,8 @@ WavePlayer::WavePlayer(uint32_t sampels_per_sec, uint32_t bits_per_sample, uint3
     }
 
     int frame_size = WavePlaybackAbstract::FRAME_SIZE;
-    _ring_size = (sampels_per_sec * RING_SIZE_MS / 1000) / frame_size;
-    _start_mark = (sampels_per_sec * START_MARK_MS / 1000) / frame_size;
+    _ring_size = (samples_per_sec * RING_SIZE_MS / 1000) / frame_size;
+    _start_mark = (samples_per_sec * START_MARK_MS / 1000) / frame_size;
     _frame_bytes = frame_size * channels * bits_per_sample / 8;
     _ring_item_size = sizeof(WAVEHDR) + _frame_bytes + sample_bytes;
 
@@ -174,5 +174,5 @@ bool WavePlayer::abort()
 
 uint32_t WavePlayer::get_delay_ms()
 {
-    return _in_use * WavePlaybackAbstract::FRAME_SIZE / _sampels_per_ms;
+    return _in_use * WavePlaybackAbstract::FRAME_SIZE / _samples_per_ms;
 }
