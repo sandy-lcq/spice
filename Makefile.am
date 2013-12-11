@@ -19,6 +19,7 @@ DISTCHECK_CONFIGURE_FLAGS =			\
 
 EXTRA_DIST =					\
 	build-aux/git-version-gen		\
+	.version				\
 	$(NULL)
 
 # Generate the ChangeLog file (with all entries since the switch to git)
