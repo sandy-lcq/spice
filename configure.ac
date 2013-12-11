@@ -404,11 +404,11 @@ AC_SUBST([SASL_CFLAGS])
 AC_SUBST([SASL_LIBS])
 
 if test "x$enable_automated_tests" = "xyes"; then
-    AC_MSG_CHECKING([for snappy])
-    snappy --help >/dev/null 2>&1
+    AC_MSG_CHECKING([for snappy/spicy-screenshot])
+    snappy --help >/dev/null 2>&1 || spicy-screenshot --help >/dev/null 2>&1
     if test $? -ne 0 ; then
         AC_MSG_RESULT([not found])
-        AC_MSG_ERROR([snappy was not found, this module is part of spice-gtk andis required to compile this package])
+        AC_MSG_ERROR([snappy/spicy-screenshot was not found, this module is part of spice-gtk and is required to compile this package])
     fi
     AC_MSG_RESULT([found])
 fi
