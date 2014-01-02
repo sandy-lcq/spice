@@ -672,7 +672,6 @@ static void cursor_init()
 static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *ext)
 {
     Test *test = SPICE_CONTAINEROF(qin, Test, qxl_instance);
-    static int color = 0;
     static int set = 1;
     static int x = 0, y = 0;
     QXLCursorCmd *cursor_cmd;

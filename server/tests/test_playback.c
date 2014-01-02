@@ -53,8 +53,6 @@ void playback_timer_cb(void *opaque)
     int i;
     struct timeval cur;
     uint64_t cur_usec;
-    uint32_t *test_frame;
-    uint32_t test_num_samples;
 
     get_frame();
     if (!frame) {
