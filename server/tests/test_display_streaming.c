@@ -5,12 +5,16 @@
  */
 
 #include <config.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include <glib.h>
+
 #include "test_display_base.h"
 
 static int sized;
@@ -29,7 +33,7 @@ static void create_overlay(Command *command , int width, int height)
     cmd->bbox.bottom = height;
 
     cmd->num_clip_rects = 0;
-    cmd->bitmap = malloc(width * height * 4 );
+    cmd->bitmap = g_malloc(width * height * 4 );
     dst = (uint32_t *)cmd->bitmap;
     for (int i = 0; i < width * height; i++, dst++) {
         *dst = 0x8B008B;
@@ -100,7 +104,7 @@ static void create_clipped_frame(Test *test, Command *command, int clipping_fact
         end_line += 50;
     }
 
-    cmd->bitmap = malloc(width*height*4);
+    cmd->bitmap = g_malloc(width*height*4);
     memset(cmd->bitmap, 0xff, width*height*4);
     dst = (uint32_t *)(cmd->bitmap + cur_line*width*4);
     for (cur_line; cur_line < end_line; cur_line++) {

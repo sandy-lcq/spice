@@ -6,6 +6,7 @@ AM_CPPFLAGS =					\
 	-I$(top_srcdir)/server			\
 	-I$(top_srcdir)/server/tests		\
 	$(COMMON_CFLAGS)			\
+	$(GLIB2_CFLAGS)				\
 	$(SMARTCARD_CFLAGS)			\
 	$(SPICE_NONPKGCONFIG_CFLAGS)		\
 	$(NULL)
@@ -17,6 +18,7 @@ endif
 LDADD =								\
 	$(top_builddir)/spice-common/common/libspice-common.la	\
 	$(top_builddir)/server/libspice-server.la		\
+	$(GLIB2_LIBS)						\
 	$(NULL)
 
 COMMON_BASE =					\
