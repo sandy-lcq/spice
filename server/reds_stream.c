@@ -282,6 +282,15 @@ static void reds_stream_set_socket(RedsStream *stream, int socket)
                 &stream->info->plen_ext);
 }
 
+
+void reds_stream_set_channel(RedsStream *stream, int connection_id,
+                             int channel_type, int channel_id)
+{
+    stream->info->connection_id = connection_id;
+    stream->info->type = channel_type;
+    stream->info->id   = channel_id;
+}
+
 RedsStream *reds_stream_new(int socket)
 {
     RedsStream *stream;
