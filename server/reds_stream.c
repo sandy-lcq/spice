@@ -29,6 +29,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include <glib.h>
+
 #include <openssl/err.h>
 
 extern SpiceCoreInterface *core;
@@ -301,6 +303,14 @@ RedsStream *reds_stream_new(int socket)
 bool reds_stream_is_ssl(RedsStream *stream)
 {
     return (stream->priv->ssl != NULL);
+}
+
+void reds_stream_set_info_flag(RedsStream *stream, unsigned int flag)
+{
+    g_return_if_fail((flag == SPICE_CHANNEL_EVENT_FLAG_TLS)
+                     || (flag == SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT));
+
+    stream->info->flags |= flag;
 }
 
 void reds_stream_disable_writev(RedsStream *stream)

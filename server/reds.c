@@ -1415,7 +1415,7 @@ static void reds_info_new_channel(RedLinkInfo *link, int connection_id)
                reds_stream_is_ssl(link->stream) ? "Secure" : "Non Secure");
     /* add info + send event */
     if (reds_stream_is_ssl(link->stream)) {
-        link->stream->info->flags |= SPICE_CHANNEL_EVENT_FLAG_TLS;
+        reds_stream_set_info_flag(link->stream, SPICE_CHANNEL_EVENT_FLAG_TLS);
     }
     link->stream->info->connection_id = connection_id;
     link->stream->info->type = link->link_mess->channel_type;
