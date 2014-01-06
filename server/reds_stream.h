@@ -53,8 +53,6 @@ struct RedsStream {
        receive may return data afterward. check the flag before calling receive*/
     int shutdown;
 
-    AsyncRead async_read;
-
     /* life time of info:
      * allocated when creating RedsStream.
      * deallocated when main_dispatcher handles the SPICE_CHANNEL_EVENT_DISCONNECTED
