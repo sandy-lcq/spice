@@ -1412,9 +1412,9 @@ static void reds_info_new_channel(RedLinkInfo *link, int connection_id)
     spice_info("channel %d:%d, connected successfully, over %s link",
                link->link_mess->channel_type,
                link->link_mess->channel_id,
-               link->stream->ssl == NULL ? "Non Secure" : "Secure");
+               reds_stream_is_ssl(link->stream) ? "Secure" : "Non Secure");
     /* add info + send event */
-    if (link->stream->ssl) {
+    if (reds_stream_is_ssl(link->stream)) {
         link->stream->info->flags |= SPICE_CHANNEL_EVENT_FLAG_TLS;
     }
     link->stream->info->connection_id = connection_id;
@@ -2033,8 +2033,8 @@ static int reds_security_check(RedLinkInfo *link)
 {
     ChannelSecurityOptions *security_option = find_channel_security(link->link_mess->channel_type);
     uint32_t security = security_option ? security_option->options : default_channel_security;
-    return (link->stream->ssl && (security & SPICE_CHANNEL_SECURITY_SSL)) ||
-        (!link->stream->ssl && (security & SPICE_CHANNEL_SECURITY_NONE));
+    return (reds_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_SSL)) ||
+        (!reds_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_NONE));
 }
 
 static void reds_handle_read_link_done(void *opaque)
@@ -2058,7 +2058,7 @@ static void reds_handle_read_link_done(void *opaque)
                                     SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
 
     if (!reds_security_check(link)) {
-        if (link->stream->ssl) {
+        if (reds_stream_is_ssl(link->stream)) {
             spice_warning("spice channels %d should not be encrypted", link_mess->channel_type);
             reds_send_link_error(link, SPICE_LINK_ERR_NEED_UNSECURED);
         } else {

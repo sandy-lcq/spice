@@ -255,6 +255,11 @@ RedsStream *reds_stream_new(int socket)
     return stream;
 }
 
+bool reds_stream_is_ssl(RedsStream *stream)
+{
+    return (stream->ssl != NULL);
+}
+
 void reds_stream_disable_writev(RedsStream *stream)
 {
     stream->writev = NULL;
