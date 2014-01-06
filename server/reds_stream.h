@@ -25,39 +25,8 @@
 
 #include <openssl/ssl.h>
 
-#if HAVE_SASL
-#include <sasl/sasl.h>
-
 typedef void (*AsyncReadDone)(void *opaque);
 typedef void (*AsyncReadError)(void *opaque, int err);
-
-typedef struct RedsSASL {
-    sasl_conn_t *conn;
-
-    /* If we want to negotiate an SSF layer with client */
-    int wantSSF :1;
-    /* If we are now running the SSF layer */
-    int runSSF :1;
-
-    /*
-     * Buffering encoded data to allow more clear data
-     * to be stuffed onto the output buffer
-     */
-    const uint8_t *encoded;
-    unsigned int encodedLength;
-    unsigned int encodedOffset;
-
-    SpiceBuffer inbuffer;
-
-    char *username;
-    char *mechlist;
-    char *mechname;
-
-    /* temporary data during authentication */
-    unsigned int len;
-    char *data;
-} RedsSASL;
-#endif
 
 typedef struct RedsStream RedsStream;
 typedef struct AsyncRead {
@@ -85,10 +54,6 @@ struct RedsStream {
     int shutdown;
 
     AsyncRead async_read;
-
-#if HAVE_SASL
-    RedsSASL sasl;
-#endif
 
     /* life time of info:
      * allocated when creating RedsStream.

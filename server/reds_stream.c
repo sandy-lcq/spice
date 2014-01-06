@@ -33,8 +33,43 @@
 
 extern SpiceCoreInterface *core;
 
+#if HAVE_SASL
+#include <sasl/sasl.h>
+
+typedef struct RedsSASL {
+    sasl_conn_t *conn;
+
+    /* If we want to negotiate an SSF layer with client */
+    int wantSSF :1;
+    /* If we are now running the SSF layer */
+    int runSSF :1;
+
+    /*
+     * Buffering encoded data to allow more clear data
+     * to be stuffed onto the output buffer
+     */
+    const uint8_t *encoded;
+    unsigned int encodedLength;
+    unsigned int encodedOffset;
+
+    SpiceBuffer inbuffer;
+
+    char *username;
+    char *mechlist;
+    char *mechname;
+
+    /* temporary data during authentication */
+    unsigned int len;
+    char *data;
+} RedsSASL;
+#endif
+
 struct RedsStreamPrivate {
     SSL *ssl;
+
+#if HAVE_SASL
+    RedsSASL sasl;
+#endif
 
     ssize_t (*read)(RedsStream *s, void *buf, size_t nbyte);
     ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
@@ -124,7 +159,7 @@ ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte)
     ssize_t ret;
 
 #if HAVE_SASL
-    if (s->sasl.conn && s->sasl.runSSF) {
+    if (s->priv->sasl.conn && s->priv->sasl.runSSF) {
         ret = reds_stream_sasl_read(s, buf, nbyte);
     } else
 #endif
@@ -158,7 +193,7 @@ ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
     ssize_t ret;
 
 #if HAVE_SASL
-    if (s->sasl.conn && s->sasl.runSSF) {
+    if (s->priv->sasl.conn && s->priv->sasl.runSSF) {
         ret = reds_stream_sasl_write(s, buf, nbyte);
     } else
 #endif
@@ -196,16 +231,16 @@ void reds_stream_free(RedsStream *s)
     reds_stream_push_channel_event(s, SPICE_CHANNEL_EVENT_DISCONNECTED);
 
 #if HAVE_SASL
-    if (s->sasl.conn) {
-        s->sasl.runSSF = s->sasl.wantSSF = 0;
-        s->sasl.len = 0;
-        s->sasl.encodedLength = s->sasl.encodedOffset = 0;
-        s->sasl.encoded = NULL;
-        free(s->sasl.mechlist);
-        free(s->sasl.mechname);
-        s->sasl.mechlist = NULL;
-        sasl_dispose(&s->sasl.conn);
-        s->sasl.conn = NULL;
+    if (s->priv->sasl.conn) {
+        s->priv->sasl.runSSF = s->priv->sasl.wantSSF = 0;
+        s->priv->sasl.len = 0;
+        s->priv->sasl.encodedLength = s->priv->sasl.encodedOffset = 0;
+        s->priv->sasl.encoded = NULL;
+        free(s->priv->sasl.mechlist);
+        free(s->priv->sasl.mechname);
+        s->priv->sasl.mechlist = NULL;
+        sasl_dispose(&s->priv->sasl.conn);
+        s->priv->sasl.conn = NULL;
     }
 #endif
 
@@ -402,39 +437,39 @@ static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nby
 {
     ssize_t ret;
 
-    if (!s->sasl.encoded) {
+    if (!s->priv->sasl.encoded) {
         int err;
-        err = sasl_encode(s->sasl.conn, (char *)buf, nbyte,
-                          (const char **)&s->sasl.encoded,
-                          &s->sasl.encodedLength);
+        err = sasl_encode(s->priv->sasl.conn, (char *)buf, nbyte,
+                          (const char **)&s->priv->sasl.encoded,
+                          &s->priv->sasl.encodedLength);
         if (err != SASL_OK) {
             spice_warning("sasl_encode error: %d", err);
             return -1;
         }
 
-        if (s->sasl.encodedLength == 0) {
+        if (s->priv->sasl.encodedLength == 0) {
             return 0;
         }
 
-        if (!s->sasl.encoded) {
+        if (!s->priv->sasl.encoded) {
             spice_warning("sasl_encode didn't return a buffer!");
             return 0;
         }
 
-        s->sasl.encodedOffset = 0;
+        s->priv->sasl.encodedOffset = 0;
     }
 
-    ret = s->priv->write(s, s->sasl.encoded + s->sasl.encodedOffset,
-                         s->sasl.encodedLength - s->sasl.encodedOffset);
+    ret = s->priv->write(s, s->priv->sasl.encoded + s->priv->sasl.encodedOffset,
+                         s->priv->sasl.encodedLength - s->priv->sasl.encodedOffset);
 
     if (ret <= 0) {
         return ret;
     }
 
-    s->sasl.encodedOffset += ret;
-    if (s->sasl.encodedOffset == s->sasl.encodedLength) {
-        s->sasl.encoded = NULL;
-        s->sasl.encodedOffset = s->sasl.encodedLength = 0;
+    s->priv->sasl.encodedOffset += ret;
+    if (s->priv->sasl.encodedOffset == s->priv->sasl.encodedLength) {
+        s->priv->sasl.encoded = NULL;
+        s->priv->sasl.encodedOffset = s->priv->sasl.encodedLength = 0;
         return nbyte;
     }
 
@@ -451,9 +486,9 @@ static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte)
     int err;
     int n;
 
-    n = spice_buffer_copy(&s->sasl.inbuffer, buf, nbyte);
+    n = spice_buffer_copy(&s->priv->sasl.inbuffer, buf, nbyte);
     if (n > 0) {
-        spice_buffer_remove(&s->sasl.inbuffer, n);
+        spice_buffer_remove(&s->priv->sasl.inbuffer, n);
         if (n == nbyte)
             return n;
         nbyte -= n;
@@ -465,7 +500,7 @@ static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte)
         return n;
     }
 
-    err = sasl_decode(s->sasl.conn,
+    err = sasl_decode(s->priv->sasl.conn,
                       (char *)encoded, n,
                       &decoded, &decodedlen);
     if (err != SASL_OK) {
@@ -480,7 +515,7 @@ static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte)
 
     n = MIN(nbyte, decodedlen);
     memcpy(buf, decoded, n);
-    spice_buffer_append(&s->sasl.inbuffer, decoded + n, decodedlen - n);
+    spice_buffer_append(&s->priv->sasl.inbuffer, decoded + n, decodedlen - n);
     return n;
 }
 
@@ -574,7 +609,7 @@ RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_
     unsigned int serveroutlen;
     int err;
     char *clientdata = NULL;
-    RedsSASL *sasl = &stream->sasl;
+    RedsSASL *sasl = &stream->priv->sasl;
     uint32_t datalen = sasl->len;
     AsyncRead *obj = &stream->async_read;
 
@@ -657,7 +692,7 @@ authreject:
 RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
     AsyncRead *obj = &stream->async_read;
-    RedsSASL *sasl = &stream->sasl;
+    RedsSASL *sasl = &stream->priv->sasl;
 
     spice_info("Got steplen %d", sasl->len);
     if (sasl->len > SASL_DATA_MAX_LEN) {
@@ -704,7 +739,7 @@ RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read
     unsigned int serveroutlen;
     int err;
     char *clientdata = NULL;
-    RedsSASL *sasl = &stream->sasl;
+    RedsSASL *sasl = &stream->priv->sasl;
     uint32_t datalen = sasl->len;
 
     /* NB, distinction of NULL vs "" is *critical* in SASL */
@@ -786,7 +821,7 @@ authreject:
 RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
     AsyncRead *obj = &stream->async_read;
-    RedsSASL *sasl = &stream->sasl;
+    RedsSASL *sasl = &stream->priv->sasl;
 
     spice_info("Got client start len %d", sasl->len);
     if (sasl->len > SASL_DATA_MAX_LEN) {
@@ -810,7 +845,7 @@ RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone r
 bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
     AsyncRead *obj = &stream->async_read;
-    RedsSASL *sasl = &stream->sasl;
+    RedsSASL *sasl = &stream->priv->sasl;
 
     sasl->mechname[sasl->len] = '\0';
     spice_info("Got client mechname '%s' check against '%s'",
@@ -852,7 +887,7 @@ bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, v
 bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
     AsyncRead *obj = &stream->async_read;
-    RedsSASL *sasl = &stream->sasl;
+    RedsSASL *sasl = &stream->priv->sasl;
 
     if (sasl->len < 1 || sasl->len > 100) {
         spice_warning("Got bad client mechname len %d", sasl->len);
@@ -878,7 +913,7 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
     char *localAddr, *remoteAddr;
     int mechlistlen;
     AsyncRead *obj = &stream->async_read;
-    RedsSASL *sasl = &stream->sasl;
+    RedsSASL *sasl = &stream->priv->sasl;
 
     if (!(localAddr = reds_stream_get_local_address(stream))) {
         goto error;
