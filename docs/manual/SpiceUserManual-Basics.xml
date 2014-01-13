@@ -1,0 +1,689 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?oxygen RNGSchema="http://www.oasis-open.org/docbook/xml/5.0/rng/docbookxi.rng" type="xml"?>
+
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xi="http://www.w3.org/2001/XInclude" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:id="basics">
+    <title>Spice basics</title>
+    <section xml:id="definitions">
+        <title>Basic Definitions</title>
+        <section xml:id="host">
+            <title>Host</title>
+            <para>Host is a machine running an instance of qemu-kvm.</para>
+        </section>
+
+        <section xml:id="guest">
+            <title>Guest</title>
+            <para>
+                Guest is a virtual machine hosted on the <link linkend="host">host</link>
+                which will be accessed with a spice client.
+            </para>
+        </section>
+
+        <section xml:id="client">
+            <title>Client</title>
+            <para>
+                Client is referring to a system running the spice client
+                (the recommended one is virt-viewer).
+            </para>
+        </section>
+    </section>
+
+    <section xml:id="qemu_basics">
+        <title>Launching qemu</title>
+        <para>I'll use qemu-kvm as a name for the executable. If you're using a manually built qemu or
+            a qemu without kvm then just replace qemu-kvm with your own binary. I'll use host# client#
+            guest# shell prompt notations to distinguish where the command should be the command. See
+            section <link xlink:href="definitions">Basic Definitions</link> to be sure that you know
+            difference between the host, client and guest. You can ignore the difference between guest, client
+            and host if they are all running on the same machine.</para>
+
+        <para>
+            <emphasis role="bold">The first important thing to do is to create a guest
+                image.</emphasis> You can use any raw device such as a clean logical volume, or an iSCSI
+            lun. You may also use a file as the disk image for the guest. I'll use a file created by qemu-img as a demonstration.
+        </para>
+        
+        <para>
+            The following command will allocate a 10GB file. See qemu-img man page for further information.
+        </para>
+        
+        <screen>host# qemu-img create /path/to/xp.img 10G</screen>
+        
+        <para>
+            Now that we created an image, we can now start with image population. I assume that you have
+            a locally stored ISO of your favourite operating system so you can use it for installation.
+        </para>
+        
+        <screen>host# sudo qemu-kvm -boot order=dc -vga qxl \
+         -spice port=3001,disable-ticketing -soundhw ac97 \
+         -device virtio-serial -chardev spicevmc,id=vdagent,debug=0,name=vdagent \
+         -device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
+         -cdrom /path/to/your.iso /path/to/your.img</screen>
+        
+        <para>
+            Let's take a brief look at the qemu options that were used. The option -boot order=dc specifies that the guest system
+            should try to boot from the first cdrom and then fallback to the first disk, -vga qxl specifies that qemu should
+            emulate the qxl device adapter.
+        </para>
+        <para> The Spice port option defines what port will be used for communication with the client. The Spice
+            option disable-ticketing is telling us that ticketing <emphasis role="italic">(simple
+                authentication method)</emphasis> is not used. The virtio and chardev devices are
+            required by <link xlink:href="SpiceUserManual-Introduction.xml#vdagent">the guest
+            agent</link>.
+        </para>
+    </section>
+
+    <section xml:id="qemu_spice">
+        <title>Adding Spice support to an existing virtual machine</title>
+        <para>
+            This section will assume that you already have a running QEMU virtual machine,
+            and that you are running it either through virt-manager, libvirt or through
+            direct QEMU use, and that you want to enable Spice support for this virtual
+            machine.
+        </para>
+
+        <section>
+            <title>Using virt-manager</title>
+            <para>
+                Double-click on the virtual machine you are interested in, go to View/Details.
+                If the left pane has a "Display Spice" entry, then the virtual machine already
+                has Spice support, and you can check the connection details (port number)
+                by clicking on it. If it has no Spice entry, click on "Add
+                Hardware", and add a "Graphics" element of type "Spice server".
+                If the host and the client are not the same machine, you should check
+                the "Listen on all public network interfaces" checkbox, otherwise you
+                don't need to make any changes.
+            </para>
+            <para>
+                You should also add a QXL video device. It can be done by double-clicking
+                on a virtual machine, then by going to View/Details, and  by clicking
+                on "Add Hardware" if the virtual machine does not have a "Video QXL" item
+                in its left pane. From the "Add hardware" dialog, you should then create
+                a "Video" device whose model is "QXL".
+            </para>
+            <para>
+                After stopping and restarting the virtual machine, it should be
+                accessible with a Spice client.
+            </para>
+            <para>
+                You can remove non-Spice display entries and non-QXL video entries from
+                the virtual machine configuration.
+            </para>
+            <para>
+                If you go to Edit/Preferences/VM Details in the main virt-manager window,
+                you can set Spice graphics type as the default setting for new virtual
+                machines.
+            </para>
+        </section>
+
+        <section>
+            <title>Using libvirt</title>
+            <para>
+                All libvirt examples will assume that the virtual machine to modify
+                is $vmname and that virsh is using the correct
+                <link xlink:href="http://libvirt.org/uri.html">libvirt connection</link>
+                by default.
+            </para>
+            <para>
+                To add Spice support to an existing virtual machine managed by libvirt,
+                you need to edit it:
+                <screen>
+host# virsh edit $vmname
+                </screen>
+                and then add a <link xlink:href="http://libvirt.org/formatdomain.html#elementsGraphics">Spice graphics element</link>:
+                <programlisting>
+&lt;graphics type='spice'/&gt;
+                </programlisting>
+                You should also add a <link xlink:href="http://libvirt.org/formatdomain.html#elementsVideo">QXL video device</link>
+                <programlisting>
+&lt;video&gt;
+    &lt;model type='qxl'&gt;
+&lt;/video&gt;
+                </programlisting>
+            </para>
+            <para>
+                After stopping and restarting the virtual machine $vmname, it should be
+                accessible through Spice. You can check the connection parameters with:
+                <screen>
+host# virsh domdisplay $vmname
+                </screen>
+            </para>
+        </section>
+
+        <section>
+            <title>Using QEMU</title>
+            <para>
+                To enable Spice support to your virtual machine, you only need to
+                append the following to your QEMU command line:
+                <screen>
+-spice port=3001,disable-ticketing
+                </screen>
+                This will setup a Spice session listening on port 3001 exporting
+                your virtual machine display.
+            </para>
+            <para>
+                You can also add a QXL device by appending this to the command line:
+                <screen>
+-vga qxl
+                </screen>
+            </para>
+
+        </section>
+
+        <section xml:id="client_basics">
+            <title>Connecting to guest</title>
+
+            <para>
+                The following section will show you basic usage of the Spice
+                client. The example connection will be related to the qemu instance
+                started in <link xlink:href="#qemu_basics">the previous section</link>.
+            </para>
+
+            <para>
+                Be aware that the port used for spice communication
+                <emphasis role="italic">(port 3001 in our case)</emphasis> should not be
+                blocked by firewall.  <emphasis role="bold">Host myhost is referring to the
+                machine which is running our qemu instance.</emphasis>
+            </para>
+
+            <screen>client# remote-viewer spice://myhost:3001</screen>
+            <figure>
+                <title>Established connection to Windows 2008 guest</title>
+                <mediaobject>
+                    <imageobject>
+                        <imagedata fileref="resources/spicec01.png"/>
+                    </imageobject>
+                </mediaobject>
+            </figure>
+         </section>
+    </section>
+
+     <section xml:id="ticketing">
+        <title>Ticketing</title>
+        <para>
+            Spice does not currently support multiple connections to the same qemu
+            instance.  So anybody who will connect to the same host and port can simply
+            take over your session.
+
+            <emphasis role="bold">You can eliminate this problem by using
+            <link xlink:href="#ticketing">ticketing</link> or SSL.</emphasis>
+        </para>
+
+        <para>
+            Ticketing is a simple authentication system which enables you to set simple
+            tickets to a vm.
+            Client has to authentificate before the connection can be established. See
+            the spice option password in the following example.
+        </para>
+
+        <section>
+            <title>Using virt-manager</title>
+            <para>
+                To set a Spice password for a virtual machine, go to this machine
+                details in virt-manager, and then click on the "Display Spice" item in
+                the left pane, and enter the ticket you want to use in the "Password"
+                field.
+            </para>
+        </section>
+
+        <section>
+            <title>Using libvirt</title>
+            <para>
+                All you need to do is to append a passwd attribute to the Spice
+                graphics node for your virtual machine:
+                <programlisting>
+&lt;graphics type='spice' passwd='mysecretpassword'/&gt;
+                </programlisting>
+            </para>
+        </section>
+
+        <section>
+            <title>Using QEMU</title>
+            <para>
+                Adding a ticket with QEMU involves a slight modification of the -spice
+                parameter used when running QEMU:
+                <screen>
+-spice port=3001,password=mysecretpassword
+                </screen>
+            </para>
+        </section>
+
+        <section>
+            <title>Client</title>
+            <para>
+                When you start the client as usual, if ticketing was enabled on the host,
+                remote-viewer will pop up a window asking for a password before starting
+                the Spice session. It won't be established if an incorrect ticket was
+                passed to the client.
+            </para>
+
+            <para>
+                You might have figured out that passing tickets as a commandline option isn't very safe.
+                <emphasis role="bold">It's not safe as everybody with access to the host can read it from the output of ps(1).</emphasis>
+                To prevent this, the ticket can be also set by using the qemu console command spice._set_ticket.
+            </para>
+        </section>
+    </section>
+
+    <section xml:id="agent">
+        <title>Agent</title>
+        <para>
+            Agent support allows better integration with the guest. For example, it
+            allows copy and paste between the guest and the host OSes, dynamic resolution
+            changes when the client window is resized/fullscreened, file transfers through
+            drag and drop, ...
+        </para>
+        <para>
+            The agent is a daemon/service running in the guest OS so it must be installed
+            if it was not installed by default during the guest OS installation. It also
+            relies on a virtio-serial PCI device and a dedicated spicevmc char device
+            to achieve communication between the guest and the host. These devices must
+            be added to the virtual machine if we want to agent to work properly in the
+            guest.
+        </para>
+
+        <section>
+            <title>Using virt-manager</title>
+            <para>
+                The needed devices can be added from the virtual machine details. Click
+                on "Add hardware" and then add a "Channel" device with type
+                "Spice agent (spicevmc)". This will automatically add the needed
+                virtio-serial device in addition to the spicevmc channel.
+            </para>
+        </section>
+
+        <section>
+            <title>Using libvirt</title>
+            <para>
+                Two distinct devices must be added:
+                <itemizedlist>
+                    <listitem>a <link xlink:href="http://libvirt.org/formatdomain.html#elementsControllers">virtio serial device</link></listitem>
+                    <listitem>a <link xlink:href="http://libvirt.org/formatdomain.html#elementCharChannel">spicevmc channel</link></listitem>
+                </itemizedlist>
+                <programlisting>
+&lt;devices&gt;
+    &lt;controller type='virtio-serial' index='0'/&gt;
+    &lt;channel type='spicevmc'&gt;
+        &lt;target type='virtio' name='com.redhat.spice.0'/&gt;
+    &lt;/channel&gt;
+&lt;/devices&gt;
+                </programlisting>
+            </para>
+        </section>
+
+        <section>
+            <title>Using QEMU</title>
+            <para>
+                Adding the following parameters to your QEMU command line will
+                enable the needed devices for agent support in the guest OS:
+                <screen>
+-device virtio-serial \
+-chardev spicevmc,id=vdagent,debug=0,name=vdagent \
+-device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
+                </screen>
+            </para>
+        </section>
+    </section>
+
+    <section xml:id="USB">
+        <title>USB redirection</title>
+        <para>
+            With USB redirection, USB devices plugged into the client machine can be
+            transparently redirected to the guest OS. This redirection can either be
+            automatic (all newly plugged devices are redirected), or manual
+            (the user selects which devices (s)he wants to redirect).
+        </para>
+        <para>
+            For redirection to work, the virtual machine must have an USB2 EHCI controller
+            (this implies 3 additional UHCI controllers). It also needs to have
+            Spice channels for USB redirection. The number of such channels correspond
+            to the number of USB devices that it will be possible to redirect at the same
+            time.
+        </para>
+
+        <section>
+            <title>Using virt-manager</title>
+            <para>
+                Virtual machines created with virt-manager should have a USB controller
+                by default. In the virtual machine details, select "Controller USB" in
+                the left pane, and make sure its model is set to USB2. You can then
+                click on "Add Hardware" and add as many "USB Redirection" items as
+                the number of USB devices you want to be able to redirect simultaneously.
+            </para>
+        </section>
+
+        <section>
+            <title>Using libvirt</title>
+                <para>
+                    You need to add the needed USB controllers to the libvirt XML (make
+                    sure there is no pre-existing USB controller in your virtual machine
+                    XML before doing this), as well as one Spice USB redirection channel
+                    per device you want to redirect simultaneously.
+                    <programlisting>
+ &lt;controller type='usb' index='0' model='ich9-ehci1'/&gt;
+&lt;controller type='usb' index='0' model='ich9-uhci1'&gt;
+  &lt;master startport='0'/&gt;
+&lt;/controller&gt;
+&lt;controller type='usb' index='0' model='ich9-uhci2'&gt;
+  &lt;master startport='2'/&gt;
+&lt;/controller&gt;
+&lt;controller type='usb' index='0' model='ich9-uhci3'&gt;
+  &lt;master startport='4'/&gt;
+&lt;/controller&gt;
+&lt;redirdev bus='usb' type='spicevmc'/&gt;
+&lt;redirdev bus='usb' type='spicevmc'/&gt;
+&lt;redirdev bus='usb' type='spicevmc'/&gt;
+&lt;redirdev bus='usb' type='spicevmc'/&gt;
+                    </programlisting>
+                </para>
+        </section>
+
+        <section>
+            <title>Using QEMU</title>
+            <para>
+                Similarly to libvirt, we need to add EHCI/UHCI controllers to QEMU
+                command line, and we also need to add one Spice redirection channel per
+                device we want to redirect simultaneously.
+                <screen>
+-device ich9-usb-ehci1,id=usb \
+-device ich9-usb-uhci1,masterbus=usb.0,firstport=0,multifunction=on \
+-device ich9-usb-uhci2,masterbus=usb.0,firstport=2 \
+-device ich9-usb-uhci3,masterbus=usb.0,firstport=4 \
+-chardev spicevmc,name=usbredir,id=usbredirchardev1 \
+-device usb-redir,chardev=usbredirchardev1,id=usbredirdev1 \
+-chardev spicevmc,name=usbredir,id=usbredirchardev2 \
+-device usb-redir,chardev=usbredirchardev2,id=usbredirdev2 \
+-chardev spicevmc,name=usbredir,id=usbredirchardev3 \
+-device usb-redir,chardev=usbredirchardev3,id=usbredirdev3
+                </screen>
+            </para>
+        </section>
+
+        <section>
+            <title>Client</title>
+            <para>
+                The client needs to have support for USB redirection. In remote-viewer,
+                you can select which USB devices to redirect in File/USB device selection
+                once the Spice connection is established. There are also various command
+                line redirection options which are described when running remote-viewer
+                with --help-spice.
+            </para>
+        </section>
+    </section>
+
+    <section xml:id="multi-monitors">
+        <title>Multiple monitor support</title>
+        <para>
+            When using Spice, it's possible to use multiple monitors. For that, the guest
+            must have multiple QXL devices (for Windows guests), or a single QXL device
+            configured to support multiple heads (for Linux guests).
+        </para>
+        <para>
+            Before following the instructions in this section, make sure your virtual machine
+            already has a QXL device. If that is not the case, refer to
+            <link xlink:href="qemu_spice">this section</link>. Your guest OS will
+            also need to have the QXL driver installed or multiple monitor support will
+            not work.
+        </para>
+        <para>
+            Once your virtual machine is using a QXL device, you don't need to make
+            any other change to get multiple heads in a Linux guest. The following
+            paragraph will deal with adding multiple QXL devices to get multiple
+            monitors in a Windows guest.
+        </para>
+
+        <section>
+            <title>Using virt-manager</title>
+            <para>
+                To add an additional QXL device for Windows guests, simply go to your
+                virtual machine details. Check that you already have a "Video QXL" device,
+                if notclick on "Add Hardware", and add a "Video" device
+                with model "QXL". This can also work with Linux guests if your are willing
+                to configure X.Org to use Xinerama (instead of XRandR).
+            </para>
+            <para>
+                If you are using a new enough distribution (for example Fedora 19), and if your
+                virtual machine already has a QXL device, you should not need to make any changes
+                in virt-manager. If you are using an older distribution, you can't do the required
+                changes from virt-manager, you'll need to edit libvirt XML as described on this
+                <link xlink:href="http://hansdegoede.livejournal.com/12969.html">blog post</link>.
+            </para>
+        </section>
+
+        <section>
+            <title>Using libvirt</title>
+            <para>
+                To add an additional QXL device to your virtual machine managed by
+                libvirt, you simply need to append a new video node whose model is
+                QXL:
+                <programlisting>
+&lt;video&gt;
+    &lt;model type='qxl'&gt;
+&lt;/video&gt;
+&lt;video&gt;
+    &lt;model type='qxl'&gt;
+&lt;/video&gt;
+                </programlisting>
+            </para>
+        </section>
+
+        <section>
+            <title>Using QEMU</title>
+            <para>
+                To get a second QXL device in your virtual machine, you need to append
+                -device qxl to your QEMU command line in addition to the -vga qxl that
+                is already there:
+                <screen>
+-vga qxl -device qxl
+                </screen>
+            </para>
+        </section>
+
+        <section>
+            <title>Client</title>
+            <para>
+                You can enable additional displays either from the Display/Displays menu
+                in remote-viewer, or from your guest OS display configuration tool.
+            </para>
+        </section>
+    </section>
+
+    <section xml:id="tls">
+        <title>TLS</title>
+        <para>
+            TLS support allows to encrypt all/some of the channels Spice uses
+            for its communication.
+            A separate port is used for the encrypted channels.
+            When connecting through a TLS channel, the Spice client will verify
+            the certificate sent by the host. It will check that this
+            certificate matches the hostname it's connecting, and that
+            this certificate is signed by a known certificate authority
+            (CA). This can be achieved by either getting the host
+            certificate signed by an official CA, or by passing to the client
+            the certificate of the authority which signed the host certificate.
+            The latter allows the use of self-signed certificates.
+        </para>
+
+        <section>
+            <title>Using virt-manager</title>
+            <para>
+                It's not possible to define the CA certificate/host certificate
+                to use for the TLS connection using virt-manager, see the next
+                section for how to enable this using libvirt.
+            </para>
+        </section>
+
+        <section>
+            <title>Using libvirt</title>
+            <para>
+                The certificate must be specified in libvirtd configuration
+                file in /etc/libvirt/qemu.conf (or in
+                ~/.config/libvirt/qemu.conf if you are using a session libvirt).
+                See the documentation in this file reproduced below:
+                <screen>
+# Enable use of TLS encryption on the SPICE server.
+#
+# It is necessary to setup CA and issue a server certificate
+# before enabling this.
+#
+spice_tls = 1
+
+
+# Use of TLS requires that x509 certificates be issued. The
+# default it to keep them in /etc/pki/libvirt-spice. This directory
+# must contain
+#
+#  ca-cert.pem - the CA master certificate
+#  server-cert.pem - the server certificate signed with ca-cert.pem
+#  server-key.pem  - the server private key
+#
+# This option allows the certificate directory to be changed.
+#
+spice_tls_x509_cert_dir = "/etc/pki/libvirt-spice"
+                </screen>
+            </para>
+            <para>
+                Once the above is done, when the domain is running, you
+                should get something like what is below if you are leaving
+                Spice port allocation up to libvirt:
+                <screen>
+host# virsh domdisplay
+spice://127.0.0.1?tls-port=5901
+                </screen>
+            </para>
+            <para>
+                This means that the connection is possible both through TLS and
+                without any encryption. You can edit the libvirt graphics node
+                if you want to change that behaviour and only allow connections
+                through TLS:
+                <programlisting>
+&lt;graphics type='spice' autoport='yes' defaultMode='secure'/&gt;
+                </programlisting>
+            </para>
+        </section>
+
+        <section>
+            <title>Using QEMU</title>
+            <para>
+                QEMU expects the certificates to be named the same way as what
+                libvirt expects in the previous paragraph. The directory where
+                these certificates can be found is specified as options to the
+                -spice command line parameters:
+                <screen>
+-spice port=5900,tls-port=5901,disable-ticketing,x509-dir=/etc/pki/libvirt-spice
+                </screen>
+            </para>
+        </section>
+
+        <section>
+            <title>Client</title>
+            <para>
+                We need to change 2 things when starting the client:
+                <itemizedlist>
+                    <listitem>specify the tls port to use</listitem>
+                    <listitem>specify the CA certificate to use when verifying the host certificate</listitem>
+                </itemizedlist>
+                With remote-viewer, this is done this way:
+                <screen>
+client# remote-viewer --spice-ca-file=/etc/pki/libvirt-spice/ca-cert.ca spice://myhost?tls-port=5901
+                </screen>
+            </para>
+        </section>
+
+        <section>
+            <title>Generating self-signed certificates for use with Spice</title>
+            <para>
+                The following script can be used to create the various certificates
+                needed to use a TLS Spice connection. Make sure to substitute the hostname
+                of your Spice host in the subject of the certificate signing request.
+                <screen>
+SERVER_KEY=server-key.pem
+
+# creating a key for our ca
+if [ ! -e ca-key.pem ]; then
+    openssl genrsa -des3 -out ca-key.pem 1024
+fi
+# creating a ca
+if [ ! -e ca-cert.pem ]; then
+    openssl req -new -x509 -days 1095 -key ca-key.pem -out ca-cert.pem -utf8 -subj "/C=IL/L=Raanana/O=Red Hat/CN=my CA"
+fi
+# create server key
+if [ ! -e $SERVER_KEY ]; then
+    openssl genrsa -out $SERVER_KEY 1024
+fi
+# create a certificate signing request (csr)
+if [ ! -e server-key.csr ]; then
+    openssl req -new -key $SERVER_KEY -out server-key.csr -utf8 -subj "/C=IL/L=Raanana/O=Red Hat/CN=myhostname.example.com"
+fi
+# signing our server certificate with this ca
+if [ ! -e server-cert.pem ]; then
+    openssl x509 -req -days 1095 -in server-key.csr -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out server-cert.pem
+fi
+
+# now create a key that doesn't require a passphrase
+openssl rsa -in $SERVER_KEY -out $SERVER_KEY.insecure
+mv $SERVER_KEY $SERVER_KEY.secure
+mv $SERVER_KEY.insecure $SERVER_KEY
+
+# show the results (no other effect)
+openssl rsa -noout -text -in $SERVER_KEY
+openssl rsa -noout -text -in ca-key.pem
+openssl req -noout -text -in server-key.csr
+openssl x509 -noout -text -in server-cert.pem
+openssl x509 -noout -text -in ca-cert.pem
+                </screen>
+            </para>
+        </section>
+    </section>
+
+     <section xml:id="sasl">
+        <title>SASL</title>
+        <para>
+            Spice server and client have support for SASL authentication. When using QEMU, /etc/sasl2/qemu.conf will be
+            used as a configuration file. For testing, you can use the digest-md5 mechanism, and populate a test database
+            using 'saslpasswd2 -f /etc/qemu/passwd.db -c foo'. These files have to be readable by the qemu process that will
+            handle your VM.
+       </para>
+
+        <para>
+            To troubleshoot SASL issues, running strace -e open on the QEMU process can be a useful first step.
+        </para>
+
+
+        <section>
+            <title>Using virt-manager</title>
+            <para>
+                It's currently not possible to enable SASL from virt-manager.
+            </para>
+        </section>
+
+        <section>
+            <title>Using libvirt</title>
+            <para>
+                SASL support for SPICE has been added to libvirt mid-October 2013 so you need a libvirt version
+                that was released after this date. To enable SASL, you need to add spice_sasl = 1 in /etc/libvirt/qemu.conf
+                for the system libvirtd instance, and to ~/.config/libvirt/qemu.conf for the session libvirtd instance.
+            </para>
+        </section>
+
+        <section>
+            <title>Using QEMU</title>
+            <para>
+                Using SASL with QEMU involves a slight modification of the -spice
+                parameter used when running QEMU:
+                <screen>
+-spice port=3001,sasl
+                </screen>
+            </para>
+        </section>
+
+        <section>
+            <title>Client</title>
+            <para>
+                When you start the client as usual, if SASL was enabled on the host,
+                remote-viewer will pop up a window asking for a password before starting
+                the Spice session. It won't be established if an incorrect ticket was
+                passed to the client.
+            </para>
+        </section>
+    </section>
+</chapter>

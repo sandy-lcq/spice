@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?oxygen RNGSchema="http://www.oasis-open.org/docbook/xml/5.0/rng/docbookxi.rng" type="xml"?>
+
+    <chapter xmlns="http://docbook.org/ns/docbook" 
+        xmlns:xi="http://www.w3.org/2001/XInclude"
+        xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0">
+    <title>Introduction</title>
+    <para>
+        Spice is an open remote computing solution, providing client access to remote displays and devices (e.g. keyboard, mouse, audio).
+        At the moment, it's mainly used to get remote access to virtual machines. Spice provides a desktop-like user experience, while trying to
+        offload most of the intensive CPU and GPU tasks to the client.
+
+        The basic building blocks of Spice are:
+    </para>
+
+    <orderedlist>
+        <listitem><para><link linkend="spice_server">Spice Server</link></para></listitem>
+        <listitem><para><link linkend="spice_client">Spice Client</link></para></listitem>
+        <listitem><para>Spice Protocol</para></listitem>
+    </orderedlist>
+
+    <para>
+        The following sections provide basic information on Spice components and features, obtaining, building installing and using Spice.
+    </para>
+
+    <section>
+        <title>Spice and Spice-related Components</title>
+        <section xml:id="spice_server">
+            <title>Spice Server</title>
+            <para>
+                Spice server is implemented in libspice, a VDI pluggable library.
+                Currently, the main user of this library is QEMU. QEMU uses spice-server
+                to provide remote access to virtual machines through the Spice protocol.
+                Virtual Device Interface (VDI) defines a set of interfaces that provide
+                a standard way to publish virtual devices (e.g. display device, keyboard,
+                mouse) and enables different Spice components to interact with those
+                devices.  On one side, the server communicates with the remote client
+                using the Spice protocol and on the other side, it interacts with the
+                VDI host application (e.g QEMU).
+            </para>
+        </section>
+
+        <section xml:id="spice_client">
+            <title>Spice Client</title>
+            <para>
+                The Spice client is a cross-platform (Linux and Windows)
+                which is used by the end user to access remote systems through Spice.
+                The recommended client is <link xlink:href="https://fedorahosted.org/released/virt-viewer/">remote-viewer</link>
+                (which is shipped with virt-viewer).
+                <link xlink:href="https://wiki.gnome.org/Apps/Boxes">GNOME Boxes</link>
+                can also be used as a Spice client. spicec is an obsolete
+                legacy client, and spicy is only a test application.
+            </para>
+        </section>
+
+        <section>
+            <title>QXL Device and Drivers</title>
+            <para>
+                Spice server supports the QXL VDI interface. When libspice is used with
+                QEMU, a specific video PCI device can be used for improving
+                remote display performance and enhancing the graphic capabilities of the
+                guest graphic system. This video device is called a QXL
+                device and requires guest QXL drivers for full functionality. However,
+                standard VGA is supported when no driver exists.
+            </para>
+        </section>
+
+        <section xml:id="vdagent">
+            <title>Spice Agent</title>
+            <para>
+                The Spice agent is an optional component for enhancing user
+                experience and performing guest-oriented management tasks.
+                For example, the agent injects mouse position and state to
+                the guest when using client mouse mode. It also enables you to
+                move cursor freely between guest and client. Other features
+                of agent are shared clipboard (copy and paste between guest and host)
+                and aligning guest resolution with client when entering fullscreen mode.
+            </para>
+        </section>
+
+        <section>
+            <title>VDI Port Device</title>
+            <para>
+                Spice protocol supports a communication channel between the
+                client and the agent on the server side.  When using QEMU, Spice agent
+                resides on the guest. VDI port is a QEMU PCI device used
+                for communication with the agent.
+            </para>
+        </section>
+
+    </section>
+
+    <section xml:id="features">
+        <title>Features</title>
+        <para>
+            The server and client communicate via channels. Each channel is dedicated to
+            a specific type of data. The available channels are following.
+        </para>
+        <section xml:id="multiple_channels">
+            <title>Multiple Channels</title>
+
+            <orderedlist numeration="arabic">
+                <listitem>
+                    <para><emphasis role="bold">Main</emphasis> -  control and configuration</para>
+                </listitem>
+                <listitem>
+                    <para><emphasis role="bold">Display</emphasis> -  graphics commands images and video streams</para>
+                </listitem>
+                <listitem>
+                    <para><emphasis role="bold">Inputs</emphasis> - keyboard and mouse inputs</para>
+                </listitem> 
+                <listitem>
+                    <para><emphasis role="bold">Cursor</emphasis> - pointer device position and cursor shape</para>
+                </listitem>
+                <listitem>
+                    <para><emphasis role="bold">Playback</emphasis> - audio received from the server to be played by the client</para>
+                </listitem>
+                <listitem>
+                    <para><emphasis role="bold">Record</emphasis> - audio captured on the client side</para>
+                </listitem>
+                <listitem>
+                    <para><emphasis role="bold">Smartcard</emphasis> - passthrough of smartcard data from the client machine to the guest OS</para>
+                </listitem>
+                <listitem>
+                    <para><emphasis role="bold">USB</emphasis> - redirection of USB devices plugged into the client to the guest OS</para>
+                </listitem>
+            </orderedlist>
+        </section>
+
+        <section xml:id="image_compression">
+            <title>Image Compression</title>
+            
+            <para>
+                Spice offers several image compression algorithms, which
+                can be chosen on server initiation and  dynamically at run-time. Quic is a
+                Spice proprietary image compression technology based on the SFALIC
+                algorithm. The Lempel-Ziv (LZ) algorithm is another option. Both Quic and
+                LZ are local algorithms encoding each image separately. Global LZ (GLZ) is
+                another proprietary Spice technology that uses LZ with history-based global
+                dictionary. GLZ takes advantage of repeating patterns among images to
+                shrink the traffic and save bandwidth, which is critical in a WAN
+                environment. Spice also offers an automatic mode for compression selection
+                per image, where the choice between LZ/GLZ and Quic is heuristically based
+                on image properties. Conceptually, synthetic images are better compressed
+                with LZ/GLZ and real images are better with Quic.
+            </para>
+        </section>
+        
+        <section xml:id="video_compression">
+            <title>Video Compression</title>
+            
+            <para>
+                Spice uses loss-less compression for images sent to the
+                client. However, video streams are handled differently. Spice server
+                heuristically identifies video areas and sends them as a video stream coded
+                using M-JPEG. This handling saves a lot of traffic, improving Spice
+                performance, especially in a WAN environment. However, in some
+                circumstances the heuristic behavior might cause low quality images (e.g.
+                identifying updated text area as a video stream). Video streaming can be
+                chosen on server initiation and dynamically at run-time.
+            </para>
+        </section>
+
+        <section xml:id="mouse_modes">
+            <title>Mouse modes</title>
+
+            <para>
+                Spice supports two mouse modes: server and client. The mode
+                can be changed dynamically and is negotiated between the client and the
+                server.
+            </para>
+            <orderedlist>
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Server mouse</emphasis> - When a user
+                        clicks inside the Spice client window, the client mouse is
+                        captured and set invisible. In this mode, the server controls
+                        the mouse position on display. However, it might be problematic
+                        on WAN or on a loaded server, where mouse cursor might have some
+                        latency or non-responsiveness.
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Client mouse</emphasis> - Not
+                        captured and is used as the effective pointing device. To enable
+                        client mouse, the VDI host application must register an absolute
+                        pointing device (e.g. USB tablet in QEMU). This mode is
+                        appropriate for WAN or or for a loaded server, since cursor has
+                        smooth motion and responsiveness.  However, the cursor might
+                        lose synchronization (position and shape) for a while.
+                    </para>
+                </listitem>
+
+            </orderedlist>
+        </section>
+
+        <section xml:id="other_features">
+            <title>Other Features</title>
+            <orderedlist>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Multiple Monitors</emphasis> -  any number of monitors is supported
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Arbitrary Resolution</emphasis> -  when
+                        using the QXL driver, the resolution of the guest OS will be
+                        automatically adjusted to the size of the client window.
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">USB Redirection</emphasis> -  Spice
+                        can be used to redirect USB devices that are plugged in the
+                        client to the guest OS. This redirection can either be
+                        automatic (all newly plugged devices are redirected), or manual
+                        (the user selects which devices (s)he wants to redirect).
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Smartcard Redirection</emphasis> -
+                        data from smartcard that are inserted into the client machine
+                        can be passed through to the guest OS. The smartcard can be
+                        used by both the client OS and the guest OS.
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Bidirectional Audio</emphasis> - Spice supports audio playback and recording. Playback is compressed using the CELT algorithm
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Lip-sync</emphasis> - between video and audio. Available only when video streaming is enabled. 
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Migration</emphasis> - switching channel connectivity for supporting server migration
+                    </para>
+                </listitem>
+
+                <listitem>
+                    <para>
+                        <emphasis role="bold">Pixmap and Palette caching</emphasis>
+                    </para>
+                </listitem>
+
+            </orderedlist>
+        </section>
+    </section>
+
+</chapter>

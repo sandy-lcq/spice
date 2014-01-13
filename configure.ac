@@ -415,6 +415,23 @@ if test "x$enable_automated_tests" = "xyes"; then
     AC_MSG_RESULT([found])
 fi
 
+
+AC_ARG_ENABLE([manual],
+               AS_HELP_STRING([--enable-manual=@<:@auto/yes/no@:>@],
+                              [Build SPICE manual]),
+               [],
+               [enable_manual="auto"])
+if test "x$enable_manual" != "xno"; then
+    AC_PATH_PROG([XMLTO], [xmlto])
+    AS_IF([test -z "$XMLTO" && test "x$enable_manual" = "xyes"],
+          [AC_MSG_ERROR([xmlto is missing and build of manual was requested])]
+          [have_xmlto = no]
+         )
+fi
+AS_IF([test -n "$XMLTO"], [have_xmlto=yes], [have_xmlto=no])
+AM_CONDITIONAL([BUILD_MANUAL], [test -n "$XMLTO"])
+
+
 dnl ===========================================================================
 dnl check compiler flags
 
@@ -495,6 +512,8 @@ spice-server.pc
 server/Makefile
 server/tests/Makefile
 client/Makefile
+docs/Makefile
+docs/manual/Makefile
 ])
 
 dnl ==========================================================================
@@ -525,6 +544,8 @@ echo "
         SASL support:             ${enable_sasl}
 
         Automated tests:          ${enable_automated_tests}
+
+        Manual:                   ${have_xmlto}
 "
 
 if test $os_win32 == "yes" ; then

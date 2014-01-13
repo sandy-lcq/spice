@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?oxygen RNGSchema="http://www.oasis-open.org/docbook/xml/5.0/rng/docbookxi.rng" type="xml"?>
+
+<chapter xmlns="http://docbook.org/ns/docbook" 
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0">
+    <title>QEMU Spice Reference</title>
+
+    <section xml:id="commandline-spice">
+        <title>QEMU Spice command line options</title>
+        <para>
+            They are covered in <link xlink:href="http://qemu.weilnetz.de/qemu-doc.html#index-g_t_002dspice-58">QEMU online documentation</link>.
+            Basic syntax is -spice &lt;spice_options&gt;
+        </para>
+
+        <itemizedlist>
+            <listitem>
+                [port=&lt;port&gt;][,tls-port=&lt;tls-port&gt;][,addr=&lt;addr&gt;]
+                Listen on interface addr &lt;addr> (if given, otherwise any interface)
+                using port &lt;port&gt; and/or tls-port &lt;tls-port&gt; (at least one of them must be given)
+            </listitem>
+
+            <listitem>
+                ipv4=&lt;on|off&gt;
+                IPv4 only (default:off)
+            </listitem>
+
+            <listitem>
+                ipv6=&lt;on|off&gt;
+                IPv6 only (default:off)
+            </listitem>
+
+<!-- Image, video & audio options -->
+            <listitem>
+                image-compression=on|auto_glz|auto_lz|quic|glz|lz|off
+                Set image compression (default=on=auto_glz)
+                quic is based on the SFALIC algorithm
+                lz is the Lempel-Ziv algorithm, glz uses lz with history based global dictionary
+                The auto_[glz/lz] modes choose between the [glz/lz] and quic,
+                based on the image properties
+            </listitem>
+
+            <listitem>
+                streaming-video=&lt;all|filter|off&gt;
+                Set video streams detection and (lossy) compression (default=filter)
+            </listitem>
+
+            <listitem>
+                playback-compression=&lt;on|off&gt;
+                Set playback compression, using the CELT algorithm (default=on)
+            </listitem>
+
+            <listitem>
+                jpeg-wan-compression=&lt;auto|never|always&gt;
+                (default = auto)
+            </listitem>
+
+            <listitem>
+                zlib-glz-wan-compression=&lt;auto|never|always&gt;
+                (default = auto)
+            </listitem>
+
+<!-- Security options -->
+            <listitem>
+                disable-ticketing
+                Enables client connection with no password.
+            </listitem>
+
+            <listitem>
+                password=&lt;password&gt;
+                Set ticket password, which must be used by a client for connection. The passwords never expires.
+            </listitem>
+
+            <listitem>
+                sasl=&lt;on|off&gt;
+            </listitem>
+
+            <listitem>
+                x509-dir=&lt;dir_name&gt;
+            </listitem>
+
+            <listitem>
+                x509-key-file=&lt;key_file&gt;
+                TLS private key file
+            </listitem>
+
+            <listitem>
+                x509-key-password=&lt;pem_password&gt;
+                Password to open the private key file which is in PEM format
+            </listitem>
+
+            <listitem>
+                x509-cert-file=&lt;cert_file&gt;
+                TLS certificate file
+            </listitem>
+
+            <listitem>
+                tls-cacert-file=&lt;ca_file&gt;
+                SSL certificates file of the trusted CA (certificate authority) and CRL (certificate revocation list)
+            </listitem>
+
+            <listitem>
+                x509-dh-key-file=&lt;dh_file&gt;
+                Symmetric Diffie-Hellman key file
+            </listitem>
+
+            <listitem>
+                tls-ciphers=&lt;ciphers&gt;
+                Cipher suite to use, see http://www.openssl.org/docs/apps/ciphers.html or ciphers(1)
+            </listitem>
+
+            <listitem>
+                tls-channel=[all|channel_name]
+                plaintext-channel=[all|channel_name]
+                Force TLS/plain text connection on all/specific channels. This option
+                can be specified multiple times in order to force multiple channels
+                to use TLS or plain text.
+                Channels are: main, display, inputs, cursor, playback and record
+                By default, any channel allows both TLS and plain text connection, depending on the
+                port and tls-port parameters.
+            </listitem>
+
+<!-- Other options -->
+
+            <listitem>
+                agent-mouse=&lt;on|off&gt;
+                Define whether spice agent is used for client mouse mode (default=on)
+            </listitem>
+
+            <listitem>
+                disable-copy-paste=&lt;on|off&gt;
+                (default=off)
+            </listitem>
+
+            <listitem>
+                disable-agent-file-xfer=&lt;on|off&gt;
+                (default=off)
+            </listitem>
+
+            <listitem>
+                seamless-migration=&lt;on|off&gt;
+                (default=off)
+            </listitem>
+        </itemizedlist>
+    </section>
+
+    <section xml:id="commandline-qxl">
+        <title>QEMU QXL command line options</title>
+        <itemizedlist>
+            <listitem>
+                ram_size
+            </listitem>
+            <listitem>
+                vram_size
+            </listitem>
+            <listitem>
+                revision
+            </listitem>
+            <listitem>
+                debug
+            </listitem>
+            <listitem>
+                guestdebug
+            </listitem>
+            <listitem>
+                cmdlog
+            </listitem>
+            <listitem>
+                ram_size_mb
+            </listitem>
+            <listitem>
+                vram_size_mb
+            </listitem>
+            <listitem>
+                vram64_size_mb
+            </listitem>
+            <listitem>
+                vgamem_mb
+            </listitem>
+            <listitem>
+                surfaces
+            </listitem>
+        </itemizedlist>
+    </section>
+
+    <section xml:id="console-control">
+        <title>QEMU Console Spice control commands</title>
+        <itemizedlist>
+            <listitem>
+                set_password spice &lt;password&gt; [keep|disconnect]
+                Set the spice connection ticket (one time password). An
+                empty password prevents any connection. keep/disconnect
+                indicates what to do if a client is already connected
+                when the command is issued.
+            </listitem>
+
+            <listitem>
+                expire_password
+            </listitem>
+
+            <listitem>
+                client_migrate_info
+            </listitem>
+
+        </itemizedlist>
+    </section>
+
+    <section xml:id="console-info">
+        <title>QEMU Console Spice info commands</title>
+        <itemizedlist>
+            <listitem>
+                info spice
+                Show current spice state
+            </listitem>
+        </itemizedlist>
+    </section>
+
+</chapter>
