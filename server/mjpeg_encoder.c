@@ -796,7 +796,7 @@ int mjpeg_encoder_start_frame(MJpegEncoder *encoder, SpiceBitmapFmt format,
 #endif
         break;
     default:
-        spice_warning("unsupported format %d", format);
+        spice_debug("unsupported format %d", format);
         return MJPEG_ENCODER_FRAME_UNSUPPORTED;
     }
 
