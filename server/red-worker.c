@@ -177,7 +177,7 @@ static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ri
 
     *ring_is_empty = FALSE;
     while (!cursor_is_connected(worker) ||
-           red_channel_min_pipe_size(RED_CHANNEL(worker->cursor_channel)) <= max_pipe_size) {
+           red_channel_max_pipe_size(RED_CHANNEL(worker->cursor_channel)) <= max_pipe_size) {
         if (!worker->qxl->st->qif->get_cursor_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->cursor_poll_tries < CMD_RING_POLL_RETRIES) {
@@ -238,8 +238,7 @@ static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *r
     worker->process_display_generation++;
     *ring_is_empty = FALSE;
     while (!display_is_connected(worker) ||
-           // TODO: change to average pipe size?
-           red_channel_min_pipe_size(RED_CHANNEL(worker->display_channel)) <= max_pipe_size) {
+           red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) <= max_pipe_size) {
         if (!worker->qxl->st->qif->get_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;;
             if (worker->display_poll_tries < CMD_RING_POLL_RETRIES) {
@@ -447,7 +446,7 @@ static void flush_cursor_commands(RedWorker *worker)
         for (;;) {
             red_channel_push(RED_CHANNEL(worker->cursor_channel));
             if (!cursor_is_connected(worker)
-                || red_channel_min_pipe_size(cursor_red_channel) <= MAX_PIPE_SIZE) {
+                || red_channel_max_pipe_size(cursor_red_channel) <= MAX_PIPE_SIZE) {
                 break;
             }
             RedChannel *channel = (RedChannel *)worker->cursor_channel;
