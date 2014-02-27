@@ -87,7 +87,6 @@ libspice_server_la_SOURCES =			\
 	red_bitmap_utils.h			\
 	red_channel.c				\
 	red_channel.h				\
-	red_client_cache.h			\
 	red_common.h				\
 	dispatcher.c				\
 	dispatcher.h				\
@@ -146,6 +145,7 @@ libspice_server_la_SOURCES +=	\
 endif
 
 EXTRA_DIST =					\
+	cache_item.tmpl.c			\
 	glz_encode_match_tmpl.c			\
 	glz_encode_tmpl.c			\
 	spice-server.syms			\
