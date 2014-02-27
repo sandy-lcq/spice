@@ -65,6 +65,7 @@ libspice_server_la_SOURCES =			\
 	$(libspice_serverinclude_HEADERS)	\
 	agent-msg-filter.c			\
 	agent-msg-filter.h			\
+	cache-item.h				\
 	char_device.c				\
 	char_device.h				\
 	demarshallers.h				\
