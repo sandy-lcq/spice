@@ -1398,11 +1398,6 @@ static void show_draw_item(RedWorker *worker, DrawItem *draw_item, const char *p
            draw_item->base.rgn.extents.y2);
 }
 
-static inline int pipe_item_is_linked(PipeItem *item)
-{
-    return ring_item_is_linked(&item->link);
-}
-
 static void red_pipe_add_verb(RedChannelClient* rcc, uint16_t verb)
 {
     VerbItem *item = spice_new(VerbItem, 1);
@@ -11133,15 +11128,6 @@ void handle_dev_destroy_surface_wait(void *opaque, void *payload)
     dev_destroy_surface_wait(worker, msg->surface_id);
 }
 
-static void rcc_disconnect_if_pending_send(RedChannelClient *rcc)
-{
-    if (red_channel_client_blocked(rcc) || rcc->pipe_size > 0) {
-        red_channel_client_disconnect(rcc);
-    } else {
-        spice_assert(red_channel_client_no_item_being_sent(rcc));
-    }
-}
-
 static inline void red_cursor_reset(RedWorker *worker)
 {
     if (worker->cursor) {
@@ -11162,7 +11148,7 @@ static inline void red_cursor_reset(RedWorker *worker)
         if (!red_channel_wait_all_sent(&worker->cursor_channel->common.base,
                                        DISPLAY_CLIENT_TIMEOUT)) {
             red_channel_apply_clients(&worker->cursor_channel->common.base,
-                                      rcc_disconnect_if_pending_send);
+                               red_channel_client_disconnect_if_pending_send);
         }
     }
 }
@@ -11456,12 +11442,12 @@ void handle_dev_stop(void *opaque, void *payload)
     if (!red_channel_wait_all_sent(&worker->display_channel->common.base,
                                    DISPLAY_CLIENT_TIMEOUT)) {
         red_channel_apply_clients(&worker->display_channel->common.base,
-                                  rcc_disconnect_if_pending_send);
+                                 red_channel_client_disconnect_if_pending_send);
     }
     if (!red_channel_wait_all_sent(&worker->cursor_channel->common.base,
                                    DISPLAY_CLIENT_TIMEOUT)) {
         red_channel_apply_clients(&worker->cursor_channel->common.base,
-                                  rcc_disconnect_if_pending_send);
+                                 red_channel_client_disconnect_if_pending_send);
     }
 }
 
