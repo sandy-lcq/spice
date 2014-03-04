@@ -1368,8 +1368,15 @@ static int reds_send_link_ack(RedLinkInfo *link)
         return FALSE;
     }
 
-    RSA_generate_key_ex(link->tiTicketing.rsa, SPICE_TICKET_KEY_PAIR_LENGTH, link->tiTicketing.bn,
-                        NULL);
+    if (RSA_generate_key_ex(link->tiTicketing.rsa,
+                            SPICE_TICKET_KEY_PAIR_LENGTH,
+                            link->tiTicketing.bn,
+                            NULL) != 1) {
+        spice_warning("Failed to generate %d bits RSA key: %s",
+                      SPICE_TICKET_KEY_PAIR_LENGTH,
+                      ERR_error_string(ERR_get_error(), NULL));
+        goto end;
+    }
     link->tiTicketing.rsa_size = RSA_size(link->tiTicketing.rsa);
 
     i2d_RSA_PUBKEY_bio(bio, link->tiTicketing.rsa);
