@@ -1359,7 +1359,7 @@ static int reds_send_link_ack(RedLinkInfo *link)
     ack.caps_offset = sizeof(SpiceLinkReply);
 
     if (!(link->tiTicketing.rsa = RSA_new())) {
-        spice_warning("RSA nes failed");
+        spice_warning("RSA new failed");
         return FALSE;
     }
 
