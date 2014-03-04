@@ -2054,8 +2054,8 @@ static void reds_handle_read_link_done(void *opaque)
         return;
     }
 
-    auth_selection = test_capabilty(caps, link_mess->num_common_caps,
-                                    SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
+    auth_selection = test_capability(caps, link_mess->num_common_caps,
+                                     SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
 
     if (!reds_security_check(link)) {
         if (reds_stream_is_ssl(link->stream)) {

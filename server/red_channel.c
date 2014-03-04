@@ -684,16 +684,16 @@ static void red_channel_client_destroy_remote_caps(RedChannelClient* rcc)
 
 int red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t cap)
 {
-    return test_capabilty(rcc->remote_caps.common_caps,
-                          rcc->remote_caps.num_common_caps,
-                          cap);
+    return test_capability(rcc->remote_caps.common_caps,
+                           rcc->remote_caps.num_common_caps,
+                           cap);
 }
 
 int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap)
 {
-    return test_capabilty(rcc->remote_caps.caps,
-                          rcc->remote_caps.num_caps,
-                          cap);
+    return test_capability(rcc->remote_caps.caps,
+                           rcc->remote_caps.num_caps,
+                           cap);
 }
 
 int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
@@ -1172,7 +1172,7 @@ void red_channel_register_client_cbs(RedChannel *channel, ClientCbs *client_cbs)
     }
 }
 
-int test_capabilty(uint32_t *caps, int num_caps, uint32_t cap)
+int test_capability(uint32_t *caps, int num_caps, uint32_t cap)
 {
     uint32_t index = cap / 32;
     if (num_caps < index + 1) {
