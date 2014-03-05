@@ -1329,6 +1329,22 @@ static void reds_channel_init_auth_caps(RedLinkInfo *link, RedChannel *channel)
     red_channel_set_common_cap(channel, SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
 }
 
+
+static const uint32_t *red_link_info_get_caps(const RedLinkInfo *link)
+{
+    const uint8_t *caps_start = (const uint8_t *)link->link_mess;
+
+    return (const uint32_t *)(caps_start + link->link_mess->caps_offset);
+}
+
+static bool red_link_info_test_capability(const RedLinkInfo *link, uint32_t cap)
+{
+    const uint32_t *caps = red_link_info_get_caps(link);
+
+    return test_capability(caps, link->link_mess->num_common_caps, cap);
+}
+
+
 static int reds_send_link_ack(RedLinkInfo *link)
 {
     SpiceLinkHeader header;
@@ -2050,7 +2066,6 @@ static void reds_handle_read_link_done(void *opaque)
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     SpiceLinkMess *link_mess = link->link_mess;
     uint32_t num_caps = link_mess->num_common_caps + link_mess->num_channel_caps;
-    uint32_t *caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
     int auth_selection;
 
     if (num_caps && (num_caps * sizeof(uint32_t) + link_mess->caps_offset >
@@ -2061,8 +2076,8 @@ static void reds_handle_read_link_done(void *opaque)
         return;
     }
 
-    auth_selection = test_capability(caps, link_mess->num_common_caps,
-                                     SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
+    auth_selection = red_link_info_test_capability(link,
+                                                   SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
 
     if (!reds_security_check(link)) {
         if (reds_stream_is_ssl(link->stream)) {
