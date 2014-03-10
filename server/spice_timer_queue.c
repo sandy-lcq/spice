@@ -147,7 +147,7 @@ SpiceTimer *spice_timer_queue_add(SpiceTimerFunc func, void *opaque)
     return timer;
 }
 
-static void _spice_timer_set(SpiceTimer *timer, uint32_t ms, uint32_t now)
+static void _spice_timer_set(SpiceTimer *timer, uint32_t ms, uint64_t now)
 {
     RingItem *next_item;
     SpiceTimerQueue *queue;
@@ -183,7 +183,8 @@ void spice_timer_set(SpiceTimer *timer, uint32_t ms)
     spice_assert(pthread_equal(timer->queue->thread, pthread_self()) != 0);
 
     clock_gettime(CLOCK_MONOTONIC, &now);
-    _spice_timer_set(timer, ms, now.tv_sec * 1000 + (now.tv_nsec / 1000 / 1000));
+    _spice_timer_set(timer, ms,
+                     (uint64_t)now.tv_sec * 1000 + (now.tv_nsec / 1000 / 1000));
 }
 
 void spice_timer_cancel(SpiceTimer *timer)
@@ -217,7 +218,7 @@ void spice_timer_remove(SpiceTimer *timer)
 unsigned int spice_timer_queue_get_timeout_ms(void)
 {
     struct timespec now;
-    int now_ms;
+    int64_t now_ms;
     RingItem *head;
     SpiceTimer *head_timer;
     SpiceTimerQueue *queue = spice_timer_queue_find_with_lock();
@@ -232,9 +233,9 @@ unsigned int spice_timer_queue_get_timeout_ms(void)
     head_timer = SPICE_CONTAINEROF(head, SpiceTimer, active_link);
 
     clock_gettime(CLOCK_MONOTONIC, &now);
-    now_ms = (now.tv_sec * 1000) - (now.tv_nsec / 1000 / 1000);
+    now_ms = ((int64_t)now.tv_sec * 1000) - (now.tv_nsec / 1000 / 1000);
 
-    return MAX(0, ((int)head_timer->expiry_time - now_ms));
+    return MAX(0, ((int64_t)head_timer->expiry_time - now_ms));
 }
 
 
@@ -252,7 +253,7 @@ void spice_timer_queue_cb(void)
     }
 
     clock_gettime(CLOCK_MONOTONIC, &now);
-    now_ms = (now.tv_sec * 1000) + (now.tv_nsec / 1000 / 1000);
+    now_ms = ((uint64_t)now.tv_sec * 1000) + (now.tv_nsec / 1000 / 1000);
 
     while ((head = ring_get_head(&queue->active_timers))) {
         SpiceTimer *timer = SPICE_CONTAINEROF(head, SpiceTimer, active_link);
