@@ -1352,7 +1352,7 @@ static int reds_send_link_ack(RedLinkInfo *link)
     RedChannel *channel;
     RedChannelCapabilities *channel_caps;
     BUF_MEM *bmBuf;
-    BIO *bio;
+    BIO *bio = NULL;
     int ret = FALSE;
 
     header.magic = SPICE_MAGIC;
@@ -1377,31 +1377,45 @@ static int reds_send_link_ack(RedLinkInfo *link)
     ack.num_channel_caps = channel_caps->num_caps;
     header.size += (ack.num_common_caps + ack.num_channel_caps) * sizeof(uint32_t);
     ack.caps_offset = sizeof(SpiceLinkReply);
+    if (!sasl_enabled
+        || !red_link_info_test_capability(link, SPICE_COMMON_CAP_AUTH_SASL)) {
+        if (!(link->tiTicketing.rsa = RSA_new())) {
+            spice_warning("RSA new failed");
+            return FALSE;
+        }
 
-    if (!(link->tiTicketing.rsa = RSA_new())) {
-        spice_warning("RSA new failed");
-        return FALSE;
+        if (!(bio = BIO_new(BIO_s_mem()))) {
+            spice_warning("BIO new failed");
+            return FALSE;
+        }
+
+        if (RSA_generate_key_ex(link->tiTicketing.rsa,
+                                SPICE_TICKET_KEY_PAIR_LENGTH,
+                                link->tiTicketing.bn,
+                                NULL) != 1) {
+            spice_warning("Failed to generate %d bits RSA key: %s",
+                          SPICE_TICKET_KEY_PAIR_LENGTH,
+                          ERR_error_string(ERR_get_error(), NULL));
+            goto end;
+        }
+        link->tiTicketing.rsa_size = RSA_size(link->tiTicketing.rsa);
+
+        i2d_RSA_PUBKEY_bio(bio, link->tiTicketing.rsa);
+        BIO_get_mem_ptr(bio, &bmBuf);
+        memcpy(ack.pub_key, bmBuf->data, sizeof(ack.pub_key));
+    } else {
+        /* if the client sets the AUTH_SASL cap, it indicates that it
+         * supports SASL, and will use it if the server supports SASL as
+         * well. Moreover, a client setting the AUTH_SASL cap also
+         * indicates that it will not try using the RSA-related content
+         * in the SpiceLinkReply message, so we don't need to initialize
+         * it. Reason to avoid this is to fix auth in fips mode where
+         * the generation of a 1024 bit RSA key as we are trying to do
+         * will fail.
+         */
+        spice_warning("not initialising RSA key");
+        memset(ack.pub_key, '\0', sizeof(ack.pub_key));
     }
-
-    if (!(bio = BIO_new(BIO_s_mem()))) {
-        spice_warning("BIO new failed");
-        return FALSE;
-    }
-
-    if (RSA_generate_key_ex(link->tiTicketing.rsa,
-                            SPICE_TICKET_KEY_PAIR_LENGTH,
-                            link->tiTicketing.bn,
-                            NULL) != 1) {
-        spice_warning("Failed to generate %d bits RSA key: %s",
-                      SPICE_TICKET_KEY_PAIR_LENGTH,
-                      ERR_error_string(ERR_get_error(), NULL));
-        goto end;
-    }
-    link->tiTicketing.rsa_size = RSA_size(link->tiTicketing.rsa);
-
-    i2d_RSA_PUBKEY_bio(bio, link->tiTicketing.rsa);
-    BIO_get_mem_ptr(bio, &bmBuf);
-    memcpy(ack.pub_key, bmBuf->data, sizeof(ack.pub_key));
 
     if (!reds_stream_write_all(link->stream, &header, sizeof(header)))
         goto end;
@@ -1415,7 +1429,8 @@ static int reds_send_link_ack(RedLinkInfo *link)
     ret = TRUE;
 
 end:
-    BIO_free(bio);
+    if (bio != NULL)
+        BIO_free(bio);
     return ret;
 }
 
