@@ -29,17 +29,6 @@ typedef void (*AsyncReadDone)(void *opaque);
 typedef void (*AsyncReadError)(void *opaque, int err);
 
 typedef struct RedsStream RedsStream;
-typedef struct AsyncRead {
-    RedsStream *stream;
-    void *opaque;
-    uint8_t *now;
-    uint8_t *end;
-    AsyncReadDone done;
-    AsyncReadError error;
-} AsyncRead;
-
-void async_read_handler(int fd, int event, void *data);
-
 typedef struct RedsStreamPrivate RedsStreamPrivate;
 
 struct RedsStream {

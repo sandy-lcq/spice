@@ -33,6 +33,16 @@
 
 #include <openssl/err.h>
 
+struct AsyncRead {
+    RedsStream *stream;
+    void *opaque;
+    uint8_t *now;
+    uint8_t *end;
+    AsyncReadDone done;
+    AsyncReadError error;
+};
+typedef struct AsyncRead AsyncRead;
+
 extern SpiceCoreInterface *core;
 
 #if HAVE_SASL
@@ -403,7 +413,7 @@ static inline void async_read_clear_handlers(AsyncRead *async)
     async->stream = NULL;
 }
 
-void async_read_handler(int fd, int event, void *data)
+static void async_read_handler(int fd, int event, void *data)
 {
     AsyncRead *async = (AsyncRead *)data;
 
