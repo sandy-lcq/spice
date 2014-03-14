@@ -389,11 +389,10 @@ int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
     return reds_stream_ssl_accept(stream);
 }
 
-void async_read_set_error_handler(AsyncRead *async,
-                                  AsyncReadError error_handler,
-                                 void *opaque)
+void reds_stream_set_async_error_handler(RedsStream *stream,
+                                         AsyncReadError error_handler)
 {
-    async->error = error_handler;
+    stream->priv->async_read.error = error_handler;
 }
 
 static inline void async_read_clear_handlers(AsyncRead *obj)
