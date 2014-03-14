@@ -123,7 +123,6 @@ static RedsState *reds = NULL;
 
 typedef struct RedLinkInfo {
     RedsStream *stream;
-    AsyncRead async_read;
     SpiceLinkHeader link_header;
     SpiceLinkMess *link_mess;
     int mess_pos;
@@ -1880,12 +1879,9 @@ end:
 
 static void reds_get_spice_ticket(RedLinkInfo *link)
 {
-    AsyncRead *obj = &link->async_read;
-
-    obj->now = (uint8_t *)&link->tiTicketing.encrypted_ticket.encrypted_data;
-    obj->end = obj->now + link->tiTicketing.rsa_size;
-    obj->done = reds_handle_ticket;
-    async_read_handler(0, 0, &link->async_read);
+    reds_stream_async_read(link->stream,
+                           (uint8_t *)&link->tiTicketing.encrypted_ticket.encrypted_data,
+                           link->tiTicketing.rsa_size, reds_handle_ticket, link);
 }
 
 #if HAVE_SASL
@@ -2048,7 +2044,6 @@ static void reds_handle_read_link_done(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     SpiceLinkMess *link_mess = link->link_mess;
-    AsyncRead *obj = &link->async_read;
     uint32_t num_caps = link_mess->num_common_caps + link_mess->num_channel_caps;
     uint32_t *caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
     int auth_selection;
@@ -2090,10 +2085,11 @@ static void reds_handle_read_link_done(void *opaque)
         spice_warning("Peer doesn't support AUTH selection");
         reds_get_spice_ticket(link);
     } else {
-        obj->now = (uint8_t *)&link->auth_mechanism;
-        obj->end = obj->now + sizeof(SpiceLinkAuthMechanism);
-        obj->done = reds_handle_auth_mechanism;
-        async_read_handler(0, 0, &link->async_read);
+        reds_stream_async_read(link->stream,
+                               (uint8_t *)&link->auth_mechanism,
+                               sizeof(SpiceLinkAuthMechanism),
+                               reds_handle_auth_mechanism,
+                               link);
     }
 }
 
@@ -2115,7 +2111,6 @@ static void reds_handle_read_header_done(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     SpiceLinkHeader *header = &link->link_header;
-    AsyncRead *obj = &link->async_read;
 
     if (header->magic != SPICE_MAGIC) {
         reds_send_link_error(link, SPICE_LINK_ERR_INVALID_MAGIC);
@@ -2144,22 +2139,21 @@ static void reds_handle_read_header_done(void *opaque)
 
     link->link_mess = spice_malloc(header->size);
 
-    obj->now = (uint8_t *)link->link_mess;
-    obj->end = obj->now + header->size;
-    obj->done = reds_handle_read_link_done;
-    async_read_handler(0, 0, &link->async_read);
+    reds_stream_async_read(link->stream,
+                           (uint8_t *)link->link_mess,
+                           header->size,
+                           reds_handle_read_link_done,
+                           link);
 }
 
 static void reds_handle_new_link(RedLinkInfo *link)
 {
-    AsyncRead *obj = &link->async_read;
-    obj->opaque = link;
-    obj->stream = link->stream;
-    obj->now = (uint8_t *)&link->link_header;
-    obj->end = (uint8_t *)((SpiceLinkHeader *)&link->link_header + 1);
-    obj->done = reds_handle_read_header_done;
-    obj->error = reds_handle_link_error;
-    async_read_handler(0, 0, &link->async_read);
+    reds_stream_set_async_error_handler(link->stream, reds_handle_link_error);
+    reds_stream_async_read(link->stream,
+                           (uint8_t *)&link->link_header,
+                           sizeof(SpiceLinkHeader),
+                           reds_handle_read_header_done,
+                           link);
 }
 
 static void reds_handle_ssl_accept(int fd, int event, void *data)
