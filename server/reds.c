@@ -1908,7 +1908,7 @@ static void reds_handle_auth_sasl_step(void *opaque)
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     RedsSaslError status;
 
-    status = reds_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
+    status = reds_sasl_handle_auth_step(link->stream, reds_handle_auth_sasl_steplen, link);
     if (status == REDS_SASL_ERROR_OK) {
         reds_handle_link(link);
     } else if (status != REDS_SASL_ERROR_CONTINUE) {
