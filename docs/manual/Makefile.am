@@ -1,38 +1,30 @@
-SUFFIXES = .xml .html .txt .1
+all: html
+.PHONY: html
 
 # apparently, xmlto does not support validation of docbook5 docs
 # that's why it's disabled with --skip-validation
-.xml.html:
-	$(AM_V_GEN)$(XMLTO) --skip-validation -o html xhtml $<
+XMLTO_FLAGS = --skip-validation
 
-.xml.1:
-	$(AM_V_GEN)$(XMLTO) --skip-validation -o man man $<
+XMLDOC =					\
+	SpiceUserManual-Basics.xml		\
+	SpiceUserManual-Guest.xml		\
+	SpiceUserManual-Installation.xml	\
+	SpiceUserManual-Introduction.xml	\
+	SpiceUserManual-References.xml		\
+	SpiceUserManual.xml			\
+	$(NULL)
 
-.xml.txt:
-	$(AM_V_GEN)$(XMLTO) --skip-validation -o txt txt $<
+html-stamp: $(XMLDOC)
+	$(AM_V_GEN)$(XMLTO) $(XMLTO_FLAGS) -o html xhtml $(srcdir)/SpiceUserManual.xml
+	touch $@
 
-all: allhtml manpages
-
-XMLMAN =
-XMLDOC = \
-	SpiceUserManual-Basics.xml \
-	SpiceUserManual-Guest.xml \
-	SpiceUserManual-Installation.xml \
-	SpiceUserManual-Introduction.xml \
-	SpiceUserManual-References.xml \
-	SpiceUserManual.xml
-XMLALL = $(XMLMAN) $(XMLDOC)
-SOURCES = $(XMLALL) $(TXTDOC)
-
-allhtml: $(XMLALL:.xml=.html)
-
-manpages: $(XMLMAN:.xml=.1)
+html: html-stamp
 
 # Control what goes in the distribution tarball.
 # We include all of the XML, and also generated HTML pages
 # so people working from the distribution tarball won't need xmlto.
-EXTRA_DIST = $(SOURCES) html
+EXTRA_DIST = $(XMLDOC) html html-stamp
 
 clean-local:
-	rm -fr html $(XMLMAN:.xml=.1)
-
+	rm -fr html
+	rm -f *-stamp
