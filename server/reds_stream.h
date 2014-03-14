@@ -65,6 +65,8 @@ typedef enum {
 
 /* any thread */
 ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte);
+void reds_stream_async_read(RedsStream *stream, uint8_t *data, size_t size,
+                            AsyncReadDone read_done_cb, void *opaque);
 ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte);
 ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt);
 bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n);

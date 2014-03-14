@@ -314,8 +314,6 @@ RedsStream *reds_stream_new(int socket)
     stream->priv->write = stream_write_cb;
     stream->priv->writev = stream_writev_cb;
 
-    stream->priv->async_read.stream = stream;
-
     return stream;
 }
 
@@ -400,11 +398,10 @@ void async_read_set_error_handler(AsyncRead *async,
 
 static inline void async_read_clear_handlers(AsyncRead *obj)
 {
-    if (!obj->stream->watch) {
-        return;
+    if (obj->stream->watch) {
+        reds_stream_remove_watch(obj->stream);
     }
-
-    reds_stream_remove_watch(obj->stream);
+    obj->stream = NULL;
 }
 
 void async_read_handler(int fd, int event, void *data)
@@ -451,6 +448,23 @@ void async_read_handler(int fd, int event, void *data)
             }
         }
     }
+}
+
+void reds_stream_async_read(RedsStream *stream,
+                            uint8_t *data, size_t size,
+                            AsyncReadDone read_done_cb,
+                            void *opaque)
+{
+    AsyncRead *obj = &stream->priv->async_read;
+
+    g_return_if_fail(!obj->stream);
+    obj->stream = stream;
+    obj->now = data;
+    obj->end = obj->now + size;
+    obj->done = read_done_cb;
+    obj->opaque = opaque;
+    async_read_handler(0, 0, obj);
+
 }
 
 #if HAVE_SASL
@@ -642,7 +656,6 @@ RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_
     char *clientdata = NULL;
     RedsSASL *sasl = &stream->priv->sasl;
     uint32_t datalen = sasl->len;
-    AsyncRead *obj = &stream->priv->async_read;
 
     /* NB, distinction of NULL vs "" is *critical* in SASL */
     if (datalen) {
@@ -687,10 +700,8 @@ RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_
     if (err == SASL_CONTINUE) {
         spice_info("%s", "Authentication must continue (step)");
         /* Wait for step length */
-        obj->now = (uint8_t *)&sasl->len;
-        obj->end = obj->now + sizeof(uint32_t);
-        obj->done = read_cb;
-        async_read_handler(0, 0, &stream->priv->async_read);
+        reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                               read_cb, opaque);
         return REDS_SASL_ERROR_CONTINUE;
     } else {
         int ssf;
@@ -722,7 +733,6 @@ authreject:
 
 RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    AsyncRead *obj = &stream->priv->async_read;
     RedsSASL *sasl = &stream->priv->sasl;
 
     spice_info("Got steplen %d", sasl->len);
@@ -739,11 +749,8 @@ RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone re
          * treatment */
         return REDS_SASL_ERROR_OK;
     } else {
-        sasl->data = spice_realloc(sasl->data, sasl->len);
-        obj->now = (uint8_t *)sasl->data;
-        obj->end = obj->now + sasl->len;
-        obj->done = read_cb;
-        async_read_handler(0, 0, obj);
+        reds_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
+                               read_cb, opaque);
         return REDS_SASL_ERROR_OK;
     }
 }
@@ -765,7 +772,6 @@ RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone re
 
 RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    AsyncRead *obj = &stream->priv->async_read;
     const char *serverout;
     unsigned int serveroutlen;
     int err;
@@ -817,10 +823,8 @@ RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read
     if (err == SASL_CONTINUE) {
         spice_info("%s", "Authentication must continue (start)");
         /* Wait for step length */
-        obj->now = (uint8_t *)&sasl->len;
-        obj->end = obj->now + sizeof(uint32_t);
-        obj->done = read_cb;
-        async_read_handler(0, 0, &stream->priv->async_read);
+        reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                               read_cb, opaque);
         return REDS_SASL_ERROR_CONTINUE;
     } else {
         int ssf;
@@ -851,7 +855,6 @@ authreject:
 
 RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    AsyncRead *obj = &stream->priv->async_read;
     RedsSASL *sasl = &stream->priv->sasl;
 
     spice_info("Got client start len %d", sasl->len);
@@ -865,17 +868,14 @@ RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone r
     }
 
     sasl->data = spice_realloc(sasl->data, sasl->len);
-    obj->now = (uint8_t *)sasl->data;
-    obj->end = obj->now + sasl->len;
-    obj->done = read_cb;
-    async_read_handler(0, 0, obj);
+    reds_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
+                           read_cb, opaque);
 
     return REDS_SASL_ERROR_OK;
 }
 
 bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    AsyncRead *obj = &stream->priv->async_read;
     RedsSASL *sasl = &stream->priv->sasl;
 
     sasl->mechname[sasl->len] = '\0';
@@ -907,17 +907,14 @@ bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, v
 
     spice_info("Validated mechname '%s'", sasl->mechname);
 
-    obj->now = (uint8_t *)&sasl->len;
-    obj->end = obj->now + sizeof(uint32_t);
-    obj->done = read_cb;
-    async_read_handler(0, 0, &stream->priv->async_read);
+    reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                           read_cb, opaque);
 
     return TRUE;
 }
 
 bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    AsyncRead *obj = &stream->priv->async_read;
     RedsSASL *sasl = &stream->priv->sasl;
 
     if (sasl->len < 1 || sasl->len > 100) {
@@ -928,10 +925,8 @@ bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, vo
     sasl->mechname = spice_malloc(sasl->len + 1);
 
     spice_info("Wait for client mechname");
-    obj->now = (uint8_t *)sasl->mechname;
-    obj->end = obj->now + sasl->len;
-    obj->done = read_cb;
-    async_read_handler(0, 0, &stream->priv->async_read);
+    reds_stream_async_read(stream, (uint8_t *)sasl->mechname, sasl->len,
+                           read_cb, opaque);
 
     return TRUE;
 }
@@ -943,7 +938,6 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
     int err;
     char *localAddr, *remoteAddr;
     int mechlistlen;
-    AsyncRead *obj = &stream->priv->async_read;
     RedsSASL *sasl = &stream->priv->sasl;
 
     if (!(localAddr = reds_stream_get_local_address(stream))) {
@@ -1040,11 +1034,8 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
     }
 
     spice_info("Wait for client mechname length");
-    obj->now = (uint8_t *)&sasl->len;
-    obj->end = obj->now + sizeof(uint32_t);
-    obj->done = read_cb;
-    obj->opaque = opaque;
-    async_read_handler(0, 0, obj);
+    reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                           read_cb, opaque);
 
     return TRUE;
 
