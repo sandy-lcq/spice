@@ -413,7 +413,9 @@ static inline void async_read_clear_handlers(AsyncRead *async)
     async->stream = NULL;
 }
 
-static void async_read_handler(int fd, int event, void *data)
+static void async_read_handler(G_GNUC_UNUSED int fd,
+                               G_GNUC_UNUSED int event,
+                               void *data)
 {
     AsyncRead *async = (AsyncRead *)data;
 
