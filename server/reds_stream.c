@@ -760,6 +760,7 @@ RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone re
          * treatment */
         return REDS_SASL_ERROR_OK;
     } else {
+        sasl->data = spice_realloc(sasl->data, sasl->len);
         reds_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
                                read_cb, opaque);
         return REDS_SASL_ERROR_OK;
