@@ -422,14 +422,12 @@ AC_ARG_ENABLE([manual],
                [],
                [enable_manual="auto"])
 if test "x$enable_manual" != "xno"; then
-    AC_PATH_PROG([XMLTO], [xmlto])
-    AS_IF([test -z "$XMLTO" && test "x$enable_manual" = "xyes"],
-          [AC_MSG_ERROR([xmlto is missing and build of manual was requested])]
-          [have_xmlto = no]
-         )
+    AC_PATH_PROG([ASCIIDOC], [asciidoc])
+    AS_IF([test -z "$ASCIIDOC" && test "x$enable_manual" = "xyes"],
+          [AC_MSG_ERROR([asciidoc is missing and build of manual was requested])])
 fi
-AS_IF([test -n "$XMLTO"], [have_xmlto=yes], [have_xmlto=no])
-AM_CONDITIONAL([BUILD_MANUAL], [test -n "$XMLTO"])
+AS_IF([test -n "$ASCIIDOC"], [have_asciidoc=yes], [have_asciidoc=no])
+AM_CONDITIONAL([BUILD_MANUAL], [test -n "$ASCIIDOC"])
 
 
 dnl ===========================================================================
@@ -545,7 +543,7 @@ echo "
 
         Automated tests:          ${enable_automated_tests}
 
-        Manual:                   ${have_xmlto}
+        Manual:                   ${have_asciidoc}
 "
 
 if test $os_win32 == "yes" ; then

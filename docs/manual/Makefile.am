@@ -1,30 +1,19 @@
-all: html
-.PHONY: html
+NULL =
+SUFFIXES = .html
+ASCIIDOC_FLAGS = -a icons -a toc
 
-# apparently, xmlto does not support validation of docbook5 docs
-# that's why it's disabled with --skip-validation
-XMLTO_FLAGS = --skip-validation
-
-XMLDOC =					\
-	SpiceUserManual-Basics.xml		\
-	SpiceUserManual-Guest.xml		\
-	SpiceUserManual-Installation.xml	\
-	SpiceUserManual-Introduction.xml	\
-	SpiceUserManual-References.xml		\
-	SpiceUserManual.xml			\
+EXTRA_DIST =					\
+	docbook-xsl.css				\
+	images/icons/*.png			\
+	images/spicec01.png			\
+	manual.html				\
+	manual.txt				\
 	$(NULL)
 
-html-stamp: $(XMLDOC)
-	$(AM_V_GEN)$(XMLTO) $(XMLTO_FLAGS) -o html xhtml $(srcdir)/SpiceUserManual.xml
-	touch $@
+.txt.html:
+	$(AM_V_GEN) $(ASCIIDOC) $(ASCIIDOC_FLAGS) $<
 
-html: html-stamp
-
-# Control what goes in the distribution tarball.
-# We include all of the XML, and also generated HTML pages
-# so people working from the distribution tarball won't need xmlto.
-EXTRA_DIST = $(XMLDOC) html html-stamp
+all-local: manual.html
 
 clean-local:
-	rm -fr html
-	rm -f *-stamp
+	rm manual.html
