@@ -790,6 +790,61 @@ remote-viewer will pop up a window asking for a password before
 starting the Spice session. It won't be established if an incorrect
 ticket was passed to the client.
 
+Folder sharing
+==============
+
+The Spice client can share a folder with the remote guest. By default,
+the client will share the XDG Public Share directory, or '~/Public' by
+default.  You may specify a different folder with `--spice-share-dir`
+client option.
+
+Configuration
+-------------
+
+.Using virt-manager
+
+It's currently not possible to configure folder sharing with virt-manager.
+
+.Using libvirt
+
+In order to set up folder sharing, qemu needs to expose a
+`org.spice-space.webdav.0` virtio port, associated with a
+corresponding Spice port:
+
+[source,sh]
+<devices>
+    <channel type='spiceport'>
+        <source channel='org.spice-space.webdav.0'/>
+        <target type='virtio' name='org.spice-space.webdav.0'/>
+    </channel>
+</devices>
+
+.Using QEMU
+
+In order to set up folder sharing, qemu needs to expose a
+`org.spice-space.webdav.0` virtio port, associated with a
+corresponding Spice port:
+
+[source,sh]
+-device virtserialport,bus=virtio-serial0.0,nr=1,chardev=charchannel1,id=channel1,name=org.spice-space.webdav.0 -chardev spiceport,name=org.spice-space.webdav.0,id=charchannel1
+
+Guest configuration
+-------------------
+
+.Windows
+In a Windows guest, you must then install
+http://elmarco.fedorapeople.org/spice-webdavd-x86-0.1.24.msi[spice-webdavd]
+service, and register the drive (by running 'map-drive.bat' from
+'Program Files/Spice webdav').
+
+.Linux
+
+With a Linux guest, you must install the spice-webdavd service (the
+sources are available at https://git.gnome.org/browse/phodav). The
+folder will show up in GNOME Files network places (or Nautilus). It
+can then be mounted and browsed in traditional applications thanks to
+`gvfs-fuse`.
+
 QEMU Spice reference
 ====================
 
@@ -807,7 +862,7 @@ online documentation]. Basic syntax is `-spice <spice_options>`.
 QXL command line options
 ------------------------
 
- *  ram_size
+ * ram_size
  * vram_size
  * revision
  * debug
