@@ -223,7 +223,7 @@ typedef struct RedChannelCapabilities {
     uint32_t *caps;
 } RedChannelCapabilities;
 
-int test_capability(uint32_t *caps, int num_caps, uint32_t cap);
+int test_capability(const uint32_t *caps, int num_caps, uint32_t cap);
 
 typedef struct RedChannelClientLatencyMonitor {
     int state;

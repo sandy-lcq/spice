@@ -1172,7 +1172,7 @@ void red_channel_register_client_cbs(RedChannel *channel, ClientCbs *client_cbs)
     }
 }
 
-int test_capability(uint32_t *caps, int num_caps, uint32_t cap)
+int test_capability(const uint32_t *caps, int num_caps, uint32_t cap)
 {
     uint32_t index = cap / 32;
     if (num_caps < index + 1) {
