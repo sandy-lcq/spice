@@ -162,7 +162,9 @@ void reds_stream_remove_watch(RedsStream* s)
     }
 }
 
+#if HAVE_SASL
 static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte);
+#endif
 
 ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte)
 {
@@ -196,7 +198,9 @@ bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n)
     return TRUE;
 }
 
+#if HAVE_SASL
 static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nbyte);
+#endif
 
 ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
 {
