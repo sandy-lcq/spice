@@ -811,7 +811,7 @@ In order to set up folder sharing, qemu needs to expose a
 `org.spice-space.webdav.0` virtio port, associated with a
 corresponding Spice port:
 
-[source,sh]
+[source,xml]
 <devices>
     <channel type='spiceport'>
         <source channel='org.spice-space.webdav.0'/>
