@@ -157,7 +157,7 @@ dnl =========================================================================
 dnl Check deps
 
 AC_CONFIG_SUBDIRS([spice-common])
-COMMON_CFLAGS='-I ${top_srcdir}/spice-common/ -I ${top_srcdir}/spice-common/spice-protocol/'
+COMMON_CFLAGS='-I ${top_srcdir}/spice-common/ -I ${top_builddir}/spice-common/ -I ${top_srcdir}/spice-common/spice-protocol/'
 AC_SUBST(COMMON_CFLAGS)
 
 AC_CHECK_LIBM
