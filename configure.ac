@@ -425,9 +425,14 @@ if test "x$enable_manual" != "xno"; then
     AC_PATH_PROG([ASCIIDOC], [asciidoc])
     AS_IF([test -z "$ASCIIDOC" && test "x$enable_manual" = "xyes"],
           [AC_MSG_ERROR([asciidoc is missing and build of manual was requested])])
+    AC_PATH_PROG([A2X], [a2x])
+    AS_IF([test -z "$A2X" && test "x$enable_manual" = "xyes"],
+          [AC_MSG_ERROR([a2x is missing and build of manual was requested])])
 fi
 AS_IF([test -n "$ASCIIDOC"], [have_asciidoc=yes], [have_asciidoc=no])
-AM_CONDITIONAL([BUILD_MANUAL], [test -n "$ASCIIDOC"])
+AM_CONDITIONAL([BUILD_MANUAL], [test -n "$ASCIIDOC" || test -n "$A2X"])
+AM_CONDITIONAL([BUILD_HTML_MANUAL], [test -n "$ASCIIDOC"])
+AM_CONDITIONAL([BUILD_CHUNKED_MANUAL], [test -n "$A2X"])
 
 
 dnl ===========================================================================
