@@ -395,54 +395,54 @@ void reds_stream_set_async_error_handler(RedsStream *stream,
     stream->priv->async_read.error = error_handler;
 }
 
-static inline void async_read_clear_handlers(AsyncRead *obj)
+static inline void async_read_clear_handlers(AsyncRead *async)
 {
-    if (obj->stream->watch) {
-        reds_stream_remove_watch(obj->stream);
+    if (async->stream->watch) {
+        reds_stream_remove_watch(async->stream);
     }
-    obj->stream = NULL;
+    async->stream = NULL;
 }
 
 void async_read_handler(int fd, int event, void *data)
 {
-    AsyncRead *obj = (AsyncRead *)data;
+    AsyncRead *async = (AsyncRead *)data;
 
     for (;;) {
-        int n = obj->end - obj->now;
+        int n = async->end - async->now;
 
         spice_assert(n > 0);
-        n = reds_stream_read(obj->stream, obj->now, n);
+        n = reds_stream_read(async->stream, async->now, n);
         if (n <= 0) {
             if (n < 0) {
                 switch (errno) {
                 case EAGAIN:
-                    if (!obj->stream->watch) {
-                        obj->stream->watch = core->watch_add(obj->stream->socket,
-                                                           SPICE_WATCH_EVENT_READ,
-                                                           async_read_handler, obj);
+                    if (!async->stream->watch) {
+                        async->stream->watch = core->watch_add(async->stream->socket,
+                                                               SPICE_WATCH_EVENT_READ,
+                                                               async_read_handler, async);
                     }
                     return;
                 case EINTR:
                     break;
                 default:
-                    async_read_clear_handlers(obj);
-		    if (obj->error) {
-                        obj->error(obj->opaque, errno);
+                    async_read_clear_handlers(async);
+		    if (async->error) {
+                        async->error(async->opaque, errno);
 		    }
                     return;
                 }
             } else {
-                async_read_clear_handlers(obj);
-		if (obj->error) {
-		    obj->error(obj->opaque, 0);
+                async_read_clear_handlers(async);
+		if (async->error) {
+		    async->error(async->opaque, 0);
 		}
                 return;
             }
         } else {
-            obj->now += n;
-            if (obj->now == obj->end) {
-                async_read_clear_handlers(obj);
-                obj->done(obj->opaque);
+            async->now += n;
+            if (async->now == async->end) {
+                async_read_clear_handlers(async);
+                async->done(async->opaque);
                 return;
             }
         }
@@ -454,15 +454,15 @@ void reds_stream_async_read(RedsStream *stream,
                             AsyncReadDone read_done_cb,
                             void *opaque)
 {
-    AsyncRead *obj = &stream->priv->async_read;
+    AsyncRead *async = &stream->priv->async_read;
 
-    g_return_if_fail(!obj->stream);
-    obj->stream = stream;
-    obj->now = data;
-    obj->end = obj->now + size;
-    obj->done = read_done_cb;
-    obj->opaque = opaque;
-    async_read_handler(0, 0, obj);
+    g_return_if_fail(!async->stream);
+    async->stream = stream;
+    async->now = data;
+    async->end = async->now + size;
+    async->done = read_done_cb;
+    async->opaque = opaque;
+    async_read_handler(0, 0, async);
 
 }
 
