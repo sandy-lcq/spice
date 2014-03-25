@@ -794,9 +794,9 @@ Folder sharing
 ==============
 
 The Spice client can share a folder with the remote guest. By default,
-the client will share the XDG Public Share directory, or '~/Public' by
-default.  You may specify a different folder with `--spice-share-dir`
-client option.
+the client will share the XDG Public Share directory (ie '~/Public' if
+you use a regular system).  You may specify a different folder with
+`--spice-share-dir` client option.
 
 Configuration
 -------------
