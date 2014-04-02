@@ -3,8 +3,8 @@ SUFFIXES = .html
 ASCIIDOC_FLAGS = -a icons -a toc
 
 EXTRA_DIST =					\
-	docbook-xsl.css				\
-	images/icons/*.png			\
+	images/icons/important.png		\
+	images/icons/note.png			\
 	images/spicec01.png			\
 	manual.html				\
 	manual.chunked				\
@@ -12,7 +12,7 @@ EXTRA_DIST =					\
 	$(NULL)
 
 .txt.html:
-	$(AM_V_GEN) $(ASCIIDOC) $(ASCIIDOC_FLAGS) $<
+	$(AM_V_GEN) $(ASCIIDOC) $(ASCIIDOC_FLAGS) -o $@ $<
 
 manual.chunked: manual.txt
 	$(AM_V_GEN) $(A2X) -f chunked -D $(builddir) $(ASCIIDOC_FLAGS) $<
@@ -28,4 +28,5 @@ endif
 all-local: $(docfiles)
 
 clean-local:
+	rm -f manual.html
 	rm -rf manual.chunked
