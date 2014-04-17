@@ -1,3 +1,16 @@
+Major changes in 0.12.5:
+========================
+* Added Opus support. Celt support will be obsoleted in a future release.
+* Addition of webdav channel
+* Force use of TLS 1.0 or newer for TLS connections
+* Reference manual
+* Some optimizations improving CPU use
+* Various bug fixes for race conditions, memory corruption, ... which could
+  be triggered on client disconnections, migration, ... and cause spice-server
+  to misbehave.
+* Portability fixes
+* Code cleanups
+
 Major changes in 0.12.4:
 ========================
 * log actual address spice-server binds to
