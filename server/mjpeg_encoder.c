@@ -23,6 +23,7 @@
 #include "mjpeg_encoder.h"
 #include <jerror.h>
 #include <jpeglib.h>
+#include <inttypes.h>
 
 #define MJPEG_MAX_FPS 25
 #define MJPEG_MIN_FPS 1
@@ -66,7 +67,7 @@ static const int mjpeg_quality_samples[MJPEG_QUALITY_SAMPLE_NUM] = {20, 30, 40, 
  * are not necessarily related to mis-estimation of the bit rate, and we would
  * like to wait till the stream stabilizes.
  */
-#define MJPEG_WARMUP_TIME 3000L // 3 sec
+#define MJPEG_WARMUP_TIME 3000LL // 3 sec
 
 enum {
     MJPEG_QUALITY_EVAL_TYPE_SET,
@@ -638,7 +639,7 @@ static void mjpeg_encoder_adjust_params_to_bit_rate(MJpegEncoder *encoder)
 
     spice_debug("cur-fps=%u new-fps=%u (new/old=%.2f) |"
                 "bit-rate=%.2f (Mbps) latency=%u (ms) quality=%d |"
-                " new-size-avg %lu , base-size %lu, (new/old=%.2f) ",
+                " new-size-avg %"PRIu64" , base-size %"PRIu64", (new/old=%.2f) ",
                 rate_control->fps, new_fps, ((double)new_fps)/rate_control->fps,
                 ((double)rate_control->byte_rate*8)/1024/1024,
                 latency,
@@ -703,7 +704,7 @@ static void mjpeg_encoder_adjust_fps(MJpegEncoder *encoder, uint64_t now)
 
         avg_fps = ((double)rate_control->adjusted_fps_num_frames*1000) /
                   adjusted_fps_time_passed;
-        spice_debug("#frames-adjust=%lu #adjust-time=%lu avg-fps=%.2f",
+        spice_debug("#frames-adjust=%"PRIu64" #adjust-time=%"PRIu64" avg-fps=%.2f",
                     rate_control->adjusted_fps_num_frames, adjusted_fps_time_passed, avg_fps);
         spice_debug("defined=%u old-adjusted=%.2f", rate_control->fps, rate_control->adjusted_fps);
         fps_ratio = avg_fps / rate_control->fps;
