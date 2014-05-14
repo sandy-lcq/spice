@@ -18,10 +18,8 @@
 #ifndef _H_REDS_GL_CANVAS
 #define _H_REDS_GL_CANVAS
 
-#define SPICE_CANVAS_INTERNAL
 #define SW_CANVAS_IMAGE_CACHE
 #include "common/gl_canvas.h"
 #undef SW_CANVAS_IMAGE_CACHE
-#undef SPICE_CANVAS_INTERNAL
 
 #endif
