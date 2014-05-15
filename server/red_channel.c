@@ -824,8 +824,8 @@ static void red_channel_client_connectivity_timer(void *opaque)
                                         rcc->connectivity_monitor.timeout);
     } else {
         monitor->state = CONNECTIVITY_STATE_DISCONNECTED;
-        spice_debug("rcc %p has not been responsive for more than %u ms, disconnecting",
-                    rcc, monitor->timeout);
+        spice_warning("rcc %p on channel %d:%d has been unresponsive for more than %u ms, disconnecting",
+                      rcc, rcc->channel->type, rcc->channel->id, monitor->timeout);
         red_channel_client_disconnect(rcc);
     }
 }
