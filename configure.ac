@@ -1,26 +1,19 @@
 AC_PREREQ([2.57])
 
-# Making releases:
-# 1. The version is SPICE_MAJOR.SPICE_MINOR.SPICE_MICRO
-# 2. It is generated via a two stage process:
-#   1. Create a tag
-#   2. run configure which calls git-version-gen.
-# 3. Follow these rules for setting the next tag (aka tarball version):
-#   1. SPICE_MAJOR remains 0 until a major change is done.
-#   2. Increment SPICE_MINOR to next even value on a significant release,
-#      updating the release schedule: http://www.spice-space.org/page/Releases
-#   3. Increment SPICE_MINOR otherwise.
-# 4. Follow the libtool manual for the so version:
-#  http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
-
+# Follow the libtool manual for the so version:
+# http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
+# - If the library source code has changed at all since the last update,
+#   then increment revision (‘c:r:a’ becomes ‘c:r+1:a’).
+# - If any interfaces have been added, removed, or changed since the last update,
+#   increment current, and set revision to 0.
+# - If any interfaces have been added since the last public release,
+#   then increment age.
+# - If any interfaces have been removed or changed since the last public release,
+#   then set age to 0.
+#
 m4_define([SPICE_CURRENT], [9])
 m4_define([SPICE_REVISION], [0])
 m4_define([SPICE_AGE], [8])
-
-# Note on the library name on linux (SONAME) produced by libtool (for reference, gleaned
-# from looking at libtool 2.4.2)
-#
-#  libspice-server.so.current-age.age.revision
 
 AC_INIT(spice, [m4_esyscmd(build-aux/git-version-gen .tarball-version)],
         [spice-devel@lists.freedesktop.org], spice)
