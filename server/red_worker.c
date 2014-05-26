@@ -257,7 +257,7 @@ static inline void stat_compress_add(stat_info_t *info, stat_time_t start, int o
     info->comp_size += comp_size;
 }
 
-double inline stat_byte_to_mega(uint64_t size)
+static inline double stat_byte_to_mega(uint64_t size)
 {
     return (double)size / (1000 * 1000);
 }
@@ -1152,7 +1152,7 @@ static void print_compress_stats(DisplayChannel *display_channel)
                        display_channel->zlib_glz_stat.comp_size :
                        display_channel->glz_stat.comp_size;
 
-    spice_info("==> Compression stats for display %u", display_channel->common.id);
+    spice_info("==> Compression stats for display %u", display_channel->common.base.id);
     spice_info("Method   \t  count  \torig_size(MB)\tenc_size(MB)\tenc_time(s)");
     spice_info("QUIC     \t%8d\t%13.2f\t%12.2f\t%12.2f",
                display_channel->quic_stat.count,
