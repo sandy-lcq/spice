@@ -1354,13 +1354,14 @@ static int reds_send_link_ack(RedLinkInfo *link)
     BUF_MEM *bmBuf;
     BIO *bio = NULL;
     int ret = FALSE;
+    size_t hdr_size;
 
     header.magic = SPICE_MAGIC;
-    header.size = sizeof(ack);
-    header.major_version = SPICE_VERSION_MAJOR;
-    header.minor_version = SPICE_VERSION_MINOR;
+    hdr_size = sizeof(ack);
+    header.major_version = GUINT32_TO_LE(SPICE_VERSION_MAJOR);
+    header.minor_version = GUINT32_TO_LE(SPICE_VERSION_MINOR);
 
-    ack.error = SPICE_LINK_ERR_OK;
+    ack.error = GUINT32_TO_LE(SPICE_LINK_ERR_OK);
 
     channel = reds_find_channel(link->link_mess->channel_type,
                                 link->link_mess->channel_id);
@@ -1373,10 +1374,12 @@ static int reds_send_link_ack(RedLinkInfo *link)
     reds_channel_init_auth_caps(link, channel); /* make sure common caps are set */
 
     channel_caps = &channel->local_caps;
-    ack.num_common_caps = channel_caps->num_common_caps;
-    ack.num_channel_caps = channel_caps->num_caps;
-    header.size += (ack.num_common_caps + ack.num_channel_caps) * sizeof(uint32_t);
-    ack.caps_offset = sizeof(SpiceLinkReply);
+    ack.num_common_caps = GUINT32_TO_LE(channel_caps->num_common_caps);
+    ack.num_channel_caps = GUINT32_TO_LE(channel_caps->num_caps);
+    hdr_size += channel_caps->num_common_caps * sizeof(uint32_t);
+    hdr_size += channel_caps->num_caps * sizeof(uint32_t);
+    header.size = GUINT32_TO_LE(hdr_size);
+    ack.caps_offset = GUINT32_TO_LE(sizeof(SpiceLinkReply));
     if (!sasl_enabled
         || !red_link_info_test_capability(link, SPICE_COMMON_CAP_AUTH_SASL)) {
         if (!(link->tiTicketing.rsa = RSA_new())) {
@@ -1421,10 +1424,16 @@ static int reds_send_link_ack(RedLinkInfo *link)
         goto end;
     if (!reds_stream_write_all(link->stream, &ack, sizeof(ack)))
         goto end;
-    if (!reds_stream_write_all(link->stream, channel_caps->common_caps, channel_caps->num_common_caps * sizeof(uint32_t)))
-        goto end;
-    if (!reds_stream_write_all(link->stream, channel_caps->caps, channel_caps->num_caps * sizeof(uint32_t)))
-        goto end;
+    for (unsigned int i = 0; i < channel_caps->num_common_caps; i++) {
+        guint32 cap = GUINT32_TO_LE(channel_caps->common_caps[i]);
+        if (!reds_stream_write_all(link->stream, &cap, sizeof(cap)))
+            goto end;
+    }
+    for (unsigned int i = 0; i < channel_caps->num_caps; i++) {
+        guint32 cap = GUINT32_TO_LE(channel_caps->caps[i]);
+        if (!reds_stream_write_all(link->stream, &cap, sizeof(cap)))
+            goto end;
+    }
 
     ret = TRUE;
 
@@ -1440,11 +1449,11 @@ static bool reds_send_link_error(RedLinkInfo *link, uint32_t error)
     SpiceLinkReply reply;
 
     header.magic = SPICE_MAGIC;
-    header.size = sizeof(reply);
-    header.major_version = SPICE_VERSION_MAJOR;
-    header.minor_version = SPICE_VERSION_MINOR;
+    header.size = GUINT32_TO_LE(sizeof(reply));
+    header.major_version = GUINT32_TO_LE(SPICE_VERSION_MAJOR);
+    header.minor_version = GUINT32_TO_LE(SPICE_VERSION_MINOR);
     memset(&reply, 0, sizeof(reply));
-    reply.error = error;
+    reply.error = GUINT32_TO_LE(error);
     return reds_stream_write_all(link->stream, &header, sizeof(header)) && reds_stream_write_all(link->stream, &reply,
                                                                          sizeof(reply));
 }
@@ -1467,6 +1476,7 @@ static void reds_info_new_channel(RedLinkInfo *link, int connection_id)
 
 static void reds_send_link_result(RedLinkInfo *link, uint32_t error)
 {
+    error = GUINT32_TO_LE(error);
     reds_stream_write_all(link->stream, &error, sizeof(error));
 }
 
@@ -2051,6 +2061,7 @@ static void reds_handle_auth_mechanism(void *opaque)
 
     spice_info("Auth method: %d", link->auth_mechanism.auth_mechanism);
 
+    link->auth_mechanism.auth_mechanism = GUINT32_FROM_LE(link->auth_mechanism.auth_mechanism);
     if (link->auth_mechanism.auth_mechanism == SPICE_COMMON_CAP_AUTH_SPICE
         && !sasl_enabled
         ) {
@@ -2082,8 +2093,18 @@ static void reds_handle_read_link_done(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     SpiceLinkMess *link_mess = link->link_mess;
-    uint32_t num_caps = link_mess->num_common_caps + link_mess->num_channel_caps;
+    uint32_t num_caps;
+    uint32_t *caps;
     int auth_selection;
+    unsigned int i;
+
+    link_mess->caps_offset = GUINT32_FROM_LE(link_mess->caps_offset);
+    link_mess->connection_id = GUINT32_FROM_LE(link_mess->connection_id);
+    link_mess->num_channel_caps = GUINT32_FROM_LE(link_mess->num_channel_caps);
+    link_mess->num_common_caps = GUINT32_FROM_LE(link_mess->num_common_caps);
+
+    num_caps = link_mess->num_common_caps + link_mess->num_channel_caps;
+    caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
 
     if (num_caps && (num_caps * sizeof(uint32_t) + link_mess->caps_offset >
                      link->link_header.size ||
@@ -2092,6 +2113,9 @@ static void reds_handle_read_link_done(void *opaque)
         reds_link_free(link);
         return;
     }
+
+    for(i = 0; i < num_caps;i++)
+        caps[i] = GUINT32_FROM_LE(caps[i]);
 
     auth_selection = red_link_info_test_capability(link,
                                                    SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
@@ -2148,6 +2172,10 @@ static void reds_handle_read_header_done(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     SpiceLinkHeader *header = &link->link_header;
+
+    header->major_version = GUINT32_FROM_LE(header->major_version);
+    header->minor_version = GUINT32_FROM_LE(header->minor_version);
+    header->size = GUINT32_FROM_LE(header->size);
 
     if (header->magic != SPICE_MAGIC) {
         reds_send_link_error(link, SPICE_LINK_ERR_INVALID_MAGIC);

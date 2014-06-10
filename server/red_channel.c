@@ -22,6 +22,7 @@
 #include <config.h>
 #endif
 
+#include <glib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <netinet/in.h>
