@@ -1274,6 +1274,7 @@ int reds_handle_migrate_data(MainChannelClient *mcc, SpiceMigrateDataMain *mig_d
 {
     VDIPortState *agent_state = &reds->agent_state;
 
+    spice_debug("main-channel: got migrate data");
     /*
      * Now that the client has switched to the target server, if main_channel
      * controls the mm-time, we update the client's mm-time.
@@ -1295,15 +1296,18 @@ int reds_handle_migrate_data(MainChannelClient *mcc, SpiceMigrateDataMain *mig_d
                     main_channel_push_agent_disconnected(reds->main_channel);
                     main_channel_push_agent_connected(reds->main_channel);
                 } else {
+                    spice_debug("restoring state from mig_data");
                     return reds_agent_state_restore(mig_data);
                 }
             }
         } else {
             /* restore agent starte when the agent gets attached */
+            spice_debug("saving mig_data");
             spice_assert(agent_state->plug_generation == 0);
             agent_state->mig_data = spice_memdup(mig_data, size);
         }
     } else {
+        spice_debug("agent was not attached on the source host");
         if (vdagent) {
             /* spice_char_device_client_remove disables waiting for migration data */
             spice_char_device_client_remove(agent_state->base,
@@ -2853,17 +2857,15 @@ static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
     state->read_filter.discard_all = FALSE;
     reds->agent_state.plug_generation++;
 
-    if (reds->agent_state.mig_data) {
-        spice_assert(reds->agent_state.plug_generation == 1);
-        reds_agent_state_restore(reds->agent_state.mig_data);
-        free(reds->agent_state.mig_data);
-        reds->agent_state.mig_data = NULL;
-    } else if (!red_channel_waits_for_migrate_data(&reds->main_channel->base)) {
-        /* we will assoicate the client with the char device, upon reds_on_main_agent_start,
-         * in response to MSGC_AGENT_START */
-        main_channel_push_agent_connected(reds->main_channel);
-    } else {
-       spice_debug("waiting for migration data");
+    if (reds->agent_state.mig_data ||
+        red_channel_waits_for_migrate_data(&reds->main_channel->base)) {
+        /* Migration in progress (code is running on the destination host):
+         * 1.  Add the client to spice char device, if it was not already added.
+         * 2.a If this (qemu-kvm state load side of migration) happens first
+         *     then wait for spice migration data to arrive. Otherwise
+         * 2.b If this happens second ==> we already have spice migrate data
+         *     then restore state
+         */
         if (!spice_char_device_client_exists(reds->agent_state.base, reds_get_client())) {
             int client_added;
 
@@ -2879,9 +2881,24 @@ static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
                 spice_warning("failed to add client to agent");
                 reds_disconnect();
             }
-
         }
+
+        if (reds->agent_state.mig_data) {
+            spice_debug("restoring state from stored migration data");
+            spice_assert(reds->agent_state.plug_generation == 1);
+            reds_agent_state_restore(reds->agent_state.mig_data);
+            free(reds->agent_state.mig_data);
+            reds->agent_state.mig_data = NULL;
+        }
+        else {
+            spice_debug("waiting for migration data");
+        }
+    } else {
+        /* we will associate the client with the char device, upon reds_on_main_agent_start,
+         * in response to MSGC_AGENT_START */
+        main_channel_push_agent_connected(reds->main_channel);
     }
+
     return state->base;
 }
 
