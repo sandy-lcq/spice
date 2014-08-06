@@ -9470,7 +9470,11 @@ static inline void red_create_surface(RedWorker *worker, uint32_t surface_id, ui
     surface->context.stride = stride;
     surface->context.line_0 = line_0;
     if (!data_is_valid) {
-        memset((char *)line_0 + (int32_t)(stride * (height - 1)), 0, height*abs(stride));
+        char *data = line_0;
+        if (stride < 0) {
+            data -= abs(stride) * (height - 1);
+        }
+        memset(data, 0, height*abs(stride));
     }
     surface->create.info = NULL;
     surface->destroy.info = NULL;
