@@ -342,7 +342,7 @@ enum {
     SPICE_INTERFACE_AUDIO_FMT_S16 = 1,
 };
 
-#define SPICE_INTERFACE_PLAYBACK_FREQ  48000
+#define SPICE_INTERFACE_PLAYBACK_FREQ  44100
 #define SPICE_INTERFACE_PLAYBACK_CHAN  2
 #define SPICE_INTERFACE_PLAYBACK_FMT   SPICE_INTERFACE_AUDIO_FMT_S16
 
@@ -372,7 +372,7 @@ typedef struct SpiceRecordInterface SpiceRecordInterface;
 typedef struct SpiceRecordInstance SpiceRecordInstance;
 typedef struct SpiceRecordState SpiceRecordState;
 
-#define SPICE_INTERFACE_RECORD_FREQ  48000
+#define SPICE_INTERFACE_RECORD_FREQ  44100
 #define SPICE_INTERFACE_RECORD_CHAN  2
 #define SPICE_INTERFACE_RECORD_FMT   SPICE_INTERFACE_AUDIO_FMT_S16
 
