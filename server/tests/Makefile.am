@@ -27,17 +27,17 @@ COMMON_BASE =					\
 	test_util.h				\
 	$(NULL)
 
-noinst_PROGRAMS =						\
-	test_display_no_ssl					\
-	test_display_streaming				\
-	test_empty_success					\
+noinst_PROGRAMS =				\
+	test_display_no_ssl			\
+	test_display_streaming			\
+	test_empty_success			\
 	test_fail_on_null_core_interface	\
-	test_just_sockets_no_ssl			\
-	test_playback						\
+	test_just_sockets_no_ssl		\
+	test_playback				\
 	test_display_resolution_changes		\
-	test_two_servers					\
-	test_vdagent						\
-	test_display_width_stride			\
+	test_two_servers			\
+	test_vdagent				\
+	test_display_width_stride		\
 	$(NULL)
 
 test_vdagent_SOURCES =		\
@@ -65,7 +65,7 @@ test_display_resolution_changes_SOURCES = \
 	$(COMMON_BASE)				\
 	test_display_base.c			\
 	test_display_base.h			\
-	test_display_resolution_changes.c	 \
+	test_display_resolution_changes.c	\
 	$(NULL)
 
 test_just_sockets_no_ssl_SOURCES =		\
@@ -93,9 +93,9 @@ test_two_servers_SOURCES =			\
 	test_two_servers.c 			\
 	$(NULL)
 
-test_display_width_stride_SOURCES =			\
+test_display_width_stride_SOURCES =		\
 	$(COMMON_BASE)				\
 	test_display_base.c			\
 	test_display_base.h			\
-	test_display_width_stride.c 			\
+	test_display_width_stride.c 		\
 	$(NULL)
