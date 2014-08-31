@@ -95,6 +95,7 @@ void dump_bitmap(SpiceBitmap *bitmap)
         break;
     default:
         spice_error("invalid bitmap format  %u", bitmap->format);
+        return;
     }
 
     if (!rgb) {
