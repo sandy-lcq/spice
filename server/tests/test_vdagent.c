@@ -20,7 +20,7 @@ int ping_ms = 100;
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 #endif
 
-void pinger(void *opaque)
+void pinger(SPICE_GNUC_UNUSED void *opaque)
 {
     // show_channels is not thread safe - fails if disconnections / connections occur
     //show_channels(server);
@@ -29,12 +29,16 @@ void pinger(void *opaque)
 }
 
 
-static int vmc_write(SpiceCharDeviceInstance *sin, const uint8_t *buf, int len)
+static int vmc_write(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
+                     SPICE_GNUC_UNUSED const uint8_t *buf,
+                     int len)
 {
     return len;
 }
 
-static int vmc_read(SpiceCharDeviceInstance *sin, uint8_t *buf, int len)
+static int vmc_read(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
+                    uint8_t *buf,
+                    int len)
 {
     static uint8_t c = 0;
     static uint8_t message[2048];
@@ -70,7 +74,8 @@ static int vmc_read(SpiceCharDeviceInstance *sin, uint8_t *buf, int len)
     return ret;
 }
 
-static void vmc_state(SpiceCharDeviceInstance *sin, int connected)
+static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
+                      SPICE_GNUC_UNUSED int connected)
 {
 }
 

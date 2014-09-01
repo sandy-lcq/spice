@@ -22,7 +22,8 @@ void pinger(void *opaque)
     test->core->timer_start(ping_timer, ping_ms);
 }
 
-void set_primary_params(Test *test, Command *command)
+void set_primary_params(SPICE_GNUC_UNUSED Test *test,
+                        Command *command)
 {
 #if 0
     static int toggle = 0;
