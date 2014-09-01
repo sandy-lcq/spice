@@ -28,57 +28,6 @@ void pinger(SPICE_GNUC_UNUSED void *opaque)
     core->timer_start(ping_timer, ping_ms);
 }
 
-
-static int vmc_write(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
-                     SPICE_GNUC_UNUSED const uint8_t *buf,
-                     int len)
-{
-    return len;
-}
-
-static int vmc_read(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
-                    uint8_t *buf,
-                    int len)
-{
-    static uint8_t c = 0;
-    static uint8_t message[2048];
-    static unsigned pos = 0;
-    static unsigned message_size;
-    int ret;
-
-    if (pos == 0) {
-        VDIChunkHeader *hdr = (VDIChunkHeader *)message;
-        VDAgentMessage *msg = (VDAgentMessage *)&hdr[1];
-        uint8_t *p = message;
-        int size = sizeof(message);
-        message_size = size;
-        /* fill in message */
-        hdr->port = VDP_SERVER_PORT;
-        hdr->size = message_size - sizeof(VDIChunkHeader);
-        msg->protocol = VD_AGENT_PROTOCOL;
-        msg->type = VD_AGENT_END_MESSAGE;
-        msg->opaque = 0;
-        msg->size = message_size - sizeof(VDIChunkHeader) - sizeof(VDAgentMessage);
-        size -= sizeof(VDIChunkHeader) + sizeof(VDAgentMessage);
-        p += sizeof(VDIChunkHeader) + sizeof(VDAgentMessage);
-        for (; size; --size, ++p, ++c)
-            *p = c;
-    }
-    ret = MIN(message_size - pos, len);
-    memcpy(buf, &message[pos], ret);
-    pos += ret;
-    if (pos == message_size) {
-        pos = 0;
-    }
-    //printf("vmc_read %d (ret %d)\n", len, ret);
-    return ret;
-}
-
-static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
-                      SPICE_GNUC_UNUSED int connected)
-{
-}
-
 static SpiceBaseInterface base = {
     .type          = SPICE_INTERFACE_CHAR_DEVICE,
     .description   = "test spice virtual channel char device",

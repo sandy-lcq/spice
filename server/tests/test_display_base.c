@@ -793,28 +793,6 @@ void test_add_display_interface(Test* test)
     spice_server_add_interface(test->server, &test->qxl_instance.base);
 }
 
-static int vmc_write(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
-                     SPICE_GNUC_UNUSED const uint8_t *buf,
-                     int len)
-{
-    printf("%s: %d\n", __func__, len);
-    return len;
-}
-
-static int vmc_read(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
-                    SPICE_GNUC_UNUSED uint8_t *buf,
-                    int len)
-{
-    printf("%s: %d\n", __func__, len);
-    return 0;
-}
-
-static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
-                      int connected)
-{
-    printf("%s: %d\n", __func__, connected);
-}
-
 static SpiceBaseInterface base = {
     .type          = SPICE_INTERFACE_CHAR_DEVICE,
     .description   = "test spice virtual channel char device",
