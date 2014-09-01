@@ -88,10 +88,11 @@ static void regression_test(void)
     pid = fork();
     if (pid == 0) {
         char buf[PATH_MAX];
+        char *argv[] = { NULL };
         char *envp[] = {buf, NULL};
 
         snprintf(buf, sizeof(buf), "PATH=%s", getenv("PATH"));
-        execve("regression_test.py", NULL, envp);
+        execve("regression_test.py", argv, envp);
     } else if (pid > 0) {
         return;
     }
