@@ -50,7 +50,7 @@ void playback_timer_cb(SPICE_GNUC_UNUSED void *opaque)
     static int t = 0;
     static uint64_t last_sent_usec = 0;
     static uint64_t samples_to_send;
-    int i;
+    uint32_t i;
     struct timeval cur;
     uint64_t cur_usec;
 

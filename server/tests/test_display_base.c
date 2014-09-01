@@ -215,7 +215,7 @@ static SimpleSpiceUpdate *test_spice_create_update_solid(uint32_t surface_id, QX
     uint32_t *dst;
     uint32_t bw;
     uint32_t bh;
-    int i;
+    uint32_t i;
 
     bw = bbox.right - bbox.left;
     bh = bbox.bottom - bbox.top;
@@ -450,7 +450,7 @@ struct QXLCommandExt* commands[1024];
 
 static void push_command(QXLCommandExt *ext)
 {
-    ASSERT(commands_end - commands_start < COMMANDS_SIZE);
+    ASSERT(commands_end - commands_start < (int) COMMANDS_SIZE);
     commands[commands_end % COMMANDS_SIZE] = ext;
     commands_end++;
 }
