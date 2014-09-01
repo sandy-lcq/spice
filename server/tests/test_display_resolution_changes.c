@@ -45,8 +45,8 @@ void set_primary_params(SPICE_GNUC_UNUSED Test *test,
 }
 
 static Command commands[] = {
-    {DESTROY_PRIMARY, NULL},
-    {CREATE_PRIMARY, set_primary_params},
+    {DESTROY_PRIMARY, NULL, .cb_opaque = NULL,},
+    {CREATE_PRIMARY, set_primary_params, .cb_opaque = NULL},
 };
 
 int main(void)

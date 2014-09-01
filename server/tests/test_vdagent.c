@@ -79,14 +79,11 @@ static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
 {
 }
 
-static SpiceCharDeviceInterface vmc_interface = {
-    .base.type          = SPICE_INTERFACE_CHAR_DEVICE,
-    .base.description   = "test spice virtual channel char device",
-    .base.major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
-    .base.minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
-    .state              = vmc_state,
-    .write              = vmc_write,
-    .read               = vmc_read,
+static SpiceBaseInterface base = {
+    .type          = SPICE_INTERFACE_CHAR_DEVICE,
+    .description   = "test spice virtual channel char device",
+    .major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
+    .minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
 };
 
 SpiceCharDeviceInstance vmc_instance = {
@@ -100,7 +97,7 @@ int main(void)
     core = basic_event_loop_init();
     test = test_new(core);
 
-    vmc_instance.base.sif = &vmc_interface.base;
+    vmc_instance.base.sif = &base;
     spice_server_add_interface(test->server, &vmc_instance.base);
 
     ping_timer = core->timer_add(pinger, NULL);

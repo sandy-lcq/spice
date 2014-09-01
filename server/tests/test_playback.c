@@ -21,11 +21,11 @@
 
 SpicePlaybackInstance playback_instance;
 
-static const SpicePlaybackInterface playback_sif = {
-    .base.type          = SPICE_INTERFACE_PLAYBACK,
-    .base.description   = "test playback",
-    .base.major_version = SPICE_INTERFACE_PLAYBACK_MAJOR,
-    .base.minor_version = SPICE_INTERFACE_PLAYBACK_MINOR,
+static const SpiceBaseInterface base = {
+    .type          = SPICE_INTERFACE_PLAYBACK,
+    .description   = "test playback",
+    .major_version = SPICE_INTERFACE_PLAYBACK_MAJOR,
+    .minor_version = SPICE_INTERFACE_PLAYBACK_MINOR,
 };
 
 uint32_t *frame;
@@ -97,7 +97,7 @@ int main(void)
     spice_server_set_noauth(server);
     spice_server_init(server, core);
 
-    playback_instance.base.sif = &playback_sif.base;
+    playback_instance.base.sif = &base;
     spice_server_add_interface(server, &playback_instance.base);
     spice_server_playback_start(&playback_instance);
 

@@ -815,19 +815,16 @@ static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
     printf("%s: %d\n", __func__, connected);
 }
 
-static SpiceCharDeviceInterface vdagent_sif = {
-    .base.type          = SPICE_INTERFACE_CHAR_DEVICE,
-    .base.description   = "test spice virtual channel char device",
-    .base.major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
-    .base.minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
-    .state              = vmc_state,
-    .write              = vmc_write,
-    .read               = vmc_read,
+static SpiceBaseInterface base = {
+    .type          = SPICE_INTERFACE_CHAR_DEVICE,
+    .description   = "test spice virtual channel char device",
+    .major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
+    .minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
 };
 
 SpiceCharDeviceInstance vdagent_sin = {
     .base = {
-        .sif = &vdagent_sif.base,
+        .sif = &base,
     },
     .subtype = "vdagent",
 };
