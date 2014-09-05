@@ -570,7 +570,7 @@ static void red_put_fill(SpiceFill *red)
 static void red_get_opaque_ptr(RedMemSlotInfo *slots, int group_id,
                                SpiceOpaque *red, QXLOpaque *qxl, uint32_t flags)
 {
-    red->src_bitmap     = red_get_image(slots, group_id, qxl->src_bitmap, flags, FALSE);
+   red->src_bitmap     = red_get_image(slots, group_id, qxl->src_bitmap, flags, FALSE);
    red_get_rect_ptr(&red->src_area, &qxl->src_area);
    red_get_brush_ptr(slots, group_id, &red->brush, &qxl->brush, flags);
    red->rop_descriptor = qxl->rop_descriptor;
