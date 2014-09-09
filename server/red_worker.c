@@ -1250,6 +1250,33 @@ static inline void __validate_surface(RedWorker *worker, uint32_t surface_id)
     spice_warn_if(surface_id >= worker->n_surfaces);
 }
 
+static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
+{
+        DrawContext *context;
+        uint32_t surface_id = drawable->surface_id;
+
+        /* surface_id must be validated before calling into
+         * validate_drawable_bbox
+         */
+        __validate_surface(worker, surface_id);
+        context = &worker->surfaces[surface_id].context;
+
+        if (drawable->bbox.top < 0)
+                return FALSE;
+        if (drawable->bbox.left < 0)
+                return FALSE;
+        if (drawable->bbox.bottom < 0)
+                return FALSE;
+        if (drawable->bbox.right < 0)
+                return FALSE;
+        if (drawable->bbox.bottom > context->height)
+                return FALSE;
+        if (drawable->bbox.right > context->width)
+                return FALSE;
+
+        return TRUE;
+}
+
 static inline int validate_surface(RedWorker *worker, uint32_t surface_id)
 {
     spice_warn_if(surface_id >= worker->n_surfaces);
@@ -4072,6 +4099,10 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
         if (drawable->surfaces_dest[x] != -1) {
             VALIDATE_SURFACE_RETVAL(worker, drawable->surfaces_dest[x], NULL)
         }
+    }
+    if (!validate_drawable_bbox(worker, red_drawable)) {
+        rendering_incorrect(__func__);
+        return NULL;
     }
     ring_init(&drawable->pipes);
     ring_init(&drawable->glz_ring);
