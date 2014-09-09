@@ -21,7 +21,7 @@
 
 #define SPICE_LOG_DOMAIN "SpiceWorker"
 
-/* Common variable abberiviations:
+/* Common variable abbreviations:
  *
  * rcc - RedChannelClient
  * ccc - CursorChannelClient (not to be confused with common_cc)
