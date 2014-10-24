@@ -18,6 +18,16 @@ m4_define([SPICE_AGE], [9])
 AC_INIT(spice, [m4_esyscmd(build-aux/git-version-gen .tarball-version)],
         [spice-devel@lists.freedesktop.org], spice)
 
+major=`echo $PACKAGE_VERSION | cut -d. -f1`
+minor=`echo $PACKAGE_VERSION | cut -d. -f2`
+micro=`echo $PACKAGE_VERSION | cut -d. -f3`
+git=`echo $PACKAGE_VERSION | cut -d. -f4`
+if test x"$git" != x ; then
+    micro=$(($micro+1))
+fi
+SPICE_SERVER_VERSION=`printf "0x%02x%02x%02x" $major $minor $micro`
+AC_SUBST(SPICE_SERVER_VERSION)
+
 AC_CONFIG_MACRO_DIR([m4])
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_AUX_DIR(.)
@@ -510,6 +520,7 @@ AC_OUTPUT([
 Makefile
 spice-server.pc
 server/Makefile
+server/spice-version.h
 server/tests/Makefile
 client/Makefile
 docs/Makefile
