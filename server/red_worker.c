@@ -4068,6 +4068,17 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
     struct timespec time;
     int x;
 
+    VALIDATE_SURFACE_RETVAL(worker, red_drawable->surface_id, NULL)
+    if (!validate_drawable_bbox(worker, red_drawable)) {
+        rendering_incorrect(__func__);
+        return NULL;
+    }
+    for (x = 0; x < 3; ++x) {
+        if (red_drawable->surfaces_dest[x] != -1) {
+            VALIDATE_SURFACE_RETVAL(worker, red_drawable->surfaces_dest[x], NULL)
+        }
+    }
+
     while (!(drawable = alloc_drawable(worker))) {
         free_one_drawable(worker, FALSE);
     }
@@ -4093,17 +4104,7 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
     drawable->group_id = group_id;
 
     drawable->surface_id = red_drawable->surface_id;
-    VALIDATE_SURFACE_RETVAL(worker, drawable->surface_id, NULL)
-    for (x = 0; x < 3; ++x) {
-        drawable->surfaces_dest[x] = red_drawable->surfaces_dest[x];
-        if (drawable->surfaces_dest[x] != -1) {
-            VALIDATE_SURFACE_RETVAL(worker, drawable->surfaces_dest[x], NULL)
-        }
-    }
-    if (!validate_drawable_bbox(worker, red_drawable)) {
-        rendering_incorrect(__func__);
-        return NULL;
-    }
+    memcpy(drawable->surfaces_dest, red_drawable->surfaces_dest, sizeof(drawable->surfaces_dest));
     ring_init(&drawable->pipes);
     ring_init(&drawable->glz_ring);
 
