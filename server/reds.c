@@ -54,7 +54,6 @@
 #include "common/ring.h"
 
 #include "spice.h"
-#include "spice-experimental.h"
 #include "reds.h"
 #include "agent-msg-filter.h"
 #include "inputs_channel.h"
@@ -3165,9 +3164,6 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         }
         spice_server_char_device_add_interface(s, sin);
 
-    } else if (strcmp(interface->type, SPICE_INTERFACE_NET_WIRE) == 0) {
-        spice_warning("unsupported net wire interface");
-        return -1;
     } else if (strcmp(interface->type, SPICE_INTERFACE_MIGRATION) == 0) {
         spice_info("SPICE_INTERFACE_MIGRATION");
         if (migration_interface) {
@@ -3777,20 +3773,6 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_start(SpiceServer *s)
     spice_info(NULL);
     if (!reds->mig_spice) {
         return -1;
-    }
-    return 0;
-}
-
-SPICE_GNUC_VISIBLE int spice_server_migrate_client_state(SpiceServer *s)
-{
-    spice_assert(reds == s);
-
-    if (!reds_main_channel_connected()) {
-        return SPICE_MIGRATE_CLIENT_NONE;
-    } else if (reds->mig_wait_connect) {
-        return SPICE_MIGRATE_CLIENT_WAITING;
-    } else {
-        return SPICE_MIGRATE_CLIENT_READY;
     }
     return 0;
 }
