@@ -44,7 +44,22 @@ libspice_server_la_LIBADD =						\
 	$(SPICE_NONPKGCONFIG_LIBS)					\
 	$(NULL)
 
+libspice_serverincludedir = $(includedir)/spice-server
+libspice_serverinclude_HEADERS =		\
+	spice-audio.h				\
+	spice-char.h				\
+	spice-core.h				\
+	spice-experimental.h			\
+	spice-input.h				\
+	spice-migration.h			\
+	spice-qxl.h				\
+	spice-server.h				\
+	spice-version.h				\
+	spice.h					\
+	$(NULL)
+
 libspice_server_la_SOURCES =			\
+	$(libspice_serverinclude_HEADERS)	\
 	agent-msg-filter.c			\
 	agent-msg-filter.h			\
 	char_device.c				\
@@ -93,8 +108,6 @@ libspice_server_la_SOURCES =			\
 	reds_sw_canvas.h			\
 	snd_worker.c				\
 	snd_worker.h				\
-	spice-experimental.h			\
-	spice.h					\
 	stat.h					\
 	spicevmc.c				\
 	spice_timer_queue.c			\
@@ -121,12 +134,6 @@ libspice_server_la_SOURCES +=	\
 	smartcard.h		\
 	$(NULL)
 endif
-
-libspice_serverincludedir = $(includedir)/spice-server
-libspice_serverinclude_HEADERS =		\
-	spice.h					\
-	spice-experimental.h			\
-	$(NULL)
 
 EXTRA_DIST =					\
 	glz_encode_match_tmpl.c			\
