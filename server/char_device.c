@@ -438,7 +438,10 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
     }
 
     spice_char_device_state_ref(dev);
-    core->timer_cancel(dev->write_to_dev_timer);
+
+    if (dev->write_to_dev_timer) {
+        core->timer_cancel(dev->write_to_dev_timer);
+    }
 
     sif = SPICE_CONTAINEROF(dev->sin->base.sif, SpiceCharDeviceInterface, base);
     while (dev->running) {
@@ -473,8 +476,10 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
     /* retry writing as long as the write queue is not empty */
     if (dev->running) {
         if (dev->cur_write_buf) {
-            core->timer_start(dev->write_to_dev_timer,
-                              CHAR_DEVICE_WRITE_TO_TIMEOUT);
+            if (dev->write_to_dev_timer) {
+                core->timer_start(dev->write_to_dev_timer,
+                                  CHAR_DEVICE_WRITE_TO_TIMEOUT);
+            }
         } else {
             spice_assert(ring_is_empty(&dev->write_queue));
         }
@@ -488,7 +493,9 @@ static void spice_char_dev_write_retry(void *opaque)
 {
     SpiceCharDeviceState *dev = opaque;
 
-    core->timer_cancel(dev->write_to_dev_timer);
+    if (dev->write_to_dev_timer) {
+        core->timer_cancel(dev->write_to_dev_timer);
+    }
     spice_char_device_write_to_device(dev);
 }
 
@@ -635,6 +642,7 @@ SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *si
                                                      void *opaque)
 {
     SpiceCharDeviceState *char_dev;
+    SpiceCharDeviceInterface *sif;
 
     spice_assert(sin);
     spice_assert(cbs->read_one_msg_from_device && cbs->ref_msg_to_client &&
@@ -652,10 +660,15 @@ SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *si
     ring_init(&char_dev->write_bufs_pool);
     ring_init(&char_dev->clients);
 
-    char_dev->write_to_dev_timer = core->timer_add(spice_char_dev_write_retry, char_dev);
-    if (!char_dev->write_to_dev_timer) {
-        spice_error("failed creating char dev write timer");
+    sif = SPICE_CONTAINEROF(char_dev->sin->base.sif, SpiceCharDeviceInterface, base);
+    if (sif->base.minor_version <= 2 ||
+        !(sif->flags & SPICE_CHAR_DEVICE_NOTIFY_WRITABLE)) {
+        char_dev->write_to_dev_timer = core->timer_add(spice_char_dev_write_retry, char_dev);
+        if (!char_dev->write_to_dev_timer) {
+            spice_error("failed creating char dev write timer");
+        }
     }
+
     char_dev->refs = 1;
     sin->st = char_dev;
     spice_debug("sin %p dev_state %p", sin, char_dev);
@@ -697,7 +710,9 @@ static void spice_char_device_state_unref(SpiceCharDeviceState *char_dev)
 void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
 {
     reds_on_char_device_state_destroy(char_dev);
-    core->timer_remove(char_dev->write_to_dev_timer);
+    if (char_dev->write_to_dev_timer) {
+        core->timer_remove(char_dev->write_to_dev_timer);
+    }
     write_buffers_queue_free(&char_dev->write_queue);
     write_buffers_queue_free(&char_dev->write_bufs_pool);
     if (char_dev->cur_write_buf) {
@@ -805,7 +820,9 @@ void spice_char_device_stop(SpiceCharDeviceState *dev)
     spice_debug("dev_state %p", dev);
     dev->running = FALSE;
     dev->active = FALSE;
-    core->timer_cancel(dev->write_to_dev_timer);
+    if (dev->write_to_dev_timer) {
+        core->timer_cancel(dev->write_to_dev_timer);
+    }
 }
 
 void spice_char_device_reset(SpiceCharDeviceState *dev)
@@ -842,6 +859,7 @@ void spice_char_device_reset(SpiceCharDeviceState *dev)
 
 void spice_char_device_wakeup(SpiceCharDeviceState *dev)
 {
+    spice_char_device_write_to_device(dev);
     spice_char_device_read_from_device(dev);
 }
 

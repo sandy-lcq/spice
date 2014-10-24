@@ -24,7 +24,7 @@
 #include <spice/vd_agent.h>
 #include <spice/macros.h>
 
-#define SPICE_SERVER_VERSION 0x000c05 /* release 0.12.5 */
+#define SPICE_SERVER_VERSION 0x000c06 /* release 0.12.6 */
 
 #ifdef SPICE_SERVER_INTERNAL
 #undef SPICE_GNUC_DEPRECATED
@@ -402,10 +402,14 @@ void     spice_server_set_record_rate(SpiceRecordInstance *sin, uint32_t frequen
 
 #define SPICE_INTERFACE_CHAR_DEVICE "char_device"
 #define SPICE_INTERFACE_CHAR_DEVICE_MAJOR 1
-#define SPICE_INTERFACE_CHAR_DEVICE_MINOR 2
+#define SPICE_INTERFACE_CHAR_DEVICE_MINOR 3
 typedef struct SpiceCharDeviceInterface SpiceCharDeviceInterface;
 typedef struct SpiceCharDeviceInstance SpiceCharDeviceInstance;
 typedef struct SpiceCharDeviceState SpiceCharDeviceState;
+
+typedef enum {
+    SPICE_CHAR_DEVICE_NOTIFY_WRITABLE = 1 << 0,
+} spice_char_device_flags;
 
 struct SpiceCharDeviceInterface {
     SpiceBaseInterface base;
@@ -414,6 +418,7 @@ struct SpiceCharDeviceInterface {
     int (*write)(SpiceCharDeviceInstance *sin, const uint8_t *buf, int len);
     int (*read)(SpiceCharDeviceInstance *sin, uint8_t *buf, int len);
     void (*event)(SpiceCharDeviceInstance *sin, uint8_t event);
+    spice_char_device_flags flags;
 };
 
 struct SpiceCharDeviceInstance {
