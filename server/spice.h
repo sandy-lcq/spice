@@ -111,11 +111,7 @@ typedef struct QXLState QXLState;
 typedef struct QXLWorker QXLWorker;
 typedef struct QXLDevMemSlot QXLDevMemSlot;
 typedef struct QXLDevSurfaceCreate QXLDevSurfaceCreate;
-union QXLReleaseInfo;
-struct QXLReleaseInfoExt;
-struct QXLCommand;
-struct QXLCommandExt;
-struct QXLRect;
+
 struct QXLWorker {
     uint32_t minor_version;
     uint32_t major_version;
