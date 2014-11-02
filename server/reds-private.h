@@ -6,7 +6,6 @@
 #include <spice/protocol.h>
 
 #define MIGRATE_TIMEOUT (1000 * 10) /* 10sec */
-#define MM_TIMER_GRANULARITY_MS (1000 / 30)
 #define MM_TIME_DELTA 400 /*ms*/
 
 typedef struct TicketAuthentication {
@@ -159,7 +158,6 @@ typedef struct RedsState {
     int dispatcher_allows_client_mouse;
     MonitorMode monitor_mode;
     SpiceTimer *mig_timer;
-    SpiceTimer *mm_timer;
 
     int vm_running;
     Ring char_devs_states; /* list of SpiceCharDeviceStateItem */

@@ -156,7 +156,7 @@ struct QXLInterface {
 
     void (*attache_worker)(QXLInstance *qin, QXLWorker *qxl_worker);
     void (*set_compression_level)(QXLInstance *qin, int level);
-    void (*set_mm_time)(QXLInstance *qin, uint32_t mm_time);
+    void (*set_mm_time)(QXLInstance *qin, uint32_t mm_time) SPICE_GNUC_DEPRECATED;
 
     void (*get_init_info)(QXLInstance *qin, QXLDevInitInfo *info);
     int (*get_command)(QXLInstance *qin, struct QXLCommandExt *cmd);

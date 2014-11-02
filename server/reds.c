@@ -2830,7 +2830,6 @@ uint32_t reds_get_mm_time(void)
 
 void reds_enable_mm_timer(void)
 {
-    core->timer_start(reds->mm_timer, MM_TIMER_GRANULARITY_MS);
     reds->mm_timer_enabled = TRUE;
     reds->mm_time_latency = MM_TIME_DELTA;
     reds_send_mm_time();
@@ -2838,14 +2837,7 @@ void reds_enable_mm_timer(void)
 
 void reds_disable_mm_timer(void)
 {
-    core->timer_cancel(reds->mm_timer);
     reds->mm_timer_enabled = FALSE;
-}
-
-static void mm_timer_proc(void *opaque)
-{
-    red_dispatcher_set_mm_time(reds_get_mm_time());
-    core->timer_start(reds->mm_timer, MM_TIMER_GRANULARITY_MS);
 }
 
 static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
@@ -3270,11 +3262,6 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
         spice_error("mutex init failed");
     }
 #endif
-
-    if (!(reds->mm_timer = core->timer_add(mm_timer_proc, NULL))) {
-        spice_error("mm timer create failed");
-    }
-    reds_enable_mm_timer();
 
     if (reds_init_net() < 0) {
         goto err;

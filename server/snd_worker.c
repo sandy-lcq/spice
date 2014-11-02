@@ -1117,7 +1117,6 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
         snd_playback_free_frame(playback_channel, playback_channel->pending_frame);
     }
     frame->time = reds_get_mm_time();
-    red_dispatcher_set_mm_time(frame->time);
     playback_channel->pending_frame = frame;
     snd_set_command(&playback_channel->base, SND_PLAYBACK_PCM_MASK);
     snd_playback_send(&playback_channel->base);

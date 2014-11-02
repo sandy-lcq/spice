@@ -751,15 +751,6 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_dispatcher_loadvm_commands((RedDispatcher*)qxl_worker, ext, count);
 }
 
-void red_dispatcher_set_mm_time(uint32_t mm_time)
-{
-    RedDispatcher *now = dispatchers;
-    while (now) {
-        now->qxl->st->qif->set_mm_time(now->qxl, mm_time);
-        now = now->next;
-    }
-}
-
 static inline int calc_compression_level(void)
 {
     spice_assert(streaming_video != STREAM_VIDEO_INVALID);

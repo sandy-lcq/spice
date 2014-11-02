@@ -4195,6 +4195,7 @@ static inline void red_process_drawable(RedWorker *worker, RedDrawable *red_draw
         return;
     }
 
+    red_drawable->mm_time = reds_get_mm_time();
     surface_id = drawable->surface_id;
 
     worker->surfaces[surface_id].refs++;
