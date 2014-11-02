@@ -72,6 +72,7 @@ bool reds_stream_is_ssl(RedsStream *stream);
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream);
 int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx);
 void reds_stream_set_info_flag(RedsStream *stream, unsigned int flag);
+int reds_stream_get_family(RedsStream *stream);
 
 typedef enum {
     REDS_SASL_ERROR_OK,

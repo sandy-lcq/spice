@@ -226,6 +226,16 @@ ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
     return ret;
 }
 
+int reds_stream_get_family(RedsStream *s)
+{
+    spice_return_val_if_fail(s != NULL, -1);
+
+    if (s->socket == -1)
+        return -1;
+
+    return s->priv->info->laddr_ext.ss_family;
+}
+
 ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt)
 {
     int i;
