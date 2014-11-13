@@ -74,6 +74,7 @@ typedef enum {
     SPICE_IMAGE_COMPRESS_QUIC     = 4,
     SPICE_IMAGE_COMPRESS_GLZ      = 5,
     SPICE_IMAGE_COMPRESS_LZ       = 6,
+    SPICE_IMAGE_COMPRESS_LZ4      = 7,
 } spice_image_compression_t;
 
 int spice_server_set_image_compression(SpiceServer *s,

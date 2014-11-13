@@ -74,6 +74,9 @@
 #include "red_memslots.h"
 #include "red_parse_qxl.h"
 #include "jpeg_encoder.h"
+#ifdef USE_LZ4
+#include "lz4_encoder.h"
+#endif
 #include "demarshallers.h"
 #include "zlib_encoder.h"
 #include "red_channel.h"
@@ -237,6 +240,7 @@ static const char *quic_stat_name = "quic";
 static const char *jpeg_stat_name = "jpeg";
 static const char *zlib_stat_name = "zlib_glz";
 static const char *jpeg_alpha_stat_name = "jpeg_alpha";
+static const char *lz4_stat_name = "lz4";
 
 static inline void stat_compress_init(stat_info_t *info, const char *name)
 {
@@ -599,6 +603,13 @@ typedef struct {
     EncoderData data;
 } JpegData;
 
+#ifdef USE_LZ4
+typedef struct {
+    Lz4EncoderUsrContext usr;
+    EncoderData data;
+} Lz4Data;
+#endif
+
 typedef struct {
     ZlibEncoderUsrContext usr;
     EncoderData data;
@@ -740,6 +751,7 @@ struct DisplayChannel {
     stat_info_t jpeg_stat;
     stat_info_t zlib_glz_stat;
     stat_info_t jpeg_alpha_stat;
+    stat_info_t lz4_stat;
 #endif
 };
 
@@ -998,6 +1010,11 @@ typedef struct RedWorker {
     JpegData jpeg_data;
     JpegEncoderContext *jpeg;
 
+#ifdef USE_LZ4
+    Lz4Data lz4_data;
+    Lz4EncoderContext *lz4;
+#endif
+
     ZlibData zlib_data;
     ZlibEncoder *zlib;
 
@@ -1190,27 +1207,37 @@ static void print_compress_stats(DisplayChannel *display_channel)
                stat_byte_to_mega(display_channel->jpeg_alpha_stat.comp_size),
                stat_cpu_time_to_sec(display_channel->jpeg_alpha_stat.total)
                );
+    spice_info("LZ4      \t%8d\t%13.2f\t%12.2f\t%12.2f",
+               display_channel->lz4_stat.count,
+               stat_byte_to_mega(display_channel->lz4_stat.orig_size),
+               stat_byte_to_mega(display_channel->lz4_stat.comp_size),
+               stat_cpu_time_to_sec(display_channel->lz4_stat.total)
+               );
     spice_info("-------------------------------------------------------------------");
     spice_info("Total    \t%8d\t%13.2f\t%12.2f\t%12.2f",
                display_channel->lz_stat.count + display_channel->glz_stat.count +
                                                 display_channel->quic_stat.count +
                                                 display_channel->jpeg_stat.count +
+                                                display_channel->lz4_stat.count +
                                                 display_channel->jpeg_alpha_stat.count,
                stat_byte_to_mega(display_channel->lz_stat.orig_size +
                                  display_channel->glz_stat.orig_size +
                                  display_channel->quic_stat.orig_size +
                                  display_channel->jpeg_stat.orig_size +
+                                 display_channel->lz4_stat.orig_size +
                                  display_channel->jpeg_alpha_stat.orig_size),
                stat_byte_to_mega(display_channel->lz_stat.comp_size +
                                  glz_enc_size +
                                  display_channel->quic_stat.comp_size +
                                  display_channel->jpeg_stat.comp_size +
+                                 display_channel->lz4_stat.comp_size +
                                  display_channel->jpeg_alpha_stat.comp_size),
                stat_cpu_time_to_sec(display_channel->lz_stat.total +
                                     display_channel->glz_stat.total +
                                     display_channel->zlib_glz_stat.total +
                                     display_channel->quic_stat.total +
                                     display_channel->jpeg_stat.total +
+                                    display_channel->lz4_stat.total +
                                     display_channel->jpeg_alpha_stat.total)
                );
 }
@@ -5725,6 +5752,14 @@ static int jpeg_usr_more_space(JpegEncoderUsrContext *usr, uint8_t **io_ptr)
     return (encoder_usr_more_space(usr_data, (uint32_t **)io_ptr) << 2);
 }
 
+#ifdef USE_LZ4
+static int lz4_usr_more_space(Lz4EncoderUsrContext *usr, uint8_t **io_ptr)
+{
+    EncoderData *usr_data = &(((Lz4Data *)usr)->data);
+    return (encoder_usr_more_space(usr_data, (uint32_t **)io_ptr) << 2);
+}
+#endif
+
 static int zlib_usr_more_space(ZlibEncoderUsrContext *usr, uint8_t **io_ptr)
 {
     EncoderData *usr_data = &(((ZlibData *)usr)->data);
@@ -5784,6 +5819,14 @@ static int jpeg_usr_more_lines(JpegEncoderUsrContext *usr, uint8_t **lines)
     EncoderData *usr_data = &(((JpegData *)usr)->data);
     return encoder_usr_more_lines(usr_data, lines);
 }
+
+#ifdef USE_LZ4
+static int lz4_usr_more_lines(Lz4EncoderUsrContext *usr, uint8_t **lines)
+{
+    EncoderData *usr_data = &(((Lz4Data *)usr)->data);
+    return encoder_usr_more_lines(usr_data, lines);
+}
+#endif
 
 static int zlib_usr_more_input(ZlibEncoderUsrContext *usr, uint8_t** input)
 {
@@ -5885,6 +5928,20 @@ static inline void red_init_jpeg(RedWorker *worker)
         spice_critical("create jpeg encoder failed");
     }
 }
+
+#ifdef USE_LZ4
+static inline void red_init_lz4(RedWorker *worker)
+{
+    worker->lz4_data.usr.more_space = lz4_usr_more_space;
+    worker->lz4_data.usr.more_lines = lz4_usr_more_lines;
+
+    worker->lz4 = lz4_encoder_create(&worker->lz4_data.usr);
+
+    if (!worker->lz4) {
+        spice_critical("create lz4 encoder failed");
+    }
+}
+#endif
 
 static inline void red_init_zlib(RedWorker *worker)
 {
@@ -6355,6 +6412,80 @@ static int red_jpeg_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
     return TRUE;
 }
 
+#ifdef USE_LZ4
+static int red_lz4_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
+                                  SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                  uint32_t group_id)
+{
+    DisplayChannel *display_channel = DCC_TO_DC(dcc);
+    RedWorker *worker = display_channel->common.worker;
+    Lz4Data *lz4_data = &worker->lz4_data;
+    Lz4EncoderContext *lz4 = worker->lz4;
+    int lz4_size = 0;
+    int stride;
+
+#ifdef COMPRESS_STAT
+    stat_time_t start_time = stat_now();
+#endif
+
+    lz4_data->data.bufs_tail = red_display_alloc_compress_buf(dcc);
+    lz4_data->data.bufs_head = lz4_data->data.bufs_tail;
+
+    if (!lz4_data->data.bufs_head) {
+        spice_warning("failed to allocate compress buffer");
+        return FALSE;
+    }
+
+    lz4_data->data.bufs_head->send_next = NULL;
+    lz4_data->data.dcc = dcc;
+
+    if (setjmp(lz4_data->data.jmp_env)) {
+        while (lz4_data->data.bufs_head) {
+            RedCompressBuf *buf = lz4_data->data.bufs_head;
+            lz4_data->data.bufs_head = buf->send_next;
+            red_display_free_compress_buf(dcc, buf);
+        }
+        return FALSE;
+    }
+
+    if (src->data->flags & SPICE_CHUNKS_FLAGS_UNSTABLE) {
+        spice_chunks_linearize(src->data);
+    }
+
+    lz4_data->data.u.lines_data.chunks = src->data;
+    lz4_data->data.u.lines_data.stride = src->stride;
+    lz4_data->usr.more_lines = lz4_usr_more_lines;
+
+    if ((src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN)) {
+        lz4_data->data.u.lines_data.next = 0;
+        lz4_data->data.u.lines_data.reverse = 0;
+        stride = src->stride;
+    } else {
+        lz4_data->data.u.lines_data.next = src->data->num_chunks - 1;
+        lz4_data->data.u.lines_data.reverse = 1;
+        stride = -src->stride;
+    }
+
+    lz4_size = lz4_encode(lz4, src->y, stride, (uint8_t*)lz4_data->data.bufs_head->buf,
+                          sizeof(lz4_data->data.bufs_head->buf));
+
+    // the compressed buffer is bigger than the original data
+    if (lz4_size > (src->y * src->stride)) {
+        longjmp(lz4_data->data.jmp_env, 1);
+    }
+
+    dest->descriptor.type = SPICE_IMAGE_TYPE_LZ4;
+    dest->u.lz4.data_size = lz4_size;
+
+    o_comp_data->comp_buf = lz4_data->data.bufs_head;
+    o_comp_data->comp_buf_size = lz4_size;
+
+    stat_compress_add(&display_channel->lz4_stat, start_time, src->stride * src->y,
+                      o_comp_data->comp_buf_size);
+    return TRUE;
+}
+#endif
+
 static inline int red_quic_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
                                           SpiceBitmap *src, compress_send_data_t* o_comp_data,
                                           uint32_t group_id)
@@ -6471,6 +6602,7 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
         if (_stride_is_extra(src) || (src->data->flags & SPICE_CHUNKS_FLAGS_UNSTABLE)) {
             if ((image_compression == SPICE_IMAGE_COMPRESS_LZ) ||
                 (image_compression == SPICE_IMAGE_COMPRESS_GLZ) ||
+                (image_compression == SPICE_IMAGE_COMPRESS_LZ4) ||
                 BITMAP_FMT_IS_PLT[src->format]) {
                 return FALSE;
             } else {
@@ -6522,7 +6654,8 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
                     (src->x * src->y) < glz_enc_dictionary_get_size(
                         dcc->glz_dict->dict));
         } else if ((image_compression == SPICE_IMAGE_COMPRESS_AUTO_LZ) ||
-                   (image_compression == SPICE_IMAGE_COMPRESS_LZ)) {
+                   (image_compression == SPICE_IMAGE_COMPRESS_LZ) ||
+                   (image_compression == SPICE_IMAGE_COMPRESS_LZ4)) {
             glz = FALSE;
         } else {
             spice_error("invalid image compression type %u", image_compression);
@@ -6543,8 +6676,16 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
         }
 
         if (!glz) {
-            ret = red_lz_compress_image(dcc, dest, src, o_comp_data,
-                                        drawable->group_id);
+#ifdef USE_LZ4
+            if (image_compression == SPICE_IMAGE_COMPRESS_LZ4 &&
+                red_channel_client_test_remote_cap(&dcc->common.base,
+                        SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
+                ret = red_lz4_compress_image(dcc, dest, src, o_comp_data,
+                                             drawable->group_id);
+            } else
+#endif
+                ret = red_lz_compress_image(dcc, dest, src, o_comp_data,
+                                            drawable->group_id);
 #ifdef COMPRESS_DEBUG
             spice_info("LZ LOCAL compress");
 #endif
@@ -8775,9 +8916,18 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
                                                      &comp_send_data,
                                                      worker->mem_slots.internal_groupslot_id);
         } else {
-            comp_succeeded = red_lz_compress_image(dcc, &red_image, &bitmap,
-                                                   &comp_send_data,
-                                                   worker->mem_slots.internal_groupslot_id);
+#ifdef USE_LZ4
+            if (comp_mode == SPICE_IMAGE_COMPRESS_LZ4 &&
+                red_channel_client_test_remote_cap(&dcc->common.base,
+                        SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
+                comp_succeeded = red_lz4_compress_image(dcc, &red_image, &bitmap,
+                                                        &comp_send_data,
+                                                        worker->mem_slots.internal_groupslot_id);
+            } else
+#endif
+                comp_succeeded = red_lz_compress_image(dcc, &red_image, &bitmap,
+                                                       &comp_send_data,
+                                                       worker->mem_slots.internal_groupslot_id);
         }
     }
 
@@ -10567,6 +10717,7 @@ static void display_channel_create(RedWorker *worker, int migrate)
     stat_compress_init(&display_channel->jpeg_stat, jpeg_stat_name);
     stat_compress_init(&display_channel->zlib_glz_stat, zlib_stat_name);
     stat_compress_init(&display_channel->jpeg_alpha_stat, jpeg_alpha_stat_name);
+    stat_compress_init(&display_channel->lz4_stat, lz4_stat_name);
 }
 
 static void guest_set_client_capabilities(RedWorker *worker)
@@ -11591,6 +11742,11 @@ void handle_dev_set_compression(void *opaque, void *payload)
     case SPICE_IMAGE_COMPRESS_QUIC:
         spice_info("ic quic");
         break;
+#ifdef USE_LZ4
+    case SPICE_IMAGE_COMPRESS_LZ4:
+        spice_info("ic lz4");
+        break;
+#endif
     case SPICE_IMAGE_COMPRESS_LZ:
         spice_info("ic lz");
         break;
@@ -11612,6 +11768,7 @@ void handle_dev_set_compression(void *opaque, void *payload)
         stat_reset(&worker->display_channel->jpeg_stat);
         stat_reset(&worker->display_channel->zlib_glz_stat);
         stat_reset(&worker->display_channel->jpeg_alpha_stat);
+        stat_reset(&worker->display_channel->lz4_stat);
     }
 #endif
 }
@@ -12015,6 +12172,9 @@ SPICE_GNUC_NORETURN void *red_worker_main(void *arg)
     red_init_quic(worker);
     red_init_lz(worker);
     red_init_jpeg(worker);
+#ifdef USE_LZ4
+    red_init_lz4(worker);
+#endif
     red_init_zlib(worker);
     worker->event_timeout = INF_EVENT_WAIT;
     for (;;) {

@@ -138,6 +138,12 @@ AC_ARG_ENABLE(opengl,
 AS_IF([test x"$enable_opengl" != "xno"], [enable_opengl="yes"])
 AM_CONDITIONAL(SUPPORT_GL, test "x$enable_opengl" = "xyes")
 
+AC_ARG_ENABLE(lz4,
+[  --enable-lz4         Enable lz4 compression algorithm],,
+[enable_lz4="no"])
+AS_IF([test x"$enable_lz4" != "xno"], [enable_lz4="yes"])
+AM_CONDITIONAL(SUPPORT_LZ4, test "x$enable_lz4" = "xyes")
+
 AC_ARG_ENABLE(smartcard,
 [  --enable-smartcard         Enable network redirection],,
 [enable_smartcard="no"])
@@ -286,6 +292,13 @@ AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
 AC_ARG_ENABLE([xinerama],
     [AS_HELP_STRING([--disable-xinerama],
         [disable Xinerama library @<:@default=no@:>@])])
+
+if test "x$enable_lz4" = "xyes"; then
+    PKG_CHECK_MODULES(LZ4, liblz4)
+    AC_DEFINE([USE_LZ4], [1], [Define to build with Lz4 support])
+fi
+AC_SUBST(LZ4_CFLAGS)
+AC_SUBST(LZ4_LIBS)
 
 if test "x$red_target" = "xx11" && test "x$enable_client" = "xyes" ; then
 	if test "$os_linux" = yes; then
@@ -549,6 +562,8 @@ echo "
 
         GUI:                      ${enable_gui}
 " ; fi ; echo "\
+        LZ4 support:              ${enable_lz4}
+
         Smartcard:                ${enable_smartcard}
 
         SASL support:             ${enable_sasl}

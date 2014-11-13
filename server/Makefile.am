@@ -6,6 +6,7 @@ AM_CPPFLAGS =					\
 	-DRED_STATISTICS			\
 	$(COMMON_CFLAGS)			\
 	$(GLIB2_CFLAGS)				\
+	$(LZ4_CFLAGS)				\
 	$(PIXMAN_CFLAGS)			\
 	$(SASL_CFLAGS)				\
 	$(SLIRP_CFLAGS)				\
@@ -35,6 +36,7 @@ libspice_server_la_LIBADD =						\
 	$(GL_LIBS)							\
 	$(GLIB2_LIBS)							\
 	$(JPEG_LIBS)							\
+	$(LZ4_LIBS)							\
 	$(LIBRT)							\
 	$(PIXMAN_LIBS)							\
 	$(SASL_LIBS)							\
@@ -75,6 +77,8 @@ libspice_server_la_SOURCES =			\
 	inputs_channel.h			\
 	jpeg_encoder.c				\
 	jpeg_encoder.h				\
+	lz4_encoder.c				\
+	lz4_encoder.h				\
 	main_channel.c				\
 	main_channel.h				\
 	mjpeg_encoder.c				\
