@@ -313,7 +313,7 @@ You should also add a QXL video device
 
 [source,xml]
 <video>
-    <model type='qxl'>
+    <model type='qxl'/>
 </video>
 
 After stopping and restarting the virtual machine `$vmname`, it should
@@ -583,10 +583,10 @@ QXL:
 
 [source,xml]
 <video>
-    <model type='qxl'>
+    <model type='qxl'/>
 </video>
 <video>
-    <model type='qxl'>
+    <model type='qxl'/>
 </video>
 
 
