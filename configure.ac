@@ -52,6 +52,10 @@ AC_DEFINE([__STDC_FORMAT_MACROS],[],[Force definition of format macros for C++])
 SPICE_LT_VERSION=m4_format("%d:%d:%d", SPICE_CURRENT, SPICE_REVISION, SPICE_AGE)
 AC_SUBST(SPICE_LT_VERSION)
 
+# For autoconf < 2.63
+m4_ifndef([AS_VAR_APPEND],
+          AC_DEFUN([AS_VAR_APPEND], $1=$$1$2))
+
 # Check for the CPU we are using
 #
 AC_MSG_CHECKING(for x86, x86-64 or armv6+ platform)
@@ -163,9 +167,9 @@ AC_CHECK_LIB(rt, clock_gettime,
 AC_SUBST(LIBRT)
 
 if test "$red_target" = "windows"; then
-	SPICE_NONPKGCONFIG_LIBS+=" -lpthreadGC2 -lversion -lmsimg32 $LIBM"
+	AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" -lpthreadGC2 -lversion -lmsimg32 $LIBM"])
 else
-	SPICE_NONPKGCONFIG_LIBS+=" -pthread $LIBM $LIBRT"
+	AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" -pthread $LIBM $LIBRT"])
 fi
 
 dnl The client needs a yield function
@@ -211,24 +215,24 @@ if test "x$enable_smartcard" = "xyes"; then
     SMARTCARD_CFLAGS="$CAC_CARD_CFLAGS"
     AC_SUBST(SMARTCARD_LIBS)
     AC_SUBST(SMARTCARD_CFLAGS)
-    SPICE_REQUIRES+=" libcacard >= 0.1.2"
+    AS_VAR_APPEND([SPICE_REQUIRES], [" libcacard >= 0.1.2"])
 fi
 
 
 PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.22])
-SPICE_REQUIRES+=" glib-2.0 >= 2.22"
+AS_VAR_APPEND([SPICE_REQUIRES], [" glib-2.0 >= 2.22"])
 
 PKG_CHECK_MODULES(PIXMAN, pixman-1 >= 0.17.7)
 AC_SUBST(PIXMAN_CFLAGS)
 AC_SUBST(PIXMAN_LIBS)
-SPICE_REQUIRES+=" pixman-1 >= 0.17.7"
+AS_VAR_APPEND([SPICE_REQUIRES], [" pixman-1 >= 0.17.7"])
 
 AC_ARG_ENABLE(celt051,
     [  --disable-celt051       Disable celt051 audio codec (enabled by default)],,
         [enable_celt051="yes"])
 
 if test "x$enable_celt051" = "xyes"; then
-    PKG_CHECK_MODULES(CELT051, celt051 >= 0.5.1.1, SPICE_REQUIRES+=" celt051 >= 0.5.1.1")
+    PKG_CHECK_MODULES(CELT051, celt051 >= 0.5.1.1, AS_VAR_APPEND([SPICE_REQUIRES], [" celt051 >= 0.5.1.1"]))
 fi
 
 if test ! -e client/generated_marshallers.cpp; then
@@ -244,14 +248,14 @@ fi
 PKG_CHECK_MODULES(SSL, openssl)
 AC_SUBST(SSL_CFLAGS)
 AC_SUBST(SSL_LIBS)
-SPICE_REQUIRES+=" openssl"
+AS_VAR_APPEND([SPICE_REQUIRES], [" openssl"])
 
 # These are commented out because the gl libraries on RHEL 5 do not have pkgconfig files
 #
 # PKG_CHECK_MODULES(GL, gl glu)
 # AC_SUBST(GL_CFLAGS)
 # AC_SUBST(GL_LIBS)
-# SPICE_REQUIRES+=" gl glu"
+# AS_VAR_APPEND([SPICE_REQUIRES], [" gl glu"])
 
 if test "x$enable_opengl" = "xyes"; then
    AC_CHECK_LIB(GL, glBlendFunc, GL_LIBS="$GL_LIBS -lGL", enable_opengl=no)
@@ -266,7 +270,7 @@ fi
 
 AC_SUBST(GL_CFLAGS)
 AC_SUBST(GL_LIBS)
-SPICE_NONPKGCONFIG_LIBS+=" $GL_LIBS"
+AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
 
 if test "x$red_target" = "xx11" && test "x$enable_client" = "xyes" ; then
 	if test "$os_linux" = yes; then
@@ -319,7 +323,7 @@ if test "x$have_xinerama" = "xyes" ; then
   AC_DEFINE([HAVE_XINERAMA], [], [Define if we have Xinerama])
   AC_SUBST(XINERAMA_CFLAGS)
   AC_SUBST(XINERAMA_LIBS)
-  SPICE_REQUIRES+=" xinerama"
+  AS_VAR_APPEND([SPICE_REQUIRES], [" xinerama"])
 fi
 
 # Add parameter for (partial) static linkage of spice client.
@@ -436,7 +440,7 @@ LIBVIRT_LINKER_RELRO
 LIBVIRT_LINKER_NO_INDIRECT
 
 # use ximage.h for win32 build if it is found (no package for mingw32 atm)
-if test $os_win32 == "yes" ; then
+if test $os_win32 = "yes" ; then
     AC_MSG_CHECKING([for cximage])
     AC_TRY_CPP(
 [#include <ximage.h>
@@ -457,7 +461,7 @@ fi
 AC_SUBST(CXIMAGE_CFLAGS)
 
 # check for windres for mingw32 builds
-if test $os_win32 == "yes" ; then
+if test $os_win32 = "yes" ; then
     AC_CHECK_PROGS(WINDRES,i686-pc-mingw32-windres mingw-windres mingw32-windres,false)
     AC_SUBST(WINDRES)
 fi
@@ -524,7 +528,7 @@ echo "
         python:                   ${PYTHON}
 
         Build Spice client:       ${enable_client}
-" ; if test "x$enable_client" == "xyes"; then echo "\
+" ; if test "x$enable_client" = "xyes"; then echo "\
         Have XRANDR 1.2:          ${have_xrandr12}
 
         Have Xinerama:            ${have_xinerama}
@@ -544,7 +548,7 @@ echo "
         Manual:                   ${have_asciidoc}
 "
 
-if test $os_win32 == "yes" ; then
+if test $os_win32 = "yes" ; then
 echo \
 "        Copy & Paste Images:     ${have_cximage}
 "
