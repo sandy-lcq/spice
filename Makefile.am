@@ -3,10 +3,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = spice-common server docs
 
-if SUPPORT_CLIENT
-SUBDIRS += client
-endif
-
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = spice-server.pc
 
