@@ -282,6 +282,11 @@ AC_SUBST(GL_CFLAGS)
 AC_SUBST(GL_LIBS)
 AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
 
+# Add parameter for libXinerama
+AC_ARG_ENABLE([xinerama],
+    [AS_HELP_STRING([--disable-xinerama],
+        [disable Xinerama library @<:@default=no@:>@])])
+
 if test "x$red_target" = "xx11" && test "x$enable_client" = "xyes" ; then
 	if test "$os_linux" = yes; then
 		PKG_CHECK_MODULES(ALSA, alsa)
@@ -301,31 +306,26 @@ if test "x$red_target" = "xx11" && test "x$enable_client" = "xyes" ; then
 	        xrandr >= 1.2,
 	        have_xrandr12=yes,
 	        have_xrandr12=no)
+
+	if test "x$enable_xinerama" != "xno"; then
+	    PKG_CHECK_MODULES(XINERAMA,
+			      xinerama >= 1.0,
+			      have_xinerama=yes,
+			      have_xinerama=no)
+	else
+	    have_xinerama=no
+	fi
+	if test "x$enable_xinerama" = "xyes" && test "x$have_xinerama" = "xno"; then
+	    AC_MSG_ERROR([Requested Xinerama library was not found])
+	fi
 else
 	have_xrandr12=no
+	have_xinerama=no
 fi
 
 AM_CONDITIONAL([HAVE_XRANDR12], [test "x$have_xrandr12" = "xyes"])
 if test "x$have_xrandr12" = "xyes" ; then
   AC_DEFINE([HAVE_XRANDR12], [], [Define if we have XRANDR 12])
-fi
-
-# Add parameter for libXinerama
-AC_ARG_ENABLE([xinerama],
-    [AS_HELP_STRING([--disable-xinerama],
-        [disable Xinerama library @<:@default=no@:>@])])
-
-if test "x$enable_xinerama" != "xno"; then
-    PKG_CHECK_MODULES(XINERAMA,
-        xinerama >= 1.0,
-        have_xinerama=yes,
-        have_xinerama=no)
-else
-    have_xinerama=no
-fi
-
-if test "x$enable_xinerama" = "xyes" && test "x$have_xinerama" = "xno"; then
-    AC_MSG_ERROR([Requested Xinerama library was not found])
 fi
 
 AM_CONDITIONAL([HAVE_XINERAMA], [test "x$have_xinerama" = "xyes"])
