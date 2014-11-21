@@ -333,7 +333,6 @@ if test "x$have_xinerama" = "xyes" ; then
   AC_DEFINE([HAVE_XINERAMA], [], [Define if we have Xinerama])
   AC_SUBST(XINERAMA_CFLAGS)
   AC_SUBST(XINERAMA_LIBS)
-  AS_VAR_APPEND([SPICE_REQUIRES], [" xinerama"])
 fi
 
 # Add parameter for (partial) static linkage of spice client.
