@@ -1041,7 +1041,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
     if (!channel)
         return;
     spice_assert(!playback_channel->base.active);
-    reds_disable_mm_timer();
+    reds_disable_mm_time();
     playback_channel->base.active = TRUE;
     if (!playback_channel->base.client_active) {
         snd_set_command(&playback_channel->base, SND_PLAYBACK_CTRL_MASK);
@@ -1060,7 +1060,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
     if (!channel)
         return;
     spice_assert(playback_channel->base.active);
-    reds_enable_mm_timer();
+    reds_enable_mm_time();
     playback_channel->base.active = FALSE;
     if (playback_channel->base.client_active) {
         snd_set_command(&playback_channel->base, SND_PLAYBACK_CTRL_MASK);
@@ -1174,7 +1174,7 @@ static void on_new_playback_channel(SndWorker *worker)
         snd_set_command((SndChannel *)playback_channel, SND_PLAYBACK_VOLUME_MASK);
     }
     if (playback_channel->base.active) {
-        reds_disable_mm_timer();
+        reds_disable_mm_time();
     }
 }
 
@@ -1183,7 +1183,7 @@ static void snd_playback_cleanup(SndChannel *channel)
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
 
     if (playback_channel->base.active) {
-        reds_enable_mm_timer();
+        reds_enable_mm_time();
     }
 
     snd_codec_destroy(&playback_channel->codec);

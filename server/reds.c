@@ -1280,7 +1280,7 @@ int reds_handle_migrate_data(MainChannelClient *mcc, SpiceMigrateDataMain *mig_d
      * controls the mm-time, we update the client's mm-time.
      * (MSG_MAIN_INIT is not sent for a migrating connection)
      */
-    if (reds->mm_timer_enabled) {
+    if (reds->mm_time_enabled) {
         reds_send_mm_time();
     }
     if (mig_data->agent_base.connected) {
@@ -2423,7 +2423,7 @@ static void reds_send_mm_time(void)
 void reds_set_client_mm_time_latency(RedClient *client, uint32_t latency)
 {
     // TODO: multi-client support for mm_time
-    if (reds->mm_timer_enabled) {
+    if (reds->mm_time_enabled) {
         // TODO: consider network latency
         if (latency > reds->mm_time_latency) {
             reds->mm_time_latency = latency;
@@ -2828,16 +2828,16 @@ uint32_t reds_get_mm_time(void)
     return time_space.tv_sec * 1000 + time_space.tv_nsec / 1000 / 1000;
 }
 
-void reds_enable_mm_timer(void)
+void reds_enable_mm_time(void)
 {
-    reds->mm_timer_enabled = TRUE;
+    reds->mm_time_enabled = TRUE;
     reds->mm_time_latency = MM_TIME_DELTA;
     reds_send_mm_time();
 }
 
-void reds_disable_mm_timer(void)
+void reds_disable_mm_time(void)
 {
-    reds->mm_timer_enabled = FALSE;
+    reds->mm_time_enabled = FALSE;
 }
 
 static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
