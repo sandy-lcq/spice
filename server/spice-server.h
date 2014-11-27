@@ -22,7 +22,7 @@
 #error "Only spice.h can be included directly."
 #endif
 
-/* spice server setup */
+#include "spice-core.h"
 
 /* Don't use features incompatible with a specific spice
    version, so that migration to/from that version works. */
