@@ -325,13 +325,12 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
 {
     InputsChannel *inputs_channel = (InputsChannel *)rcc->channel;
     InputsChannelClient *icc = (InputsChannelClient *)rcc;
-    uint8_t *buf = (uint8_t *)message;
     uint32_t i;
 
     spice_assert(g_inputs_channel == inputs_channel);
     switch (type) {
     case SPICE_MSGC_INPUTS_KEY_DOWN: {
-        SpiceMsgcKeyDown *key_down = (SpiceMsgcKeyDown *)buf;
+        SpiceMsgcKeyDown *key_down = message;
         if (key_down->code == CAPS_LOCK_SCAN_CODE ||
             key_down->code == NUM_LOCK_SCAN_CODE ||
             key_down->code == SCROLL_LOCK_SCAN_CODE) {
@@ -339,7 +338,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         }
     }
     case SPICE_MSGC_INPUTS_KEY_UP: {
-        SpiceMsgcKeyUp *key_up = (SpiceMsgcKeyUp *)buf;
+        SpiceMsgcKeyUp *key_up = message;
         for (i = 0; i < 4; i++) {
             uint8_t code = (key_up->code >> (i * 8)) & 0xff;
             if (code == 0) {
@@ -350,14 +349,14 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         break;
     }
     case SPICE_MSGC_INPUTS_KEY_SCANCODE: {
-        uint8_t *code = (uint8_t *)buf;
+        uint8_t *code = message;
         for (i = 0; i < size; i++) {
             kbd_push_scan(keyboard, code[i]);
         }
         break;
     }
     case SPICE_MSGC_INPUTS_MOUSE_MOTION: {
-        SpiceMsgcMouseMotion *mouse_motion = (SpiceMsgcMouseMotion *)buf;
+        SpiceMsgcMouseMotion *mouse_motion = message;
 
         if (++icc->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
             !g_inputs_channel->src_during_migrate) {
@@ -374,7 +373,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         break;
     }
     case SPICE_MSGC_INPUTS_MOUSE_POSITION: {
-        SpiceMsgcMousePosition *pos = (SpiceMsgcMousePosition *)buf;
+        SpiceMsgcMousePosition *pos = message;
 
         if (++icc->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
             !g_inputs_channel->src_during_migrate) {
@@ -400,7 +399,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         break;
     }
     case SPICE_MSGC_INPUTS_MOUSE_PRESS: {
-        SpiceMsgcMousePress *mouse_press = (SpiceMsgcMousePress *)buf;
+        SpiceMsgcMousePress *mouse_press = message;
         int dz = 0;
         if (mouse_press->button == SPICE_MOUSE_BUTTON_UP) {
             dz = -1;
@@ -428,7 +427,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         break;
     }
     case SPICE_MSGC_INPUTS_MOUSE_RELEASE: {
-        SpiceMsgcMouseRelease *mouse_release = (SpiceMsgcMouseRelease *)buf;
+        SpiceMsgcMouseRelease *mouse_release = message;
         if (reds_get_mouse_mode() == SPICE_MOUSE_MODE_CLIENT) {
             if (reds_get_agent_mouse() && reds_has_vdagent()) {
                 inputs_channel->mouse_state.buttons =
@@ -448,7 +447,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         break;
     }
     case SPICE_MSGC_INPUTS_KEY_MODIFIERS: {
-        SpiceMsgcKeyModifiers *modifiers = (SpiceMsgcKeyModifiers *)buf;
+        SpiceMsgcKeyModifiers *modifiers = message;
         uint8_t leds;
 
         if (!keyboard) {
