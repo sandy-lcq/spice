@@ -332,7 +332,8 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
     switch (type) {
     case SPICE_MSGC_INPUTS_KEY_DOWN: {
         SpiceMsgcKeyDown *key_down = (SpiceMsgcKeyDown *)buf;
-        if (key_down->code == CAPS_LOCK_SCAN_CODE || key_down->code == NUM_LOCK_SCAN_CODE ||
+        if (key_down->code == CAPS_LOCK_SCAN_CODE ||
+            key_down->code == NUM_LOCK_SCAN_CODE ||
             key_down->code == SCROLL_LOCK_SCAN_CODE) {
             activate_modifiers_watch();
         }
