@@ -331,16 +331,16 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
     spice_assert(g_inputs_channel == inputs_channel);
     switch (type) {
     case SPICE_MSGC_INPUTS_KEY_DOWN: {
-        SpiceMsgcKeyDown *key_up = (SpiceMsgcKeyDown *)buf;
-        if (key_up->code == CAPS_LOCK_SCAN_CODE || key_up->code == NUM_LOCK_SCAN_CODE ||
-            key_up->code == SCROLL_LOCK_SCAN_CODE) {
+        SpiceMsgcKeyDown *key_down = (SpiceMsgcKeyDown *)buf;
+        if (key_down->code == CAPS_LOCK_SCAN_CODE || key_down->code == NUM_LOCK_SCAN_CODE ||
+            key_down->code == SCROLL_LOCK_SCAN_CODE) {
             activate_modifiers_watch();
         }
     }
     case SPICE_MSGC_INPUTS_KEY_UP: {
-        SpiceMsgcKeyDown *key_down = (SpiceMsgcKeyDown *)buf;
+        SpiceMsgcKeyUp *key_up = (SpiceMsgcKeyUp *)buf;
         for (i = 0; i < 4; i++) {
-            uint8_t code = (key_down->code >> (i * 8)) & 0xff;
+            uint8_t code = (key_up->code >> (i * 8)) & 0xff;
             if (code == 0) {
                 break;
             }
