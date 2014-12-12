@@ -121,47 +121,47 @@ static void red_channel_client_unref(RedChannelClient *rcc);
 
 static uint32_t full_header_get_msg_size(SpiceDataHeaderOpaque *header)
 {
-    return ((SpiceDataHeader *)header->data)->size;
+    return GUINT32_FROM_LE(((SpiceDataHeader *)header->data)->size);
 }
 
 static uint32_t mini_header_get_msg_size(SpiceDataHeaderOpaque *header)
 {
-    return ((SpiceMiniDataHeader *)header->data)->size;
+    return GUINT32_FROM_LE(((SpiceMiniDataHeader *)header->data)->size);
 }
 
 static uint16_t full_header_get_msg_type(SpiceDataHeaderOpaque *header)
 {
-    return ((SpiceDataHeader *)header->data)->type;
+    return GUINT16_FROM_LE(((SpiceDataHeader *)header->data)->type);
 }
 
 static uint16_t mini_header_get_msg_type(SpiceDataHeaderOpaque *header)
 {
-    return ((SpiceMiniDataHeader *)header->data)->type;
+    return GUINT16_FROM_LE(((SpiceMiniDataHeader *)header->data)->type);
 }
 
 static void full_header_set_msg_type(SpiceDataHeaderOpaque *header, uint16_t type)
 {
-    ((SpiceDataHeader *)header->data)->type = type;
+    ((SpiceDataHeader *)header->data)->type = GUINT16_TO_LE(type);
 }
 
 static void mini_header_set_msg_type(SpiceDataHeaderOpaque *header, uint16_t type)
 {
-    ((SpiceMiniDataHeader *)header->data)->type = type;
+    ((SpiceMiniDataHeader *)header->data)->type = GUINT16_TO_LE(type);
 }
 
 static void full_header_set_msg_size(SpiceDataHeaderOpaque *header, uint32_t size)
 {
-    ((SpiceDataHeader *)header->data)->size = size;
+    ((SpiceDataHeader *)header->data)->size = GUINT32_TO_LE(size);
 }
 
 static void mini_header_set_msg_size(SpiceDataHeaderOpaque *header, uint32_t size)
 {
-    ((SpiceMiniDataHeader *)header->data)->size = size;
+    ((SpiceMiniDataHeader *)header->data)->size = GUINT32_TO_LE(size);
 }
 
 static void full_header_set_msg_serial(SpiceDataHeaderOpaque *header, uint64_t serial)
 {
-    ((SpiceDataHeader *)header->data)->serial = serial;
+    ((SpiceDataHeader *)header->data)->serial = GUINT64_TO_LE(serial);
 }
 
 static void mini_header_set_msg_serial(SpiceDataHeaderOpaque *header, uint64_t serial)
@@ -171,7 +171,7 @@ static void mini_header_set_msg_serial(SpiceDataHeaderOpaque *header, uint64_t s
 
 static void full_header_set_msg_sub_list(SpiceDataHeaderOpaque *header, uint32_t sub_list)
 {
-    ((SpiceDataHeader *)header->data)->sub_list = sub_list;
+    ((SpiceDataHeader *)header->data)->sub_list = GUINT32_TO_LE(sub_list);
 }
 
 static void mini_header_set_msg_sub_list(SpiceDataHeaderOpaque *header, uint32_t sub_list)
