@@ -18,6 +18,7 @@
 #include <config.h>
 #endif
 
+#include <glib.h>
 #include <pthread.h>
 #include <stdio.h>
 #include "glz_encoder.h"
@@ -261,7 +262,7 @@ int glz_encode(GlzEncoderContext *opaque_encoder,
     encoder->cur_image.id = dict_image->id;
     encoder->cur_image.first_win_seg = dict_image->first_seg;
 
-    encode_32(encoder, LZ_MAGIC);
+    encode_32(encoder, GUINT32_TO_LE(LZ_MAGIC));
     encode_32(encoder, LZ_VERSION);
     if (top_down) {
         encode(encoder, (type & LZ_IMAGE_TYPE_MASK) | (1 << LZ_IMAGE_TYPE_LOG));
