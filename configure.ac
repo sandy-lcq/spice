@@ -61,21 +61,12 @@ m4_ifndef([AS_VAR_APPEND],
           AC_DEFUN([AS_VAR_APPEND], $1=$$1$2))
 
 # Check for the CPU we are using
-#
-AC_MSG_CHECKING(for x86, x86-64 or armv6+ platform)
 case $host_cpu in
-  i386|i486|i586|i686|i786|k6|k7|armv6|armv6l|armv6hl|armv7|armv7l|armv7hl)
-	variant=32
+  i386|i486|i586|i686|i786|k6|k7|x86_64|armv6|armv6l|armv6hl|armv7|armv7l|armv7hl)
         ;;
-  x86_64)
-	variant=64
-	;;
   *)
-	AC_MSG_RESULT(no)
-	echo Only x86 and x86-64 are supported
-	exit 1
+        arch_warn=1
 esac
-AC_MSG_RESULT($variant bit)
 
 dnl =========================================================================
 dnl Check optional features
@@ -374,6 +365,11 @@ echo "
 
         Manual:                   ${have_asciidoc}
 "
+
+if test x"$arch_warn" = x1; then
+        AC_MSG_WARN([spice-server on non-x86/x86_64 architectures hasn't been extensively tested])
+        echo ""
+fi
 
 echo \
 "        Now type 'make' to build $PACKAGE
