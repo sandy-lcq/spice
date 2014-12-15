@@ -76,7 +76,6 @@ case $host_cpu in
 	exit 1
 esac
 AC_MSG_RESULT($variant bit)
-AM_CONDITIONAL([X86_64], [test "$variant" = 64])
 
 dnl =========================================================================
 dnl Check optional features
