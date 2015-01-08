@@ -44,6 +44,7 @@
 #endif
 
 #include <glib.h>
+#include <sys/un.h>
 
 #include <spice/protocol.h>
 #include <spice/vd_agent.h>
@@ -2351,7 +2352,27 @@ static int reds_init_socket(const char *addr, int portnr, int family)
     static const int on=1, off=0;
     struct addrinfo ai,*res,*e;
     char port[33];
-    int slisten,rc;
+    int slisten, rc, len;
+
+    if (family == AF_UNIX) {
+        struct sockaddr_un local = { 0, };
+
+        if ((slisten = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+            perror("socket");
+            return -1;
+        }
+
+        local.sun_family = AF_UNIX;
+        strncpy(local.sun_path, addr, sizeof(local.sun_path) -1);
+        unlink(local.sun_path);
+        len = SUN_LEN(&local);
+        if (bind(slisten, (struct sockaddr *)&local, len) == -1) {
+            perror("bind");
+            return -1;
+        }
+
+        goto listen;
+    }
 
     memset(&ai,0, sizeof(ai));
     ai.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
@@ -2391,6 +2412,7 @@ static int reds_init_socket(const char *addr, int portnr, int family)
             } else {
                 spice_info("cannot resolve address spice-server is bound to");
             }
+            freeaddrinfo(res);
             goto listen;
         }
         close(slisten);
@@ -2401,7 +2423,6 @@ static int reds_init_socket(const char *addr, int portnr, int family)
     return -1;
 
 listen:
-    freeaddrinfo(res);
     if (listen(slisten,1) != 0) {
         spice_warning("listen: %s", strerror(errno));
         close(slisten);
@@ -2439,7 +2460,7 @@ void reds_set_client_mm_time_latency(RedClient *client, uint32_t latency)
 
 static int reds_init_net(void)
 {
-    if (spice_port != -1) {
+    if (spice_port != -1 || spice_family == AF_UNIX) {
         reds->listen_socket = reds_init_socket(spice_addr, spice_port, spice_family);
         if (-1 == reds->listen_socket) {
             return -1;
@@ -3360,12 +3381,17 @@ SPICE_GNUC_VISIBLE int spice_server_set_port(SpiceServer *s, int port)
 SPICE_GNUC_VISIBLE void spice_server_set_addr(SpiceServer *s, const char *addr, int flags)
 {
     spice_assert(reds == s);
+
     g_strlcpy(spice_addr, addr, sizeof(spice_addr));
-    if (flags & SPICE_ADDR_FLAG_IPV4_ONLY) {
+
+    if (flags == SPICE_ADDR_FLAG_IPV4_ONLY) {
         spice_family = PF_INET;
-    }
-    if (flags & SPICE_ADDR_FLAG_IPV6_ONLY) {
+    } else if (flags == SPICE_ADDR_FLAG_IPV6_ONLY) {
         spice_family = PF_INET6;
+    } else if (flags == SPICE_ADDR_FLAG_UNIX_ONLY) {
+        spice_family = AF_UNIX;
+    } else if (flags != 0) {
+        spice_warning("unknown address flag: 0x%X", flags);
     }
 }
 

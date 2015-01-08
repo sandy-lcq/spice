@@ -42,6 +42,7 @@ void spice_server_destroy(SpiceServer *s);
 
 #define SPICE_ADDR_FLAG_IPV4_ONLY (1 << 0)
 #define SPICE_ADDR_FLAG_IPV6_ONLY (1 << 1)
+#define SPICE_ADDR_FLAG_UNIX_ONLY (1 << 2)
 
 int spice_server_set_compat_version(SpiceServer *s,
                                     spice_compat_version_t version);
