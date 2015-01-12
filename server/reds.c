@@ -1648,7 +1648,9 @@ static void reds_handle_main_link(RedLinkInfo *link)
     } else {
         reds_mig_target_client_add(client);
     }
-    main_channel_client_start_net_test(mcc, !mig_target);
+
+    if (reds_stream_get_family(stream) != AF_UNIX)
+        main_channel_client_start_net_test(mcc, !mig_target);
 }
 
 #define RED_MOUSE_STATE_TO_LOCAL(state)     \

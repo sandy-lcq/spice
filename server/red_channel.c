@@ -928,7 +928,7 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
     red_channel_ref(channel);
     pthread_mutex_unlock(&client->lock);
 
-    if (monitor_latency) {
+    if (monitor_latency && reds_stream_get_family(stream) != AF_UNIX) {
         rcc->latency_monitor.timer = channel->core->timer_add(
             red_channel_client_ping_timer, rcc);
         if (!client->during_target_migrate) {
