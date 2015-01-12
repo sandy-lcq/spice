@@ -301,7 +301,7 @@ enum {
     PIPE_ITEM_TYPE_PIXMAP_SYNC,
     PIPE_ITEM_TYPE_PIXMAP_RESET,
     PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE,
-    PIPE_ITEM_TYPE_INVAL_PALLET_CACHE,
+    PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE,
     PIPE_ITEM_TYPE_CREATE_SURFACE,
     PIPE_ITEM_TYPE_DESTROY_SURFACE,
     PIPE_ITEM_TYPE_MONITORS_CONFIG,
@@ -9227,7 +9227,7 @@ static void display_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item
     case PIPE_ITEM_TYPE_PIXMAP_RESET:
         display_channel_marshall_reset_cache(rcc, m);
         break;
-    case PIPE_ITEM_TYPE_INVAL_PALLET_CACHE:
+    case PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
         red_reset_palette_cache(dcc);
         red_marshall_verb(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES);
         break;
@@ -9767,7 +9767,7 @@ static void push_new_primary_surface(DisplayChannelClient *dcc)
 {
     RedChannelClient *rcc = &dcc->common.base;
 
-    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_INVAL_PALLET_CACHE);
+    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
     red_create_surface_item(dcc, 0);
     red_channel_client_push(rcc);
 }
@@ -10210,7 +10210,7 @@ static int display_channel_handle_migrate_data(RedChannelClient *rcc, uint32_t s
     if (!surfaces_restored) {
         return FALSE;
     }
-    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_INVAL_PALLET_CACHE);
+    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
     /* enable sending messages */
     red_channel_client_ack_zero_messages_window(rcc);
     return TRUE;
@@ -10643,7 +10643,7 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
     case PIPE_ITEM_TYPE_MIGRATE_DATA:
     case PIPE_ITEM_TYPE_PIXMAP_SYNC:
     case PIPE_ITEM_TYPE_PIXMAP_RESET:
-    case PIPE_ITEM_TYPE_INVAL_PALLET_CACHE:
+    case PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
     case PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT:
         free(item);
         break;
@@ -11180,7 +11180,7 @@ static inline void dev_destroy_surfaces(RedWorker *worker)
 
     if (display_is_connected(worker)) {
         red_channel_pipes_add_type(&worker->display_channel->common.base,
-                                   PIPE_ITEM_TYPE_INVAL_PALLET_CACHE);
+                                   PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
         red_pipes_add_verb(&worker->display_channel->common.base,
                            SPICE_MSG_DISPLAY_STREAM_DESTROY_ALL);
     }
