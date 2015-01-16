@@ -733,6 +733,7 @@ static void vdi_port_read_buf_unref(VDIReadBuf *buf)
 static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
                                                                      void *opaque)
 {
+    RedsState *reds = opaque;
     VDIPortState *state = &reds->agent_state;
     SpiceCharDeviceInterface *sif;
     VDIReadBuf *dispatch_buf;
@@ -2987,7 +2988,7 @@ static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
                                                      REDS_TOKENS_TO_SEND,
                                                      REDS_NUM_INTERNAL_AGENT_MESSAGES,
                                                      &char_dev_state_cbs,
-                                                     NULL);
+                                                     reds);
     } else {
         spice_char_device_state_reset_dev_instance(state->base, sin);
     }
