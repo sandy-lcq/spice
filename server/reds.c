@@ -897,7 +897,7 @@ int reds_get_n_channels(RedsState *reds)
 }
 
 
-int reds_num_of_clients(RedsState *reds)
+static int reds_get_n_clients(RedsState *reds)
 {
     return reds ? reds->num_clients : 0;
 }
@@ -905,7 +905,7 @@ int reds_num_of_clients(RedsState *reds)
 SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *s)
 {
     spice_assert(reds == s);
-    return reds_num_of_clients(reds);
+    return reds_get_n_clients(reds);
 }
 
 static int secondary_channels[] = {

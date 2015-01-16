@@ -88,7 +88,6 @@ typedef struct MainMigrateData MainMigrateData;
 void reds_marshall_migrate_data(SpiceMarshaller *m);
 void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info);
 int reds_get_n_channels(RedsState *reds);
-int reds_num_of_clients(RedsState *reds);
 #ifdef RED_STATISTICS
 void reds_update_stat_value(uint32_t value);
 #endif
