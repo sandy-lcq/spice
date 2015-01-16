@@ -212,9 +212,9 @@ static void reds_char_device_add_state(SpiceCharDeviceState *st);
 static void reds_char_device_remove_state(SpiceCharDeviceState *st);
 static void reds_send_mm_time(void);
 
-static VDIReadBuf *vdi_port_read_buf_get(void);
+static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
-static void vdi_port_read_buf_unref(VDIReadBuf *buf);
+static void vdi_port_read_buf_unref(RedsState *reds, VDIReadBuf *buf);
 
 static ChannelSecurityOptions *channels_security = NULL;
 static int default_channel_security =
@@ -440,7 +440,7 @@ static void reds_reset_vdp(RedsState *reds)
     state->receive_len = sizeof(state->vdi_chunk_header);
     state->message_receive_len = 0;
     if (state->current_read_buf) {
-        vdi_port_read_buf_unref(state->current_read_buf);
+        vdi_port_read_buf_unref(reds, state->current_read_buf);
         state->current_read_buf = NULL;
     }
     /* Reset read filter to start with clean state when the agent reconnects */
@@ -658,11 +658,11 @@ static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 {
     VDIReadBuf *buf = (VDIReadBuf *)opaque;
 
-    vdi_port_read_buf_unref(buf);
+    vdi_port_read_buf_unref(reds, buf);
 }
 
 /* returns TRUE if the buffer can be forwarded */
-static int vdi_port_read_buf_process(int port, VDIReadBuf *buf)
+static int vdi_port_read_buf_process(RedsState *reds, int port, VDIReadBuf *buf)
 {
     VDIPortState *state = &reds->agent_state;
     int res;
@@ -690,7 +690,7 @@ static int vdi_port_read_buf_process(int port, VDIReadBuf *buf)
     }
 }
 
-static VDIReadBuf *vdi_port_read_buf_get(void)
+static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds)
 {
     VDIPortState *state = &reds->agent_state;
     RingItem *item;
@@ -713,7 +713,9 @@ static VDIReadBuf* vdi_port_read_buf_ref(VDIReadBuf *buf)
     return buf;
 }
 
-static void vdi_port_read_buf_unref(VDIReadBuf *buf)
+/* FIXME: refactor so that unreffing the VDIReadBuf doesn't require accessing
+ * RedsState? */
+static void vdi_port_read_buf_unref(RedsState *reds, VDIReadBuf *buf)
 {
     if (!--buf->refs) {
         ring_add(&reds->agent_state.read_bufs, &buf->link);
@@ -758,7 +760,7 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
             state->message_receive_len = state->vdi_chunk_header.size;
             state->read_state = VDI_PORT_READ_STATE_GET_BUFF;
         case VDI_PORT_READ_STATE_GET_BUFF: {
-            if (!(state->current_read_buf = vdi_port_read_buf_get())) {
+            if (!(state->current_read_buf = vdi_port_read_buf_get(reds))) {
                 return NULL;
             }
             state->receive_pos = state->current_read_buf->data;
@@ -787,10 +789,10 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
             } else {
                 state->read_state = VDI_PORT_READ_STATE_GET_BUFF;
             }
-            if (vdi_port_read_buf_process(state->vdi_chunk_header.port, dispatch_buf)) {
+            if (vdi_port_read_buf_process(reds, state->vdi_chunk_header.port, dispatch_buf)) {
                 return dispatch_buf;
             } else {
-                vdi_port_read_buf_unref(dispatch_buf);
+                vdi_port_read_buf_unref(reds, dispatch_buf);
             }
         } /* END switch */
     } /* END while */
@@ -806,7 +808,8 @@ static SpiceCharDeviceMsgToClient *vdi_port_ref_msg_to_client(SpiceCharDeviceMsg
 static void vdi_port_unref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
                                   void *opaque)
 {
-    vdi_port_read_buf_unref(msg);
+    RedsState *reds = opaque;
+    vdi_port_read_buf_unref(reds, msg);
 }
 
 /* after calling this, we unref the message, and the ref is in the instance side */
@@ -831,10 +834,11 @@ static void vdi_port_send_tokens_to_client(RedClient *client, uint32_t tokens, v
 
 static void vdi_port_on_free_self_token(void *opaque)
 {
+    RedsState *reds = opaque;
 
     if (inputs_inited() && reds->pending_mouse_event) {
         spice_debug("pending mouse event");
-        reds_handle_agent_mouse_event(inputs_get_mouse_state());
+        reds_handle_agent_mouse_event(reds, inputs_get_mouse_state());
     }
 }
 
@@ -851,7 +855,7 @@ int reds_has_vdagent(void)
     return !!vdagent;
 }
 
-void reds_handle_agent_mouse_event(const VDAgentMouseState *mouse_state)
+void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mouse_state)
 {
     SpiceCharDeviceWriteBuffer *char_dev_buf;
     VDInternalBuf *internal_buf;
@@ -887,13 +891,13 @@ void reds_handle_agent_mouse_event(const VDAgentMouseState *mouse_state)
     spice_char_device_write_buffer_add(reds->agent_state.base, char_dev_buf);
 }
 
-int reds_num_of_channels(void)
+int reds_num_of_channels(RedsState *reds)
 {
     return reds ? reds->num_of_channels : 0;
 }
 
 
-int reds_num_of_clients(void)
+int reds_num_of_clients(RedsState *reds)
 {
     return reds ? reds->num_clients : 0;
 }
@@ -901,7 +905,7 @@ int reds_num_of_clients(void)
 SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *s)
 {
     spice_assert(reds == s);
-    return reds_num_of_clients();
+    return reds_num_of_clients(reds);
 }
 
 static int secondary_channels[] = {
@@ -918,7 +922,7 @@ static int channel_is_secondary(RedChannel *channel)
     return FALSE;
 }
 
-void reds_fill_channels(SpiceMsgChannels *channels_info)
+void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
 {
     RingItem *now;
     int used_channels = 0;
@@ -940,7 +944,7 @@ void reds_fill_channels(SpiceMsgChannels *channels_info)
     }
 }
 
-void reds_on_main_agent_start(MainChannelClient *mcc, uint32_t num_tokens)
+void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens)
 {
     SpiceCharDeviceState *dev_state = reds->agent_state.base;
     RedChannelClient *rcc;
@@ -993,7 +997,7 @@ void reds_on_main_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens)
                                                 num_tokens);
 }
 
-uint8_t *reds_get_agent_data_buffer(MainChannelClient *mcc, size_t size)
+uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, size_t size)
 {
     VDIPortState *dev_state = &reds->agent_state;
     RedClient *client;
@@ -1018,7 +1022,7 @@ uint8_t *reds_get_agent_data_buffer(MainChannelClient *mcc, size_t size)
     return dev_state->recv_from_client_buf->buf + sizeof(VDIChunkHeader);
 }
 
-void reds_release_agent_data_buffer(uint8_t *buf)
+void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf)
 {
     VDIPortState *dev_state = &reds->agent_state;
 
@@ -1036,7 +1040,7 @@ void reds_release_agent_data_buffer(uint8_t *buf)
     dev_state->recv_from_client_buf_pushed = FALSE;
 }
 
-static void reds_client_monitors_config_cleanup(void)
+static void reds_client_monitors_config_cleanup(RedsState *reds)
 {
     RedsClientMonitorsConfig *cmc = &reds->client_monitors_config;
 
@@ -1046,7 +1050,7 @@ static void reds_client_monitors_config_cleanup(void)
     cmc->mcc = NULL;
 }
 
-static void reds_on_main_agent_monitors_config(
+static void reds_on_main_agent_monitors_config(RedsState *reds,
         MainChannelClient *mcc, void *message, size_t size)
 {
     VDAgentMessage *msg_header;
@@ -1068,10 +1072,10 @@ static void reds_on_main_agent_monitors_config(
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
     spice_debug("%s: %d", __func__, monitors_config->num_of_monitors);
     red_dispatcher_client_monitors_config(monitors_config);
-    reds_client_monitors_config_cleanup();
+    reds_client_monitors_config_cleanup(reds);
 }
 
-void reds_on_main_agent_data(MainChannelClient *mcc, void *message, size_t size)
+void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *message, size_t size)
 {
     VDIPortState *dev_state = &reds->agent_state;
     VDIChunkHeader *header;
@@ -1085,7 +1089,7 @@ void reds_on_main_agent_data(MainChannelClient *mcc, void *message, size_t size)
     case AGENT_MSG_FILTER_DISCARD:
         return;
     case AGENT_MSG_FILTER_MONITORS_CONFIG:
-        reds_on_main_agent_monitors_config(mcc, message, size);
+        reds_on_main_agent_monitors_config(reds, mcc, message, size);
         return;
     case AGENT_MSG_FILTER_PROTO_ERROR:
         red_channel_client_shutdown(main_channel_client_get_base(mcc));
@@ -1156,14 +1160,14 @@ void reds_on_main_channel_migrate(MainChannelClient *mcc)
                     !agent_state->read_filter.msg_data_to_read);
 
         read_buf->len = read_data_len;
-        if (vdi_port_read_buf_process(agent_state->vdi_chunk_header.port, read_buf)) {
+        if (vdi_port_read_buf_process(reds, agent_state->vdi_chunk_header.port, read_buf)) {
             main_channel_client_push_agent_data(mcc,
                                                 read_buf->data,
                                                 read_buf->len,
                                                 vdi_port_read_buf_release,
                                                 read_buf);
         } else {
-            vdi_port_read_buf_unref(read_buf);
+            vdi_port_read_buf_unref(reds, read_buf);
         }
 
         spice_assert(agent_state->receive_len);
@@ -1281,7 +1285,7 @@ static int reds_agent_state_restore(SpiceMigrateDataMain *mig_data)
             uint32_t cur_buf_size;
 
             agent_state->read_state = VDI_PORT_READ_STATE_READ_DATA;
-            agent_state->current_read_buf = vdi_port_read_buf_get();
+            agent_state->current_read_buf = vdi_port_read_buf_get(reds);
             spice_assert(agent_state->current_read_buf);
             partial_msg_header = (uint8_t *)mig_data + mig_data->agent2client.msg_header_ptr -
                 sizeof(SpiceMiniDataHeader);
@@ -3414,7 +3418,7 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
 
     reds->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 
-    reds_client_monitors_config_cleanup();
+    reds_client_monitors_config_cleanup(reds);
 
     reds->allow_multiple_clients = getenv(SPICE_DEBUG_ALLOW_MC_ENV) != NULL;
     if (reds->allow_multiple_clients) {

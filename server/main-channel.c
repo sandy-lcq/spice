@@ -348,8 +348,8 @@ static void main_channel_marshall_channels(RedChannelClient *rcc,
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_CHANNELS_LIST, item);
     channels_info = (SpiceMsgChannels *)spice_malloc(sizeof(SpiceMsgChannels)
-                            + reds_num_of_channels() * sizeof(SpiceChannelId));
-    reds_fill_channels(channels_info);
+                            + reds_num_of_channels(reds) * sizeof(SpiceChannelId));
+    reds_fill_channels(reds, channels_info);
     spice_marshall_msg_main_channels_list(m, channels_info);
     free(channels_info);
 }
@@ -891,11 +891,11 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             return FALSE;
         }
         tokens = (SpiceMsgcMainAgentStart *)message;
-        reds_on_main_agent_start(mcc, tokens->num_tokens);
+        reds_on_main_agent_start(reds, mcc, tokens->num_tokens);
         break;
     }
     case SPICE_MSGC_MAIN_AGENT_DATA: {
-        reds_on_main_agent_data(mcc, message, size);
+        reds_on_main_agent_data(reds, mcc, message, size);
         break;
     }
     case SPICE_MSGC_MAIN_AGENT_TOKEN: {
@@ -1008,7 +1008,7 @@ static uint8_t *main_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
     MainChannelClient *mcc = SPICE_CONTAINEROF(rcc, MainChannelClient, base);
 
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        return reds_get_agent_data_buffer(mcc, size);
+        return reds_get_agent_data_buffer(reds, mcc, size);
     } else {
         return main_chan->recv_buf;
     }
@@ -1020,7 +1020,7 @@ static void main_channel_release_msg_rcv_buf(RedChannelClient *rcc,
                                                uint8_t *msg)
 {
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        reds_release_agent_data_buffer(msg);
+        reds_release_agent_data_buffer(reds, msg);
     }
 }
 

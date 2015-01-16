@@ -60,7 +60,7 @@ void reds_unregister_channel(RedsState *reds, RedChannel *channel);
 int reds_get_mouse_mode(RedsState *reds); // used by inputs_channel
 int reds_get_agent_mouse(void); // used by inputs_channel
 int reds_has_vdagent(void); // used by inputs channel
-void reds_handle_agent_mouse_event(const VDAgentMouseState *mouse_state); // used by inputs_channel
+void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mouse_state); // used by inputs_channel
 
 enum {
     RED_RENDERER_INVALID,
@@ -86,20 +86,20 @@ void reds_client_disconnect(RedsState *reds, RedClient *client);
 // Temporary (?) for splitting main channel
 typedef struct MainMigrateData MainMigrateData;
 void reds_marshall_migrate_data(SpiceMarshaller *m);
-void reds_fill_channels(SpiceMsgChannels *channels_info);
-int reds_num_of_channels(void);
-int reds_num_of_clients(void);
+void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info);
+int reds_num_of_channels(RedsState *reds);
+int reds_num_of_clients(RedsState *reds);
 #ifdef RED_STATISTICS
 void reds_update_stat_value(uint32_t value);
 #endif
 
 /* callbacks from main channel messages */
 
-void reds_on_main_agent_start(MainChannelClient *mcc, uint32_t num_tokens);
+void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens);
 void reds_on_main_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens);
-uint8_t *reds_get_agent_data_buffer(MainChannelClient *mcc, size_t size);
-void reds_release_agent_data_buffer(uint8_t *buf);
-void reds_on_main_agent_data(MainChannelClient *mcc, void *message, size_t size);
+uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, size_t size);
+void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf);
+void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *message, size_t size);
 void reds_on_main_migrate_connected(int seamless); //should be called when all the clients
                                                    // are connected to the target
 int reds_handle_migrate_data(MainChannelClient *mcc,
