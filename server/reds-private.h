@@ -135,7 +135,7 @@ typedef struct RedsClientMonitorsConfig {
     int buffer_pos;
 } RedsClientMonitorsConfig;
 
-typedef struct RedsState {
+struct RedsState {
     int listen_socket;
     int secure_listen_socket;
     SpiceWatch *listen_watch;
@@ -189,6 +189,6 @@ typedef struct RedsState {
     RedsClientMonitorsConfig client_monitors_config;
     int mm_time_enabled;
     uint32_t mm_time_latency;
-} RedsState;
+};
 
 #endif

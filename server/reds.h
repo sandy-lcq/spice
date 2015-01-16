@@ -30,6 +30,9 @@
 #include "red-channel.h"
 #include "migration-protocol.h"
 
+typedef struct RedsState RedsState;
+extern RedsState *reds;
+
 struct QXLState {
     QXLInterface          *qif;
     struct RedDispatcher  *dispatcher;

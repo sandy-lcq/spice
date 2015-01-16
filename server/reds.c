@@ -175,7 +175,7 @@ int agent_copypaste = TRUE;
 int agent_file_xfer = TRUE;
 static bool exit_on_disconnect = FALSE;
 
-static RedsState *reds = NULL;
+RedsState *reds = NULL;
 
 typedef struct RedLinkInfo {
     RedsStream *stream;
