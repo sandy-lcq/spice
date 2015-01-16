@@ -836,7 +836,7 @@ static void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
 void main_channel_client_handle_migrate_dst_do_seamless(MainChannelClient *mcc,
                                                         uint32_t src_version)
 {
-    if (reds_on_migrate_dst_set_seamless(mcc, src_version)) {
+    if (reds_on_migrate_dst_set_seamless(reds, mcc, src_version)) {
         mcc->seamless_mig_dst = TRUE;
         red_channel_client_pipe_add_empty_msg(&mcc->base,
                                              SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_ACK);

@@ -2201,7 +2201,7 @@ void red_client_semi_seamless_migrate_complete(RedClient *client)
         }
     }
     pthread_mutex_unlock(&client->lock);
-    reds_on_client_semi_seamless_migrate_complete(client);
+    reds_on_client_semi_seamless_migrate_complete(reds, client);
 }
 
 /* should be called only from the main thread */

@@ -210,7 +210,7 @@ static void reds_mig_cleanup_wait_disconnect(void);
 static void reds_mig_remove_wait_disconnect_client(RedClient *client);
 static void reds_char_device_add_state(SpiceCharDeviceState *st);
 static void reds_char_device_remove_state(SpiceCharDeviceState *st);
-static void reds_send_mm_time(void);
+static void reds_send_mm_time(RedsState *reds);
 
 static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
@@ -1346,7 +1346,7 @@ int reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
      * (MSG_MAIN_INIT is not sent for a migrating connection)
      */
     if (reds->mm_time_enabled) {
-        reds_send_mm_time();
+        reds_send_mm_time(reds);
     }
     if (mig_data->agent_base.connected) {
         if (agent_state->base) { // agent was attached before migration data has arrived
@@ -1791,7 +1791,7 @@ static void reds_channel_do_link(RedChannel *channel, RedClient *client,
  * not lose any data, we activate the target channels before
  * migration completes, as soon as we receive SPICE_MSGC_MAIN_MIGRATE_DST_DO_SEAMLESS
  */
-static int reds_link_mig_target_channels(RedClient *client)
+static int reds_link_mig_target_channels(RedsState *reds, RedClient *client)
 {
     RedsMigTargetClient *mig_client;
     RingItem *item;
@@ -1827,7 +1827,7 @@ static int reds_link_mig_target_channels(RedClient *client)
     return TRUE;
 }
 
-int reds_on_migrate_dst_set_seamless(MainChannelClient *mcc, uint32_t src_version)
+int reds_on_migrate_dst_set_seamless(RedsState *reds, MainChannelClient *mcc, uint32_t src_version)
 {
     /* seamless migration is not supported with multiple clients*/
     if (reds->allow_multiple_clients  || src_version > SPICE_MIGRATION_PROTOCOL_VERSION) {
@@ -1837,12 +1837,12 @@ int reds_on_migrate_dst_set_seamless(MainChannelClient *mcc, uint32_t src_versio
 
         red_client_set_migration_seamless(rcc->client);
         /* linking all the channels that have been connected before migration handshake */
-        reds->dst_do_seamless_migrate = reds_link_mig_target_channels(rcc->client);
+        reds->dst_do_seamless_migrate = reds_link_mig_target_channels(reds, rcc->client);
     }
     return reds->dst_do_seamless_migrate;
 }
 
-void reds_on_client_seamless_migrate_complete(RedClient *client)
+void reds_on_client_seamless_migrate_complete(RedsState *reds, RedClient *client)
 {
     spice_debug(NULL);
     if (!reds_find_client(reds, client)) {
@@ -1852,7 +1852,7 @@ void reds_on_client_seamless_migrate_complete(RedClient *client)
     main_channel_migrate_dst_complete(red_client_get_main(client));
 }
 
-void reds_on_client_semi_seamless_migrate_complete(RedClient *client)
+void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *client)
 {
     MainChannelClient *mcc;
 
@@ -1864,11 +1864,11 @@ void reds_on_client_semi_seamless_migrate_complete(RedClient *client)
                            reds->mouse_mode, reds->is_client_mouse_allowed,
                            reds_get_mm_time() - MM_TIME_DELTA,
                            red_dispatcher_qxl_ram_size());
-    reds_link_mig_target_channels(client);
+    reds_link_mig_target_channels(reds, client);
     main_channel_migrate_dst_complete(mcc);
 }
 
-static void reds_handle_other_links(RedLinkInfo *link)
+static void reds_handle_other_links(RedsState *reds, RedLinkInfo *link)
 {
     RedChannel *channel;
     RedClient *client = NULL;
@@ -1926,12 +1926,12 @@ static void reds_handle_other_links(RedLinkInfo *link)
     reds_link_free(link);
 }
 
-static void reds_handle_link(RedLinkInfo *link)
+static void reds_handle_link(RedsState *reds, RedLinkInfo *link)
 {
     if (link->link_mess->channel_type == SPICE_CHANNEL_MAIN) {
         reds_handle_main_link(reds, link);
     } else {
-        reds_handle_other_links(link);
+        reds_handle_other_links(reds, link);
     }
 }
 
@@ -1982,7 +1982,7 @@ static void reds_handle_ticket(void *opaque)
         }
     }
 
-    reds_handle_link(link);
+    reds_handle_link(reds, link);
     goto end;
 
 error:
@@ -2026,7 +2026,7 @@ static void reds_handle_auth_sasl_step(void *opaque)
 
     status = reds_sasl_handle_auth_step(link->stream, reds_handle_auth_sasl_steplen, link);
     if (status == REDS_SASL_ERROR_OK) {
-        reds_handle_link(link);
+        reds_handle_link(reds, link);
     } else if (status != REDS_SASL_ERROR_CONTINUE) {
         reds_link_free(link);
     }
@@ -2066,7 +2066,7 @@ static void reds_handle_auth_sasl_start(void *opaque)
 
     status = reds_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
     if (status == REDS_SASL_ERROR_OK) {
-        reds_handle_link(link);
+        reds_handle_link(reds, link);
     } else if (status != REDS_SASL_ERROR_CONTINUE) {
         reds_link_free(link);
     }
@@ -2543,7 +2543,7 @@ listen:
     return slisten;
 }
 
-static void reds_send_mm_time(void)
+static void reds_send_mm_time(RedsState *reds)
 {
     if (!reds_main_channel_connected(reds)) {
         return;
@@ -2553,14 +2553,14 @@ static void reds_send_mm_time(void)
                                        reds_get_mm_time() - reds->mm_time_latency);
 }
 
-void reds_set_client_mm_time_latency(RedClient *client, uint32_t latency)
+void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_t latency)
 {
     // TODO: multi-client support for mm_time
     if (reds->mm_time_enabled) {
         // TODO: consider network latency
         if (latency > reds->mm_time_latency) {
             reds->mm_time_latency = latency;
-            reds_send_mm_time();
+            reds_send_mm_time(reds);
         } else {
             spice_debug("new latency %u is smaller than existing %u",
                         latency, reds->mm_time_latency);
@@ -2570,7 +2570,7 @@ void reds_set_client_mm_time_latency(RedClient *client, uint32_t latency)
     }
 }
 
-static int reds_init_net(void)
+static int reds_init_net(RedsState *reds)
 {
     if (spice_port != -1 || spice_family == AF_UNIX) {
         reds->listen_socket = reds_init_socket(spice_addr, spice_port, spice_family);
@@ -2686,7 +2686,7 @@ static void openssl_thread_setup(void)
     CRYPTO_set_locking_callback(pthreads_locking_callback);
 }
 
-static int reds_init_ssl(void)
+static int reds_init_ssl(RedsState *reds)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
     const SSL_METHOD *ssl_method;
@@ -2787,7 +2787,7 @@ static void reds_exit(void)
 #endif
 }
 
-static inline void on_activating_ticketing(void)
+static inline void on_activating_ticketing(RedsState *reds)
 {
     if (!ticketing_enabled && reds_main_channel_connected(reds)) {
         spice_warning("disconnecting");
@@ -2830,7 +2830,7 @@ typedef struct RedsMigCertPubKeyInfo {
     uint32_t len;
 } RedsMigCertPubKeyInfo;
 
-static void reds_mig_release(void)
+static void reds_mig_release(RedsState *reds)
 {
     if (reds->mig_spice) {
         free(reds->mig_spice->cert_subject);
@@ -2840,7 +2840,7 @@ static void reds_mig_release(void)
     }
 }
 
-static void reds_mig_started(void)
+static void reds_mig_started(RedsState *reds)
 {
     spice_info(NULL);
     spice_assert(reds->mig_spice);
@@ -2929,7 +2929,7 @@ static void reds_mig_finished(int completed)
     } else {
         reds_mig_cleanup(reds);
     }
-    reds_mig_release();
+    reds_mig_release(reds);
 }
 
 static void reds_mig_switch(void)
@@ -2939,7 +2939,7 @@ static void reds_mig_switch(void)
         return;
     }
     main_channel_migrate_switch(reds->main_channel, reds->mig_spice);
-    reds_mig_release();
+    reds_mig_release(reds);
 }
 
 static void migrate_timeout(void *opaque)
@@ -2966,7 +2966,7 @@ void reds_enable_mm_time(void)
 {
     reds->mm_time_enabled = TRUE;
     reds->mm_time_latency = MM_TIME_DELTA;
-    reds_send_mm_time();
+    reds_send_mm_time(reds);
 }
 
 void reds_disable_mm_time(void)
@@ -3343,7 +3343,7 @@ static void init_vd_agent_resources(void)
 
 const char *version_string = VERSION;
 
-static int do_spice_init(SpiceCoreInterface *core_interface)
+static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 {
     spice_info("starting %s", version_string);
 
@@ -3396,11 +3396,11 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
     }
 #endif
 
-    if (reds_init_net() < 0) {
+    if (reds_init_net(reds) < 0) {
         goto err;
     }
     if (reds->secure_listen_socket != -1) {
-        if (reds_init_ssl() < 0) {
+        if (reds_init_ssl(reds) < 0) {
             goto err;
         }
     }
@@ -3483,7 +3483,7 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *s, SpiceCoreInterface *cor
     int ret;
 
     spice_assert(reds == s);
-    ret = do_spice_init(core);
+    ret = do_spice_init(s, core);
     if (default_renderer) {
         red_add_renderer(default_renderer);
     }
@@ -3616,7 +3616,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *s,
         }
     }
 
-    on_activating_ticketing();
+    on_activating_ticketing(reds);
     ticketing_enabled = 1;
     if (lifetime == 0) {
         taTicket.expiration_time = INT_MAX;
@@ -3843,7 +3843,7 @@ static int reds_set_migration_dest_info(const char* dest,
 {
     RedsMigSpice *spice_migration = NULL;
 
-    reds_mig_release();
+    reds_mig_release(reds);
     if ((port == -1 && secure_port == -1) || !dest) {
         return FALSE;
     }
@@ -3901,10 +3901,10 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* 
     /* main channel will take care of clients that are still during migration (at target)*/
     if (main_channel_migrate_connect(reds->main_channel, reds->mig_spice,
                                      try_seamless)) {
-        reds_mig_started();
+        reds_mig_started(reds);
     } else {
         if (reds->num_clients == 0) {
-            reds_mig_release();
+            reds_mig_release(reds);
             spice_info("no client connected");
         }
         sif->migrate_connect_complete(migration_interface);

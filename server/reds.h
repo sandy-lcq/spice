@@ -107,12 +107,12 @@ int reds_handle_migrate_data(RedsState *recs, MainChannelClient *mcc,
 void reds_on_main_mouse_mode_request(RedsState *reds, void *message, size_t size);
 /* migration dest side: returns whether it can support seamless migration
  * with the given src migration protocol version */
-int reds_on_migrate_dst_set_seamless(MainChannelClient *mcc, uint32_t src_version);
-void reds_on_client_semi_seamless_migrate_complete(RedClient *client);
-void reds_on_client_seamless_migrate_complete(RedClient *client);
+int reds_on_migrate_dst_set_seamless(RedsState *reds, MainChannelClient *mcc, uint32_t src_version);
+void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *client);
+void reds_on_client_seamless_migrate_complete(RedsState *reds, RedClient *client);
 void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc);
 void reds_on_char_device_state_destroy(SpiceCharDeviceState *dev);
 
-void reds_set_client_mm_time_latency(RedClient *client, uint32_t latency);
+void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_t latency);
 
 #endif
