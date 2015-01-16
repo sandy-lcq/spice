@@ -226,7 +226,7 @@ static void update_client_mouse_allowed(void)
 
     if (allow_now || allow_now != allowed) {
         allowed = allow_now;
-        reds_set_client_mouse_allowed(allowed, x_res, y_res);
+        reds_set_client_mouse_allowed(reds, allowed, x_res, y_res);
     }
 }
 

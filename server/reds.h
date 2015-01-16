@@ -53,7 +53,8 @@ void reds_handle_channel_event(int event, SpiceChannelEventInfo *info);
 void reds_disable_mm_time(void);
 void reds_enable_mm_time(void);
 uint32_t reds_get_mm_time(void);
-void reds_set_client_mouse_allowed(int is_client_mouse_allowed,
+void reds_set_client_mouse_allowed(RedsState *reds,
+                                   int is_client_mouse_allowed,
                                    int x_res, int y_res);
 void reds_register_channel(RedsState *reds, RedChannel *channel);
 void reds_unregister_channel(RedsState *reds, RedChannel *channel);
@@ -85,7 +86,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client);
 
 // Temporary (?) for splitting main channel
 typedef struct MainMigrateData MainMigrateData;
-void reds_marshall_migrate_data(SpiceMarshaller *m);
+void reds_marshall_migrate_data(RedsState *reds, SpiceMarshaller *m);
 void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info);
 int reds_get_n_channels(RedsState *reds);
 #ifdef RED_STATISTICS
@@ -99,17 +100,17 @@ void reds_on_main_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens);
 uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, size_t size);
 void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf);
 void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *message, size_t size);
-void reds_on_main_migrate_connected(int seamless); //should be called when all the clients
+void reds_on_main_migrate_connected(RedsState *reds, int seamless); //should be called when all the clients
                                                    // are connected to the target
-int reds_handle_migrate_data(MainChannelClient *mcc,
+int reds_handle_migrate_data(RedsState *recs, MainChannelClient *mcc,
                              SpiceMigrateDataMain *mig_data, uint32_t size);
-void reds_on_main_mouse_mode_request(void *message, size_t size);
+void reds_on_main_mouse_mode_request(RedsState *reds, void *message, size_t size);
 /* migration dest side: returns whether it can support seamless migration
  * with the given src migration protocol version */
 int reds_on_migrate_dst_set_seamless(MainChannelClient *mcc, uint32_t src_version);
 void reds_on_client_semi_seamless_migrate_complete(RedClient *client);
 void reds_on_client_seamless_migrate_complete(RedClient *client);
-void reds_on_main_channel_migrate(MainChannelClient *mcc);
+void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc);
 void reds_on_char_device_state_destroy(SpiceCharDeviceState *dev);
 
 void reds_set_client_mm_time_latency(RedClient *client, uint32_t latency);

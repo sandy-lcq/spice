@@ -492,7 +492,7 @@ static void main_channel_marshall_migrate_data_item(RedChannelClient *rcc,
                                                     SpiceMarshaller *m, PipeItem *item)
 {
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
-    reds_marshall_migrate_data(m); // TODO: from reds split. ugly separation.
+    reds_marshall_migrate_data(reds, m); // TODO: from reds split. ugly separation.
 }
 
 static int main_channel_handle_migrate_data(RedChannelClient *rcc,
@@ -514,7 +514,7 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
         spice_error("bad header");
         return FALSE;
     }
-    return reds_handle_migrate_data(mcc, (SpiceMigrateDataMain *)(header + 1), size);
+    return reds_handle_migrate_data(reds, mcc, (SpiceMigrateDataMain *)(header + 1), size);
 }
 
 void main_channel_push_init(MainChannelClient *mcc,
@@ -823,7 +823,7 @@ static void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
         spice_assert(main_channel->num_clients_mig_wait);
         spice_assert(!seamless || main_channel->num_clients_mig_wait == 1);
         if (!--main_channel->num_clients_mig_wait) {
-            reds_on_main_migrate_connected(seamless && success);
+            reds_on_main_migrate_connected(reds, seamless && success);
         }
     } else {
         if (success) {
@@ -926,7 +926,7 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             ((SpiceMsgcMainMigrateDstDoSeamless *)message)->src_version);
         break;
     case SPICE_MSGC_MAIN_MOUSE_MODE_REQUEST:
-        reds_on_main_mouse_mode_request(message, size);
+        reds_on_main_mouse_mode_request(reds, message, size);
         break;
     case SPICE_MSGC_PONG: {
         SpiceMsgPing *ping = (SpiceMsgPing *)message;
@@ -1157,7 +1157,7 @@ uint64_t main_channel_client_get_roundtrip_ms(MainChannelClient *mcc)
 
 static void main_channel_client_migrate(RedChannelClient *rcc)
 {
-    reds_on_main_channel_migrate(SPICE_CONTAINEROF(rcc, MainChannelClient, base));
+    reds_on_main_channel_migrate(reds, SPICE_CONTAINEROF(rcc, MainChannelClient, base));
     red_channel_client_default_migrate(rcc);
 }
 
