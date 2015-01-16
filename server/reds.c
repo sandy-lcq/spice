@@ -891,7 +891,7 @@ void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mou
     spice_char_device_write_buffer_add(reds->agent_state.base, char_dev_buf);
 }
 
-int reds_num_of_channels(RedsState *reds)
+int reds_get_n_channels(RedsState *reds)
 {
     return reds ? reds->num_of_channels : 0;
 }
