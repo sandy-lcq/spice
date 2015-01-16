@@ -376,14 +376,14 @@ void reds_update_stat_value(uint32_t value)
 
 #endif
 
-void reds_register_channel(RedChannel *channel)
+void reds_register_channel(RedsState *reds, RedChannel *channel)
 {
     spice_assert(reds);
     ring_add(&reds->channels, &channel->link);
     reds->num_of_channels++;
 }
 
-void reds_unregister_channel(RedChannel *channel)
+void reds_unregister_channel(RedsState *reds, RedChannel *channel)
 {
     if (ring_item_is_linked(&channel->link)) {
         ring_remove(&channel->link);
@@ -393,7 +393,7 @@ void reds_unregister_channel(RedChannel *channel)
     }
 }
 
-static RedChannel *reds_find_channel(uint32_t type, uint32_t id)
+static RedChannel *reds_find_channel(RedsState *reds, uint32_t type, uint32_t id)
 {
     RingItem *now;
 
@@ -406,7 +406,7 @@ static RedChannel *reds_find_channel(uint32_t type, uint32_t id)
     return NULL;
 }
 
-static void reds_mig_cleanup(void)
+static void reds_mig_cleanup(RedsState *reds)
 {
     if (reds->mig_inprogress) {
 
@@ -430,7 +430,7 @@ static void reds_mig_cleanup(void)
     }
 }
 
-static void reds_reset_vdp(void)
+static void reds_reset_vdp(RedsState *reds)
 {
     VDIPortState *state = &reds->agent_state;
     SpiceCharDeviceInterface *sif;
@@ -481,12 +481,12 @@ static void reds_reset_vdp(void)
     }
 }
 
-static int reds_main_channel_connected(void)
+static int reds_main_channel_connected(RedsState *reds)
 {
     return main_channel_is_connected(reds->main_channel);
 }
 
-void reds_client_disconnect(RedClient *client)
+void reds_client_disconnect(RedsState *reds, RedClient *client)
 {
     RedsMigTargetClient *mig_client;
 
@@ -568,38 +568,38 @@ void reds_client_disconnect(RedClient *client)
         free(reds->agent_state.mig_data);
         reds->agent_state.mig_data = NULL;
 
-        reds_mig_cleanup();
+        reds_mig_cleanup(reds);
     }
 }
 
 // TODO: go over all usage of reds_disconnect, most/some of it should be converted to
 // reds_client_disconnect
-static void reds_disconnect(void)
+static void reds_disconnect(RedsState *reds)
 {
     RingItem *link, *next;
 
     spice_info(NULL);
     RING_FOREACH_SAFE(link, next, &reds->clients) {
-        reds_client_disconnect(SPICE_CONTAINEROF(link, RedClient, link));
+        reds_client_disconnect(reds, SPICE_CONTAINEROF(link, RedClient, link));
     }
-    reds_mig_cleanup();
+    reds_mig_cleanup(reds);
 }
 
-static void reds_mig_disconnect(void)
+static void reds_mig_disconnect(RedsState *reds)
 {
-    if (reds_main_channel_connected()) {
-        reds_disconnect();
+    if (reds_main_channel_connected(reds)) {
+        reds_disconnect(reds);
     } else {
-        reds_mig_cleanup();
+        reds_mig_cleanup(reds);
     }
 }
 
-int reds_get_mouse_mode(void)
+int reds_get_mouse_mode(RedsState *reds)
 {
     return reds->mouse_mode;
 }
 
-static void reds_set_mouse_mode(uint32_t mode)
+static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
 {
     if (reds->mouse_mode == mode) {
         return;
@@ -614,7 +614,7 @@ int reds_get_agent_mouse(void)
     return agent_mouse;
 }
 
-static void reds_update_mouse_mode(void)
+static void reds_update_mouse_mode(RedsState *reds)
 {
     int allowed = 0;
     int qxl_count = red_dispatcher_qxl_count();
@@ -627,7 +627,7 @@ static void reds_update_mouse_mode(void)
     }
     reds->is_client_mouse_allowed = allowed;
     if (reds->mouse_mode == SPICE_MOUSE_MODE_CLIENT && !allowed) {
-        reds_set_mouse_mode(SPICE_MOUSE_MODE_SERVER);
+        reds_set_mouse_mode(reds, SPICE_MOUSE_MODE_SERVER);
         return;
     }
     if (reds->main_channel) {
@@ -636,15 +636,15 @@ static void reds_update_mouse_mode(void)
     }
 }
 
-static void reds_agent_remove(void)
+static void reds_agent_remove(RedsState *reds)
 {
     // TODO: agent is broken with multiple clients. also need to figure out what to do when
     // part of the clients are during target migration.
-    reds_reset_vdp();
+    reds_reset_vdp(reds);
 
     vdagent = NULL;
-    reds_update_mouse_mode();
-    if (reds_main_channel_connected() &&
+    reds_update_mouse_mode(reds);
+    if (reds_main_channel_connected(reds) &&
         !red_channel_is_waiting_for_migrate_data(&reds->main_channel->base)) {
         main_channel_push_agent_disconnected(reds->main_channel);
     }
@@ -677,7 +677,7 @@ static int vdi_port_read_buf_process(int port, VDIReadBuf *buf)
         case AGENT_MSG_FILTER_DISCARD:
             return FALSE;
         case AGENT_MSG_FILTER_PROTO_ERROR:
-            reds_agent_remove();
+            reds_agent_remove(reds);
             return FALSE;
         }
     }
@@ -685,7 +685,7 @@ static int vdi_port_read_buf_process(int port, VDIReadBuf *buf)
         return FALSE;
     default:
         spice_warning("invalid port");
-        reds_agent_remove();
+        reds_agent_remove(reds);
         return FALSE;
     }
 }
@@ -1107,7 +1107,7 @@ void reds_on_main_migrate_connected(int seamless)
 {
     reds->src_do_seamless_migrate = seamless;
     if (reds->mig_wait_connect) {
-        reds_mig_cleanup();
+        reds_mig_cleanup(reds);
     }
 }
 
@@ -1116,13 +1116,13 @@ void reds_on_main_mouse_mode_request(void *message, size_t size)
     switch (((SpiceMsgcMainMouseModeRequest *)message)->mode) {
     case SPICE_MOUSE_MODE_CLIENT:
         if (reds->is_client_mouse_allowed) {
-            reds_set_mouse_mode(SPICE_MOUSE_MODE_CLIENT);
+            reds_set_mouse_mode(reds, SPICE_MOUSE_MODE_CLIENT);
         } else {
             spice_info("client mouse is disabled");
         }
         break;
     case SPICE_MOUSE_MODE_SERVER:
-        reds_set_mouse_mode(SPICE_MOUSE_MODE_SERVER);
+        reds_set_mouse_mode(reds, SPICE_MOUSE_MODE_SERVER);
         break;
     default:
         spice_warning("unsupported mouse mode");
@@ -1422,7 +1422,7 @@ static int reds_send_link_ack(RedLinkInfo *link)
 
     ack.error = GUINT32_TO_LE(SPICE_LINK_ERR_OK);
 
-    channel = reds_find_channel(link->link_mess->channel_type,
+    channel = reds_find_channel(reds, link->link_mess->channel_type,
                                 link->link_mess->channel_id);
     if (!channel) {
         if (link->link_mess->channel_type != SPICE_CHANNEL_MAIN) {
@@ -1613,7 +1613,7 @@ static void reds_mig_target_client_disconnect_all(void)
 
     RING_FOREACH_SAFE(now, next, &reds->mig_target_clients) {
         RedsMigTargetClient *mig_client = SPICE_CONTAINEROF(now, RedsMigTargetClient, link);
-        reds_client_disconnect(mig_client->client);
+        reds_client_disconnect(reds, mig_client->client);
     }
 }
 
@@ -1661,7 +1661,7 @@ static void reds_handle_main_link(RedLinkInfo *link)
 
     link_mess = link->link_mess;
     if (!reds->allow_multiple_clients) {
-        reds_disconnect();
+        reds_disconnect(reds);
     }
 
     if (link_mess->connection_id == 0) {
@@ -1739,7 +1739,7 @@ void reds_set_client_mouse_allowed(int is_client_mouse_allowed, int x_res, int y
     reds->monitor_mode.x_res = x_res;
     reds->monitor_mode.y_res = y_res;
     reds->dispatcher_allows_client_mouse = is_client_mouse_allowed;
-    reds_update_mouse_mode();
+    reds_update_mouse_mode(reds);
     if (reds->is_client_mouse_allowed && inputs_has_tablet()) {
         inputs_set_tablet_logical_size(reds->monitor_mode.x_res, reds->monitor_mode.y_res);
     }
@@ -1804,7 +1804,7 @@ static int reds_link_mig_target_channels(RedClient *client)
         RedChannel *channel;
 
         mig_link = SPICE_CONTAINEROF(item, RedsMigPendingLink, ring_link);
-        channel = reds_find_channel(mig_link->link_msg->channel_type,
+        channel = reds_find_channel(reds, mig_link->link_msg->channel_type,
                                     mig_link->link_msg->channel_id);
         if (!channel) {
             spice_warning("client %p channel (%d, %d) (type, id) wasn't found",
@@ -1885,7 +1885,7 @@ static void reds_handle_other_links(RedLinkInfo *link)
     }
 
     // TODO: MC: be less lenient. Tally connections from same connection_id (by same client).
-    if (!(channel = reds_find_channel(link_mess->channel_type,
+    if (!(channel = reds_find_channel(reds, link_mess->channel_type,
                                       link_mess->channel_id))) {
         reds_send_link_result(link, SPICE_LINK_ERR_CHANNEL_NOT_AVAILABLE);
         reds_link_free(link);
@@ -2539,7 +2539,7 @@ listen:
 
 static void reds_send_mm_time(void)
 {
-    if (!reds_main_channel_connected()) {
+    if (!reds_main_channel_connected(reds)) {
         return;
     }
     spice_debug(NULL);
@@ -2783,9 +2783,9 @@ static void reds_exit(void)
 
 static inline void on_activating_ticketing(void)
 {
-    if (!ticketing_enabled && reds_main_channel_connected()) {
+    if (!ticketing_enabled && reds_main_channel_connected(reds)) {
         spice_warning("disconnecting");
-        reds_disconnect();
+        reds_disconnect(reds);
     }
 }
 
@@ -2889,7 +2889,7 @@ static void reds_mig_remove_wait_disconnect_client(RedClient *client)
             ring_remove(wait_client_item);
             free(wait_client);
             if (ring_is_empty(&reds->mig_wait_disconnect_clients)) {
-                reds_mig_cleanup();
+                reds_mig_cleanup(reds);
             }
             return;
         }
@@ -2921,7 +2921,7 @@ static void reds_mig_finished(int completed)
     if (completed) {
         reds_mig_fill_wait_disconnect();
     } else {
-        reds_mig_cleanup();
+        reds_mig_cleanup(reds);
     }
     reds_mig_release();
 }
@@ -2945,9 +2945,9 @@ static void migrate_timeout(void *opaque)
         main_channel_migrate_cancel_wait(reds->main_channel);
         /* in case part of the client haven't yet completed the previous migration, disconnect them */
         reds_mig_target_client_disconnect_all();
-        reds_mig_cleanup();
+        reds_mig_cleanup(reds);
     } else {
-        reds_mig_disconnect();
+        reds_mig_disconnect(reds);
     }
 }
 
@@ -2993,14 +2993,14 @@ static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
     }
 
     vdagent = sin;
-    reds_update_mouse_mode();
+    reds_update_mouse_mode(reds);
 
     sif = SPICE_CONTAINEROF(vdagent->base.sif, SpiceCharDeviceInterface, base);
     if (sif->state) {
         sif->state(vdagent, 1);
     }
 
-    if (!reds_main_channel_connected()) {
+    if (!reds_main_channel_connected(reds)) {
         return state->base;
     }
 
@@ -3029,7 +3029,7 @@ static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
 
             if (!client_added) {
                 spice_warning("failed to add client to agent");
-                reds_disconnect();
+                reds_disconnect(reds);
             }
         }
 
@@ -3169,7 +3169,7 @@ static void spice_server_char_device_remove_interface(SpiceBaseInstance *sin)
     spice_info("remove CHAR_DEVICE %s", char_device->subtype);
     if (strcmp(char_device->subtype, SUBTYPE_VDAGENT) == 0) {
         if (vdagent) {
-            reds_agent_remove();
+            reds_agent_remove(reds);
         }
     }
 #ifdef USE_SMARTCARD
@@ -3239,7 +3239,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         if (inputs_set_tablet(SPICE_CONTAINEROF(sin, SpiceTabletInstance, base)) != 0) {
             return -1;
         }
-        reds_update_mouse_mode();
+        reds_update_mouse_mode(reds);
         if (reds->is_client_mouse_allowed) {
             inputs_set_tablet_logical_size(reds->monitor_mode.x_res, reds->monitor_mode.y_res);
         }
@@ -3296,7 +3296,7 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
     if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
         spice_info("remove SPICE_INTERFACE_TABLET");
         inputs_detach_tablet(SPICE_CONTAINEROF(sin, SpiceTabletInstance, base));
-        reds_update_mouse_mode();
+        reds_update_mouse_mode(reds);
     } else if (strcmp(interface->type, SPICE_INTERFACE_PLAYBACK) == 0) {
         spice_info("remove SPICE_INTERFACE_PLAYBACK");
         snd_detach_playback(SPICE_CONTAINEROF(sin, SpicePlaybackInstance, base));
@@ -3601,12 +3601,12 @@ SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *s,
 {
     spice_assert(reds == s);
 
-    if (reds_main_channel_connected()) {
+    if (reds_main_channel_connected(reds)) {
         if (fail_if_connected) {
             return -1;
         }
         if (disconnect_if_connected) {
-            reds_disconnect();
+            reds_disconnect(reds);
         }
     }
 
@@ -3808,7 +3808,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_agent_mouse(SpiceServer *s, int enable)
 {
     spice_assert(reds == s);
     agent_mouse = enable;
-    reds_update_mouse_mode();
+    reds_update_mouse_mode(reds);
     return 0;
 }
 
@@ -3944,13 +3944,13 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *s, int completed)
     sif = SPICE_CONTAINEROF(migration_interface->base.sif, SpiceMigrateInterface, base);
     if (completed && !reds->expect_migrate && reds->num_clients) {
         spice_warning("spice_server_migrate_info was not called, disconnecting clients");
-        reds_disconnect();
+        reds_disconnect(reds);
         ret = -1;
         goto complete;
     }
 
     reds->expect_migrate = FALSE;
-    if (!reds_main_channel_connected()) {
+    if (!reds_main_channel_connected(reds)) {
         spice_info("no peer connected");
         goto complete;
     }

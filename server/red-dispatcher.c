@@ -1044,7 +1044,7 @@ void red_dispatcher_init(QXLInstance *qxl)
     client_cbs.migrate = red_dispatcher_cursor_migrate;
     red_channel_register_client_cbs(channel, &client_cbs);
     red_channel_set_data(channel, red_dispatcher);
-    reds_register_channel(channel);
+    reds_register_channel(reds, channel);
 
     channel = red_worker_get_display_channel(worker);
     client_cbs.connect = red_dispatcher_set_display_peer;
@@ -1055,7 +1055,7 @@ void red_dispatcher_init(QXLInstance *qxl)
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
-    reds_register_channel(channel);
+    reds_register_channel(reds, channel);
 
     red_worker_run(worker);
     num_active_workers = 1;

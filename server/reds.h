@@ -55,9 +55,9 @@ void reds_enable_mm_time(void);
 uint32_t reds_get_mm_time(void);
 void reds_set_client_mouse_allowed(int is_client_mouse_allowed,
                                    int x_res, int y_res);
-void reds_register_channel(RedChannel *channel);
-void reds_unregister_channel(RedChannel *channel);
-int reds_get_mouse_mode(void); // used by inputs_channel
+void reds_register_channel(RedsState *reds, RedChannel *channel);
+void reds_unregister_channel(RedsState *reds, RedChannel *channel);
+int reds_get_mouse_mode(RedsState *reds); // used by inputs_channel
 int reds_get_agent_mouse(void); // used by inputs_channel
 int reds_has_vdagent(void); // used by inputs channel
 void reds_handle_agent_mouse_event(const VDAgentMouseState *mouse_state); // used by inputs_channel
@@ -81,7 +81,7 @@ extern spice_wan_compression_t zlib_glz_state;
 // Temporary measures to make splitting reds.c to inputs-channel.c easier
 
 /* should be called only from main_dispatcher */
-void reds_client_disconnect(RedClient *client);
+void reds_client_disconnect(RedsState *reds, RedClient *client);
 
 // Temporary (?) for splitting main channel
 typedef struct MainMigrateData MainMigrateData;

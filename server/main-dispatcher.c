@@ -136,7 +136,7 @@ static void main_dispatcher_handle_client_disconnect(void *opaque,
     MainDispatcherClientDisconnectMessage *msg = payload;
 
     spice_debug("client=%p", msg->client);
-    reds_client_disconnect(msg->client);
+    reds_client_disconnect(reds, msg->client);
     red_client_unref(msg->client);
 }
 

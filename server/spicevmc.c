@@ -548,7 +548,7 @@ SpiceCharDeviceState *spicevmc_device_connect(SpiceCharDeviceInstance *sin,
                                                        state);
     state->chardev_sin = sin;
 
-    reds_register_channel(&state->channel);
+    reds_register_channel(reds, &state->channel);
     return state->chardev_st;
 }
 
@@ -566,7 +566,7 @@ void spicevmc_device_disconnect(SpiceCharDeviceInstance *sin)
     state->chardev_st = NULL;
     sin->st = NULL;
 
-    reds_unregister_channel(&state->channel);
+    reds_unregister_channel(reds, &state->channel);
     free(state->pipe_item);
     red_channel_destroy(&state->channel);
 }

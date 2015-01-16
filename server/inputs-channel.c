@@ -364,7 +364,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
             red_channel_client_pipe_add_type(rcc, PIPE_ITEM_MOUSE_MOTION_ACK);
             icc->motion_count = 0;
         }
-        if (mouse && reds_get_mouse_mode() == SPICE_MOUSE_MODE_SERVER) {
+        if (mouse && reds_get_mouse_mode(reds) == SPICE_MOUSE_MODE_SERVER) {
             SpiceMouseInterface *sif;
             sif = SPICE_CONTAINEROF(mouse->base.sif, SpiceMouseInterface, base);
             sif->motion(mouse,
@@ -381,7 +381,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
             red_channel_client_pipe_add_type(rcc, PIPE_ITEM_MOUSE_MOTION_ACK);
             icc->motion_count = 0;
         }
-        if (reds_get_mouse_mode() != SPICE_MOUSE_MODE_CLIENT) {
+        if (reds_get_mouse_mode(reds) != SPICE_MOUSE_MODE_CLIENT) {
             break;
         }
         spice_assert((reds_get_agent_mouse() && reds_has_vdagent()) || tablet);
@@ -407,7 +407,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         } else if (mouse_press->button == SPICE_MOUSE_BUTTON_DOWN) {
             dz = 1;
         }
-        if (reds_get_mouse_mode() == SPICE_MOUSE_MODE_CLIENT) {
+        if (reds_get_mouse_mode(reds) == SPICE_MOUSE_MODE_CLIENT) {
             if (reds_get_agent_mouse() && reds_has_vdagent()) {
                 inputs_channel->mouse_state.buttons =
                     RED_MOUSE_BUTTON_STATE_TO_AGENT(mouse_press->buttons_state) |
@@ -429,7 +429,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
     }
     case SPICE_MSGC_INPUTS_MOUSE_RELEASE: {
         SpiceMsgcMouseRelease *mouse_release = message;
-        if (reds_get_mouse_mode() == SPICE_MOUSE_MODE_CLIENT) {
+        if (reds_get_mouse_mode(reds) == SPICE_MOUSE_MODE_CLIENT) {
             if (reds_get_agent_mouse() && reds_has_vdagent()) {
                 inputs_channel->mouse_state.buttons =
                     RED_MOUSE_BUTTON_STATE_TO_AGENT(mouse_release->buttons_state);
@@ -672,7 +672,7 @@ void inputs_init(void)
     red_channel_register_client_cbs(&g_inputs_channel->base, &client_cbs);
 
     red_channel_set_cap(&g_inputs_channel->base, SPICE_INPUTS_CAP_KEY_SCANCODE);
-    reds_register_channel(&g_inputs_channel->base);
+    reds_register_channel(reds, &g_inputs_channel->base);
 
     if (!(key_modifiers_timer = core->timer_add(core, key_modifiers_sender, NULL))) {
         spice_error("key modifiers timer create failed");

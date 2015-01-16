@@ -1533,7 +1533,7 @@ void snd_attach_playback(SpicePlaybackInstance *sin)
 
     playback_worker->base_channel = channel;
     add_worker(playback_worker);
-    reds_register_channel(channel);
+    reds_register_channel(reds, channel);
 }
 
 void snd_attach_record(SpiceRecordInstance *sin)
@@ -1561,7 +1561,7 @@ void snd_attach_record(SpiceRecordInstance *sin)
 
     record_worker->base_channel = channel;
     add_worker(record_worker);
-    reds_register_channel(channel);
+    reds_register_channel(reds, channel);
 }
 
 static void snd_detach_common(SndWorker *worker)
@@ -1571,7 +1571,7 @@ static void snd_detach_common(SndWorker *worker)
     }
     remove_worker(worker);
     snd_disconnect_channel(worker->connection);
-    reds_unregister_channel(worker->base_channel);
+    reds_unregister_channel(reds, worker->base_channel);
     red_channel_destroy(worker->base_channel);
 }
 
