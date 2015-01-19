@@ -740,7 +740,7 @@ static void spice_char_device_state_unref(SpiceCharDeviceState *char_dev)
 
 void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
 {
-    reds_on_char_device_state_destroy(char_dev);
+    reds_on_char_device_state_destroy(reds, char_dev);
     if (char_dev->write_to_dev_timer) {
         core->timer_remove(char_dev->write_to_dev_timer);
         char_dev->write_to_dev_timer = NULL;

@@ -206,10 +206,10 @@ struct ChannelSecurityOptions {
 static void migrate_timeout(void *opaque);
 static RedsMigTargetClient* reds_mig_target_client_find(RedsState *reds, RedClient *client);
 static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mig_client);
-static void reds_mig_cleanup_wait_disconnect(void);
-static void reds_mig_remove_wait_disconnect_client(RedClient *client);
-static void reds_char_device_add_state(SpiceCharDeviceState *st);
-static void reds_char_device_remove_state(SpiceCharDeviceState *st);
+static void reds_mig_cleanup_wait_disconnect(RedsState *reds);
+static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *client);
+static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st);
+static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState *st);
 static void reds_send_mm_time(RedsState *reds);
 
 static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds);
@@ -426,7 +426,7 @@ static void reds_mig_cleanup(RedsState *reds)
         reds->mig_wait_connect = FALSE;
         reds->mig_wait_disconnect = FALSE;
         core->timer_cancel(reds->mig_timer);
-        reds_mig_cleanup_wait_disconnect();
+        reds_mig_cleanup_wait_disconnect(reds);
     }
 }
 
@@ -517,7 +517,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
     }
 
     if (reds->mig_wait_disconnect) {
-        reds_mig_remove_wait_disconnect_client(client);
+        reds_mig_remove_wait_disconnect_client(reds, client);
     }
 
     if (reds->agent_state.base) {
@@ -2850,7 +2850,7 @@ static void reds_mig_started(RedsState *reds)
     core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
 }
 
-static void reds_mig_fill_wait_disconnect(void)
+static void reds_mig_fill_wait_disconnect(RedsState *reds)
 {
     RingItem *client_item;
 
@@ -2869,7 +2869,7 @@ static void reds_mig_fill_wait_disconnect(void)
     core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
 }
 
-static void reds_mig_cleanup_wait_disconnect(void)
+static void reds_mig_cleanup_wait_disconnect(RedsState *reds)
 {
     RingItem *wait_client_item;
 
@@ -2883,7 +2883,7 @@ static void reds_mig_cleanup_wait_disconnect(void)
     reds->mig_wait_disconnect = FALSE;
 }
 
-static void reds_mig_remove_wait_disconnect_client(RedClient *client)
+static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *client)
 {
     RingItem *wait_client_item;
 
@@ -2903,7 +2903,7 @@ static void reds_mig_remove_wait_disconnect_client(RedClient *client)
     spice_warning("client not found %p", client);
 }
 
-static void reds_migrate_channels_seamless(void)
+static void reds_migrate_channels_seamless(RedsState *reds)
 {
     RedClient *client;
 
@@ -2912,27 +2912,27 @@ static void reds_migrate_channels_seamless(void)
     red_client_migrate(client);
 }
 
-static void reds_mig_finished(int completed)
+static void reds_mig_finished(RedsState *reds, int completed)
 {
     spice_info(NULL);
 
     reds->mig_inprogress = TRUE;
 
     if (reds->src_do_seamless_migrate && completed) {
-        reds_migrate_channels_seamless();
+        reds_migrate_channels_seamless(reds);
     } else {
         main_channel_migrate_src_complete(reds->main_channel, completed);
     }
 
     if (completed) {
-        reds_mig_fill_wait_disconnect();
+        reds_mig_fill_wait_disconnect(reds);
     } else {
         reds_mig_cleanup(reds);
     }
     reds_mig_release(reds);
 }
 
-static void reds_mig_switch(void)
+static void reds_mig_switch(RedsState *reds)
 {
     if (!reds->mig_spice) {
         spice_warning("reds_mig_switch called without migrate_info set");
@@ -2944,6 +2944,7 @@ static void reds_mig_switch(void)
 
 static void migrate_timeout(void *opaque)
 {
+    RedsState *reds = opaque;
     spice_info(NULL);
     spice_assert(reds->mig_wait_connect || reds->mig_wait_disconnect);
     if (reds->mig_wait_connect) {
@@ -2962,19 +2963,19 @@ uint32_t reds_get_mm_time(void)
     return spice_get_monotonic_time_ms();
 }
 
-void reds_enable_mm_time(void)
+void reds_enable_mm_time(RedsState *reds)
 {
     reds->mm_time_enabled = TRUE;
     reds->mm_time_latency = MM_TIME_DELTA;
     reds_send_mm_time(reds);
 }
 
-void reds_disable_mm_time(void)
+void reds_disable_mm_time(RedsState *reds)
 {
     reds->mm_time_enabled = FALSE;
 }
 
-static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
+static SpiceCharDeviceState *attach_to_red_agent(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     VDIPortState *state = &reds->agent_state;
     SpiceCharDeviceInterface *sif;
@@ -3086,7 +3087,7 @@ SPICE_GNUC_VISIBLE const char** spice_server_char_device_recognized_subtypes(voi
     return spice_server_char_device_recognized_subtypes_list;
 }
 
-static void reds_char_device_add_state(SpiceCharDeviceState *st)
+static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st)
 {
     SpiceCharDeviceStateItem *item = spice_new0(SpiceCharDeviceStateItem, 1);
 
@@ -3095,7 +3096,7 @@ static void reds_char_device_add_state(SpiceCharDeviceState *st)
     ring_add(&reds->char_devs_states, &item->link);
 }
 
-static void reds_char_device_remove_state(SpiceCharDeviceState *st)
+static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState *st)
 {
     RingItem *item;
 
@@ -3112,9 +3113,9 @@ static void reds_char_device_remove_state(SpiceCharDeviceState *st)
     spice_error("char dev state not found %p", st);
 }
 
-void reds_on_char_device_state_destroy(SpiceCharDeviceState *dev)
+void reds_on_char_device_state_destroy(RedsState *reds, SpiceCharDeviceState *dev)
 {
-    reds_char_device_remove_state(dev);
+    reds_char_device_remove_state(reds, dev);
 }
 
 static int spice_server_char_device_add_interface(SpiceServer *s,
@@ -3132,7 +3133,7 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
             spice_warning("vdagent already attached");
             return -1;
         }
-        dev_state = attach_to_red_agent(char_device);
+        dev_state = attach_to_red_agent(reds, char_device);
     }
 #ifdef USE_SMARTCARD
     else if (strcmp(char_device->subtype, SUBTYPE_SMARTCARD) == 0) {
@@ -3159,7 +3160,7 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
         if (reds->vm_running) {
             spice_char_device_start(char_device->st);
         }
-        reds_char_device_add_state(char_device->st);
+        reds_char_device_add_state(reds, char_device->st);
     } else {
         spice_warning("failed to create device state for %s", char_device->subtype);
         return -1;
@@ -3167,7 +3168,7 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
     return 0;
 }
 
-static void spice_server_char_device_remove_interface(SpiceBaseInstance *sin)
+static void spice_server_char_device_remove_interface(RedsState *reds, SpiceBaseInstance *sin)
 {
     SpiceCharDeviceInstance* char_device =
             SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
@@ -3310,7 +3311,7 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
         spice_info("remove SPICE_INTERFACE_RECORD");
         snd_detach_record(SPICE_CONTAINEROF(sin, SpiceRecordInstance, base));
     } else if (strcmp(interface->type, SPICE_INTERFACE_CHAR_DEVICE) == 0) {
-        spice_server_char_device_remove_interface(sin);
+        spice_server_char_device_remove_interface(reds, sin);
     } else {
         spice_warning("VD_INTERFACE_REMOVING unsupported");
         return -1;
@@ -3365,7 +3366,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     ring_init(&reds->mig_wait_disconnect_clients);
     reds->vm_running = TRUE; /* for backward compatibility */
 
-    if (!(reds->mig_timer = core->timer_add(core, migrate_timeout, NULL))) {
+    if (!(reds->mig_timer = core->timer_add(core, migrate_timeout, reds))) {
         spice_error("migration timer create failed");
     }
 
@@ -3960,7 +3961,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *s, int completed)
         spice_info("no peer connected");
         goto complete;
     }
-    reds_mig_finished(completed);
+    reds_mig_finished(reds, completed);
     return 0;
 complete:
     if (sif->migrate_end_complete) {
@@ -3978,7 +3979,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_switch(SpiceServer *s)
        return 0;
     }
     reds->expect_migrate = FALSE;
-    reds_mig_switch();
+    reds_mig_switch(reds);
     return 0;
 }
 

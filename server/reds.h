@@ -50,8 +50,8 @@ struct SpiceMigrateState {
 /* main thread only */
 void reds_handle_channel_event(int event, SpiceChannelEventInfo *info);
 
-void reds_disable_mm_time(void);
-void reds_enable_mm_time(void);
+void reds_disable_mm_time(RedsState *reds);
+void reds_enable_mm_time(RedsState *reds);
 uint32_t reds_get_mm_time(void);
 void reds_set_client_mouse_allowed(RedsState *reds,
                                    int is_client_mouse_allowed,
@@ -111,7 +111,7 @@ int reds_on_migrate_dst_set_seamless(RedsState *reds, MainChannelClient *mcc, ui
 void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *client);
 void reds_on_client_seamless_migrate_complete(RedsState *reds, RedClient *client);
 void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc);
-void reds_on_char_device_state_destroy(SpiceCharDeviceState *dev);
+void reds_on_char_device_state_destroy(RedsState *reds, SpiceCharDeviceState *dev);
 
 void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_t latency);
 
