@@ -145,6 +145,7 @@ struct RedsState {
     Ring clients;
     int num_clients;
     MainChannel *main_channel;
+    InputsChannel *inputs_channel;
 
     int mig_wait_connect; /* src waits for clients to establish connection to dest
                              (before migration starts) */

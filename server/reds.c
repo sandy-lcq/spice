@@ -619,7 +619,7 @@ static void reds_update_mouse_mode(RedsState *reds)
     int allowed = 0;
     int qxl_count = red_dispatcher_qxl_count();
 
-    if ((agent_mouse && vdagent) || (inputs_has_tablet() && qxl_count == 1)) {
+    if ((agent_mouse && vdagent) || (inputs_channel_has_tablet(reds->inputs_channel) && qxl_count == 1)) {
         allowed = reds->dispatcher_allows_client_mouse;
     }
     if (allowed == reds->is_client_mouse_allowed) {
@@ -836,9 +836,9 @@ static void vdi_port_on_free_self_token(void *opaque)
 {
     RedsState *reds = opaque;
 
-    if (inputs_inited() && reds->pending_mouse_event) {
+    if (reds->inputs_channel && reds->pending_mouse_event) {
         spice_debug("pending mouse event");
-        reds_handle_agent_mouse_event(reds, inputs_get_mouse_state());
+        reds_handle_agent_mouse_event(reds, inputs_channel_get_mouse_state(reds->inputs_channel));
     }
 }
 
@@ -861,7 +861,7 @@ void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mou
     VDInternalBuf *internal_buf;
     uint32_t total_msg_size;
 
-    if (!inputs_inited() || !reds->agent_state.base) {
+    if (!reds->inputs_channel || !reds->agent_state.base) {
         return;
     }
 
@@ -1746,8 +1746,8 @@ void reds_set_client_mouse_allowed(RedsState *reds, int is_client_mouse_allowed,
     reds->monitor_mode.y_res = y_res;
     reds->dispatcher_allows_client_mouse = is_client_mouse_allowed;
     reds_update_mouse_mode(reds);
-    if (reds->is_client_mouse_allowed && inputs_has_tablet()) {
-        inputs_set_tablet_logical_size(reds->monitor_mode.x_res, reds->monitor_mode.y_res);
+    if (reds->is_client_mouse_allowed && inputs_channel_has_tablet(reds->inputs_channel)) {
+        inputs_channel_set_tablet_logical_size(reds->inputs_channel, reds->monitor_mode.x_res, reds->monitor_mode.y_res);
     }
 }
 
@@ -3208,7 +3208,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
             spice_warning("unsupported keyboard interface");
             return -1;
         }
-        if (inputs_set_keyboard(SPICE_CONTAINEROF(sin, SpiceKbdInstance, base)) != 0) {
+        if (inputs_channel_set_keyboard(reds->inputs_channel, SPICE_CONTAINEROF(sin, SpiceKbdInstance, base)) != 0) {
             return -1;
         }
     } else if (strcmp(interface->type, SPICE_INTERFACE_MOUSE) == 0) {
@@ -3218,7 +3218,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
             spice_warning("unsupported mouse interface");
             return -1;
         }
-        if (inputs_set_mouse(SPICE_CONTAINEROF(sin, SpiceMouseInstance, base)) != 0) {
+        if (inputs_channel_set_mouse(reds->inputs_channel, SPICE_CONTAINEROF(sin, SpiceMouseInstance, base)) != 0) {
             return -1;
         }
     } else if (strcmp(interface->type, SPICE_INTERFACE_QXL) == 0) {
@@ -3243,12 +3243,12 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
             spice_warning("unsupported tablet interface");
             return -1;
         }
-        if (inputs_set_tablet(SPICE_CONTAINEROF(sin, SpiceTabletInstance, base)) != 0) {
+        if (inputs_channel_set_tablet(reds->inputs_channel, SPICE_CONTAINEROF(sin, SpiceTabletInstance, base)) != 0) {
             return -1;
         }
         reds_update_mouse_mode(reds);
         if (reds->is_client_mouse_allowed) {
-            inputs_set_tablet_logical_size(reds->monitor_mode.x_res, reds->monitor_mode.y_res);
+            inputs_channel_set_tablet_logical_size(reds->inputs_channel, reds->monitor_mode.x_res, reds->monitor_mode.y_res);
         }
 
     } else if (strcmp(interface->type, SPICE_INTERFACE_PLAYBACK) == 0) {
@@ -3302,7 +3302,7 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
 
     if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
         spice_info("remove SPICE_INTERFACE_TABLET");
-        inputs_detach_tablet(SPICE_CONTAINEROF(sin, SpiceTabletInstance, base));
+        inputs_channel_detach_tablet(reds->inputs_channel, SPICE_CONTAINEROF(sin, SpiceTabletInstance, base));
         reds_update_mouse_mode(reds);
     } else if (strcmp(interface->type, SPICE_INTERFACE_PLAYBACK) == 0) {
         spice_info("remove SPICE_INTERFACE_PLAYBACK");
@@ -3416,7 +3416,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 #endif
 
     reds->main_channel = main_channel_init();
-    inputs_init();
+    reds->inputs_channel = inputs_init();
 
     reds->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 
@@ -3788,7 +3788,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_renderer(SpiceServer *s, const char *nam
 
 SPICE_GNUC_VISIBLE int spice_server_kbd_leds(SpiceKbdInstance *sin, int leds)
 {
-    inputs_on_keyboard_leds_change(NULL, leds);
+    inputs_channel_on_keyboard_leds_change(reds->inputs_channel, leds);
     return 0;
 }
 

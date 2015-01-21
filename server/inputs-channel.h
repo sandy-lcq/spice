@@ -24,15 +24,23 @@
 #include <stdint.h>
 #include <spice/vd_agent.h>
 
-void inputs_init(void);
-int inputs_inited(void);
-int inputs_has_tablet(void);
-const VDAgentMouseState *inputs_get_mouse_state(void);
-void inputs_on_keyboard_leds_change(void *opaque, uint8_t leds);
-int inputs_set_keyboard(SpiceKbdInstance *_keyboard);
-int inputs_set_mouse(SpiceMouseInstance *_mouse);
-int inputs_set_tablet(SpiceTabletInstance *_tablet);
-void inputs_detach_tablet(SpiceTabletInstance *_tablet);
-void inputs_set_tablet_logical_size(int x_res, int y_res);
+typedef struct InputsChannel InputsChannel;
 
+InputsChannel* inputs_init(void);
+const VDAgentMouseState *inputs_channel_get_mouse_state(InputsChannel *inputs);
+void inputs_channel_on_keyboard_leds_change(InputsChannel *inputs, uint8_t leds);
+void inputs_channel_set_tablet_logical_size(InputsChannel *inputs, int x_res, int y_res);
+
+SpiceKbdState* spice_kbd_state_new(void);
+SpiceMouseState* spice_mouse_state_new(void);
+SpiceTabletState* spice_tablet_state_new(void);
+
+SpiceKbdInstance* inputs_channel_get_keyboard(InputsChannel *inputs);
+int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboard);
+SpiceMouseInstance* inputs_channel_get_mouse(InputsChannel *inputs);
+int inputs_channel_set_mouse(InputsChannel *inputs, SpiceMouseInstance *mouse);
+SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs);
+int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet);
+int inputs_channel_has_tablet(InputsChannel *inputs);
+void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet);
 #endif
