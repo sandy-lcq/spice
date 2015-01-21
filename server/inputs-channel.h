@@ -26,7 +26,7 @@
 
 typedef struct InputsChannel InputsChannel;
 
-InputsChannel* inputs_init(void);
+InputsChannel* inputs_channel_new(void);
 const VDAgentMouseState *inputs_channel_get_mouse_state(InputsChannel *inputs);
 void inputs_channel_on_keyboard_leds_change(InputsChannel *inputs, uint8_t leds);
 void inputs_channel_set_tablet_logical_size(InputsChannel *inputs, int x_res, int y_res);

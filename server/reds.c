@@ -3416,7 +3416,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 #endif
 
     reds->main_channel = main_channel_init();
-    reds->inputs_channel = inputs_init();
+    reds->inputs_channel = inputs_channel_new();
 
     reds->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 

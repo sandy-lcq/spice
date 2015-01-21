@@ -605,7 +605,7 @@ static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
     return TRUE;
 }
 
-InputsChannel* inputs_init(void)
+InputsChannel* inputs_channel_new(void)
 {
     ChannelCbs channel_cbs = { NULL, };
     ClientCbs client_cbs = { NULL, };
