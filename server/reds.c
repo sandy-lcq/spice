@@ -2452,7 +2452,7 @@ static int reds_init_socket(const char *addr, int portnr, int family)
     return -1;
 
 listen:
-    if (listen(slisten,1) != 0) {
+    if (listen(slisten, SOMAXCONN) != 0) {
         spice_warning("listen: %s", strerror(errno));
         close(slisten);
         return -1;
