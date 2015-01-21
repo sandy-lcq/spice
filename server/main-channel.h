@@ -48,7 +48,7 @@ typedef struct MainChannel {
 } MainChannel;
 
 
-MainChannel *main_channel_init(void);
+MainChannel *main_channel_new(void);
 RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t link_id);
 /* This is a 'clone' from the reds.h Channel.link callback to allow passing link_id */
 MainChannelClient *main_channel_link(MainChannel *, RedClient *client,

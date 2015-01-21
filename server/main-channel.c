@@ -1161,7 +1161,7 @@ static void main_channel_client_migrate(RedChannelClient *rcc)
     red_channel_client_default_migrate(rcc);
 }
 
-MainChannel* main_channel_init(void)
+MainChannel* main_channel_new(void)
 {
     RedChannel *channel;
     ChannelCbs channel_cbs = { NULL, };
