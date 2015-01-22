@@ -190,6 +190,8 @@ struct RedsState {
     RedsClientMonitorsConfig client_monitors_config;
     int mm_time_enabled;
     uint32_t mm_time_latency;
+
+    const char *default_renderer;
 };
 
 #endif

@@ -154,7 +154,6 @@ static int spice_secure_port = -1;
 static int spice_listen_socket_fd = -1;
 static char spice_addr[256];
 static int spice_family = PF_UNSPEC;
-static const char *default_renderer = "sw";
 static int sasl_enabled = 0; // sasl disabled by default
 #if HAVE_SASL
 static char *sasl_appname = NULL; // default to "spice" if NULL
@@ -3440,6 +3439,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     spice_assert(reds == NULL);
 
     reds = spice_new0(RedsState, 1);
+    reds->default_renderer = "sw";
     return reds;
 }
 
@@ -3485,8 +3485,8 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *s, SpiceCoreInterface *cor
 
     spice_assert(reds == s);
     ret = do_spice_init(s, core);
-    if (default_renderer) {
-        red_add_renderer(default_renderer);
+    if (s->default_renderer) {
+        red_add_renderer(s->default_renderer);
     }
     return ret;
 }
@@ -3782,7 +3782,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_renderer(SpiceServer *s, const char *nam
     if (!red_add_renderer(name)) {
         return -1;
     }
-    default_renderer = NULL;
+    s->default_renderer = NULL;
     return 0;
 }
 
