@@ -71,6 +71,7 @@ struct SpiceCharDeviceState {
 
     SpiceCharDeviceCallbacks cbs;
     void *opaque;
+    SpiceServer *reds;
 };
 
 enum {
@@ -1033,4 +1034,14 @@ int spice_char_device_state_restore(SpiceCharDeviceState *dev,
     spice_char_device_write_to_device(dev);
     spice_char_device_read_from_device(dev);
     return TRUE;
+}
+
+void spice_char_device_set_server(SpiceCharDeviceState *dev, SpiceServer *server)
+{
+    dev->reds = server;
+}
+
+SpiceServer* spice_char_device_get_server(SpiceCharDeviceState *dev)
+{
+    return dev->reds;
 }

@@ -181,6 +181,8 @@ int spice_char_device_client_exists(SpiceCharDeviceState *dev,
 
 void spice_char_device_start(SpiceCharDeviceState *dev);
 void spice_char_device_stop(SpiceCharDeviceState *dev);
+void spice_char_device_set_server(SpiceCharDeviceState *dev, SpiceServer *server);
+SpiceServer* spice_char_device_get_server(SpiceCharDeviceState *dev);
 
 /** Read from device **/
 

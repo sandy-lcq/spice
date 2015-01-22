@@ -3125,6 +3125,7 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
         if (reds->vm_running) {
             spice_char_device_start(char_device->st);
         }
+        spice_char_device_set_server(char_device->st, reds);
         reds_char_device_add_state(reds, char_device->st);
     } else {
         spice_warning("failed to create device state for %s", char_device->subtype);
@@ -3202,13 +3203,14 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         red_dispatcher_init(qxl);
 
     } else if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
+        SpiceTabletInstance *tablet = SPICE_CONTAINEROF(sin, SpiceTabletInstance, base);
         spice_info("SPICE_INTERFACE_TABLET");
         if (interface->major_version != SPICE_INTERFACE_TABLET_MAJOR ||
             interface->minor_version > SPICE_INTERFACE_TABLET_MINOR) {
             spice_warning("unsupported tablet interface");
             return -1;
         }
-        if (inputs_channel_set_tablet(reds->inputs_channel, SPICE_CONTAINEROF(sin, SpiceTabletInstance, base)) != 0) {
+        if (inputs_channel_set_tablet(reds->inputs_channel, tablet, reds) != 0) {
             return -1;
         }
         reds_update_mouse_mode(reds);
@@ -3263,11 +3265,14 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
 
 SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
 {
+    RedsState *reds;
     const SpiceBaseInterface *interface = sin->sif;
 
     if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
+        SpiceTabletInstance *tablet = SPICE_CONTAINEROF(sin, SpiceTabletInstance, base);
+        reds = spice_tablet_state_get_server(tablet->st);
         spice_info("remove SPICE_INTERFACE_TABLET");
-        inputs_channel_detach_tablet(reds->inputs_channel, SPICE_CONTAINEROF(sin, SpiceTabletInstance, base));
+        inputs_channel_detach_tablet(reds->inputs_channel, tablet);
         reds_update_mouse_mode(reds);
     } else if (strcmp(interface->type, SPICE_INTERFACE_PLAYBACK) == 0) {
         spice_info("remove SPICE_INTERFACE_PLAYBACK");
@@ -3276,6 +3281,8 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
         spice_info("remove SPICE_INTERFACE_RECORD");
         snd_detach_record(SPICE_CONTAINEROF(sin, SpiceRecordInstance, base));
     } else if (strcmp(interface->type, SPICE_INTERFACE_CHAR_DEVICE) == 0) {
+        SpiceCharDeviceInstance *char_device = SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
+        reds = spice_char_device_get_server(char_device->st);
         spice_server_char_device_remove_interface(reds, sin);
     } else {
         spice_warning("VD_INTERFACE_REMOVING unsupported");

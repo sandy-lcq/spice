@@ -63,7 +63,7 @@ struct SpiceKbdState {
     bool key_ext[0x7f];
 };
 
-SpiceKbdState* spice_kbd_state_new(void)
+static SpiceKbdState* spice_kbd_state_new(void)
 {
     return spice_new0(SpiceKbdState, 1);
 }
@@ -72,18 +72,23 @@ struct SpiceMouseState {
     int dummy;
 };
 
-SpiceMouseState* spice_mouse_state_new(void)
+static SpiceMouseState* spice_mouse_state_new(void)
 {
     return spice_new0(SpiceMouseState, 1);
 }
 
 struct SpiceTabletState {
-    int dummy;
+    RedsState *reds;
 };
 
-SpiceTabletState* spice_tablet_state_new(void)
+static SpiceTabletState* spice_tablet_state_new(void)
 {
     return spice_new0(SpiceTabletState, 1);
+}
+
+RedsState* spice_tablet_state_get_server(SpiceTabletState *st)
+{
+    return st->reds;
 }
 
 typedef struct InputsChannelClient {
@@ -685,7 +690,7 @@ SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs)
     return inputs->tablet;
 }
 
-int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet)
+int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet, RedsState *reds)
 {
     if (inputs->tablet) {
         spice_printerr("already have tablet");
@@ -693,6 +698,7 @@ int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet
     }
     inputs->tablet = tablet;
     inputs->tablet->st = spice_tablet_state_new();
+    inputs->tablet->st->reds = reds;
     return 0;
 }
 
