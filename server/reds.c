@@ -3319,7 +3319,7 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
     return 0;
 }
 
-static void init_vd_agent_resources(void)
+static void reds_init_vd_agent_resources(RedsState *reds)
 {
     VDIPortState *state = &reds->agent_state;
     int i;
@@ -3355,7 +3355,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     core = &core_interface_adapter;
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
-    init_vd_agent_resources();
+    reds_init_vd_agent_resources(reds);
     ring_init(&reds->clients);
     reds->num_clients = 0;
     main_dispatcher_init(core);
