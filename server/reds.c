@@ -177,7 +177,6 @@ typedef struct RedSSLParameters {
     char ciphersuite[256];
 } RedSSLParameters;
 
-typedef struct ChannelSecurityOptions ChannelSecurityOptions;
 struct ChannelSecurityOptions {
     uint32_t channel_id;
     uint32_t options;
@@ -197,15 +196,11 @@ static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
 static void vdi_port_read_buf_unref(RedsState *reds, VDIReadBuf *buf);
 
-static ChannelSecurityOptions *channels_security = NULL;
-static int default_channel_security =
-    SPICE_CHANNEL_SECURITY_NONE | SPICE_CHANNEL_SECURITY_SSL;
-
 static RedSSLParameters ssl_parameters;
 
-static ChannelSecurityOptions *find_channel_security(int id)
+static ChannelSecurityOptions *reds_find_channel_security(RedsState *reds, int id)
 {
-    ChannelSecurityOptions *now = channels_security;
+    ChannelSecurityOptions *now = reds->channels_security;
     while (now && now->channel_id != id) {
         now = now->next;
     }
@@ -2133,8 +2128,8 @@ static void reds_handle_auth_mechanism(void *opaque)
 
 static int reds_security_check(RedLinkInfo *link)
 {
-    ChannelSecurityOptions *security_option = find_channel_security(link->link_mess->channel_type);
-    uint32_t security = security_option ? security_option->options : default_channel_security;
+    ChannelSecurityOptions *security_option = reds_find_channel_security(reds, link->link_mess->channel_type);
+    uint32_t security = security_option ? security_option->options : reds->default_channel_security;
     return (reds_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_SSL)) ||
         (!reds_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_NONE));
 }
@@ -2786,19 +2781,19 @@ static void set_image_compression(SpiceImageCompression val)
     red_dispatcher_on_ic_change();
 }
 
-static void set_one_channel_security(int id, uint32_t security)
+static void reds_set_one_channel_security(RedsState *reds, int id, uint32_t security)
 {
     ChannelSecurityOptions *security_options;
 
-    if ((security_options = find_channel_security(id))) {
+    if ((security_options = reds_find_channel_security(reds, id))) {
         security_options->options = security;
         return;
     }
     security_options = spice_new(ChannelSecurityOptions, 1);
     security_options->channel_id = id;
     security_options->options = security;
-    security_options->next = channels_security;
-    channels_security = security_options;
+    security_options->next = reds->channels_security;
+    reds->channels_security = security_options;
 }
 
 #define REDS_SAVE_VERSION 1
@@ -3415,6 +3410,8 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     spice_assert(reds == NULL);
 
     reds = spice_new0(RedsState, 1);
+    reds->default_channel_security =
+        SPICE_CHANNEL_SECURITY_NONE | SPICE_CHANNEL_SECURITY_SSL;
     reds->spice_port = -1;
     reds->spice_secure_port = -1;
     reds->spice_listen_socket_fd = -1;
@@ -3725,12 +3722,12 @@ SPICE_GNUC_VISIBLE int spice_server_set_channel_security(SpiceServer *s, const c
     spice_assert(reds == s);
 
     if (channel == NULL) {
-        default_channel_security = security;
+        s->default_channel_security = security;
         return 0;
     }
     for (i = 0; i < SPICE_N_ELEMENTS(names); i++) {
         if (names[i] && strcmp(names[i], channel) == 0) {
-            set_one_channel_security(i, security);
+            reds_set_one_channel_security(s, i, security);
             return 0;
         }
     }

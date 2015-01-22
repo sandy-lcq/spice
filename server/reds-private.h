@@ -135,6 +135,8 @@ typedef struct RedsClientMonitorsConfig {
     int buffer_pos;
 } RedsClientMonitorsConfig;
 
+typedef struct ChannelSecurityOptions ChannelSecurityOptions;
+
 struct RedsState {
     int listen_socket;
     int secure_listen_socket;
@@ -190,6 +192,9 @@ struct RedsState {
     RedsClientMonitorsConfig client_monitors_config;
     int mm_time_enabled;
     uint32_t mm_time_latency;
+
+    int default_channel_security;
+    ChannelSecurityOptions *channels_security;
 
     int spice_port;
     int spice_secure_port;
