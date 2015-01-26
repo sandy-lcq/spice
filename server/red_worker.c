@@ -6459,7 +6459,7 @@ static int red_lz4_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
 
     lz4_size = lz4_encode(lz4, src->y, src->stride, (uint8_t*)lz4_data->data.bufs_head->buf,
                           sizeof(lz4_data->data.bufs_head->buf),
-                          src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN);
+                          src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN, src->format);
 
     // the compressed buffer is bigger than the original data
     if (lz4_size > (src->y * src->stride)) {

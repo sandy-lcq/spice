@@ -50,7 +50,7 @@ void lz4_encoder_destroy(Lz4EncoderContext* encoder)
 }
 
 int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
-               unsigned int num_io_bytes, int top_down)
+               unsigned int num_io_bytes, int top_down, uint8_t format)
 {
     Lz4Encoder *enc = (Lz4Encoder *)lz4;
     uint8_t *lines;
@@ -61,10 +61,11 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
     uint8_t *out_buf = io_ptr;
     LZ4_stream_t *stream = LZ4_createStream();
 
-    // Encode direction
+    // Encode direction and format
     *(out_buf++) = top_down ? 1 : 0;
-    num_io_bytes--;
-    out_size = 1;
+    *(out_buf++) = format;
+    num_io_bytes -= 2;
+    out_size = 2;
 
     do {
         num_lines = enc->usr->more_lines(enc->usr, &lines);
