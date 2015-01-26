@@ -56,7 +56,7 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride,
     uint8_t *lines;
     int num_lines = 0;
     int total_lines = 0;
-    int in_size, enc_size, out_size = 0, already_copied;
+    int in_size, enc_size, out_size, already_copied;
     int stride_abs = abs(stride);
     uint8_t *in_buf, *compressed_lines;
     uint8_t *out_buf = io_ptr;
@@ -65,6 +65,7 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride,
     // Encode direction
     *(out_buf++) = stride < 0 ? 1 : 0;
     num_io_bytes--;
+    out_size = 1;
 
     do {
         num_lines = enc->usr->more_lines(enc->usr, &lines);
