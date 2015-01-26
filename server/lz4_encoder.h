@@ -43,8 +43,7 @@ struct Lz4EncoderUsrContext {
 Lz4EncoderContext* lz4_encoder_create(Lz4EncoderUsrContext *usr);
 void lz4_encoder_destroy(Lz4EncoderContext *encoder);
 
-/* returns the total size of the encoded data. Images must be supplied from the
-   top line to the bottom */
-int lz4_encode(Lz4EncoderContext *lz4, int height, int stride,
-               uint8_t *io_ptr, unsigned int num_io_bytes);
+/* returns the total size of the encoded data. */
+int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
+               unsigned int num_io_bytes, int top_down);
 #endif

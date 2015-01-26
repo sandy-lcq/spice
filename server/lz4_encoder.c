@@ -49,21 +49,20 @@ void lz4_encoder_destroy(Lz4EncoderContext* encoder)
     free(encoder);
 }
 
-int lz4_encode(Lz4EncoderContext *lz4, int height, int stride,
-               uint8_t *io_ptr, unsigned int num_io_bytes)
+int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
+               unsigned int num_io_bytes, int top_down)
 {
     Lz4Encoder *enc = (Lz4Encoder *)lz4;
     uint8_t *lines;
     int num_lines = 0;
     int total_lines = 0;
     int in_size, enc_size, out_size, already_copied;
-    int stride_abs = abs(stride);
     uint8_t *in_buf, *compressed_lines;
     uint8_t *out_buf = io_ptr;
     LZ4_stream_t *stream = LZ4_createStream();
 
     // Encode direction
-    *(out_buf++) = stride < 0 ? 1 : 0;
+    *(out_buf++) = top_down ? 1 : 0;
     num_io_bytes--;
     out_size = 1;
 
@@ -74,9 +73,9 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride,
             LZ4_freeStream(stream);
             return 0;
         }
-        in_buf = stride < 0 ? lines - (stride_abs * (num_lines - 1)) : lines;
-        lines += stride * num_lines;
-        in_size = stride_abs * num_lines;
+        in_buf = lines;
+        in_size = stride * num_lines;
+        lines += in_size;
         compressed_lines = (uint8_t *) malloc(LZ4_compressBound(in_size) + 4);
         enc_size = LZ4_compress_continue(stream, (const char *) in_buf,
                                          (char *) compressed_lines + 4, in_size);

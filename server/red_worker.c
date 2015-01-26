@@ -6422,7 +6422,6 @@ static int red_lz4_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
     Lz4Data *lz4_data = &worker->lz4_data;
     Lz4EncoderContext *lz4 = worker->lz4;
     int lz4_size = 0;
-    int stride;
 
 #ifdef COMPRESS_STAT
     stat_time_t start_time = stat_now();
@@ -6454,20 +6453,13 @@ static int red_lz4_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
 
     lz4_data->data.u.lines_data.chunks = src->data;
     lz4_data->data.u.lines_data.stride = src->stride;
+    lz4_data->data.u.lines_data.next = 0;
+    lz4_data->data.u.lines_data.reverse = 0;
     lz4_data->usr.more_lines = lz4_usr_more_lines;
 
-    if ((src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN)) {
-        lz4_data->data.u.lines_data.next = 0;
-        lz4_data->data.u.lines_data.reverse = 0;
-        stride = src->stride;
-    } else {
-        lz4_data->data.u.lines_data.next = src->data->num_chunks - 1;
-        lz4_data->data.u.lines_data.reverse = 1;
-        stride = -src->stride;
-    }
-
-    lz4_size = lz4_encode(lz4, src->y, stride, (uint8_t*)lz4_data->data.bufs_head->buf,
-                          sizeof(lz4_data->data.bufs_head->buf));
+    lz4_size = lz4_encode(lz4, src->y, src->stride, (uint8_t*)lz4_data->data.bufs_head->buf,
+                          sizeof(lz4_data->data.bufs_head->buf),
+                          src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN);
 
     // the compressed buffer is bigger than the original data
     if (lz4_size > (src->y * src->stride)) {
