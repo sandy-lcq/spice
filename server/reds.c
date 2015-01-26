@@ -3553,6 +3553,14 @@ SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
                                                           spice_image_compression_t comp)
 {
     spice_assert(reds == s);
+#ifndef USE_LZ4
+    if (comp == SPICE_IMAGE_COMPRESS_LZ4) {
+        spice_warning("LZ4 compression not supported, falling back to auto GLZ");
+        comp = SPICE_IMAGE_COMPRESS_AUTO_GLZ;
+        set_image_compression(comp);
+        return -1;
+    }
+#endif
     set_image_compression(comp);
     return 0;
 }
