@@ -6678,6 +6678,7 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
         if (!glz) {
 #ifdef USE_LZ4
             if (image_compression == SPICE_IMAGE_COMPRESS_LZ4 &&
+                bitmap_fmt_is_rgb(src->format) &&
                 red_channel_client_test_remote_cap(&dcc->common.base,
                         SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
                 ret = red_lz4_compress_image(dcc, dest, src, o_comp_data,
@@ -8918,6 +8919,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
         } else {
 #ifdef USE_LZ4
             if (comp_mode == SPICE_IMAGE_COMPRESS_LZ4 &&
+                bitmap_fmt_is_rgb(bitmap.format) &&
                 red_channel_client_test_remote_cap(&dcc->common.base,
                         SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
                 comp_succeeded = red_lz4_compress_image(dcc, &red_image, &bitmap,
