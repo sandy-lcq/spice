@@ -1508,7 +1508,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 
     worker->image_compression = spice_server_get_image_compression(reds);
     worker->jpeg_state = reds_get_jpeg_state(reds);
-    worker->zlib_glz_state = zlib_glz_state;
+    worker->zlib_glz_state = reds_get_zlib_glz_state(reds);
     worker->driver_cap_monitors_config = 0;
 #ifdef RED_STATISTICS
     char worker_str[20];

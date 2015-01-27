@@ -147,7 +147,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
 uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
-spice_wan_compression_t zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
 int agent_mouse = TRUE;
 
 RedsState *reds = NULL;
@@ -3426,6 +3425,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->ticketing_enabled = TRUE; /* ticketing enabled by default */
     reds->image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
     reds->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
+    reds->zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
     reds->agent_copypaste = TRUE;
     reds->agent_file_xfer = TRUE;
     reds->exit_on_disconnect = FALSE;
@@ -3705,7 +3705,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_zlib_glz_compression(SpiceServer *s, spi
         return -1;
     }
     // todo: support dynamically changing the state
-    zlib_glz_state = comp;
+    s->zlib_glz_state = comp;
     return 0;
 }
 
@@ -4019,4 +4019,9 @@ SPICE_GNUC_VISIBLE void spice_server_set_keepalive_timeout(SpiceServer *s, int t
 spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds)
 {
     return reds->jpeg_state;
+}
+
+spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds)
+{
+    return reds->zlib_glz_state;
 }
