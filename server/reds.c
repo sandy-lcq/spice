@@ -146,7 +146,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 
 static TicketAuthentication taTicket;
 
-static int spice_family = PF_UNSPEC;
 static int sasl_enabled = 0; // sasl disabled by default
 #if HAVE_SASL
 static char *sasl_appname = NULL; // default to "spice" if NULL
@@ -2565,8 +2564,8 @@ void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_
 
 static int reds_init_net(RedsState *reds)
 {
-    if (reds->spice_port != -1 || spice_family == AF_UNIX) {
-        reds->listen_socket = reds_init_socket(reds->spice_addr, reds->spice_port, spice_family);
+    if (reds->spice_port != -1 || reds->spice_family == AF_UNIX) {
+        reds->listen_socket = reds_init_socket(reds->spice_addr, reds->spice_port, reds->spice_family);
         if (-1 == reds->listen_socket) {
             return -1;
         }
@@ -2581,7 +2580,7 @@ static int reds_init_net(RedsState *reds)
 
     if (reds->spice_secure_port != -1) {
         reds->secure_listen_socket = reds_init_socket(reds->spice_addr, reds->spice_secure_port,
-                                                      spice_family);
+                                                      reds->spice_family);
         if (-1 == reds->secure_listen_socket) {
             return -1;
         }
@@ -3437,6 +3436,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->spice_port = -1;
     reds->spice_secure_port = -1;
     reds->spice_listen_socket_fd = -1;
+    reds->spice_family = PF_UNSPEC;
     return reds;
 }
 
@@ -3531,11 +3531,11 @@ SPICE_GNUC_VISIBLE void spice_server_set_addr(SpiceServer *s, const char *addr, 
     g_strlcpy(s->spice_addr, addr, sizeof(s->spice_addr));
 
     if (flags == SPICE_ADDR_FLAG_IPV4_ONLY) {
-        spice_family = PF_INET;
+        s->spice_family = PF_INET;
     } else if (flags == SPICE_ADDR_FLAG_IPV6_ONLY) {
-        spice_family = PF_INET6;
+        s->spice_family = PF_INET6;
     } else if (flags == SPICE_ADDR_FLAG_UNIX_ONLY) {
-        spice_family = AF_UNIX;
+        s->spice_family = AF_UNIX;
     } else if (flags != 0) {
         spice_warning("unknown address flag: 0x%X", flags);
     }
