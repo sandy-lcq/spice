@@ -130,8 +130,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
     .channel_event = adapter_channel_event,
 };
 
-static SpiceMigrateInstance *migration_interface = NULL;
-
 /* Debugging only variable: allow multiple client connections to the spice
  * server */
 #define SPICE_DEBUG_ALLOW_MC_ENV "SPICE_DEBUG_ALLOW_MC"
@@ -407,13 +405,13 @@ static void reds_mig_cleanup(RedsState *reds)
 
         if (reds->mig_wait_connect || reds->mig_wait_disconnect) {
             SpiceMigrateInterface *sif;
-            spice_assert(migration_interface);
-            sif = SPICE_CONTAINEROF(migration_interface->base.sif, SpiceMigrateInterface, base);
+            spice_assert(reds->migration_interface);
+            sif = SPICE_CONTAINEROF(reds->migration_interface->base.sif, SpiceMigrateInterface, base);
             if (reds->mig_wait_connect) {
-                sif->migrate_connect_complete(migration_interface);
+                sif->migrate_connect_complete(reds->migration_interface);
             } else {
                 if (sif->migrate_end_complete) {
-                    sif->migrate_end_complete(migration_interface);
+                    sif->migrate_end_complete(reds->migration_interface);
                 }
             }
         }
@@ -3275,7 +3273,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
 
     } else if (strcmp(interface->type, SPICE_INTERFACE_MIGRATION) == 0) {
         spice_info("SPICE_INTERFACE_MIGRATION");
-        if (migration_interface) {
+        if (reds->migration_interface) {
             spice_warning("already have migration");
             return -1;
         }
@@ -3285,8 +3283,8 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
             spice_warning("unsupported migration interface");
             return -1;
         }
-        migration_interface = SPICE_CONTAINEROF(sin, SpiceMigrateInstance, base);
-        migration_interface->st = spice_new0(SpiceMigrateState, 1);
+        reds->migration_interface = SPICE_CONTAINEROF(sin, SpiceMigrateInstance, base);
+        reds->migration_interface->st = spice_new0(SpiceMigrateState, 1);
     }
 
     return 0;
@@ -3871,7 +3869,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* 
     int try_seamless;
 
     spice_info(NULL);
-    spice_assert(migration_interface);
+    spice_assert(s->migration_interface);
     spice_assert(reds == s);
 
     if (reds->expect_migrate) {
@@ -3879,10 +3877,10 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* 
         main_channel_migrate_src_complete(reds->main_channel, FALSE);
     }
 
-    sif = SPICE_CONTAINEROF(migration_interface->base.sif, SpiceMigrateInterface, base);
+    sif = SPICE_CONTAINEROF(s->migration_interface->base.sif, SpiceMigrateInterface, base);
 
     if (!reds_set_migration_dest_info(dest, port, secure_port, cert_subject)) {
-        sif->migrate_connect_complete(migration_interface);
+        sif->migrate_connect_complete(s->migration_interface);
         return -1;
     }
 
@@ -3908,7 +3906,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* 
             reds_mig_release(reds);
             spice_info("no client connected");
         }
-        sif->migrate_connect_complete(migration_interface);
+        sif->migrate_connect_complete(s->migration_interface);
     }
 
     return 0;
@@ -3919,7 +3917,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_info(SpiceServer *s, const char* des
                                           const char* cert_subject)
 {
     spice_info(NULL);
-    spice_assert(!migration_interface);
+    spice_assert(!s->migration_interface);
     spice_assert(reds == s);
 
     if (!reds_set_migration_dest_info(dest, port, secure_port, cert_subject)) {
@@ -3945,10 +3943,10 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *s, int completed)
 
     spice_info(NULL);
 
-    spice_assert(migration_interface);
+    spice_assert(s->migration_interface);
     spice_assert(reds == s);
 
-    sif = SPICE_CONTAINEROF(migration_interface->base.sif, SpiceMigrateInterface, base);
+    sif = SPICE_CONTAINEROF(s->migration_interface->base.sif, SpiceMigrateInterface, base);
     if (completed && !reds->expect_migrate && reds->num_clients) {
         spice_warning("spice_server_migrate_info was not called, disconnecting clients");
         reds_disconnect(reds);
@@ -3965,7 +3963,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *s, int completed)
     return 0;
 complete:
     if (sif->migrate_end_complete) {
-        sif->migrate_end_complete(migration_interface);
+        sif->migrate_end_complete(s->migration_interface);
     }
     return ret;
 }
