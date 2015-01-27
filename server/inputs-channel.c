@@ -350,8 +350,8 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         if (reds_get_mouse_mode(reds) != SPICE_MOUSE_MODE_CLIENT) {
             break;
         }
-        spice_assert((reds_get_agent_mouse() && reds_has_vdagent()) || tablet);
-        if (!reds_get_agent_mouse() || !reds_has_vdagent()) {
+        spice_assert((reds_get_agent_mouse() && reds_has_vdagent(reds)) || tablet);
+        if (!reds_get_agent_mouse() || !reds_has_vdagent(reds)) {
             SpiceTabletInterface *sif;
             sif = SPICE_CONTAINEROF(tablet->base.sif, SpiceTabletInterface, base);
             sif->position(tablet, pos->x, pos->y, RED_MOUSE_STATE_TO_LOCAL(pos->buttons_state));
@@ -374,7 +374,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
             dz = 1;
         }
         if (reds_get_mouse_mode(reds) == SPICE_MOUSE_MODE_CLIENT) {
-            if (reds_get_agent_mouse() && reds_has_vdagent()) {
+            if (reds_get_agent_mouse() && reds_has_vdagent(reds)) {
                 inputs_channel->mouse_state.buttons =
                     RED_MOUSE_BUTTON_STATE_TO_AGENT(mouse_press->buttons_state) |
                     (dz == -1 ? VD_AGENT_UBUTTON_MASK : 0) |
@@ -396,7 +396,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
     case SPICE_MSGC_INPUTS_MOUSE_RELEASE: {
         SpiceMsgcMouseRelease *mouse_release = message;
         if (reds_get_mouse_mode(reds) == SPICE_MOUSE_MODE_CLIENT) {
-            if (reds_get_agent_mouse() && reds_has_vdagent()) {
+            if (reds_get_agent_mouse() && reds_has_vdagent(reds)) {
                 inputs_channel->mouse_state.buttons =
                     RED_MOUSE_BUTTON_STATE_TO_AGENT(mouse_release->buttons_state);
                 reds_handle_agent_mouse_event(reds, &inputs_channel->mouse_state);

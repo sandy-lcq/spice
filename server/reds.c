@@ -130,7 +130,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
     .channel_event = adapter_channel_event,
 };
 
-static SpiceCharDeviceInstance *vdagent = NULL;
 static SpiceMigrateInstance *migration_interface = NULL;
 
 /* Debugging only variable: allow multiple client connections to the spice
@@ -471,9 +470,9 @@ static void reds_reset_vdp(RedsState *reds)
         spice_char_device_reset(state->base);
     }
 
-    sif = SPICE_CONTAINEROF(vdagent->base.sif, SpiceCharDeviceInterface, base);
+    sif = SPICE_CONTAINEROF(reds->vdagent->base.sif, SpiceCharDeviceInterface, base);
     if (sif->state) {
-        sif->state(vdagent, 0);
+        sif->state(reds->vdagent, 0);
     }
 }
 
@@ -615,7 +614,8 @@ static void reds_update_mouse_mode(RedsState *reds)
     int allowed = 0;
     int qxl_count = red_dispatcher_qxl_count();
 
-    if ((agent_mouse && vdagent) || (inputs_channel_has_tablet(reds->inputs_channel) && qxl_count == 1)) {
+    if ((agent_mouse && reds->vdagent) ||
+        (inputs_channel_has_tablet(reds->inputs_channel) && qxl_count == 1)) {
         allowed = reds->dispatcher_allows_client_mouse;
     }
     if (allowed == reds->is_client_mouse_allowed) {
@@ -638,7 +638,7 @@ static void reds_agent_remove(RedsState *reds)
     // part of the clients are during target migration.
     reds_reset_vdp(reds);
 
-    vdagent = NULL;
+    reds->vdagent = NULL;
     reds_update_mouse_mode(reds);
     if (reds_main_channel_connected(reds) &&
         !red_channel_is_waiting_for_migrate_data(&reds->main_channel->base)) {
@@ -737,15 +737,15 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
     VDIReadBuf *dispatch_buf;
     int n;
 
-    if (!vdagent) {
+    if (!reds->vdagent) {
         return NULL;
     }
-    spice_assert(vdagent == sin);
-    sif = SPICE_CONTAINEROF(vdagent->base.sif, SpiceCharDeviceInterface, base);
-    while (vdagent) {
+    spice_assert(reds->vdagent == sin);
+    sif = SPICE_CONTAINEROF(reds->vdagent->base.sif, SpiceCharDeviceInterface, base);
+    while (reds->vdagent) {
         switch (state->read_state) {
         case VDI_PORT_READ_STATE_READ_HEADER:
-            n = sif->read(vdagent, state->receive_pos, state->receive_len);
+            n = sif->read(reds->vdagent, state->receive_pos, state->receive_len);
             if (!n) {
                 return NULL;
             }
@@ -767,7 +767,7 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
             state->read_state = VDI_PORT_READ_STATE_READ_DATA;
         }
         case VDI_PORT_READ_STATE_READ_DATA:
-            n = sif->read(vdagent, state->receive_pos, state->receive_len);
+            n = sif->read(reds->vdagent, state->receive_pos, state->receive_len);
             if (!n) {
                 return NULL;
             }
@@ -846,9 +846,9 @@ static void vdi_port_remove_client(RedClient *client, void *opaque)
 
 /****************************************************************************/
 
-int reds_has_vdagent(void)
+int reds_has_vdagent(RedsState *reds)
 {
-    return !!vdagent;
+    return !!reds->vdagent;
 }
 
 void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mouse_state)
@@ -945,10 +945,10 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
     SpiceCharDeviceState *dev_state = reds->agent_state.base;
     RedChannelClient *rcc;
 
-    if (!vdagent) {
+    if (!reds->vdagent) {
         return;
     }
-    spice_assert(vdagent->st && vdagent->st == dev_state);
+    spice_assert(reds->vdagent->st && reds->vdagent->st == dev_state);
     rcc = main_channel_client_get_base(mcc);
     reds->agent_state.client_agent_started = TRUE;
     /*
@@ -984,11 +984,11 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
 
 void reds_on_main_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens)
 {
-    if (!vdagent) {
+    if (!reds->vdagent) {
         return;
     }
-    spice_assert(vdagent->st);
-    spice_char_device_send_to_client_tokens_add(vdagent->st,
+    spice_assert(reds->vdagent->st);
+    spice_char_device_send_to_client_tokens_add(reds->vdagent->st,
                                                 main_channel_client_get_base(mcc)->client,
                                                 num_tokens);
 }
@@ -1184,7 +1184,7 @@ void reds_marshall_migrate_data(RedsState *reds, SpiceMarshaller *m)
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_MAIN_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_MAIN_VERSION);
 
-    if (!vdagent) {
+    if (!reds->vdagent) {
         uint8_t *null_agent_mig_data;
 
         spice_assert(!agent_state->base); /* MSG_AGENT_CONNECTED_TOKENS is supported by the client
@@ -1346,7 +1346,7 @@ int reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
     }
     if (mig_data->agent_base.connected) {
         if (agent_state->base) { // agent was attached before migration data has arrived
-            if (!vdagent) {
+            if (!reds->vdagent) {
                 spice_assert(agent_state->plug_generation > 0);
                 main_channel_push_agent_disconnected(reds->main_channel);
                 spice_debug("agent is no longer connected");
@@ -1369,7 +1369,7 @@ int reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
         }
     } else {
         spice_debug("agent was not attached on the source host");
-        if (vdagent) {
+        if (reds->vdagent) {
             /* spice_char_device_client_remove disables waiting for migration data */
             spice_char_device_client_remove(agent_state->base,
                                             main_channel_client_get_base(mcc)->client);
@@ -1701,7 +1701,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     free(link_mess);
     red_client_set_main(client, mcc);
 
-    if (vdagent) {
+    if (reds->vdagent) {
         if (mig_target) {
             spice_warning("unexpected: vdagent attached to destination during migration");
         }
@@ -2995,12 +2995,12 @@ static SpiceCharDeviceState *attach_to_red_agent(RedsState *reds, SpiceCharDevic
         spice_char_device_state_reset_dev_instance(state->base, sin);
     }
 
-    vdagent = sin;
+    reds->vdagent = sin;
     reds_update_mouse_mode(reds);
 
-    sif = SPICE_CONTAINEROF(vdagent->base.sif, SpiceCharDeviceInterface, base);
+    sif = SPICE_CONTAINEROF(reds->vdagent->base.sif, SpiceCharDeviceInterface, base);
     if (sif->state) {
-        sif->state(vdagent, 1);
+        sif->state(reds->vdagent, 1);
     }
 
     if (!reds_main_channel_connected(reds)) {
@@ -3125,7 +3125,7 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
 
     spice_info("CHAR_DEVICE %s", char_device->subtype);
     if (strcmp(char_device->subtype, SUBTYPE_VDAGENT) == 0) {
-        if (vdagent) {
+        if (s->vdagent) {
             spice_warning("vdagent already attached");
             return -1;
         }
@@ -3171,7 +3171,7 @@ static void spice_server_char_device_remove_interface(RedsState *reds, SpiceBase
 
     spice_info("remove CHAR_DEVICE %s", char_device->subtype);
     if (strcmp(char_device->subtype, SUBTYPE_VDAGENT) == 0) {
-        if (vdagent) {
+        if (reds->vdagent) {
             reds_agent_remove(reds);
         }
     }

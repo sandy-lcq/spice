@@ -545,7 +545,7 @@ static void main_channel_marshall_init(RedChannelClient *rcc,
     if (item->is_client_mouse_allowed) {
         init.supported_mouse_modes |= SPICE_MOUSE_MODE_CLIENT;
     }
-    init.agent_connected = reds_has_vdagent();
+    init.agent_connected = reds_has_vdagent(reds);
     init.agent_tokens = REDS_AGENT_WINDOW_SIZE;
     init.multi_media_time = item->multi_media_time;
     init.ram_hint = item->ram_hint;
