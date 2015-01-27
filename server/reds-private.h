@@ -202,6 +202,10 @@ struct RedsState {
     int spice_family;
     TicketAuthentication taTicket;
 
+    int sasl_enabled;
+#if HAVE_SASL
+    char *sasl_appname;
+#endif
 };
 
 #endif

@@ -144,10 +144,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 #define REDS_TOKENS_TO_SEND 5
 #define REDS_VDI_PORT_NUM_RECEIVE_BUFFS 5
 
-static int sasl_enabled = 0; // sasl disabled by default
-#if HAVE_SASL
-static char *sasl_appname = NULL; // default to "spice" if NULL
-#endif
 static char *spice_name = NULL;
 static bool spice_uuid_is_set = FALSE;
 static uint8_t spice_uuid[16] = { 0, };
@@ -1376,7 +1372,7 @@ int reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
 
 static void reds_channel_init_auth_caps(RedLinkInfo *link, RedChannel *channel)
 {
-    if (sasl_enabled && !link->skip_auth) {
+    if (reds->sasl_enabled && !link->skip_auth) {
         red_channel_set_common_cap(channel, SPICE_COMMON_CAP_AUTH_SASL);
     } else {
         red_channel_set_common_cap(channel, SPICE_COMMON_CAP_AUTH_SPICE);
@@ -1438,7 +1434,7 @@ static int reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
     hdr_size += channel_caps->num_caps * sizeof(uint32_t);
     header.size = GUINT32_TO_LE(hdr_size);
     ack.caps_offset = GUINT32_TO_LE(sizeof(SpiceLinkReply));
-    if (!sasl_enabled
+    if (!reds->sasl_enabled
         || !red_link_info_test_capability(link, SPICE_COMMON_CAP_AUTH_SASL)) {
         if (!(link->tiTicketing.rsa = RSA_new())) {
             spice_warning("RSA new failed");
@@ -2121,7 +2117,7 @@ static void reds_handle_auth_mechanism(void *opaque)
 
     link->auth_mechanism.auth_mechanism = GUINT32_FROM_LE(link->auth_mechanism.auth_mechanism);
     if (link->auth_mechanism.auth_mechanism == SPICE_COMMON_CAP_AUTH_SPICE
-        && !sasl_enabled
+        && !reds->sasl_enabled
         ) {
         reds_get_spice_ticket(link);
 #if HAVE_SASL
@@ -2131,7 +2127,7 @@ static void reds_handle_auth_mechanism(void *opaque)
 #endif
     } else {
         spice_warning("Unknown auth method, disconnecting");
-        if (sasl_enabled) {
+        if (reds->sasl_enabled) {
             spice_warning("Your client doesn't handle SASL?");
         }
         reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
@@ -2196,7 +2192,7 @@ static void reds_handle_read_link_done(void *opaque)
     }
 
     if (!auth_selection) {
-        if (sasl_enabled && !link->skip_auth) {
+        if (reds->sasl_enabled && !link->skip_auth) {
             spice_warning("SASL enabled, but peer supports only spice authentication");
             reds_send_link_error(link, SPICE_LINK_ERR_VERSION_MISMATCH);
             return;
@@ -3397,8 +3393,8 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     }
 #if HAVE_SASL
     int saslerr;
-    if ((saslerr = sasl_server_init(NULL, sasl_appname ?
-                                    sasl_appname : "spice")) != SASL_OK) {
+    if ((saslerr = sasl_server_init(NULL, reds->sasl_appname ?
+                                    reds->sasl_appname : "spice")) != SASL_OK) {
         spice_error("Failed to initialize SASL auth %s",
                   sasl_errstring(saslerr, NULL, NULL));
         goto err;
@@ -3435,6 +3431,10 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->spice_secure_port = -1;
     reds->spice_listen_socket_fd = -1;
     reds->spice_family = PF_UNSPEC;
+    reds->sasl_enabled = 0; // sasl disabled by default
+#if HAVE_SASL
+    reds->sasl_appname = NULL; // default to "spice" if NULL
+#endif
     return reds;
 }
 
@@ -3565,7 +3565,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_sasl(SpiceServer *s, int enabled)
 {
     spice_assert(reds == s);
 #if HAVE_SASL
-    sasl_enabled = enabled;
+    s->sasl_enabled = enabled;
     return 0;
 #else
     return -1;
@@ -3576,8 +3576,8 @@ SPICE_GNUC_VISIBLE int spice_server_set_sasl_appname(SpiceServer *s, const char 
 {
     spice_assert(reds == s);
 #if HAVE_SASL
-    free(sasl_appname);
-    sasl_appname = spice_strdup(appname);
+    free(s->sasl_appname);
+    s->sasl_appname = spice_strdup(appname);
     return 0;
 #else
     return -1;
