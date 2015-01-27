@@ -149,7 +149,6 @@ static SpiceMigrateInstance *migration_interface = NULL;
 
 static TicketAuthentication taTicket;
 
-static int spice_listen_socket_fd = -1;
 static char spice_addr[256];
 static int spice_family = PF_UNSPEC;
 static int sasl_enabled = 0; // sasl disabled by default
@@ -2598,8 +2597,8 @@ static int reds_init_net(RedsState *reds)
         }
     }
 
-    if (spice_listen_socket_fd != -1 ) {
-        reds->listen_socket = spice_listen_socket_fd;
+    if (reds->spice_listen_socket_fd != -1 ) {
+        reds->listen_socket = reds->spice_listen_socket_fd;
         reds->listen_watch = core->watch_add(core, reds->listen_socket,
                                              SPICE_WATCH_EVENT_READ,
                                              reds_accept, NULL);
@@ -3440,6 +3439,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->default_renderer = "sw";
     reds->spice_port = -1;
     reds->spice_secure_port = -1;
+    reds->spice_listen_socket_fd = -1;
     return reds;
 }
 
@@ -3547,7 +3547,7 @@ SPICE_GNUC_VISIBLE void spice_server_set_addr(SpiceServer *s, const char *addr, 
 SPICE_GNUC_VISIBLE int spice_server_set_listen_socket_fd(SpiceServer *s, int listen_fd)
 {
     spice_assert(reds == s);
-    spice_listen_socket_fd = listen_fd;
+    s->spice_listen_socket_fd = listen_fd;
     return 0;
 }
 

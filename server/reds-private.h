@@ -195,6 +195,7 @@ struct RedsState {
 
     int spice_port;
     int spice_secure_port;
+    int spice_listen_socket_fd;
 };
 
 #endif
