@@ -149,7 +149,6 @@ static long *lock_count;
 uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
 spice_wan_compression_t zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
 int agent_mouse = TRUE;
-int agent_copypaste = TRUE;
 int agent_file_xfer = TRUE;
 static bool exit_on_disconnect = FALSE;
 
@@ -417,7 +416,7 @@ static void reds_reset_vdp(RedsState *reds)
         state->current_read_buf = NULL;
     }
     /* Reset read filter to start with clean state when the agent reconnects */
-    agent_msg_filter_init(&state->read_filter, agent_copypaste,
+    agent_msg_filter_init(&state->read_filter, reds->agent_copypaste,
                           agent_file_xfer, TRUE);
     /* Throw away pending chunks from the current (if any) and future
      * messages written by the client.
@@ -531,7 +530,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
         }
 
         /* Reset write filter to start with clean state on client reconnect */
-        agent_msg_filter_init(&reds->agent_state.write_filter, agent_copypaste,
+        agent_msg_filter_init(&reds->agent_state.write_filter, reds->agent_copypaste,
                               agent_file_xfer, TRUE);
 
         /* Throw away pending chunks from the current (if any) and future
@@ -3298,9 +3297,9 @@ static void reds_init_vd_agent_resources(RedsState *reds)
     int i;
 
     ring_init(&state->read_bufs);
-    agent_msg_filter_init(&state->write_filter, agent_copypaste,
+    agent_msg_filter_init(&state->write_filter, reds->agent_copypaste,
                           agent_file_xfer, TRUE);
-    agent_msg_filter_init(&state->read_filter, agent_copypaste,
+    agent_msg_filter_init(&state->read_filter, reds->agent_copypaste,
                           agent_file_xfer, TRUE);
 
     state->read_state = VDI_PORT_READ_STATE_READ_HEADER;
@@ -3429,6 +3428,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->ticketing_enabled = TRUE; /* ticketing enabled by default */
     reds->image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
     reds->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
+    reds->agent_copypaste = TRUE;
     return reds;
 }
 
@@ -3810,9 +3810,9 @@ SPICE_GNUC_VISIBLE int spice_server_set_agent_mouse(SpiceServer *s, int enable)
 SPICE_GNUC_VISIBLE int spice_server_set_agent_copypaste(SpiceServer *s, int enable)
 {
     spice_assert(reds == s);
-    agent_copypaste = enable;
-    reds->agent_state.write_filter.copy_paste_enabled = agent_copypaste;
-    reds->agent_state.read_filter.copy_paste_enabled = agent_copypaste;
+    s->agent_copypaste = enable;
+    reds->agent_state.write_filter.copy_paste_enabled = s->agent_copypaste;
+    reds->agent_state.read_filter.copy_paste_enabled = s->agent_copypaste;
     return 0;
 }
 

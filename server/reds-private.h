@@ -217,6 +217,8 @@ struct RedsState {
     gboolean ticketing_enabled;
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
+
+    gboolean agent_copypaste;
 };
 
 #endif
