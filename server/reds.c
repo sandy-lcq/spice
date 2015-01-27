@@ -174,7 +174,7 @@ static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st
 static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState *st);
 static void reds_send_mm_time(RedsState *reds);
 
-static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds);
+static VDIReadBuf *reds_get_vdi_port_read_buf(RedsState *reds);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
 static void vdi_port_read_buf_unref(RedsState *reds, VDIReadBuf *buf);
 
@@ -647,7 +647,7 @@ static int vdi_port_read_buf_process(RedsState *reds, int port, VDIReadBuf *buf)
     }
 }
 
-static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds)
+static VDIReadBuf *reds_get_vdi_port_read_buf(RedsState *reds)
 {
     VDIPortState *state = &reds->agent_state;
     RingItem *item;
@@ -717,7 +717,7 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
             state->message_receive_len = state->vdi_chunk_header.size;
             state->read_state = VDI_PORT_READ_STATE_GET_BUFF;
         case VDI_PORT_READ_STATE_GET_BUFF: {
-            if (!(state->current_read_buf = vdi_port_read_buf_get(reds))) {
+            if (!(state->current_read_buf = reds_get_vdi_port_read_buf(reds))) {
                 return NULL;
             }
             state->receive_pos = state->current_read_buf->data;
@@ -1242,7 +1242,7 @@ static int reds_agent_state_restore(RedsState *reds, SpiceMigrateDataMain *mig_d
             uint32_t cur_buf_size;
 
             agent_state->read_state = VDI_PORT_READ_STATE_READ_DATA;
-            agent_state->current_read_buf = vdi_port_read_buf_get(reds);
+            agent_state->current_read_buf = reds_get_vdi_port_read_buf(reds);
             spice_assert(agent_state->current_read_buf);
             partial_msg_header = (uint8_t *)mig_data + mig_data->agent2client.msg_header_ptr -
                 sizeof(SpiceMiniDataHeader);
