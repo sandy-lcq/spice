@@ -2267,7 +2267,7 @@ static void reds_handle_ssl_accept(int fd, int event, void *data)
     }
 }
 
-static RedLinkInfo *reds_init_client_connection(int socket)
+static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
 {
     RedLinkInfo *link;
     int delay_val = 1;
@@ -2320,12 +2320,12 @@ error:
 }
 
 
-static RedLinkInfo *reds_init_client_ssl_connection(int socket)
+static RedLinkInfo *reds_init_client_ssl_connection(RedsState *reds, int socket)
 {
     RedLinkInfo *link;
     int ssl_status;
 
-    link = reds_init_client_connection(socket);
+    link = reds_init_client_connection(reds, socket);
     if (link == NULL)
         goto error;
 
@@ -2356,6 +2356,7 @@ error:
 
 static void reds_accept_ssl_connection(int fd, int event, void *data)
 {
+    RedsState *reds = data;
     RedLinkInfo *link;
     int socket;
 
@@ -2364,7 +2365,7 @@ static void reds_accept_ssl_connection(int fd, int event, void *data)
         return;
     }
 
-    if (!(link = reds_init_client_ssl_connection(socket))) {
+    if (!(link = reds_init_client_ssl_connection(reds, socket))) {
         close(socket);
         return;
     }
@@ -2390,7 +2391,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_client(SpiceServer *s, int socket, int s
     RedLinkInfo *link;
 
     spice_assert(reds == s);
-    if (!(link = reds_init_client_connection(socket))) {
+    if (!(link = reds_init_client_connection(reds, socket))) {
         spice_warning("accept failed");
         return -1;
     }
@@ -2407,7 +2408,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_ssl_client(SpiceServer *s, int socket, i
     RedLinkInfo *link;
 
     spice_assert(reds == s);
-    if (!(link = reds_init_client_ssl_connection(socket))) {
+    if (!(link = reds_init_client_ssl_connection(reds, socket))) {
         return -1;
     }
 
