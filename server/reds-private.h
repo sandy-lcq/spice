@@ -137,6 +137,15 @@ typedef struct RedsClientMonitorsConfig {
 
 typedef struct ChannelSecurityOptions ChannelSecurityOptions;
 
+typedef struct RedSSLParameters {
+    char keyfile_password[256];
+    char certs_file[256];
+    char private_key_file[256];
+    char ca_certificate_file[256];
+    char dh_key_file[256];
+    char ciphersuite[256];
+} RedSSLParameters;
+
 struct RedsState {
     int listen_socket;
     int secure_listen_socket;
@@ -224,6 +233,8 @@ struct RedsState {
     gboolean agent_copypaste;
     gboolean agent_file_xfer;
     gboolean exit_on_disconnect;
+
+    RedSSLParameters ssl_parameters;
 };
 
 #endif

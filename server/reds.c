@@ -159,15 +159,6 @@ typedef struct RedLinkInfo {
     int skip_auth;
 } RedLinkInfo;
 
-typedef struct RedSSLParameters {
-    char keyfile_password[256];
-    char certs_file[256];
-    char private_key_file[256];
-    char ca_certificate_file[256];
-    char dh_key_file[256];
-    char ciphersuite[256];
-} RedSSLParameters;
-
 struct ChannelSecurityOptions {
     uint32_t channel_id;
     uint32_t options;
@@ -186,8 +177,6 @@ static void reds_send_mm_time(RedsState *reds);
 static VDIReadBuf *vdi_port_read_buf_get(RedsState *reds);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
 static void vdi_port_read_buf_unref(RedsState *reds, VDIReadBuf *buf);
-
-static RedSSLParameters ssl_parameters;
 
 static ChannelSecurityOptions *reds_find_channel_security(RedsState *reds, int id)
 {
@@ -2611,7 +2600,8 @@ static int load_dh_params(SSL_CTX *ctx, char *file)
 /*The password code is not thread safe*/
 static int ssl_password_cb(char *buf, int size, int flags, void *userdata)
 {
-    char *pass = ssl_parameters.keyfile_password;
+    RedsState *reds = userdata;
+    char *pass = reds->ssl_parameters.keyfile_password;
     if (size < strlen(pass) + 1) {
         return (0);
     }
@@ -2686,31 +2676,32 @@ static int reds_init_ssl(RedsState *reds)
     SSL_CTX_set_options(reds->ctx, ssl_options);
 
     /* Load our keys and certificates*/
-    return_code = SSL_CTX_use_certificate_chain_file(reds->ctx, ssl_parameters.certs_file);
+    return_code = SSL_CTX_use_certificate_chain_file(reds->ctx, reds->ssl_parameters.certs_file);
     if (return_code == 1) {
-        spice_info("Loaded certificates from %s", ssl_parameters.certs_file);
+        spice_info("Loaded certificates from %s", reds->ssl_parameters.certs_file);
     } else {
-        spice_warning("Could not load certificates from %s", ssl_parameters.certs_file);
+        spice_warning("Could not load certificates from %s", reds->ssl_parameters.certs_file);
         return -1;
     }
 
     SSL_CTX_set_default_passwd_cb(reds->ctx, ssl_password_cb);
+    SSL_CTX_set_default_passwd_cb_userdata(reds->ctx, reds);
 
-    return_code = SSL_CTX_use_PrivateKey_file(reds->ctx, ssl_parameters.private_key_file,
+    return_code = SSL_CTX_use_PrivateKey_file(reds->ctx, reds->ssl_parameters.private_key_file,
                                               SSL_FILETYPE_PEM);
     if (return_code == 1) {
-        spice_info("Using private key from %s", ssl_parameters.private_key_file);
+        spice_info("Using private key from %s", reds->ssl_parameters.private_key_file);
     } else {
         spice_warning("Could not use private key file");
         return -1;
     }
 
     /* Load the CAs we trust*/
-    return_code = SSL_CTX_load_verify_locations(reds->ctx, ssl_parameters.ca_certificate_file, 0);
+    return_code = SSL_CTX_load_verify_locations(reds->ctx, reds->ssl_parameters.ca_certificate_file, 0);
     if (return_code == 1) {
-        spice_info("Loaded CA certificates from %s", ssl_parameters.ca_certificate_file);
+        spice_info("Loaded CA certificates from %s", reds->ssl_parameters.ca_certificate_file);
     } else {
-        spice_warning("Could not use CA file %s", ssl_parameters.ca_certificate_file);
+        spice_warning("Could not use CA file %s", reds->ssl_parameters.ca_certificate_file);
         return -1;
     }
 
@@ -2718,15 +2709,15 @@ static int reds_init_ssl(RedsState *reds)
     SSL_CTX_set_verify_depth(reds->ctx, 1);
 #endif
 
-    if (strlen(ssl_parameters.dh_key_file) > 0) {
-        if (load_dh_params(reds->ctx, ssl_parameters.dh_key_file) < 0) {
+    if (strlen(reds->ssl_parameters.dh_key_file) > 0) {
+        if (load_dh_params(reds->ctx, reds->ssl_parameters.dh_key_file) < 0) {
             return -1;
         }
     }
 
     SSL_CTX_set_session_id_context(reds->ctx, (const unsigned char *)"SPICE", 5);
-    if (strlen(ssl_parameters.ciphersuite) > 0) {
-        if (!SSL_CTX_set_cipher_list(reds->ctx, ssl_parameters.ciphersuite)) {
+    if (strlen(reds->ssl_parameters.ciphersuite) > 0) {
+        if (!SSL_CTX_set_cipher_list(reds->ctx, reds->ssl_parameters.ciphersuite)) {
             return -1;
         }
     }
@@ -3638,27 +3629,27 @@ SPICE_GNUC_VISIBLE int spice_server_set_tls(SpiceServer *s, int port,
     if (port < 0 || port > 0xffff) {
         return -1;
     }
-    memset(&ssl_parameters, 0, sizeof(ssl_parameters));
+    memset(&s->ssl_parameters, 0, sizeof(s->ssl_parameters));
 
     s->spice_secure_port = port;
-    g_strlcpy(ssl_parameters.ca_certificate_file, ca_cert_file,
-              sizeof(ssl_parameters.ca_certificate_file));
-    g_strlcpy(ssl_parameters.certs_file, certs_file,
-              sizeof(ssl_parameters.certs_file));
-    g_strlcpy(ssl_parameters.private_key_file, private_key_file,
-              sizeof(ssl_parameters.private_key_file));
+    g_strlcpy(s->ssl_parameters.ca_certificate_file, ca_cert_file,
+              sizeof(s->ssl_parameters.ca_certificate_file));
+    g_strlcpy(s->ssl_parameters.certs_file, certs_file,
+              sizeof(s->ssl_parameters.certs_file));
+    g_strlcpy(s->ssl_parameters.private_key_file, private_key_file,
+              sizeof(s->ssl_parameters.private_key_file));
 
     if (key_passwd) {
-        g_strlcpy(ssl_parameters.keyfile_password, key_passwd,
-                  sizeof(ssl_parameters.keyfile_password));
+        g_strlcpy(s->ssl_parameters.keyfile_password, key_passwd,
+                  sizeof(s->ssl_parameters.keyfile_password));
     }
     if (ciphersuite) {
-        g_strlcpy(ssl_parameters.ciphersuite, ciphersuite,
-                  sizeof(ssl_parameters.ciphersuite));
+        g_strlcpy(s->ssl_parameters.ciphersuite, ciphersuite,
+                  sizeof(s->ssl_parameters.ciphersuite));
     }
     if (dh_key_file) {
-        g_strlcpy(ssl_parameters.dh_key_file, dh_key_file,
-                  sizeof(ssl_parameters.dh_key_file));
+        g_strlcpy(s->ssl_parameters.dh_key_file, dh_key_file,
+                  sizeof(s->ssl_parameters.dh_key_file));
     }
     return 0;
 }
