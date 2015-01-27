@@ -192,6 +192,8 @@ struct RedsState {
     uint32_t mm_time_latency;
 
     const char *default_renderer;
+
+    int spice_port;
 };
 
 #endif

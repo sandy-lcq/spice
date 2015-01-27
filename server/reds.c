@@ -149,7 +149,6 @@ static SpiceMigrateInstance *migration_interface = NULL;
 
 static TicketAuthentication taTicket;
 
-static int spice_port = -1;
 static int spice_secure_port = -1;
 static int spice_listen_socket_fd = -1;
 static char spice_addr[256];
@@ -2571,8 +2570,8 @@ void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_
 
 static int reds_init_net(RedsState *reds)
 {
-    if (spice_port != -1 || spice_family == AF_UNIX) {
-        reds->listen_socket = reds_init_socket(spice_addr, spice_port, spice_family);
+    if (reds->spice_port != -1 || spice_family == AF_UNIX) {
+        reds->listen_socket = reds_init_socket(spice_addr, reds->spice_port, spice_family);
         if (-1 == reds->listen_socket) {
             return -1;
         }
@@ -3440,6 +3439,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 
     reds = spice_new0(RedsState, 1);
     reds->default_renderer = "sw";
+    reds->spice_port = -1;
     return reds;
 }
 
@@ -3523,7 +3523,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_port(SpiceServer *s, int port)
     if (port < 0 || port > 0xffff) {
         return -1;
     }
-    spice_port = port;
+    s->spice_port = port;
     return 0;
 }
 
