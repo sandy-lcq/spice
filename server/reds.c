@@ -146,7 +146,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 
 static TicketAuthentication taTicket;
 
-static char spice_addr[256];
 static int spice_family = PF_UNSPEC;
 static int sasl_enabled = 0; // sasl disabled by default
 #if HAVE_SASL
@@ -2567,7 +2566,7 @@ void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_
 static int reds_init_net(RedsState *reds)
 {
     if (reds->spice_port != -1 || spice_family == AF_UNIX) {
-        reds->listen_socket = reds_init_socket(spice_addr, reds->spice_port, spice_family);
+        reds->listen_socket = reds_init_socket(reds->spice_addr, reds->spice_port, spice_family);
         if (-1 == reds->listen_socket) {
             return -1;
         }
@@ -2581,7 +2580,7 @@ static int reds_init_net(RedsState *reds)
     }
 
     if (reds->spice_secure_port != -1) {
-        reds->secure_listen_socket = reds_init_socket(spice_addr, reds->spice_secure_port,
+        reds->secure_listen_socket = reds_init_socket(reds->spice_addr, reds->spice_secure_port,
                                                       spice_family);
         if (-1 == reds->secure_listen_socket) {
             return -1;
@@ -3529,7 +3528,7 @@ SPICE_GNUC_VISIBLE void spice_server_set_addr(SpiceServer *s, const char *addr, 
 {
     spice_assert(reds == s);
 
-    g_strlcpy(spice_addr, addr, sizeof(spice_addr));
+    g_strlcpy(s->spice_addr, addr, sizeof(s->spice_addr));
 
     if (flags == SPICE_ADDR_FLAG_IPV4_ONLY) {
         spice_family = PF_INET;

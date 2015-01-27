@@ -198,6 +198,7 @@ struct RedsState {
     SpiceCharDeviceInstance *vdagent;
     SpiceMigrateInstance *migration_interface;
     int spice_listen_socket_fd;
+    char spice_addr[256];
 };
 
 #endif
