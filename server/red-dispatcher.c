@@ -706,7 +706,7 @@ static inline int calc_compression_level(void)
 {
     spice_assert(streaming_video != SPICE_STREAM_VIDEO_INVALID);
     if ((streaming_video != SPICE_STREAM_VIDEO_OFF) ||
-        (image_compression != SPICE_IMAGE_COMPRESSION_QUIC)) {
+        (spice_server_get_image_compression(reds) != SPICE_IMAGE_COMPRESSION_QUIC)) {
         return 0;
     } else {
         return 1;
@@ -721,7 +721,7 @@ void red_dispatcher_on_ic_change(void)
 
     while (now) {
         now->qxl->st->qif->set_compression_level(now->qxl, compression_level);
-        payload.image_compression = image_compression;
+        payload.image_compression = spice_server_get_image_compression(reds);
         dispatcher_send_message(&now->dispatcher,
                                 RED_WORKER_MESSAGE_SET_COMPRESSION,
                                 &payload);

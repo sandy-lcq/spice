@@ -75,7 +75,6 @@ extern uint32_t num_renderers;
 
 extern struct SpiceCoreInterfaceInternal *core;
 extern uint32_t streaming_video;
-extern SpiceImageCompression image_compression;
 extern spice_wan_compression_t jpeg_state;
 extern spice_wan_compression_t zlib_glz_state;
 

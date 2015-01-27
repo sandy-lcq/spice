@@ -214,6 +214,7 @@ struct RedsState {
     bool spice_uuid_is_set;
     uint8_t spice_uuid[16];
 
+    SpiceImageCompression image_compression;
 };
 
 #endif

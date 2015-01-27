@@ -1505,7 +1505,8 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     if (worker->record_fd) {
         dispatcher_register_universal_handler(dispatcher, worker_dispatcher_record);
     }
-    worker->image_compression = image_compression;
+
+    worker->image_compression = spice_server_get_image_compression(reds);
     worker->jpeg_state = jpeg_state;
     worker->zlib_glz_state = zlib_glz_state;
     worker->driver_cap_monitors_config = 0;
