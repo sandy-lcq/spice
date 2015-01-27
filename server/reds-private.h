@@ -215,6 +215,7 @@ struct RedsState {
     uint8_t spice_uuid[16];
 
     SpiceImageCompression image_compression;
+    spice_wan_compression_t jpeg_state;
 };
 
 #endif

@@ -148,7 +148,6 @@ static int ticketing_enabled = 1; //Ticketing is enabled by default
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
 uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
-spice_wan_compression_t jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
 spice_wan_compression_t zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
 int agent_mouse = TRUE;
 int agent_copypaste = TRUE;
@@ -3422,6 +3421,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->spice_uuid_is_set = FALSE;
     memset(reds->spice_uuid, 0, sizeof(reds->spice_uuid));
     reds->image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
+    reds->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
     return reds;
 }
 
@@ -3686,7 +3686,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_jpeg_compression(SpiceServer *s, spice_w
         return -1;
     }
     // todo: support dynamically changing the state
-    jpeg_state = comp;
+    s->jpeg_state = comp;
     return 0;
 }
 
@@ -4007,4 +4007,9 @@ SPICE_GNUC_VISIBLE void spice_server_set_keepalive_timeout(SpiceServer *s, int t
     spice_assert(s == reds);
     reds->keepalive_timeout = timeout;
     spice_debug("keepalive timeout=%d", timeout);
+}
+
+spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds)
+{
+    return reds->jpeg_state;
 }
