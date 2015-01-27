@@ -206,6 +206,7 @@ struct RedsState {
 #if HAVE_SASL
     char *sasl_appname;
 #endif
+    char *spice_name;
 };
 
 #endif

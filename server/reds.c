@@ -144,7 +144,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 #define REDS_TOKENS_TO_SEND 5
 #define REDS_VDI_PORT_NUM_RECEIVE_BUFFS 5
 
-static char *spice_name = NULL;
 static bool spice_uuid_is_set = FALSE;
 static uint8_t spice_uuid[16] = { 0, };
 
@@ -1704,8 +1703,8 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
             reds->mouse_mode, reds->is_client_mouse_allowed,
             reds_get_mm_time() - MM_TIME_DELTA,
             red_dispatcher_qxl_ram_size());
-        if (spice_name)
-            main_channel_push_name(mcc, spice_name);
+        if (reds->spice_name)
+            main_channel_push_name(mcc, reds->spice_name);
         if (spice_uuid_is_set)
             main_channel_push_uuid(mcc, spice_uuid);
     } else {
@@ -3586,8 +3585,8 @@ SPICE_GNUC_VISIBLE int spice_server_set_sasl_appname(SpiceServer *s, const char 
 
 SPICE_GNUC_VISIBLE void spice_server_set_name(SpiceServer *s, const char *name)
 {
-    free(spice_name);
-    spice_name = spice_strdup(name);
+    free(s->spice_name);
+    s->spice_name = spice_strdup(name);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_set_uuid(SpiceServer *s, const uint8_t uuid[16])
