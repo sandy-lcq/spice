@@ -149,7 +149,6 @@ static long *lock_count;
 uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
 spice_wan_compression_t zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
 int agent_mouse = TRUE;
-static bool exit_on_disconnect = FALSE;
 
 RedsState *reds = NULL;
 
@@ -461,7 +460,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
 {
     RedsMigTargetClient *mig_client;
 
-    if (exit_on_disconnect)
+    if (reds->exit_on_disconnect)
     {
         spice_info("Exiting server because of client disconnect.\n");
         exit(0);
@@ -3429,6 +3428,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
     reds->agent_copypaste = TRUE;
     reds->agent_file_xfer = TRUE;
+    reds->exit_on_disconnect = FALSE;
     return reds;
 }
 
@@ -3543,7 +3543,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_listen_socket_fd(SpiceServer *s, int lis
 SPICE_GNUC_VISIBLE int spice_server_set_exit_on_disconnect(SpiceServer *s, int flag)
 {
     spice_assert(reds == s);
-    exit_on_disconnect = !!flag;
+    s->exit_on_disconnect = !!flag;
     return 0;
 }
 

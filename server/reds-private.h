@@ -220,6 +220,7 @@ struct RedsState {
 
     gboolean agent_copypaste;
     gboolean agent_file_xfer;
+    gboolean exit_on_disconnect;
 };
 
 #endif
