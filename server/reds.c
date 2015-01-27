@@ -144,9 +144,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 #define REDS_TOKENS_TO_SEND 5
 #define REDS_VDI_PORT_NUM_RECEIVE_BUFFS 5
 
-static bool spice_uuid_is_set = FALSE;
-static uint8_t spice_uuid[16] = { 0, };
-
 static int ticketing_enabled = 1; //Ticketing is enabled by default
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
@@ -1705,8 +1702,8 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
             red_dispatcher_qxl_ram_size());
         if (reds->spice_name)
             main_channel_push_name(mcc, reds->spice_name);
-        if (spice_uuid_is_set)
-            main_channel_push_uuid(mcc, spice_uuid);
+        if (reds->spice_uuid_is_set)
+            main_channel_push_uuid(mcc, reds->spice_uuid);
     } else {
         reds_mig_target_client_add(reds, client);
     }
@@ -3434,6 +3431,8 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 #if HAVE_SASL
     reds->sasl_appname = NULL; // default to "spice" if NULL
 #endif
+    reds->spice_uuid_is_set = FALSE;
+    memset(reds->spice_uuid, 0, sizeof(reds->spice_uuid));
     return reds;
 }
 
@@ -3591,8 +3590,8 @@ SPICE_GNUC_VISIBLE void spice_server_set_name(SpiceServer *s, const char *name)
 
 SPICE_GNUC_VISIBLE void spice_server_set_uuid(SpiceServer *s, const uint8_t uuid[16])
 {
-    memcpy(spice_uuid, uuid, sizeof(spice_uuid));
-    spice_uuid_is_set = TRUE;
+    memcpy(s->spice_uuid, uuid, sizeof(s->spice_uuid));
+    s->spice_uuid_is_set = TRUE;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *s,

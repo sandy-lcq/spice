@@ -207,6 +207,10 @@ struct RedsState {
     char *sasl_appname;
 #endif
     char *spice_name;
+
+    bool spice_uuid_is_set;
+    uint8_t spice_uuid[16];
+
 };
 
 #endif
