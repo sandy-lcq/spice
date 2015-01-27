@@ -1052,9 +1052,9 @@ static void do_ping_client(MainChannelClient *mcc,
         if (has_interval && interval > 0) {
             mcc->ping_interval = interval * MSEC_PER_SEC;
         }
-        core->timer_start(mcc->ping_timer, mcc->ping_interval);
+        reds_get_core_interface(reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
     } else if (!strcmp(opt, "off")) {
-        core->timer_cancel(mcc->ping_timer);
+        reds_get_core_interface(reds)->timer_cancel(mcc->ping_timer);
     } else {
         return;
     }
@@ -1066,11 +1066,11 @@ static void ping_timer_cb(void *opaque)
 
     if (!red_channel_client_is_connected(&mcc->base)) {
         spice_printerr("not connected to peer, ping off");
-        core->timer_cancel(mcc->ping_timer);
+        reds_get_core_interface(reds)->timer_cancel(mcc->ping_timer);
         return;
     }
     do_ping_client(mcc, NULL, 0, 0);
-    core->timer_start(mcc->ping_timer, mcc->ping_interval);
+    reds_get_core_interface(reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
 }
 #endif /* RED_STATISTICS */
 
@@ -1087,7 +1087,8 @@ static MainChannelClient *main_channel_client_create(MainChannel *main_chan, Red
     mcc->connection_id = connection_id;
     mcc->bitrate_per_sec = ~0;
 #ifdef RED_STATISTICS
-    if (!(mcc->ping_timer = core->timer_add(core, ping_timer_cb, NULL))) {
+    if (!(mcc->ping_timer = reds_get_core_interface(reds)->timer_add(reds_get_core_interface(reds),
+                                                                     ping_timer_cb, NULL))) {
         spice_error("ping timer create failed");
     }
     mcc->ping_interval = PING_INTERVAL;
@@ -1178,7 +1179,7 @@ MainChannel* main_channel_new(void)
     channel_cbs.handle_migrate_data = main_channel_handle_migrate_data;
 
     // TODO: set the migration flag of the channel
-    channel = red_channel_create_parser(sizeof(MainChannel), core,
+    channel = red_channel_create_parser(sizeof(MainChannel), reds_get_core_interface(reds),
                                         SPICE_CHANNEL_MAIN, 0,
                                         FALSE, /* handle_acks */
                                         spice_get_client_channel_parser(SPICE_CHANNEL_MAIN, NULL),

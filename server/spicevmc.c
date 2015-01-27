@@ -524,7 +524,7 @@ SpiceCharDeviceState *spicevmc_device_connect(SpiceCharDeviceInstance *sin,
     channel_cbs.handle_migrate_data = spicevmc_channel_client_handle_migrate_data;
 
     state = (SpiceVmcState*)red_channel_create(sizeof(SpiceVmcState),
-                                   core, channel_type, id[channel_type]++,
+                                   reds_get_core_interface(reds), channel_type, id[channel_type]++,
                                    FALSE /* handle_acks */,
                                    spicevmc_red_channel_client_handle_message,
                                    &channel_cbs,

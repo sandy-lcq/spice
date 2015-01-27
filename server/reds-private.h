@@ -235,6 +235,8 @@ struct RedsState {
     gboolean exit_on_disconnect;
 
     RedSSLParameters ssl_parameters;
+    SpiceCoreInterfaceInternal *core;
+
 };
 
 #endif

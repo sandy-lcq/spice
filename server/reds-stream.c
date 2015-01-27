@@ -22,6 +22,7 @@
 #include "main-dispatcher.h"
 #include "red-common.h"
 #include "reds-stream.h"
+#include "reds.h"
 #include "common/log.h"
 
 #include <errno.h>
@@ -43,8 +44,6 @@ struct AsyncRead {
     AsyncReadError error;
 };
 typedef struct AsyncRead AsyncRead;
-
-extern SpiceCoreInterfaceInternal *core;
 
 #if HAVE_SASL
 #include <sasl/sasl.h>
@@ -168,7 +167,7 @@ static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
 void reds_stream_remove_watch(RedsStream* s)
 {
     if (s->watch) {
-        core->watch_remove(s->watch);
+        reds_get_core_interface(reds)->watch_remove(s->watch);
         s->watch = NULL;
     }
 }
@@ -497,9 +496,10 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
                 switch (errno) {
                 case EAGAIN:
                     if (!async->stream->watch) {
-                        async->stream->watch = core->watch_add(core, async->stream->socket,
-                                                               SPICE_WATCH_EVENT_READ,
-                                                               async_read_handler, async);
+                        async->stream->watch = reds_get_core_interface(reds)->watch_add(reds_get_core_interface(reds),
+                                                                                        async->stream->socket,
+                                                                                        SPICE_WATCH_EVENT_READ,
+                                                                                        async_read_handler, async);
                     }
                     return;
                 case EINTR:

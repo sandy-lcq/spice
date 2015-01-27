@@ -848,7 +848,8 @@ static void smartcard_init(void)
     channel_cbs.handle_migrate_data = smartcard_channel_client_handle_migrate_data;
 
     g_smartcard_channel = (SmartCardChannel*)red_channel_create(sizeof(SmartCardChannel),
-                                             core, SPICE_CHANNEL_SMARTCARD, 0,
+                                             reds_get_core_interface(reds),
+                                             SPICE_CHANNEL_SMARTCARD, 0,
                                              FALSE /* handle_acks */,
                                              smartcard_channel_handle_message,
                                              &channel_cbs,

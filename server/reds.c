@@ -72,8 +72,6 @@
 
 #include "reds-private.h"
 
-SpiceCoreInterfaceInternal *core = NULL;
-
 static SpiceCoreInterface *core_public = NULL;
 
 static SpiceTimer *adapter_timer_add(const SpiceCoreInterfaceInternal *iface, SpiceTimerFunc func, void *opaque)
@@ -189,7 +187,7 @@ static ChannelSecurityOptions *reds_find_channel_security(RedsState *reds, int i
 
 void reds_handle_channel_event(RedsState *reds, int event, SpiceChannelEventInfo *info)
 {
-    core->channel_event(event, info);
+    reds->core->channel_event(event, info);
 
     if (event == SPICE_CHANNEL_EVENT_DISCONNECTED) {
         free(info);
@@ -381,7 +379,7 @@ static void reds_mig_cleanup(RedsState *reds)
         reds->mig_inprogress = FALSE;
         reds->mig_wait_connect = FALSE;
         reds->mig_wait_disconnect = FALSE;
-        core->timer_cancel(reds->mig_timer);
+        reds->core->timer_cancel(reds->mig_timer);
         reds_mig_cleanup_wait_disconnect(reds);
     }
 }
@@ -2256,10 +2254,10 @@ static void reds_handle_ssl_accept(int fd, int event, void *data)
             reds_link_free(link);
             return;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
-            core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_READ);
+            reds->core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_READ);
             return;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
-            core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_WRITE);
+            reds->core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_WRITE);
             return;
         case REDS_STREAM_SSL_STATUS_OK:
             reds_stream_remove_watch(link->stream);
@@ -2337,12 +2335,12 @@ static RedLinkInfo *reds_init_client_ssl_connection(RedsState *reds, int socket)
         case REDS_STREAM_SSL_STATUS_ERROR:
             goto error;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
-            link->stream->watch = core->watch_add(core, link->stream->socket, SPICE_WATCH_EVENT_READ,
-                                            reds_handle_ssl_accept, link);
+            link->stream->watch = reds->core->watch_add(reds->core, link->stream->socket, SPICE_WATCH_EVENT_READ,
+                                                        reds_handle_ssl_accept, link);
             break;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
-            link->stream->watch = core->watch_add(core, link->stream->socket, SPICE_WATCH_EVENT_WRITE,
-                                                  reds_handle_ssl_accept, link);
+            link->stream->watch = reds->core->watch_add(reds->core, link->stream->socket, SPICE_WATCH_EVENT_WRITE,
+                                                        reds_handle_ssl_accept, link);
             break;
     }
     return link;
@@ -2536,9 +2534,9 @@ static int reds_init_net(RedsState *reds)
         if (-1 == reds->listen_socket) {
             return -1;
         }
-        reds->listen_watch = core->watch_add(core, reds->listen_socket,
-                                             SPICE_WATCH_EVENT_READ,
-                                             reds_accept, reds);
+        reds->listen_watch = reds->core->watch_add(reds->core, reds->listen_socket,
+                                                   SPICE_WATCH_EVENT_READ,
+                                                   reds_accept, reds);
         if (reds->listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
@@ -2551,9 +2549,9 @@ static int reds_init_net(RedsState *reds)
         if (-1 == reds->secure_listen_socket) {
             return -1;
         }
-        reds->secure_listen_watch = core->watch_add(core, reds->secure_listen_socket,
-                                                    SPICE_WATCH_EVENT_READ,
-                                                    reds_accept_ssl_connection, reds);
+        reds->secure_listen_watch = reds->core->watch_add(reds->core, reds->secure_listen_socket,
+                                                          SPICE_WATCH_EVENT_READ,
+                                                          reds_accept_ssl_connection, reds);
         if (reds->secure_listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
@@ -2562,9 +2560,9 @@ static int reds_init_net(RedsState *reds)
 
     if (reds->spice_listen_socket_fd != -1 ) {
         reds->listen_socket = reds->spice_listen_socket_fd;
-        reds->listen_watch = core->watch_add(core, reds->listen_socket,
-                                             SPICE_WATCH_EVENT_READ,
-                                             reds_accept, reds);
+        reds->listen_watch = reds->core->watch_add(reds->core, reds->listen_socket,
+                                                   SPICE_WATCH_EVENT_READ,
+                                                   reds_accept, reds);
         if (reds->listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
@@ -2799,7 +2797,7 @@ static void reds_mig_started(RedsState *reds)
 
     reds->mig_inprogress = TRUE;
     reds->mig_wait_connect = TRUE;
-    core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
+    reds->core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
 }
 
 static void reds_mig_fill_wait_disconnect(RedsState *reds)
@@ -2818,7 +2816,7 @@ static void reds_mig_fill_wait_disconnect(RedsState *reds)
         ring_add(&reds->mig_wait_disconnect_clients, &wait_client->link);
     }
     reds->mig_wait_disconnect = TRUE;
-    core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
+    reds->core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
 }
 
 static void reds_mig_cleanup_wait_disconnect(RedsState *reds)
@@ -3314,20 +3312,20 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
         goto err;
     }
     core_public = core_interface;
-    core = &core_interface_adapter;
+    reds->core = &core_interface_adapter;
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
     reds_init_vd_agent_resources(reds);
     ring_init(&reds->clients);
     reds->num_clients = 0;
-    main_dispatcher_init(core);
+    main_dispatcher_init(reds->core);
     ring_init(&reds->channels);
     ring_init(&reds->mig_target_clients);
     ring_init(&reds->char_devs_states);
     ring_init(&reds->mig_wait_disconnect_clients);
     reds->vm_running = TRUE; /* for backward compatibility */
 
-    if (!(reds->mig_timer = core->timer_add(core, migrate_timeout, reds))) {
+    if (!(reds->mig_timer = reds->core->timer_add(reds->core, migrate_timeout, reds))) {
         spice_error("migration timer create failed");
     }
 
@@ -4024,4 +4022,9 @@ spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds)
 spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds)
 {
     return reds->zlib_glz_state;
+}
+
+SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds)
+{
+    return reds->core;
 }

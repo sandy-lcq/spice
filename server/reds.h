@@ -76,8 +76,6 @@ enum {
 extern uint32_t renderers[RED_RENDERER_LAST];
 extern uint32_t num_renderers;
 
-extern struct SpiceCoreInterfaceInternal *core;
-
 // Temporary measures to make splitting reds.c to inputs-channel.c easier
 
 /* should be called only from main_dispatcher */
@@ -116,5 +114,6 @@ void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_
 uint32_t reds_get_streaming_video(const RedsState *reds);
 spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds);
 spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds);
+SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds);
 
 #endif
