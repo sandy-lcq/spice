@@ -149,7 +149,6 @@ static SpiceMigrateInstance *migration_interface = NULL;
 
 static TicketAuthentication taTicket;
 
-static int spice_secure_port = -1;
 static int spice_listen_socket_fd = -1;
 static char spice_addr[256];
 static int spice_family = PF_UNSPEC;
@@ -2584,8 +2583,8 @@ static int reds_init_net(RedsState *reds)
         }
     }
 
-    if (spice_secure_port != -1) {
-        reds->secure_listen_socket = reds_init_socket(spice_addr, spice_secure_port,
+    if (reds->spice_secure_port != -1) {
+        reds->secure_listen_socket = reds_init_socket(spice_addr, reds->spice_secure_port,
                                                       spice_family);
         if (-1 == reds->secure_listen_socket) {
             return -1;
@@ -3440,6 +3439,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds = spice_new0(RedsState, 1);
     reds->default_renderer = "sw";
     reds->spice_port = -1;
+    reds->spice_secure_port = -1;
     return reds;
 }
 
@@ -3651,7 +3651,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_tls(SpiceServer *s, int port,
     }
     memset(&ssl_parameters, 0, sizeof(ssl_parameters));
 
-    spice_secure_port = port;
+    s->spice_secure_port = port;
     g_strlcpy(ssl_parameters.ca_certificate_file, ca_cert_file,
               sizeof(ssl_parameters.ca_certificate_file));
     g_strlcpy(ssl_parameters.certs_file, certs_file,

@@ -194,6 +194,7 @@ struct RedsState {
     const char *default_renderer;
 
     int spice_port;
+    int spice_secure_port;
 };
 
 #endif
