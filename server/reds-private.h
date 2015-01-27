@@ -220,6 +220,7 @@ struct RedsState {
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
 
+    gboolean agent_mouse;
     gboolean agent_copypaste;
     gboolean agent_file_xfer;
     gboolean exit_on_disconnect;

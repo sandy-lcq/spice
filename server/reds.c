@@ -146,7 +146,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
-int agent_mouse = TRUE;
 
 RedsState *reds = NULL;
 
@@ -577,9 +576,9 @@ static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
     main_channel_push_mouse_mode(reds->main_channel, reds->mouse_mode, reds->is_client_mouse_allowed);
 }
 
-int reds_get_agent_mouse(void)
+gboolean reds_get_agent_mouse(const RedsState *reds)
 {
-    return agent_mouse;
+    return reds->agent_mouse;
 }
 
 static void reds_update_mouse_mode(RedsState *reds)
@@ -587,7 +586,7 @@ static void reds_update_mouse_mode(RedsState *reds)
     int allowed = 0;
     int qxl_count = red_dispatcher_qxl_count();
 
-    if ((agent_mouse && reds->vdagent) ||
+    if ((reds->agent_mouse && reds->vdagent) ||
         (inputs_channel_has_tablet(reds->inputs_channel) && qxl_count == 1)) {
         allowed = reds->dispatcher_allows_client_mouse;
     }
@@ -3426,6 +3425,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
     reds->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
     reds->zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
+    reds->agent_mouse = TRUE;
     reds->agent_copypaste = TRUE;
     reds->agent_file_xfer = TRUE;
     reds->exit_on_disconnect = FALSE;
@@ -3807,7 +3807,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_playback_compression(SpiceServer *s, int
 SPICE_GNUC_VISIBLE int spice_server_set_agent_mouse(SpiceServer *s, int enable)
 {
     spice_assert(reds == s);
-    agent_mouse = enable;
+    reds->agent_mouse = enable;
     reds_update_mouse_mode(reds);
     return 0;
 }
