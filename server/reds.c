@@ -148,6 +148,7 @@ static long *lock_count;
 RedsState *reds = NULL;
 
 typedef struct RedLinkInfo {
+    RedsState *reds;
     RedsStream *stream;
     SpiceLinkHeader link_header;
     SpiceLinkMess *link_mess;
@@ -1341,6 +1342,7 @@ int reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
 
 static void reds_channel_init_auth_caps(RedLinkInfo *link, RedChannel *channel)
 {
+    RedsState *reds = link->reds;
     if (reds->sasl_enabled && !link->skip_auth) {
         red_channel_set_common_cap(channel, SPICE_COMMON_CAP_AUTH_SASL);
     } else {
@@ -1893,6 +1895,7 @@ static void reds_handle_link(RedsState *reds, RedLinkInfo *link)
 static void reds_handle_ticket(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
+    RedsState *reds = link->reds;
     char *password;
     time_t ltime;
     int password_size;
@@ -1977,6 +1980,7 @@ static void reds_handle_auth_sasl_steplen(void *opaque);
 static void reds_handle_auth_sasl_step(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
+    RedsState *reds = link->reds;
     RedsSaslError status;
 
     status = reds_sasl_handle_auth_step(link->stream, reds_handle_auth_sasl_steplen, link);
@@ -2017,6 +2021,7 @@ static void reds_handle_auth_sasl_steplen(void *opaque)
 static void reds_handle_auth_sasl_start(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
+    RedsState *reds = link->reds;
     RedsSaslError status;
 
     status = reds_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
@@ -2081,6 +2086,7 @@ static void reds_start_auth_sasl(RedLinkInfo *link)
 static void reds_handle_auth_mechanism(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
+    RedsState *reds = link->reds;
 
     spice_info("Auth method: %d", link->auth_mechanism.auth_mechanism);
 
@@ -2106,6 +2112,7 @@ static void reds_handle_auth_mechanism(void *opaque)
 
 static int reds_security_check(RedLinkInfo *link)
 {
+    RedsState *reds = link->reds;
     ChannelSecurityOptions *security_option = reds_find_channel_security(reds, link->link_mess->channel_type);
     uint32_t security = security_option ? security_option->options : reds->default_channel_security;
     return (reds_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_SSL)) ||
@@ -2115,6 +2122,7 @@ static int reds_security_check(RedLinkInfo *link)
 static void reds_handle_read_link_done(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
+    RedsState *reds = link->reds;
     SpiceLinkMess *link_mess = link->link_mess;
     uint32_t num_caps;
     uint32_t *caps;
@@ -2194,6 +2202,7 @@ static void reds_handle_link_error(void *opaque, int err)
 static void reds_handle_read_header_done(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
+    RedsState *reds = link->reds;
     SpiceLinkHeader *header = &link->link_header;
 
     header->major_version = GUINT32_FROM_LE(header->major_version);
@@ -2247,6 +2256,7 @@ static void reds_handle_new_link(RedLinkInfo *link)
 static void reds_handle_ssl_accept(int fd, int event, void *data)
 {
     RedLinkInfo *link = (RedLinkInfo *)data;
+    RedsState *reds = link->reds;
     int return_code = reds_stream_ssl_accept(link->stream);
 
     switch (return_code) {
@@ -2303,6 +2313,7 @@ static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
     }
 
     link = spice_new0(RedLinkInfo, 1);
+    link->reds = reds;
     link->stream = reds_stream_new(socket);
 
     /* gather info + send event */
