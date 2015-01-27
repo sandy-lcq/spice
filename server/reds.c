@@ -144,8 +144,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 #define REDS_TOKENS_TO_SEND 5
 #define REDS_VDI_PORT_NUM_RECEIVE_BUFFS 5
 
-static TicketAuthentication taTicket;
-
 static int sasl_enabled = 0; // sasl disabled by default
 #if HAVE_SASL
 static char *sasl_appname = NULL; // default to "spice" if NULL
@@ -1956,15 +1954,15 @@ static void reds_handle_ticket(void *opaque)
     password[password_size] = '\0';
 
     if (ticketing_enabled && !link->skip_auth) {
-        int expired =  taTicket.expiration_time < ltime;
+        int expired =  reds->taTicket.expiration_time < ltime;
 
-        if (strlen(taTicket.password) == 0) {
+        if (strlen(reds->taTicket.password) == 0) {
             spice_warning("Ticketing is enabled, but no password is set. "
                           "please set a ticket first");
             goto error;
         }
 
-        if (expired || strcmp(password, taTicket.password) != 0) {
+        if (expired || strcmp(password, reds->taTicket.password) != 0) {
             if (expired) {
                 spice_warning("Ticket has expired");
             } else {
@@ -3558,7 +3556,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_exit_on_disconnect(SpiceServer *s, int f
 SPICE_GNUC_VISIBLE int spice_server_set_noauth(SpiceServer *s)
 {
     spice_assert(reds == s);
-    memset(taTicket.password, 0, sizeof(taTicket.password));
+    memset(s->taTicket.password, 0, sizeof(s->taTicket.password));
     ticketing_enabled = 0;
     return 0;
 }
@@ -3617,18 +3615,18 @@ SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *s,
     on_activating_ticketing(reds);
     ticketing_enabled = 1;
     if (lifetime == 0) {
-        taTicket.expiration_time = INT_MAX;
+        reds->taTicket.expiration_time = INT_MAX;
     } else {
         time_t now = time(NULL);
-        taTicket.expiration_time = now + lifetime;
+        reds->taTicket.expiration_time = now + lifetime;
     }
     if (passwd != NULL) {
         if (strlen(passwd) > SPICE_MAX_PASSWORD_LENGTH)
             return -1;
-        g_strlcpy(taTicket.password, passwd, sizeof(taTicket.password));
+        g_strlcpy(reds->taTicket.password, passwd, sizeof(reds->taTicket.password));
     } else {
-        memset(taTicket.password, 0, sizeof(taTicket.password));
-        taTicket.expiration_time = 0;
+        memset(reds->taTicket.password, 0, sizeof(reds->taTicket.password));
+        reds->taTicket.expiration_time = 0;
     }
     return 0;
 }
