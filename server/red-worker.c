@@ -231,7 +231,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             red_record_qxl_command(worker->record_fd, &worker->mem_slots, ext_cmd,
                                    stat_now(CLOCK_MONOTONIC));
 
-        stat_inc_counter(worker->command_counter, 1);
+        stat_inc_counter(reds, worker->command_counter, 1);
         worker->display_poll_tries = 0;
         switch (ext_cmd.cmd.type) {
         case QXL_CMD_DRAW: {
@@ -507,7 +507,7 @@ CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
                                         channel_cbs,
                                         migration_flags);
     spice_return_val_if_fail(channel, NULL);
-    red_channel_set_stat_node(channel, stat_add_node(worker->stat, name, TRUE));
+    red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, name, TRUE));
 
     common = (CommonChannel *)channel;
     common->qxl = worker->qxl;
@@ -842,7 +842,7 @@ static void handle_dev_wakeup(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
 
-    stat_inc_counter(worker->wakeup_counter, 1);
+    stat_inc_counter(reds, worker->wakeup_counter, 1);
     red_dispatcher_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_WAKEUP);
 }
 
@@ -1527,9 +1527,9 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 #ifdef RED_STATISTICS
     char worker_str[20];
     sprintf(worker_str, "display[%d]", worker->qxl->id);
-    worker->stat = stat_add_node(INVALID_STAT_REF, worker_str, TRUE);
-    worker->wakeup_counter = stat_add_counter(worker->stat, "wakeups", TRUE);
-    worker->command_counter = stat_add_counter(worker->stat, "commands", TRUE);
+    worker->stat = stat_add_node(reds, INVALID_STAT_REF, worker_str, TRUE);
+    worker->wakeup_counter = stat_add_counter(reds, worker->stat, "wakeups", TRUE);
+    worker->command_counter = stat_add_counter(reds, worker->stat, "commands", TRUE);
 #endif
 
     worker->dispatch_watch =

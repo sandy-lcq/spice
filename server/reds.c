@@ -216,7 +216,7 @@ static void reds_link_free(RedLinkInfo *link)
 
 #ifdef RED_STATISTICS
 
-static void insert_stat_node(StatNodeRef parent, StatNodeRef ref)
+static void reds_insert_stat_node(RedsState *reds, StatNodeRef parent, StatNodeRef ref)
 {
     SpiceStatNode *node = &reds->stat->nodes[ref];
     uint32_t pos = INVALID_STAT_REF;
@@ -243,7 +243,7 @@ static void insert_stat_node(StatNodeRef parent, StatNodeRef ref)
     }
 }
 
-StatNodeRef stat_add_node(StatNodeRef parent, const char *name, int visible)
+StatNodeRef stat_add_node(RedsState *reds, StatNodeRef parent, const char *name, int visible)
 {
     StatNodeRef ref;
     SpiceStatNode *node;
@@ -280,12 +280,12 @@ StatNodeRef stat_add_node(StatNodeRef parent, const char *name, int visible)
     node->value = 0;
     node->flags = SPICE_STAT_NODE_FLAG_ENABLED | (visible ? SPICE_STAT_NODE_FLAG_VISIBLE : 0);
     g_strlcpy(node->name, name, sizeof(node->name));
-    insert_stat_node(parent, ref);
+    reds_insert_stat_node(reds, parent, ref);
     pthread_mutex_unlock(&reds->stat_lock);
     return ref;
 }
 
-static void stat_remove(SpiceStatNode *node)
+static void reds_stat_remove(RedsState *reds, SpiceStatNode *node)
 {
     pthread_mutex_lock(&reds->stat_lock);
     node->flags &= ~SPICE_STAT_NODE_FLAG_ENABLED;
@@ -294,14 +294,14 @@ static void stat_remove(SpiceStatNode *node)
     pthread_mutex_unlock(&reds->stat_lock);
 }
 
-void stat_remove_node(StatNodeRef ref)
+void stat_remove_node(RedsState *reds, StatNodeRef ref)
 {
-    stat_remove(&reds->stat->nodes[ref]);
+    reds_stat_remove(reds, &reds->stat->nodes[ref]);
 }
 
-uint64_t *stat_add_counter(StatNodeRef parent, const char *name, int visible)
+uint64_t *stat_add_counter(RedsState *reds, StatNodeRef parent, const char *name, int visible)
 {
-    StatNodeRef ref = stat_add_node(parent, name, visible);
+    StatNodeRef ref = stat_add_node(reds, parent, name, visible);
     SpiceStatNode *node;
 
     if (ref == INVALID_STAT_REF) {
@@ -312,12 +312,12 @@ uint64_t *stat_add_counter(StatNodeRef parent, const char *name, int visible)
     return &node->value;
 }
 
-void stat_remove_counter(uint64_t *counter)
+void stat_remove_counter(RedsState *reds, uint64_t *counter)
 {
-    stat_remove((SpiceStatNode *)(counter - offsetof(SpiceStatNode, value)));
+    reds_stat_remove(reds, (SpiceStatNode *)(counter - offsetof(SpiceStatNode, value)));
 }
 
-void reds_update_stat_value(uint32_t value)
+void stat_update_value(RedsState *reds, uint32_t value)
 {
     RedsStatValue *stat_value = &reds->roundtrip_stat;
 

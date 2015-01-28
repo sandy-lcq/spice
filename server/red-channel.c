@@ -38,7 +38,6 @@
 #include "common/generated_server_marshallers.h"
 #include "common/ring.h"
 
-#include "stat.h"
 #include "red-channel.h"
 #include "reds.h"
 #include "reds-stream.h"
@@ -396,7 +395,7 @@ static void red_channel_client_on_output(void *opaque, int n)
     if (rcc->connectivity_monitor.timer) {
         rcc->connectivity_monitor.out_bytes += n;
     }
-    stat_inc_counter(rcc->channel->out_bytes_counter, n);
+    stat_inc_counter(reds, rcc->channel->out_bytes_counter, n);
 }
 
 static void red_channel_client_on_input(void *opaque, int n)
@@ -1166,7 +1165,7 @@ void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat)
 
 #ifdef RED_STATISTICS
     channel->stat = stat;
-    channel->out_bytes_counter = stat_add_counter(stat, "out_bytes", TRUE);
+    channel->out_bytes_counter = stat_add_counter(channel->reds, stat, "out_bytes", TRUE);
 #endif
 }
 

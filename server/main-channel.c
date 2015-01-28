@@ -985,7 +985,7 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             red_channel_client_handle_message(rcc, size, type, message);
         }
 #ifdef RED_STATISTICS
-        reds_update_stat_value(roundtrip);
+        stat_update_value(rcc->channel->reds, roundtrip);
 #endif
         break;
     }

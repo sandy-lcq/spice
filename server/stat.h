@@ -25,23 +25,24 @@ typedef uint32_t StatNodeRef;
 #define INVALID_STAT_REF (~(StatNodeRef)0)
 
 #ifdef RED_STATISTICS
-StatNodeRef stat_add_node(StatNodeRef parent, const char *name, int visible);
-void stat_remove_node(StatNodeRef node);
-uint64_t *stat_add_counter(StatNodeRef parent, const char *name, int visible);
-void stat_remove_counter(uint64_t *counter);
+StatNodeRef stat_add_node(SpiceServer *reds, StatNodeRef parent, const char *name, int visible);
+void stat_remove_node(SpiceServer *reds, StatNodeRef node);
+uint64_t *stat_add_counter(SpiceServer *reds, StatNodeRef parent, const char *name, int visible);
+void stat_remove_counter(SpiceServer *reds, uint64_t *counter);
+void stat_update_value(SpiceServer *reds, uint32_t value);
 
-#define stat_inc_counter(counter, value) {  \
+#define stat_inc_counter(reds, counter, value) {  \
     if (counter) {                          \
         *(counter) += (value);              \
     }                                       \
 }
 
 #else
-#define stat_add_node(p, n, v) INVALID_STAT_REF
-#define stat_remove_node(n)
-#define stat_add_counter(p, n, v) NULL
-#define stat_remove_counter(c)
-#define stat_inc_counter(c, v)
+#define stat_add_node(r, p, n, v) INVALID_STAT_REF
+#define stat_remove_node(r, n)
+#define stat_add_counter(r, p, n, v) NULL
+#define stat_remove_counter(r, c)
+#define stat_inc_counter(r, c, v)
 #endif /* RED_STATISTICS */
 
 typedef uint64_t stat_time_t;

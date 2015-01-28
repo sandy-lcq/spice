@@ -2046,12 +2046,12 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
     stat_init(&display->__exclude_stat, "__exclude", stat_clock);
 #ifdef RED_STATISTICS
     RedChannel *channel = RED_CHANNEL(display);
-    display->cache_hits_counter = stat_add_counter(channel->stat,
-                                                           "cache_hits", TRUE);
-    display->add_to_cache_counter = stat_add_counter(channel->stat,
-                                                             "add_to_cache", TRUE);
-    display->non_cache_counter = stat_add_counter(channel->stat,
-                                                          "non_cache", TRUE);
+    display->cache_hits_counter = stat_add_counter(reds, channel->stat,
+                                                   "cache_hits", TRUE);
+    display->add_to_cache_counter = stat_add_counter(reds, channel->stat,
+                                                     "add_to_cache", TRUE);
+    display->non_cache_counter = stat_add_counter(reds, channel->stat,
+                                                  "non_cache", TRUE);
 #endif
     stat_compress_init(&display->lz_stat, "lz", stat_clock);
     stat_compress_init(&display->glz_stat, "glz", stat_clock);
