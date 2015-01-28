@@ -40,7 +40,10 @@ typedef struct MonitorMode {
     uint32_t y_res;
 } MonitorMode;
 
+typedef struct VDIPortState VDIPortState;
+
 typedef struct VDIReadBuf {
+    VDIPortState *state;
     RingItem link;
     uint32_t refs;
 
@@ -54,7 +57,7 @@ enum {
     VDI_PORT_READ_STATE_READ_DATA,
 };
 
-typedef struct VDIPortState {
+struct VDIPortState {
     SpiceCharDeviceState *base;
     uint32_t plug_generation;
     int client_agent_started;
@@ -77,7 +80,7 @@ typedef struct VDIPortState {
 
     SpiceMigrateDataMain *mig_data; /* storing it when migration data arrives
                                        before agent is attached */
-} VDIPortState;
+};
 
 /* messages that are addressed to the agent and are created in the server */
 typedef struct __attribute__ ((__packed__)) VDInternalBuf {
