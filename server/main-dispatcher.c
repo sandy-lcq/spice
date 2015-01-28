@@ -86,7 +86,7 @@ static void main_dispatcher_self_handle_channel_event(
                                                 int event,
                                                 SpiceChannelEventInfo *info)
 {
-    reds_handle_channel_event(event, info);
+    reds_handle_channel_event(reds, event, info);
 }
 
 static void main_dispatcher_handle_channel_event(void *opaque,

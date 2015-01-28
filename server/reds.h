@@ -48,7 +48,7 @@ struct SpiceMigrateState {
 };
 
 /* main thread only */
-void reds_handle_channel_event(int event, SpiceChannelEventInfo *info);
+void reds_handle_channel_event(RedsState *reds, int event, SpiceChannelEventInfo *info);
 
 void reds_disable_mm_time(RedsState *reds);
 void reds_enable_mm_time(RedsState *reds);

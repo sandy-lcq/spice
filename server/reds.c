@@ -187,7 +187,7 @@ static ChannelSecurityOptions *reds_find_channel_security(RedsState *reds, int i
     return now;
 }
 
-void reds_handle_channel_event(int event, SpiceChannelEventInfo *info)
+void reds_handle_channel_event(RedsState *reds, int event, SpiceChannelEventInfo *info)
 {
     core->channel_event(event, info);
 
