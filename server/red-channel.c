@@ -2046,11 +2046,12 @@ void red_channel_client_pipe_remove_and_release(RedChannelClient *rcc,
  * pretty tied together.
  */
 
-RedClient *red_client_new(int migrated)
+RedClient *red_client_new(RedsState *reds, int migrated)
 {
     RedClient *client;
 
     client = spice_malloc0(sizeof(RedClient));
+    client->reds = reds;
     ring_init(&client->channels);
     pthread_mutex_init(&client->lock, NULL);
     client->thread_id = pthread_self();
@@ -2212,7 +2213,7 @@ void red_client_semi_seamless_migrate_complete(RedClient *client)
         }
     }
     pthread_mutex_unlock(&client->lock);
-    reds_on_client_semi_seamless_migrate_complete(reds, client);
+    reds_on_client_semi_seamless_migrate_complete(client->reds, client);
 }
 
 /* should be called only from the main thread */

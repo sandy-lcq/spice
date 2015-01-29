@@ -1648,7 +1648,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     link->link_mess = NULL;
     reds_link_free(link);
     caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
-    client = red_client_new(mig_target);
+    client = red_client_new(reds, mig_target);
     ring_add(&reds->clients, &client->link);
     reds->num_clients++;
     mcc = main_channel_link(reds->main_channel, client,

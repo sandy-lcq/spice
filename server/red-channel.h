@@ -563,7 +563,10 @@ typedef void (*channel_client_callback)(RedChannelClient *rcc);
 typedef void (*channel_client_callback_data)(RedChannelClient *rcc, void *data);
 void red_channel_apply_clients(RedChannel *channel, channel_client_callback v);
 
+struct RedsState;
+
 struct RedClient {
+    struct RedsState *reds;
     RingItem link;
     Ring channels;
     int channels_num;
@@ -585,7 +588,7 @@ struct RedClient {
     int refs;
 };
 
-RedClient *red_client_new(int migrated);
+RedClient *red_client_new(struct RedsState *reds, int migrated);
 
 /*
  * disconnects all the client's channels (should be called from the client's thread)
