@@ -61,11 +61,19 @@ struct SpiceKbdState {
     /* track key press state */
     bool key[0x7f];
     bool key_ext[0x7f];
+    RedsState *reds;
 };
 
-static SpiceKbdState* spice_kbd_state_new(void)
+static SpiceKbdState* spice_kbd_state_new(RedsState *reds)
 {
-    return spice_new0(SpiceKbdState, 1);
+    SpiceKbdState *st = spice_new0(SpiceKbdState, 1);
+    st->reds = reds;
+    return st;
+}
+
+RedsState* spice_kbd_state_get_server(SpiceKbdState *dev)
+{
+    return dev->reds;
 }
 
 struct SpiceMouseState {
@@ -666,7 +674,7 @@ int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboar
         return -1;
     }
     inputs->keyboard = keyboard;
-    inputs->keyboard->st = spice_kbd_state_new();
+    inputs->keyboard->st = spice_kbd_state_new(reds);
     return 0;
 }
 

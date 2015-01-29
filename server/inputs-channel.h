@@ -40,5 +40,6 @@ int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet
 int inputs_channel_has_tablet(InputsChannel *inputs);
 void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet);
 RedsState* spice_tablet_state_get_server(SpiceTabletState *dev);
+RedsState* spice_kbd_state_get_server(SpiceKbdState *dev);
 
 #endif
