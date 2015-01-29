@@ -79,6 +79,8 @@
  *
  * */
 
+struct RedsState;
+
 /* buffer that is used for writing to the device */
 typedef struct SpiceCharDeviceWriteBuffer {
     RingItem link;
@@ -128,6 +130,7 @@ typedef struct SpiceCharDeviceCallbacks {
 } SpiceCharDeviceCallbacks;
 
 SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *sin,
+                                                     struct RedsState *reds,
                                                      uint32_t client_tokens_interval,
                                                      uint32_t self_tokens,
                                                      SpiceCharDeviceCallbacks *cbs,

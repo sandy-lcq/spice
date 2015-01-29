@@ -542,6 +542,7 @@ SpiceCharDeviceState *spicevmc_device_connect(SpiceCharDeviceInstance *sin,
     char_dev_cbs.remove_client = spicevmc_char_dev_remove_client;
 
     state->chardev_st = spice_char_device_state_create(sin,
+                                                       reds,
                                                        0, /* tokens interval */
                                                        ~0, /* self tokens */
                                                        &char_dev_cbs,

@@ -280,6 +280,7 @@ static SmartCardDeviceState *smartcard_device_state_new(SpiceCharDeviceInstance 
 
     st = spice_new0(SmartCardDeviceState, 1);
     st->chardev_st = spice_char_device_state_create(sin,
+                                                    reds,
                                                     0, /* tokens interval */
                                                     ~0, /* self tokens */
                                                     &chardev_cbs,

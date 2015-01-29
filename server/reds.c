@@ -2952,6 +2952,7 @@ static SpiceCharDeviceState *attach_to_red_agent(RedsState *reds, SpiceCharDevic
         char_dev_state_cbs.on_free_self_token = vdi_port_on_free_self_token;
 
         state->base = spice_char_device_state_create(sin,
+                                                     reds,
                                                      REDS_TOKENS_TO_SEND,
                                                      REDS_NUM_INTERNAL_AGENT_MESSAGES,
                                                      &char_dev_state_cbs,
