@@ -93,7 +93,7 @@ void reds_update_stat_value(uint32_t value);
 /* callbacks from main channel messages */
 
 void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens);
-void reds_on_main_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens);
+void reds_on_main_agent_tokens(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens);
 uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, size_t size);
 void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf);
 void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *message, size_t size);

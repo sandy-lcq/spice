@@ -940,7 +940,7 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
     reds->agent_state.write_filter.discard_all = FALSE;
 }
 
-void reds_on_main_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens)
+void reds_on_main_agent_tokens(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens)
 {
     if (!reds->vdagent) {
         return;

@@ -902,7 +902,7 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
         SpiceMsgcMainAgentTokens *tokens;
 
         tokens = (SpiceMsgcMainAgentTokens *)message;
-        reds_on_main_agent_tokens(mcc, tokens->num_tokens);
+        reds_on_main_agent_tokens(reds, mcc, tokens->num_tokens);
         break;
     }
     case SPICE_MSGC_MAIN_ATTACH_CHANNELS:
