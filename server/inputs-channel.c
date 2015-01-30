@@ -192,7 +192,7 @@ static void inputs_channel_release_msg_rcv_buf(RedChannelClient *rcc,
      ((state & SPICE_MOUSE_BUTTON_MASK_MIDDLE) ? VD_AGENT_MBUTTON_MASK : 0) |    \
      ((state & SPICE_MOUSE_BUTTON_MASK_RIGHT) ? VD_AGENT_RBUTTON_MASK : 0))
 
-static void activate_modifiers_watch(void)
+static void activate_modifiers_watch(RedsState *reds)
 {
     reds_get_core_interface(reds)->timer_start(key_modifiers_timer, KEY_MODIFIERS_TTL);
 }
@@ -312,7 +312,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         if (key_down->code == CAPS_LOCK_SCAN_CODE ||
             key_down->code == NUM_LOCK_SCAN_CODE ||
             key_down->code == SCROLL_LOCK_SCAN_CODE) {
-            activate_modifiers_watch();
+            activate_modifiers_watch(reds);
         }
     }
     case SPICE_MSGC_INPUTS_KEY_UP: {
@@ -450,7 +450,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
             kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE);
             kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE | 0x80);
         }
-        activate_modifiers_watch();
+        activate_modifiers_watch(reds);
         break;
     }
     case SPICE_MSGC_DISCONNECTING:
