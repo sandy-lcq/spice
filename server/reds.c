@@ -3097,7 +3097,7 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
     }
 #ifdef USE_SMARTCARD
     else if (strcmp(char_device->subtype, SUBTYPE_SMARTCARD) == 0) {
-        if (!(dev_state = smartcard_device_connect(char_device))) {
+        if (!(dev_state = smartcard_device_connect(reds, char_device))) {
             return -1;
         }
     }
@@ -3120,7 +3120,6 @@ static int spice_server_char_device_add_interface(SpiceServer *s,
         if (reds->vm_running) {
             spice_char_device_start(char_device->st);
         }
-        spice_char_device_set_server(char_device->st, reds);
         reds_char_device_add_state(reds, char_device->st);
     } else {
         spice_warning("failed to create device state for %s", char_device->subtype);

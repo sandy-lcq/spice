@@ -114,7 +114,7 @@ static void smartcard_channel_write_to_reader(SpiceCharDeviceWriteBuffer *write_
 
 static MsgItem *smartcard_char_device_on_message_from_device(
     SmartCardDeviceState *state, VSCMsgHeader *header);
-static SmartCardDeviceState *smartcard_device_state_new(SpiceCharDeviceInstance *sin);
+static SmartCardDeviceState *smartcard_device_state_new(RedsState *reds, SpiceCharDeviceInstance *sin);
 static void smartcard_device_state_free(SmartCardDeviceState* st);
 static void smartcard_init(void);
 
@@ -266,7 +266,7 @@ static SpiceCharDeviceInstance *smartcard_readers_get_unattached(void)
     return NULL;
 }
 
-static SmartCardDeviceState *smartcard_device_state_new(SpiceCharDeviceInstance *sin)
+static SmartCardDeviceState *smartcard_device_state_new(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     SmartCardDeviceState *st;
     SpiceCharDeviceCallbacks chardev_cbs = { NULL, };
@@ -312,11 +312,11 @@ void smartcard_device_disconnect(SpiceCharDeviceInstance *char_device)
     smartcard_device_state_free(st);
 }
 
-SpiceCharDeviceState *smartcard_device_connect(SpiceCharDeviceInstance *char_device)
+SpiceCharDeviceState *smartcard_device_connect(RedsState *reds, SpiceCharDeviceInstance *char_device)
 {
     SmartCardDeviceState *st;
 
-    st = smartcard_device_state_new(char_device);
+    st = smartcard_device_state_new(reds, char_device);
     if (smartcard_char_device_add_to_readers(char_device) == -1) {
         smartcard_device_state_free(st);
         return NULL;
