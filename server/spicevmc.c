@@ -504,7 +504,8 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
     }
 }
 
-SpiceCharDeviceState *spicevmc_device_connect(SpiceCharDeviceInstance *sin,
+SpiceCharDeviceState *spicevmc_device_connect(RedsState *reds,
+                                              SpiceCharDeviceInstance *sin,
                                               uint8_t channel_type)
 {
     static uint8_t id[256] = { 0, };
@@ -554,7 +555,7 @@ SpiceCharDeviceState *spicevmc_device_connect(SpiceCharDeviceInstance *sin,
 }
 
 /* Must be called from RedClient handling thread. */
-void spicevmc_device_disconnect(SpiceCharDeviceInstance *sin)
+void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     SpiceVmcState *state;
 

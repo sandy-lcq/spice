@@ -214,8 +214,10 @@ void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
 
 /* api for specific char devices */
 
-SpiceCharDeviceState *spicevmc_device_connect(SpiceCharDeviceInstance *sin,
+SpiceCharDeviceState *spicevmc_device_connect(struct RedsState *reds,
+                                              SpiceCharDeviceInstance *sin,
                                               uint8_t channel_type);
-void spicevmc_device_disconnect(SpiceCharDeviceInstance *char_device);
+void spicevmc_device_disconnect(struct RedsState *reds,
+                                SpiceCharDeviceInstance *char_device);
 
 #endif // CHAR_DEVICE_H_
