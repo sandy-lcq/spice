@@ -337,6 +337,7 @@ struct RedChannel {
 
     // TODO: when different channel_clients are in different threads from Channel -> need to protect!
     pthread_t thread_id;
+    struct RedsState *reds;
 #ifdef RED_STATISTICS
     StatNodeRef stat;
     uint64_t *out_bytes_counter;
@@ -359,6 +360,7 @@ struct RedChannel {
 /* if one of the callbacks should cause disconnect, use red_channel_shutdown and don't
  * explicitly destroy the channel */
 RedChannel *red_channel_create(int size,
+                               struct RedsState *reds,
                                const SpiceCoreInterfaceInternal *core,
                                uint32_t type, uint32_t id,
                                int handle_acks,
@@ -369,13 +371,14 @@ RedChannel *red_channel_create(int size,
 /* alternative constructor, meant for marshaller based (inputs,main) channels,
  * will become default eventually */
 RedChannel *red_channel_create_parser(int size,
-                               const SpiceCoreInterfaceInternal *core,
-                               uint32_t type, uint32_t id,
-                               int handle_acks,
-                               spice_parse_channel_func_t parser,
-                               channel_handle_parsed_proc handle_parsed,
-                               const ChannelCbs *channel_cbs,
-                               uint32_t migration_flags);
+                                      struct RedsState *reds,
+                                      const SpiceCoreInterfaceInternal *core,
+                                      uint32_t type, uint32_t id,
+                                      int handle_acks,
+                                      spice_parse_channel_func_t parser,
+                                      channel_handle_parsed_proc handle_parsed,
+                                      const ChannelCbs *channel_cbs,
+                                      uint32_t migration_flags);
 void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat);
 
 void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs);
@@ -392,7 +395,7 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
 // TODO: tmp, for channels that don't use RedChannel yet (e.g., snd channel), but
 // do use the client callbacks. So the channel clients are not connected (the channel doesn't
 // have list of them, but they do have a link to the channel, and the client has a list of them)
-RedChannel *red_channel_create_dummy(int size, uint32_t type, uint32_t id);
+RedChannel *red_channel_create_dummy(int size, struct RedsState *reds, uint32_t type, uint32_t id);
 RedChannelClient *red_channel_client_create_dummy(int size,
                                                   RedChannel *channel,
                                                   RedClient  *client,

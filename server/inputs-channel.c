@@ -636,6 +636,7 @@ InputsChannel* inputs_channel_new(void)
 
     inputs = (InputsChannel *)red_channel_create_parser(
                                     sizeof(InputsChannel),
+                                    reds,
                                     reds_get_core_interface(reds),
                                     SPICE_CHANNEL_INPUTS, 0,
                                     FALSE, /* handle_acks */

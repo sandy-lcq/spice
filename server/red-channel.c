@@ -1016,6 +1016,7 @@ void red_channel_client_default_migrate(RedChannelClient *rcc)
 }
 
 RedChannel *red_channel_create(int size,
+                               RedsState *reds,
                                const SpiceCoreInterfaceInternal *core,
                                uint32_t type, uint32_t id,
                                int handle_acks,
@@ -1039,6 +1040,7 @@ RedChannel *red_channel_create(int size,
     channel->migration_flags = migration_flags;
     memcpy(&channel->channel_cbs, channel_cbs, sizeof(ChannelCbs));
 
+    channel->reds = reds;
     channel->core = core;
     ring_init(&channel->clients);
 
@@ -1095,7 +1097,7 @@ SpiceCoreInterfaceInternal dummy_core = {
     .watch_remove = dummy_watch_remove,
 };
 
-RedChannel *red_channel_create_dummy(int size, uint32_t type, uint32_t id)
+RedChannel *red_channel_create_dummy(int size, RedsState *reds, uint32_t type, uint32_t id)
 {
     RedChannel *channel;
     ClientCbs client_cbs = { NULL, };
@@ -1105,6 +1107,7 @@ RedChannel *red_channel_create_dummy(int size, uint32_t type, uint32_t id)
     channel->type = type;
     channel->id = id;
     channel->refs = 1;
+    channel->reds = reds;
     channel->core = &dummy_core;
     ring_init(&channel->clients);
     client_cbs.connect = red_channel_client_default_connect;
@@ -1132,15 +1135,16 @@ static int do_nothing_handle_message(RedChannelClient *rcc,
 }
 
 RedChannel *red_channel_create_parser(int size,
-                               const SpiceCoreInterfaceInternal *core,
-                               uint32_t type, uint32_t id,
-                               int handle_acks,
-                               spice_parse_channel_func_t parser,
-                               channel_handle_parsed_proc handle_parsed,
-                               const ChannelCbs *channel_cbs,
-                               uint32_t migration_flags)
+                                      RedsState *reds,
+                                      const SpiceCoreInterfaceInternal *core,
+                                      uint32_t type, uint32_t id,
+                                      int handle_acks,
+                                      spice_parse_channel_func_t parser,
+                                      channel_handle_parsed_proc handle_parsed,
+                                      const ChannelCbs *channel_cbs,
+                                      uint32_t migration_flags)
 {
-    RedChannel *channel = red_channel_create(size, core, type, id,
+    RedChannel *channel = red_channel_create(size, reds, core, type, id,
                                              handle_acks,
                                              do_nothing_handle_message,
                                              channel_cbs,

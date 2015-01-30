@@ -1179,7 +1179,8 @@ MainChannel* main_channel_new(void)
     channel_cbs.handle_migrate_data = main_channel_handle_migrate_data;
 
     // TODO: set the migration flag of the channel
-    channel = red_channel_create_parser(sizeof(MainChannel), reds_get_core_interface(reds),
+    channel = red_channel_create_parser(sizeof(MainChannel), reds,
+                                        reds_get_core_interface(reds),
                                         SPICE_CHANNEL_MAIN, 0,
                                         FALSE, /* handle_acks */
                                         spice_get_client_channel_parser(SPICE_CHANNEL_MAIN, NULL),

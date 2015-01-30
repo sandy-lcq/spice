@@ -1519,7 +1519,7 @@ void snd_attach_playback(SpicePlaybackInstance *sin)
     sin->st->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
-    channel = red_channel_create_dummy(sizeof(RedChannel), SPICE_CHANNEL_PLAYBACK, 0);
+    channel = red_channel_create_dummy(sizeof(RedChannel), reds, SPICE_CHANNEL_PLAYBACK, 0);
 
     client_cbs.connect = snd_set_playback_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
@@ -1549,7 +1549,7 @@ void snd_attach_record(SpiceRecordInstance *sin)
     sin->st->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
-    channel = red_channel_create_dummy(sizeof(RedChannel), SPICE_CHANNEL_RECORD, 0);
+    channel = red_channel_create_dummy(sizeof(RedChannel), reds, SPICE_CHANNEL_RECORD, 0);
 
     client_cbs.connect = snd_set_record_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
