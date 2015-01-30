@@ -166,7 +166,7 @@ struct ChannelSecurityOptions {
 
 static void migrate_timeout(void *opaque);
 static RedsMigTargetClient* reds_mig_target_client_find(RedsState *reds, RedClient *client);
-static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mig_client);
+static void reds_mig_target_client_free(RedsMigTargetClient *mig_client);
 static void reds_mig_cleanup_wait_disconnect(RedsState *reds);
 static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *client);
 static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st);
@@ -468,7 +468,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
 
     mig_client = reds_mig_target_client_find(reds, client);
     if (mig_client) {
-        reds_mig_target_client_free(reds, mig_client);
+        reds_mig_target_client_free(mig_client);
     }
 
     if (reds->mig_wait_disconnect) {
@@ -1517,6 +1517,7 @@ static void reds_mig_target_client_add(RedsState *reds, RedClient *client)
     spice_info(NULL);
     mig_client = spice_malloc0(sizeof(RedsMigTargetClient));
     mig_client->client = client;
+    mig_client->reds = reds;
     ring_init(&mig_client->pending_links);
     ring_add(&reds->mig_target_clients, &mig_client->link);
     reds->num_mig_target_clients++;
@@ -1544,7 +1545,6 @@ static void reds_mig_target_client_add_pending_link(RedsMigTargetClient *client,
 {
     RedsMigPendingLink *mig_link;
 
-    spice_assert(reds);
     spice_assert(client);
     mig_link = spice_malloc0(sizeof(RedsMigPendingLink));
     mig_link->link_msg = link_msg;
@@ -1553,12 +1553,12 @@ static void reds_mig_target_client_add_pending_link(RedsMigTargetClient *client,
     ring_add(&client->pending_links, &mig_link->ring_link);
 }
 
-static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mig_client)
+static void reds_mig_target_client_free(RedsMigTargetClient *mig_client)
 {
     RingItem *now, *next;
 
     ring_remove(&mig_client->link);
-    reds->num_mig_target_clients--;
+    mig_client->reds->num_mig_target_clients--;
 
     RING_FOREACH_SAFE(now, next, &mig_client->pending_links) {
         RedsMigPendingLink *mig_link = SPICE_CONTAINEROF(now, RedsMigPendingLink, ring_link);
@@ -1777,7 +1777,7 @@ static int reds_link_mig_target_channels(RedsState *reds, RedClient *client)
         reds_channel_do_link(channel, client, mig_link->link_msg, mig_link->stream);
     }
 
-    reds_mig_target_client_free(reds, mig_client);
+    reds_mig_target_client_free(mig_client);
 
     return TRUE;
 }

@@ -114,6 +114,7 @@ typedef struct RedsMigPendingLink {
 } RedsMigPendingLink;
 
 typedef struct RedsMigTargetClient {
+    RedsState *reds;
     RingItem link;
     RedClient *client;
     Ring pending_links;
