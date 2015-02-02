@@ -64,6 +64,7 @@ struct SpiceCharDeviceState {
     SpiceCharDeviceInstance *sin;
 
     int during_read_from_device;
+    int during_write_to_device;
 
     SpiceCharDeviceCallbacks cbs;
     void *opaque;
@@ -437,6 +438,11 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
         return 0;
     }
 
+    /* protect against recursion with spice_char_device_wakeup */
+    if (dev->during_write_to_device++ > 0) {
+        return 0;
+    }
+
     spice_char_device_state_ref(dev);
 
     if (dev->write_to_dev_timer) {
@@ -461,6 +467,11 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
                     dev->cur_write_buf_pos;
         n = sif->write(dev->sin, dev->cur_write_buf_pos, write_len);
         if (n <= 0) {
+            if (dev->during_write_to_device > 1) {
+                dev->during_write_to_device = 1;
+                continue; /* a wakeup might have been called during the write -
+                             make sure it doesn't get lost */
+            }
             break;
         }
         total += n;
@@ -485,6 +496,7 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
         }
         dev->active = dev->active || total;
     }
+    dev->during_write_to_device = 0;
     spice_char_device_state_unref(dev);
     return total;
 }
