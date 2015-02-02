@@ -305,6 +305,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
     InputsChannel *inputs_channel = (InputsChannel *)rcc->channel;
     InputsChannelClient *icc = (InputsChannelClient *)rcc;
     uint32_t i;
+    RedsState *reds = inputs_channel->base.reds;
 
     switch (type) {
     case SPICE_MSGC_INPUTS_KEY_DOWN: {
@@ -618,7 +619,7 @@ static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
     return TRUE;
 }
 
-InputsChannel* inputs_channel_new(void)
+InputsChannel* inputs_channel_new(RedsState *reds)
 {
     ChannelCbs channel_cbs = { NULL, };
     ClientCbs client_cbs = { NULL, };
@@ -675,7 +676,7 @@ int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboar
         return -1;
     }
     inputs->keyboard = keyboard;
-    inputs->keyboard->st = spice_kbd_state_new(reds);
+    inputs->keyboard->st = spice_kbd_state_new(inputs->base.reds);
     return 0;
 }
 
