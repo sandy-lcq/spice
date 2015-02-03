@@ -348,8 +348,8 @@ static void main_channel_marshall_channels(RedChannelClient *rcc,
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_CHANNELS_LIST, item);
     channels_info = (SpiceMsgChannels *)spice_malloc(sizeof(SpiceMsgChannels)
-                            + reds_get_n_channels(reds) * sizeof(SpiceChannelId));
-    reds_fill_channels(reds, channels_info);
+                            + reds_get_n_channels(rcc->channel->reds) * sizeof(SpiceChannelId));
+    reds_fill_channels(rcc->channel->reds, channels_info);
     spice_marshall_msg_main_channels_list(m, channels_info);
     free(channels_info);
 }
@@ -492,7 +492,7 @@ static void main_channel_marshall_migrate_data_item(RedChannelClient *rcc,
                                                     SpiceMarshaller *m, PipeItem *item)
 {
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
-    reds_marshall_migrate_data(reds, m); // TODO: from reds split. ugly separation.
+    reds_marshall_migrate_data(rcc->channel->reds, m); // TODO: from reds split. ugly separation.
 }
 
 static int main_channel_handle_migrate_data(RedChannelClient *rcc,
@@ -514,7 +514,7 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
         spice_error("bad header");
         return FALSE;
     }
-    return reds_handle_migrate_data(reds, mcc, (SpiceMigrateDataMain *)(header + 1), size);
+    return reds_handle_migrate_data(rcc->channel->reds, mcc, (SpiceMigrateDataMain *)(header + 1), size);
 }
 
 void main_channel_push_init(MainChannelClient *mcc,
@@ -545,7 +545,7 @@ static void main_channel_marshall_init(RedChannelClient *rcc,
     if (item->is_client_mouse_allowed) {
         init.supported_mouse_modes |= SPICE_MOUSE_MODE_CLIENT;
     }
-    init.agent_connected = reds_has_vdagent(reds);
+    init.agent_connected = reds_has_vdagent(rcc->channel->reds);
     init.agent_tokens = REDS_AGENT_WINDOW_SIZE;
     init.multi_media_time = item->multi_media_time;
     init.ram_hint = item->ram_hint;
@@ -823,7 +823,7 @@ static void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
         spice_assert(main_channel->num_clients_mig_wait);
         spice_assert(!seamless || main_channel->num_clients_mig_wait == 1);
         if (!--main_channel->num_clients_mig_wait) {
-            reds_on_main_migrate_connected(reds, seamless && success);
+            reds_on_main_migrate_connected(mcc->base.channel->reds, seamless && success);
         }
     } else {
         if (success) {
@@ -836,7 +836,7 @@ static void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
 void main_channel_client_handle_migrate_dst_do_seamless(MainChannelClient *mcc,
                                                         uint32_t src_version)
 {
-    if (reds_on_migrate_dst_set_seamless(reds, mcc, src_version)) {
+    if (reds_on_migrate_dst_set_seamless(mcc->base.channel->reds, mcc, src_version)) {
         mcc->seamless_mig_dst = TRUE;
         red_channel_client_pipe_add_empty_msg(&mcc->base,
                                              SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_ACK);
@@ -891,18 +891,18 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             return FALSE;
         }
         tokens = (SpiceMsgcMainAgentStart *)message;
-        reds_on_main_agent_start(reds, mcc, tokens->num_tokens);
+        reds_on_main_agent_start(rcc->channel->reds, mcc, tokens->num_tokens);
         break;
     }
     case SPICE_MSGC_MAIN_AGENT_DATA: {
-        reds_on_main_agent_data(reds, mcc, message, size);
+        reds_on_main_agent_data(rcc->channel->reds, mcc, message, size);
         break;
     }
     case SPICE_MSGC_MAIN_AGENT_TOKEN: {
         SpiceMsgcMainAgentTokens *tokens;
 
         tokens = (SpiceMsgcMainAgentTokens *)message;
-        reds_on_main_agent_tokens(reds, mcc, tokens->num_tokens);
+        reds_on_main_agent_tokens(rcc->channel->reds, mcc, tokens->num_tokens);
         break;
     }
     case SPICE_MSGC_MAIN_ATTACH_CHANNELS:
@@ -926,7 +926,7 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             ((SpiceMsgcMainMigrateDstDoSeamless *)message)->src_version);
         break;
     case SPICE_MSGC_MAIN_MOUSE_MODE_REQUEST:
-        reds_on_main_mouse_mode_request(reds, message, size);
+        reds_on_main_mouse_mode_request(rcc->channel->reds, message, size);
         break;
     case SPICE_MSGC_PONG: {
         SpiceMsgPing *ping = (SpiceMsgPing *)message;
@@ -1008,7 +1008,7 @@ static uint8_t *main_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
     MainChannelClient *mcc = SPICE_CONTAINEROF(rcc, MainChannelClient, base);
 
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        return reds_get_agent_data_buffer(reds, mcc, size);
+        return reds_get_agent_data_buffer(rcc->channel->reds, mcc, size);
     } else {
         return main_chan->recv_buf;
     }
@@ -1020,7 +1020,7 @@ static void main_channel_release_msg_rcv_buf(RedChannelClient *rcc,
                                                uint8_t *msg)
 {
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        reds_release_agent_data_buffer(reds, msg);
+        reds_release_agent_data_buffer(rcc->channel->reds, msg);
     }
 }
 
@@ -1052,9 +1052,9 @@ static void do_ping_client(MainChannelClient *mcc,
         if (has_interval && interval > 0) {
             mcc->ping_interval = interval * MSEC_PER_SEC;
         }
-        reds_get_core_interface(reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
+        reds_get_core_interface(mcc->base.channel->reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
     } else if (!strcmp(opt, "off")) {
-        reds_get_core_interface(reds)->timer_cancel(mcc->ping_timer);
+        reds_get_core_interface(mcc->base.channel->reds)->timer_cancel(mcc->ping_timer);
     } else {
         return;
     }
@@ -1066,11 +1066,11 @@ static void ping_timer_cb(void *opaque)
 
     if (!red_channel_client_is_connected(&mcc->base)) {
         spice_printerr("not connected to peer, ping off");
-        reds_get_core_interface(reds)->timer_cancel(mcc->ping_timer);
+        reds_get_core_interface(mcc->base.channel->reds)->timer_cancel(mcc->ping_timer);
         return;
     }
     do_ping_client(mcc, NULL, 0, 0);
-    reds_get_core_interface(reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
+    reds_get_core_interface(mcc->base.channel->reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
 }
 #endif /* RED_STATISTICS */
 
@@ -1079,6 +1079,7 @@ static MainChannelClient *main_channel_client_create(MainChannel *main_chan, Red
                                                      int num_common_caps, uint32_t *common_caps,
                                                      int num_caps, uint32_t *caps)
 {
+    const SpiceCoreInterfaceInternal *core;
     MainChannelClient *mcc = (MainChannelClient*)
                              red_channel_client_create(sizeof(MainChannelClient), &main_chan->base,
                                                        client, stream, FALSE, num_common_caps,
@@ -1087,8 +1088,8 @@ static MainChannelClient *main_channel_client_create(MainChannel *main_chan, Red
     mcc->connection_id = connection_id;
     mcc->bitrate_per_sec = ~0;
 #ifdef RED_STATISTICS
-    if (!(mcc->ping_timer = reds_get_core_interface(reds)->timer_add(reds_get_core_interface(reds),
-                                                                     ping_timer_cb, NULL))) {
+    core = reds_get_core_interface(main_chan->base.reds);
+    if (!(mcc->ping_timer = core->timer_add(core, ping_timer_cb, NULL))) {
         spice_error("ping timer create failed");
     }
     mcc->ping_interval = PING_INTERVAL;
@@ -1158,11 +1159,11 @@ uint64_t main_channel_client_get_roundtrip_ms(MainChannelClient *mcc)
 
 static void main_channel_client_migrate(RedChannelClient *rcc)
 {
-    reds_on_main_channel_migrate(reds, SPICE_CONTAINEROF(rcc, MainChannelClient, base));
+    reds_on_main_channel_migrate(rcc->channel->reds, SPICE_CONTAINEROF(rcc, MainChannelClient, base));
     red_channel_client_default_migrate(rcc);
 }
 
-MainChannel* main_channel_new(void)
+MainChannel* main_channel_new(RedsState *reds)
 {
     RedChannel *channel;
     ChannelCbs channel_cbs = { NULL, };
