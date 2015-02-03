@@ -3834,7 +3834,8 @@ SPICE_GNUC_VISIBLE int spice_server_set_agent_file_xfer(SpiceServer *s, int enab
 }
 
 /* returns FALSE if info is invalid */
-static int reds_set_migration_dest_info(const char* dest,
+static int reds_set_migration_dest_info(RedsState *reds,
+                                        const char* dest,
                                         int port, int secure_port,
                                         const char* cert_subject)
 {
@@ -3877,7 +3878,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* 
 
     sif = SPICE_CONTAINEROF(s->migration_interface->base.sif, SpiceMigrateInterface, base);
 
-    if (!reds_set_migration_dest_info(dest, port, secure_port, cert_subject)) {
+    if (!reds_set_migration_dest_info(reds, dest, port, secure_port, cert_subject)) {
         sif->migrate_connect_complete(s->migration_interface);
         return -1;
     }
@@ -3916,9 +3917,8 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_info(SpiceServer *s, const char* des
 {
     spice_info(NULL);
     spice_assert(!s->migration_interface);
-    spice_assert(reds == s);
 
-    if (!reds_set_migration_dest_info(dest, port, secure_port, cert_subject)) {
+    if (!reds_set_migration_dest_info(reds, dest, port, secure_port, cert_subject)) {
         return -1;
     }
     return 0;
