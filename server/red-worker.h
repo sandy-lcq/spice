@@ -24,17 +24,17 @@
 
 typedef struct RedWorker RedWorker;
 
-typedef struct CommonChannelClient {
+typedef struct CommonGraphicsChannelClient {
     RedChannelClient base;
 
     int is_low_bandwidth;
-} CommonChannelClient;
+} CommonGraphicsChannelClient;
 
-#define COMMON_CHANNEL_CLIENT(Client) ((CommonChannelClient*)(Client))
+#define COMMON_GRAPHICS_CHANNEL_CLIENT(Client) ((CommonGraphicsChannelClient*)(Client))
 #define COMMON_CLIENT_TIMEOUT (NSEC_PER_SEC * 30)
 
 #define CHANNEL_RECEIVE_BUF_SIZE 1024
-typedef struct CommonChannel {
+typedef struct CommonGraphicsChannel {
     RedChannel base; // Must be the first thing
 
     QXLInstance *qxl;
@@ -45,9 +45,9 @@ typedef struct CommonChannel {
                                   The flag is used to avoid sending messages that are artifacts
                                   of the transition from stopped vm to loaded vm (e.g., recreation
                                   of the primary surface) */
-} CommonChannel;
+} CommonGraphicsChannel;
 
-#define COMMON_CHANNEL(Channel) ((CommonChannel*)(Channel))
+#define COMMON_GRAPHICS_CHANNEL(Channel) ((CommonGraphicsChannel*)(Channel))
 
 enum {
     PIPE_ITEM_TYPE_VERB = PIPE_ITEM_TYPE_CHANNEL_BASE,
@@ -97,21 +97,21 @@ RedChannel* red_worker_get_display_channel(RedWorker *worker);
 
 void red_drawable_unref(RedDrawable *red_drawable);
 
-CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
-                                   const char *name,
-                                   uint32_t channel_type, int migration_flags,
-                                   ChannelCbs *channel_cbs,
-                                   channel_handle_parsed_proc handle_parsed);
+CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
+                                              const char *name,
+                                              uint32_t channel_type, int migration_flags,
+                                              ChannelCbs *channel_cbs,
+                                              channel_handle_parsed_proc handle_parsed);
 
-CommonChannelClient *common_channel_new_client(CommonChannel *common,
-                                               int size,
-                                               RedClient *client,
-                                               RedsStream *stream,
-                                               int mig_target,
-                                               int monitor_latency,
-                                               uint32_t *common_caps,
-                                               int num_common_caps,
-                                               uint32_t *caps,
-                                               int num_caps);
+CommonGraphicsChannelClient *common_graphics_channel_new_client(CommonGraphicsChannel *common,
+                                                                int size,
+                                                                RedClient *client,
+                                                                RedsStream *stream,
+                                                                int mig_target,
+                                                                int monitor_latency,
+                                                                uint32_t *common_caps,
+                                                                int num_common_caps,
+                                                                uint32_t *caps,
+                                                                int num_caps);
 
 #endif

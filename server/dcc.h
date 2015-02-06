@@ -55,7 +55,7 @@ typedef struct FreeList {
 } FreeList;
 
 struct DisplayChannelClient {
-    CommonChannelClient common;
+    CommonGraphicsChannelClient common;
     uint32_t id;
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
@@ -116,7 +116,7 @@ struct DisplayChannelClient {
 };
 
 #define DCC_TO_WORKER(dcc)                                              \
-    (SPICE_CONTAINEROF((dcc)->common.base.channel, CommonChannel, base)->worker)
+    (SPICE_CONTAINEROF((dcc)->common.base.channel, CommonGraphicsChannel, base)->worker)
 #define DCC_TO_DC(dcc)                                                  \
      SPICE_CONTAINEROF((dcc)->common.base.channel, DisplayChannel, common.base)
 #define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)

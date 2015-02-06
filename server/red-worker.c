@@ -100,7 +100,7 @@ static int display_is_connected(RedWorker *worker)
 
 static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
 {
-    CommonChannel *common = SPICE_CONTAINEROF(rcc->channel, CommonChannel, base);
+    CommonGraphicsChannel *common = SPICE_CONTAINEROF(rcc->channel, CommonGraphicsChannel, base);
 
     /* SPICE_MSGC_MIGRATE_DATA is the only client message whose size is dynamic */
     if (type == SPICE_MSGC_MIGRATE_DATA) {
@@ -400,7 +400,7 @@ static int common_channel_config_socket(RedChannelClient *rcc)
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
     RedsStream *stream = red_channel_client_get_stream(rcc);
-    CommonChannelClient *ccc = COMMON_CHANNEL_CLIENT(rcc);
+    CommonGraphicsChannelClient *ccc = COMMON_GRAPHICS_CHANNEL_CLIENT(rcc);
     int flags;
     int delay_val;
 
@@ -432,16 +432,16 @@ static int common_channel_config_socket(RedChannelClient *rcc)
     return TRUE;
 }
 
-CommonChannelClient *common_channel_new_client(CommonChannel *common,
-                                               int size,
-                                               RedClient *client,
-                                               RedsStream *stream,
-                                               int mig_target,
-                                               int monitor_latency,
-                                               uint32_t *common_caps,
-                                               int num_common_caps,
-                                               uint32_t *caps,
-                                               int num_caps)
+CommonGraphicsChannelClient *common_graphics_channel_new_client(CommonGraphicsChannel *common,
+                                                                int size,
+                                                                RedClient *client,
+                                                                RedsStream *stream,
+                                                                int mig_target,
+                                                                int monitor_latency,
+                                                                uint32_t *common_caps,
+                                                                int num_common_caps,
+                                                                uint32_t *caps,
+                                                                int num_caps)
 {
     RedChannelClient *rcc =
         red_channel_client_create(size, &common->base, client, stream, monitor_latency,
@@ -449,7 +449,7 @@ CommonChannelClient *common_channel_new_client(CommonChannel *common,
     if (!rcc) {
         return NULL;
     }
-    CommonChannelClient *common_cc = (CommonChannelClient*)rcc;
+    CommonGraphicsChannelClient *common_cc = (CommonGraphicsChannelClient*)rcc;
     common->during_target_migrate = mig_target;
 
     // TODO: move wide/narrow ack setting to red_channel.
@@ -460,14 +460,14 @@ CommonChannelClient *common_channel_new_client(CommonChannel *common,
 }
 
 
-CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
-                                   const char *name,
-                                   uint32_t channel_type, int migration_flags,
-                                   ChannelCbs *channel_cbs,
-                                   channel_handle_parsed_proc handle_parsed)
+CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
+                                              const char *name,
+                                              uint32_t channel_type, int migration_flags,
+                                              ChannelCbs *channel_cbs,
+                                              channel_handle_parsed_proc handle_parsed)
 {
     RedChannel *channel = NULL;
-    CommonChannel *common;
+    CommonGraphicsChannel *common;
 
     spice_return_val_if_fail(worker, NULL);
     spice_return_val_if_fail(channel_cbs, NULL);
@@ -489,7 +489,7 @@ CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
     spice_return_val_if_fail(channel, NULL);
     red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, name, TRUE));
 
-    common = (CommonChannel *)channel;
+    common = (CommonGraphicsChannel *)channel;
     common->qxl = worker->qxl;
     return common;
 }
@@ -808,7 +808,7 @@ static void handle_dev_start(void *opaque, void *payload)
 
     spice_assert(!worker->running);
     if (worker->cursor_channel) {
-        COMMON_CHANNEL(worker->cursor_channel)->during_target_migrate = FALSE;
+        COMMON_GRAPHICS_CHANNEL(worker->cursor_channel)->during_target_migrate = FALSE;
     }
     if (worker->display_channel) {
         worker->display_channel->common.during_target_migrate = FALSE;

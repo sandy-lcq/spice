@@ -368,8 +368,8 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 {
     DisplayChannelClient *dcc;
 
-    dcc = (DisplayChannelClient*)common_channel_new_client(
-        COMMON_CHANNEL(display), sizeof(DisplayChannelClient),
+    dcc = (DisplayChannelClient*)common_graphics_channel_new_client(
+        COMMON_GRAPHICS_CHANNEL(display), sizeof(DisplayChannelClient),
         client, stream, mig_target, TRUE,
         common_caps, num_common_caps,
         caps, num_caps);
@@ -627,7 +627,7 @@ void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
     display = DCC_TO_DC(dcc);
     channel = RED_CHANNEL(display);
 
-    if (COMMON_CHANNEL(display)->during_target_migrate ||
+    if (COMMON_GRAPHICS_CHANNEL(display)->during_target_migrate ||
         !dcc->surface_client_created[surface_id]) {
         return;
     }

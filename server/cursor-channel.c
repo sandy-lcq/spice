@@ -51,7 +51,7 @@ typedef struct CursorPipeItem {
 } CursorPipeItem;
 
 struct CursorChannel {
-    CommonChannel common; // Must be the first thing
+    CommonGraphicsChannel common; // Must be the first thing
 
     CursorItem *item;
     int cursor_visible;
@@ -66,7 +66,7 @@ struct CursorChannel {
 };
 
 struct CursorChannelClient {
-    CommonChannelClient common;
+    CommonGraphicsChannelClient common;
 
     CacheItem *cursor_cache[CURSOR_CACHE_HASH_SIZE];
     Ring cursor_cache_lru;
@@ -415,7 +415,7 @@ static void cursor_channel_release_item(RedChannelClient *rcc, PipeItem *item, i
 CursorChannel* cursor_channel_new(RedWorker *worker)
 {
     CursorChannel *cursor_channel;
-    CommonChannel *channel = NULL;
+    CommonGraphicsChannel *channel = NULL;
     ChannelCbs cbs = {
         .on_disconnect =  cursor_channel_client_on_disconnect,
         .send_item = cursor_channel_send_item,
@@ -458,15 +458,15 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
     spice_return_val_if_fail(!num_caps || caps, NULL);
 
     CursorChannelClient *ccc =
-        (CursorChannelClient*)common_channel_new_client(&cursor->common,
-                                                        sizeof(CursorChannelClient),
-                                                        client, stream,
-                                                        mig_target,
-                                                        FALSE,
-                                                        common_caps,
-                                                        num_common_caps,
-                                                        caps,
-                                                        num_caps);
+        (CursorChannelClient*)common_graphics_channel_new_client(&cursor->common,
+                                                                 sizeof(CursorChannelClient),
+                                                                 client, stream,
+                                                                 mig_target,
+                                                                 FALSE,
+                                                                 common_caps,
+                                                                 num_common_caps,
+                                                                 caps,
+                                                                 num_caps);
     spice_return_val_if_fail(ccc != NULL, NULL);
 
     ring_init(&ccc->cursor_cache_lru);
@@ -547,7 +547,7 @@ void cursor_channel_init(CursorChannel *cursor, CursorChannelClient *client)
     spice_return_if_fail(cursor);
 
     if (!red_channel_is_connected(&cursor->common.base)
-        || COMMON_CHANNEL(cursor)->during_target_migrate) {
+        || COMMON_GRAPHICS_CHANNEL(cursor)->during_target_migrate) {
         spice_debug("during_target_migrate: skip init");
         return;
     }

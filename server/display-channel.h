@@ -164,7 +164,7 @@ struct _Drawable {
 };
 
 struct DisplayChannel {
-    CommonChannel common; // Must be the first thing
+    CommonGraphicsChannel common; // Must be the first thing
     uint32_t bits_unique;
 
     MonitorsConfig *monitors_config;
