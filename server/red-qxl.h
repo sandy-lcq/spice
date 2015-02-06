@@ -44,6 +44,7 @@ gboolean red_qxl_get_allow_client_mouse(QXLState *qxl_state, gint *x_res, gint *
 SpiceMsgDisplayGlScanoutUnix *red_qxl_get_gl_scanout(QXLState *qxl_state);
 void red_qxl_put_gl_scanout(QXLState *qxl_state, SpiceMsgDisplayGlScanoutUnix *scanout);
 void red_qxl_gl_draw_async_complete(QXLState *qxl);
+SpiceServer* red_qxl_get_server(QXLState *qxl);
 
 typedef uint32_t RedWorkerMessage;
 

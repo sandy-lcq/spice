@@ -1064,3 +1064,8 @@ void red_qxl_set_mouse_mode(QXLState *qxl_state, uint32_t mode)
                             RED_WORKER_MESSAGE_SET_MOUSE_MODE,
                             &payload);
 }
+
+RedsState* red_qxl_get_server(QXLState *qxl_state)
+{
+    return qxl_state->reds;
+}
