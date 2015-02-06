@@ -250,7 +250,8 @@ typedef struct UpgradeItem {
 } UpgradeItem;
 
 
-DisplayChannel*            display_channel_new                       (RedWorker *worker,
+DisplayChannel*            display_channel_new                       (SpiceServer *reds,
+                                                                      RedWorker *worker,
                                                                       int migrate,
                                                                       int stream_video,
                                                                       uint32_t n_surfaces);

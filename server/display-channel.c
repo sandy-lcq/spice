@@ -2025,7 +2025,8 @@ static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t su
     return display->surfaces[surface_id].context.canvas;
 }
 
-DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_video,
+DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker, 
+                                    int migrate, int stream_video,
                                     uint32_t n_surfaces)
 {
     DisplayChannel *display;

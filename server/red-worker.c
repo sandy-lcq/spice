@@ -91,6 +91,8 @@ struct RedWorker {
     FILE *record_fd;
 };
 
+static RedsState* red_worker_get_server(RedWorker *worker);
+
 static int display_is_connected(RedWorker *worker)
 {
     return (worker->display_channel && red_channel_is_connected(
@@ -478,15 +480,16 @@ CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
     channel_cbs->alloc_recv_buf = common_alloc_recv_buf;
     channel_cbs->release_recv_buf = common_release_recv_buf;
 
-    channel = red_channel_create_parser(size, reds, &worker->core,
-                                        channel_type, worker->qxl->id,
-                                        TRUE /* handle_acks */,
+    channel = red_channel_create_parser(size, red_worker_get_server(worker),
+                                        &worker->core, channel_type,
+                                        worker->qxl->id, TRUE /* handle_acks */,
                                         spice_get_client_channel_parser(channel_type, NULL),
                                         handle_parsed,
                                         channel_cbs,
                                         migration_flags);
     spice_return_val_if_fail(channel, NULL);
-    red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, name, TRUE));
+    red_channel_set_stat_node(channel, stat_add_node(red_worker_get_server(worker),
+                                                     worker->stat, name, TRUE));
 
     common = (CommonGraphicsChannel *)channel;
     common->qxl = worker->qxl;
@@ -1468,6 +1471,7 @@ RedWorker* red_worker_new(QXLInstance *qxl)
     RedWorker *worker;
     Dispatcher *dispatcher;
     const char *record_filename;
+    RedsState *reds = red_qxl_get_server(qxl->st);
 
     qxl_get_interface(qxl)->get_init_info(qxl, &init_info);
 
@@ -1531,7 +1535,7 @@ RedWorker* red_worker_new(QXLInstance *qxl)
 
     worker->cursor_channel = cursor_channel_new(worker);
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
-    worker->display_channel = display_channel_new(worker, FALSE, reds_get_streaming_video(reds),
+    worker->display_channel = display_channel_new(reds, worker, FALSE, reds_get_streaming_video(reds),
                                                   init_info.n_surfaces);
 
     return worker;
@@ -1590,4 +1594,9 @@ RedChannel* red_worker_get_display_channel(RedWorker *worker)
     spice_return_val_if_fail(worker, NULL);
 
     return RED_CHANNEL(worker->display_channel);
+}
+
+static RedsState* red_worker_get_server(RedWorker *worker)
+{
+    return red_qxl_get_server(worker->qxl->st);
 }
