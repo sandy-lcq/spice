@@ -2453,3 +2453,8 @@ void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc)
         spice_assert(red_channel_client_no_item_being_sent(rcc));
     }
 }
+
+RedsState* red_channel_get_server(RedChannel *channel)
+{
+    return channel->reds;
+}

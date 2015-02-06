@@ -47,6 +47,8 @@
    The intention is to move towards one channel interface gradually.
    At the final stage, this interface shouldn't be exposed. Only RedChannel will use it. */
 
+struct RedsState;
+
 typedef struct SpiceDataHeaderOpaque SpiceDataHeaderOpaque;
 
 typedef uint16_t (*get_msg_type_proc)(SpiceDataHeaderOpaque *header);
@@ -565,8 +567,7 @@ uint32_t red_channel_sum_pipes_size(RedChannel *channel);
 typedef void (*channel_client_callback)(RedChannelClient *rcc);
 typedef void (*channel_client_callback_data)(RedChannelClient *rcc, void *data);
 void red_channel_apply_clients(RedChannel *channel, channel_client_callback v);
-
-struct RedsState;
+struct RedsState* red_channel_get_server(RedChannel *channel);
 
 struct RedClient {
     struct RedsState *reds;
