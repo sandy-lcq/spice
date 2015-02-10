@@ -941,6 +941,7 @@ error:
 
 static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
 {
+    RedsState *reds = red_channel_get_server(rcc->channel);
     rcc->wait_migrate_data = FALSE;
 
     pthread_mutex_lock(&rcc->client->lock);
@@ -953,7 +954,8 @@ static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
         rcc->client->seamless_migrate = FALSE;
         /* migration completion might have been triggered from a different thread
          * than the main thread */
-        main_dispatcher_seamless_migrate_dst_complete(rcc->client);
+        main_dispatcher_seamless_migrate_dst_complete(reds_get_main_dispatcher(reds),
+                                                      rcc->client);
         if (rcc->latency_monitor.timer) {
             red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
         }

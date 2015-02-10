@@ -178,8 +178,9 @@ int main_channel_is_connected(MainChannel *main_chan)
  */
 static void main_channel_client_on_disconnect(RedChannelClient *rcc)
 {
+    RedsState *reds = red_channel_get_server(rcc->channel);
     spice_printerr("rcc=%p", rcc);
-    main_dispatcher_client_disconnect(rcc->client);
+    main_dispatcher_client_disconnect(reds_get_main_dispatcher(reds), rcc->client);
 }
 
 RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t connection_id)

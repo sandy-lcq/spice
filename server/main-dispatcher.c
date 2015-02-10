@@ -47,12 +47,11 @@
  *   seperate from self because it may send an ack or do other work in the future.
  */
 
-typedef struct {
+struct MainDispatcher {
     Dispatcher base;
     SpiceCoreInterfaceInternal *core;
-} MainDispatcher;
-
-MainDispatcher main_dispatcher;
+    RedsState *reds;
+};
 
 enum {
     MAIN_DISPATCHER_CHANNEL_EVENT = 0,
@@ -82,33 +81,35 @@ typedef struct MainDispatcherClientDisconnectMessage {
 } MainDispatcherClientDisconnectMessage;
 
 /* channel_event - calls core->channel_event, must be done in main thread */
-static void main_dispatcher_self_handle_channel_event(
-                                                int event,
-                                                SpiceChannelEventInfo *info)
+static void main_dispatcher_self_handle_channel_event(MainDispatcher *self,
+                                                      int event,
+                                                      SpiceChannelEventInfo *info)
 {
-    reds_handle_channel_event(reds, event, info);
+    reds_handle_channel_event(self->reds, event, info);
 }
 
 static void main_dispatcher_handle_channel_event(void *opaque,
                                                  void *payload)
 {
+    MainDispatcher *self = opaque;
     MainDispatcherChannelEventMessage *channel_event = payload;
 
-    main_dispatcher_self_handle_channel_event(channel_event->event,
+    main_dispatcher_self_handle_channel_event(self,
+                                              channel_event->event,
                                               channel_event->info);
 }
 
-void main_dispatcher_channel_event(int event, SpiceChannelEventInfo *info)
+void main_dispatcher_channel_event(MainDispatcher *self, int event, SpiceChannelEventInfo *info)
 {
     MainDispatcherChannelEventMessage msg = {0,};
 
-    if (pthread_self() == main_dispatcher.base.self) {
-        main_dispatcher_self_handle_channel_event(event, info);
+    if (pthread_self() == self->base.self) {
+        main_dispatcher_self_handle_channel_event(self, event, info);
         return;
     }
     msg.event = event;
     msg.info = info;
-    dispatcher_send_message(&main_dispatcher.base, MAIN_DISPATCHER_CHANNEL_EVENT,
+    dispatcher_send_message(&self->base, MAIN_DISPATCHER_CHANNEL_EVENT,
                             &msg);
 }
 
@@ -116,67 +117,71 @@ void main_dispatcher_channel_event(int event, SpiceChannelEventInfo *info)
 static void main_dispatcher_handle_migrate_complete(void *opaque,
                                                     void *payload)
 {
+    MainDispatcher *self = opaque;
     MainDispatcherMigrateSeamlessDstCompleteMessage *mig_complete = payload;
 
-    reds_on_client_seamless_migrate_complete(reds, mig_complete->client);
+    reds_on_client_seamless_migrate_complete(self->reds, mig_complete->client);
     red_client_unref(mig_complete->client);
 }
 
 static void main_dispatcher_handle_mm_time_latency(void *opaque,
                                                    void *payload)
 {
+    MainDispatcher *self = opaque;
     MainDispatcherMmTimeLatencyMessage *msg = payload;
-    reds_set_client_mm_time_latency(reds, msg->client, msg->latency);
+    reds_set_client_mm_time_latency(self->reds, msg->client, msg->latency);
     red_client_unref(msg->client);
 }
 
 static void main_dispatcher_handle_client_disconnect(void *opaque,
                                                      void *payload)
 {
+    MainDispatcher *self = opaque;
     MainDispatcherClientDisconnectMessage *msg = payload;
 
     spice_debug("client=%p", msg->client);
-    reds_client_disconnect(reds, msg->client);
+    reds_client_disconnect(self->reds, msg->client);
     red_client_unref(msg->client);
 }
 
-void main_dispatcher_seamless_migrate_dst_complete(RedClient *client)
+void main_dispatcher_seamless_migrate_dst_complete(MainDispatcher *self,
+                                                   RedClient *client)
 {
     MainDispatcherMigrateSeamlessDstCompleteMessage msg;
 
-    if (pthread_self() == main_dispatcher.base.self) {
-        reds_on_client_seamless_migrate_complete(reds, client);
+    if (pthread_self() == self->base.self) {
+        reds_on_client_seamless_migrate_complete(self->reds, client);
         return;
     }
 
     msg.client = red_client_ref(client);
-    dispatcher_send_message(&main_dispatcher.base, MAIN_DISPATCHER_MIGRATE_SEAMLESS_DST_COMPLETE,
+    dispatcher_send_message(&self->base, MAIN_DISPATCHER_MIGRATE_SEAMLESS_DST_COMPLETE,
                             &msg);
 }
 
-void main_dispatcher_set_mm_time_latency(RedClient *client, uint32_t latency)
+void main_dispatcher_set_mm_time_latency(MainDispatcher *self, RedClient *client, uint32_t latency)
 {
     MainDispatcherMmTimeLatencyMessage msg;
 
-    if (pthread_self() == main_dispatcher.base.self) {
-        reds_set_client_mm_time_latency(reds, client, latency);
+    if (pthread_self() == self->base.self) {
+        reds_set_client_mm_time_latency(self->reds, client, latency);
         return;
     }
 
     msg.client = red_client_ref(client);
     msg.latency = latency;
-    dispatcher_send_message(&main_dispatcher.base, MAIN_DISPATCHER_SET_MM_TIME_LATENCY,
+    dispatcher_send_message(&self->base, MAIN_DISPATCHER_SET_MM_TIME_LATENCY,
                             &msg);
 }
 
-void main_dispatcher_client_disconnect(RedClient *client)
+void main_dispatcher_client_disconnect(MainDispatcher *self, RedClient *client)
 {
     MainDispatcherClientDisconnectMessage msg;
 
     if (!client->disconnecting) {
         spice_debug("client %p", client);
         msg.client = red_client_ref(client);
-        dispatcher_send_message(&main_dispatcher.base, MAIN_DISPATCHER_CLIENT_DISCONNECT,
+        dispatcher_send_message(&self->base, MAIN_DISPATCHER_CLIENT_DISCONNECT,
                                 &msg);
     } else {
         spice_debug("client %p already during disconnection", client);
@@ -185,9 +190,9 @@ void main_dispatcher_client_disconnect(RedClient *client)
 
 static void dispatcher_handle_read(int fd, int event, void *opaque)
 {
-    Dispatcher *dispatcher = opaque;
+    MainDispatcher *self = opaque;
 
-    dispatcher_handle_recv_read(dispatcher);
+    dispatcher_handle_recv_read(&self->base);
 }
 
 /*
@@ -195,23 +200,25 @@ static void dispatcher_handle_read(int fd, int event, void *opaque)
  * Reds routines shouldn't be exposed. Instead reds.c should register the callbacks,
  * and the corresponding operations should be made only via main_dispatcher.
  */
-void main_dispatcher_init(SpiceCoreInterfaceInternal *core)
+MainDispatcher* main_dispatcher_new(RedsState *reds, SpiceCoreInterfaceInternal *core)
 {
-    memset(&main_dispatcher, 0, sizeof(main_dispatcher));
-    main_dispatcher.core = core;
-    dispatcher_init(&main_dispatcher.base, MAIN_DISPATCHER_NUM_MESSAGES, &main_dispatcher.base);
-    core->watch_add(core, main_dispatcher.base.recv_fd, SPICE_WATCH_EVENT_READ,
-                    dispatcher_handle_read, &main_dispatcher.base);
-    dispatcher_register_handler(&main_dispatcher.base, MAIN_DISPATCHER_CHANNEL_EVENT,
+    MainDispatcher *main_dispatcher = g_new0(MainDispatcher, 1);
+    main_dispatcher->core = core;
+    main_dispatcher->reds = reds;
+    dispatcher_init(&main_dispatcher->base, MAIN_DISPATCHER_NUM_MESSAGES, main_dispatcher);
+    core->watch_add(core, main_dispatcher->base.recv_fd, SPICE_WATCH_EVENT_READ,
+                    dispatcher_handle_read, main_dispatcher);
+    dispatcher_register_handler(&main_dispatcher->base, MAIN_DISPATCHER_CHANNEL_EVENT,
                                 main_dispatcher_handle_channel_event,
                                 sizeof(MainDispatcherChannelEventMessage), 0 /* no ack */);
-    dispatcher_register_handler(&main_dispatcher.base, MAIN_DISPATCHER_MIGRATE_SEAMLESS_DST_COMPLETE,
+    dispatcher_register_handler(&main_dispatcher->base, MAIN_DISPATCHER_MIGRATE_SEAMLESS_DST_COMPLETE,
                                 main_dispatcher_handle_migrate_complete,
                                 sizeof(MainDispatcherMigrateSeamlessDstCompleteMessage), 0 /* no ack */);
-    dispatcher_register_handler(&main_dispatcher.base, MAIN_DISPATCHER_SET_MM_TIME_LATENCY,
+    dispatcher_register_handler(&main_dispatcher->base, MAIN_DISPATCHER_SET_MM_TIME_LATENCY,
                                 main_dispatcher_handle_mm_time_latency,
                                 sizeof(MainDispatcherMmTimeLatencyMessage), 0 /* no ack */);
-    dispatcher_register_handler(&main_dispatcher.base, MAIN_DISPATCHER_CLIENT_DISCONNECT,
+    dispatcher_register_handler(&main_dispatcher->base, MAIN_DISPATCHER_CLIENT_DISCONNECT,
                                 main_dispatcher_handle_client_disconnect,
                                 sizeof(MainDispatcherClientDisconnectMessage), 0 /* no ack */);
+    return main_dispatcher;
 }

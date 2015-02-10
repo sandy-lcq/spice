@@ -3350,7 +3350,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     reds_init_vd_agent_resources(reds);
     ring_init(&reds->clients);
     reds->num_clients = 0;
-    main_dispatcher_init(reds->core);
+    reds->main_dispatcher = main_dispatcher_new(reds, reds->core);
     ring_init(&reds->channels);
     ring_init(&reds->mig_target_clients);
     ring_init(&reds->char_devs_states);
@@ -4194,4 +4194,9 @@ uint32_t reds_qxl_ram_size(RedsState *reds)
 
     first = reds->dispatchers->data;
     return red_dispatcher_qxl_ram_size(first);
+}
+
+MainDispatcher* reds_get_main_dispatcher(RedsState *reds)
+{
+    return reds->main_dispatcher;
 }

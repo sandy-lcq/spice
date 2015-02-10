@@ -683,6 +683,7 @@ static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
 {
     StreamAgent *agent = opaque;
     DisplayChannelClient *dcc = agent->dcc;
+    RedsState *reds = red_channel_get_server(dcc->common.base.channel);
 
     dcc_update_streams_max_latency(dcc, agent);
 
@@ -691,7 +692,9 @@ static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
         agent->dcc->streams_max_latency = delay_ms;
     }
     spice_debug("resetting client latency: %u", agent->dcc->streams_max_latency);
-    main_dispatcher_set_mm_time_latency(RED_CHANNEL_CLIENT(agent->dcc)->client, agent->dcc->streams_max_latency);
+    main_dispatcher_set_mm_time_latency(reds_get_main_dispatcher(reds),
+                                        RED_CHANNEL_CLIENT(agent->dcc)->client,
+                                        agent->dcc->streams_max_latency);
 }
 
 void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
