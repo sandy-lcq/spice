@@ -21,9 +21,9 @@
 
 #include "main-dispatcher.h"
 #include "red-common.h"
+#include "common/log.h"
 #include "reds-stream.h"
 #include "reds.h"
-#include "common/log.h"
 
 #include <errno.h>
 #include <netdb.h>
@@ -95,6 +95,7 @@ struct RedsStreamPrivate {
     ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
     ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
 
+    RedsState *reds;
 };
 
 static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
@@ -167,7 +168,7 @@ static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
 void reds_stream_remove_watch(RedsStream* s)
 {
     if (s->watch) {
-        reds_get_core_interface(reds)->watch_remove(s->watch);
+        reds_get_core_interface(s->priv->reds)->watch_remove(s->watch);
         s->watch = NULL;
     }
 }
@@ -378,13 +379,14 @@ void reds_stream_set_channel(RedsStream *stream, int connection_id,
     stream->priv->info->id   = channel_id;
 }
 
-RedsStream *reds_stream_new(int socket)
+RedsStream *reds_stream_new(RedsState *reds, int socket)
 {
     RedsStream *stream;
 
     stream = spice_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
     stream->priv = (RedsStreamPrivate *)(stream+1);
     stream->priv->info = spice_new0(SpiceChannelEventInfo, 1);
+    stream->priv->reds = reds;
     reds_stream_set_socket(stream, socket);
 
     stream->priv->read = stream_read_cb;
@@ -485,21 +487,23 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
                                void *data)
 {
     AsyncRead *async = (AsyncRead *)data;
+    RedsStream *stream = async->stream;
+    RedsState *reds = stream->priv->reds;
 
     for (;;) {
         int n = async->end - async->now;
 
         spice_assert(n > 0);
-        n = reds_stream_read(async->stream, async->now, n);
+        n = reds_stream_read(stream, async->now, n);
         if (n <= 0) {
             if (n < 0) {
                 switch (errno) {
                 case EAGAIN:
-                    if (!async->stream->watch) {
-                        async->stream->watch = reds_get_core_interface(reds)->watch_add(reds_get_core_interface(reds),
-                                                                                        async->stream->socket,
-                                                                                        SPICE_WATCH_EVENT_READ,
-                                                                                        async_read_handler, async);
+                    if (!stream->watch) {
+                        stream->watch = reds_get_core_interface(reds)->watch_add(reds_get_core_interface(reds),
+                                                                                 stream->socket,
+                                                                                 SPICE_WATCH_EVENT_READ,
+                                                                                 async_read_handler, async);
                     }
                     return;
                 case EINTR:

@@ -2324,7 +2324,7 @@ static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
 
     link = spice_new0(RedLinkInfo, 1);
     link->reds = reds;
-    link->stream = reds_stream_new(socket);
+    link->stream = reds_stream_new(reds, socket);
 
     /* gather info + send event */
 

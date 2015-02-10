@@ -7,10 +7,12 @@
 #include "reds-stream.h"
 #include "basic_event_loop.h"
 
+static SpiceServer *server = NULL;
+
 static int server_init(void)
 {
     SpiceCoreInterface *core = basic_event_loop_init();
-    SpiceServer *server = spice_server_new();
+    server = spice_server_new();
 
     return spice_server_init(server, core);
 }
@@ -89,9 +91,9 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    st[0] = reds_stream_new(sv[0]);
+    st[0] = reds_stream_new(server, sv[0]);
     spice_assert(reds_stream_is_plain_unix(st[0]));
-    st[1] = reds_stream_new(sv[1]);
+    st[1] = reds_stream_new(server, sv[1]);
     spice_assert(reds_stream_is_plain_unix(st[1]));
 
     /* send stdin, for the fun of it */

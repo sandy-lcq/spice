@@ -28,6 +28,7 @@
 typedef void (*AsyncReadDone)(void *opaque);
 typedef void (*AsyncReadError)(void *opaque, int err);
 
+typedef struct RedsState RedsState;
 typedef struct RedsStream RedsStream;
 typedef struct RedsStreamPrivate RedsStreamPrivate;
 
@@ -67,7 +68,7 @@ void reds_stream_push_channel_event(RedsStream *s, int event);
 void reds_stream_remove_watch(RedsStream* s);
 void reds_stream_set_channel(RedsStream *stream, int connection_id,
                              int channel_type, int channel_id);
-RedsStream *reds_stream_new(int socket);
+RedsStream *reds_stream_new(RedsState *reds, int socket);
 bool reds_stream_is_ssl(RedsStream *stream);
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream);
 int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx);
