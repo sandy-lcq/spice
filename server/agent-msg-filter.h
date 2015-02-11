@@ -35,13 +35,16 @@ enum {
 typedef struct AgentMsgFilter {
     int msg_data_to_read;
     int result;
-    int copy_paste_enabled;
-    int file_xfer_enabled;
-    int discard_all;
+    gboolean copy_paste_enabled;
+    gboolean file_xfer_enabled;
+    gboolean use_client_monitors_config;
+    gboolean discard_all;
 } AgentMsgFilter;
 
 void agent_msg_filter_init(struct AgentMsgFilter *filter,
-                           int copy_paste, int file_xfer, int discard_all);
+                           gboolean copy_paste, gboolean file_xfer,
+                           gboolean use_client_monitors_config,
+                           gboolean discard_all);
 int agent_msg_filter_process_data(struct AgentMsgFilter *filter,
                                   uint8_t *data, uint32_t len);
 

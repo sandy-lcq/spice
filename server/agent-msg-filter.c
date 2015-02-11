@@ -28,11 +28,14 @@
 #include "red-dispatcher.h"
 
 void agent_msg_filter_init(struct AgentMsgFilter *filter,
-                           int copy_paste, int file_xfer, int discard_all)
+                           gboolean copy_paste, gboolean file_xfer,
+                           gboolean use_client_monitors_config,
+                           int discard_all)
 {
     memset(filter, 0, sizeof(*filter));
     filter->copy_paste_enabled = copy_paste;
     filter->file_xfer_enabled = file_xfer;
+    filter->use_client_monitors_config = use_client_monitors_config;
     filter->discard_all = discard_all;
 }
 
@@ -93,7 +96,7 @@ data_to_read:
             }
             break;
         case VD_AGENT_MONITORS_CONFIG:
-            if (reds_use_client_monitors_config(reds)) {
+            if (filter->use_client_monitors_config) {
                 filter->result = AGENT_MSG_FILTER_MONITORS_CONFIG;
             } else {
                 filter->result = AGENT_MSG_FILTER_OK;
