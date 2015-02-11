@@ -199,14 +199,22 @@ static SndChannel *snd_channel_put(SndChannel *channel)
     return channel;
 }
 
+static RedsState* snd_channel_get_server(SndChannel *channel)
+{
+    g_return_val_if_fail(channel != NULL, NULL);
+    return red_channel_get_server(channel->worker->base_channel);
+}
+
 static void snd_disconnect_channel(SndChannel *channel)
 {
     SndWorker *worker;
+    RedsState *reds;
 
     if (!channel || !channel->stream) {
         spice_debug("not connected");
         return;
     }
+    reds = snd_channel_get_server(channel);
     spice_debug("SndChannel=%p rcc=%p type=%d",
                  channel, channel->channel_client, channel->channel_client->channel->type);
     worker = channel->worker;
@@ -247,6 +255,7 @@ static void snd_record_on_message_done(SndChannel *channel)
 
 static int snd_send_data(SndChannel *channel)
 {
+    RedsState *reds = snd_channel_get_server(channel);
     uint32_t n;
 
     if (!channel) {
@@ -900,6 +909,7 @@ static SndChannel *__new_channel(SndWorker *worker, int size, uint32_t channel_i
 #endif
     int tos;
     MainChannelClient *mcc = red_client_get_main(client);
+    RedsState *reds = red_channel_get_server(worker->base_channel);
 
     spice_assert(stream);
     if ((flags = fcntl(stream->socket, F_GETFL)) == -1) {
@@ -1037,6 +1047,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
 {
     SndChannel *channel = sin->st->worker.connection;
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    RedsState *reds = snd_channel_get_server(channel);
 
     sin->st->worker.active = 1;
     if (!channel)
@@ -1056,6 +1067,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
 {
     SndChannel *channel = sin->st->worker.connection;
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    RedsState *reds = snd_channel_get_server(channel);
 
     sin->st->worker.active = 0;
     if (!channel)
@@ -1161,6 +1173,7 @@ static int snd_desired_audio_mode(int frequency, int client_can_celt, int client
 
 static void on_new_playback_channel(SndWorker *worker)
 {
+    RedsState *reds = red_channel_get_server(worker->base_channel);
     PlaybackChannel *playback_channel =
         SPICE_CONTAINEROF(worker->connection, PlaybackChannel, base);
     SpicePlaybackState *st = SPICE_CONTAINEROF(worker, SpicePlaybackState, worker);
@@ -1181,6 +1194,7 @@ static void on_new_playback_channel(SndWorker *worker)
 
 static void snd_playback_cleanup(SndChannel *channel)
 {
+    RedsState *reds = snd_channel_get_server(channel);
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
 
     if (playback_channel->base.active) {
@@ -1507,7 +1521,7 @@ static void remove_worker(SndWorker *worker)
     spice_printerr("not found");
 }
 
-void snd_attach_playback(SpicePlaybackInstance *sin)
+void snd_attach_playback(RedsState *reds, SpicePlaybackInstance *sin)
 {
     SndWorker *playback_worker;
     RedChannel *channel;
@@ -1537,7 +1551,7 @@ void snd_attach_playback(SpicePlaybackInstance *sin)
     reds_register_channel(reds, channel);
 }
 
-void snd_attach_record(SpiceRecordInstance *sin)
+void snd_attach_record(RedsState *reds, SpiceRecordInstance *sin)
 {
     SndWorker *record_worker;
     RedChannel *channel;
@@ -1570,6 +1584,8 @@ static void snd_detach_common(SndWorker *worker)
     if (!worker) {
         return;
     }
+    RedsState *reds = red_channel_get_server(worker->base_channel);
+
     remove_worker(worker);
     snd_disconnect_channel(worker->connection);
     reds_unregister_channel(reds, worker->base_channel);

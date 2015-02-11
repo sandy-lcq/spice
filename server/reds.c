@@ -3243,7 +3243,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
             spice_warning("unsupported playback interface");
             return -1;
         }
-        snd_attach_playback(SPICE_CONTAINEROF(sin, SpicePlaybackInstance, base));
+        snd_attach_playback(reds, SPICE_CONTAINEROF(sin, SpicePlaybackInstance, base));
 
     } else if (strcmp(interface->type, SPICE_INTERFACE_RECORD) == 0) {
         spice_info("SPICE_INTERFACE_RECORD");
@@ -3252,7 +3252,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
             spice_warning("unsupported record interface");
             return -1;
         }
-        snd_attach_record(SPICE_CONTAINEROF(sin, SpiceRecordInstance, base));
+        snd_attach_record(reds, SPICE_CONTAINEROF(sin, SpiceRecordInstance, base));
 
     } else if (strcmp(interface->type, SPICE_INTERFACE_CHAR_DEVICE) == 0) {
         if (interface->major_version != SPICE_INTERFACE_CHAR_DEVICE_MAJOR ||

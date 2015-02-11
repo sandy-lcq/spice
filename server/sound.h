@@ -20,10 +20,10 @@
 
 #include "spice.h"
 
-void snd_attach_playback(SpicePlaybackInstance *sin);
+void snd_attach_playback(RedsState *reds, SpicePlaybackInstance *sin);
 void snd_detach_playback(SpicePlaybackInstance *sin);
 
-void snd_attach_record(SpiceRecordInstance *sin);
+void snd_attach_record(RedsState *reds, SpiceRecordInstance *sin);
 void snd_detach_record(SpiceRecordInstance *sin);
 
 void snd_set_playback_compression(int on);
