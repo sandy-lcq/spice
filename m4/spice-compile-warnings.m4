@@ -23,6 +23,9 @@ AC_DEFUN([SPICE_COMPILE_WARNINGS],[
     dontwarn="$dontwarn -Wc++-compat"
     dontwarn="$dontwarn -Wabi"
     dontwarn="$dontwarn -Wdeprecated"
+    # For older gcc versions, -Wenum-compare is "C++ and Objective-C++ only"
+    # For newer gcc versions, -Wenum-compare is "enabled by -Wall"
+    dontwarn="$dontwarn -Wenum-compare"
     # Don't care about ancient C standard compat
     dontwarn="$dontwarn -Wtraditional"
     # Don't care about ancient C standard compat
