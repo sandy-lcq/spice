@@ -19,9 +19,34 @@
 #define MAIN_DISPATCHER_H
 
 #include <spice.h>
+#include "dispatcher.h"
 #include "red-channel.h"
 
+#define TYPE_MAIN_DISPATCHER main_dispatcher_get_type()
+
+#define MAIN_DISPATCHER(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_MAIN_DISPATCHER, MainDispatcher))
+#define MAIN_DISPATCHER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_MAIN_DISPATCHER, MainDispatcherClass))
+#define IS_MAIN_DISPATCHER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_MAIN_DISPATCHER))
+#define IS_MAIN_DISPATCHER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_MAIN_DISPATCHER))
+#define MAIN_DISPATCHER_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_MAIN_DISPATCHER, MainDispatcherClass))
+
 typedef struct MainDispatcher MainDispatcher;
+typedef struct MainDispatcherClass MainDispatcherClass;
+typedef struct MainDispatcherPrivate MainDispatcherPrivate;
+
+struct MainDispatcher
+{
+    Dispatcher parent;
+
+    MainDispatcherPrivate *priv;
+};
+
+struct MainDispatcherClass
+{
+    DispatcherClass parent_class;
+};
+
+GType main_dispatcher_get_type(void) G_GNUC_CONST;
 
 void main_dispatcher_channel_event(MainDispatcher *self, int event, SpiceChannelEventInfo *info);
 void main_dispatcher_seamless_migrate_dst_complete(MainDispatcher *self, RedClient *client);

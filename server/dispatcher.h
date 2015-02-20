@@ -18,9 +18,37 @@
 #ifndef DISPATCHER_H
 #define DISPATCHER_H
 
+#include <glib-object.h>
 #include "red-common.h"
 
+#define TYPE_DISPATCHER dispatcher_get_type()
+
+#define DISPATCHER(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_DISPATCHER, Dispatcher))
+#define DISPATCHER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_DISPATCHER, DispatcherClass))
+#define IS_DISPATCHER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_DISPATCHER))
+#define IS_DISPATCHER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_DISPATCHER))
+#define DISPATCHER_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_DISPATCHER, DispatcherClass))
+
 typedef struct Dispatcher Dispatcher;
+typedef struct DispatcherClass DispatcherClass;
+typedef struct DispatcherPrivate DispatcherPrivate;
+
+struct Dispatcher
+{
+    GObject parent;
+
+    DispatcherPrivate *priv;
+};
+
+struct DispatcherClass
+{
+    GObjectClass parent_class;
+};
+
+GType dispatcher_get_type(void) G_GNUC_CONST;
+
+Dispatcher *dispatcher_new(size_t max_message_type, void *opaque);
+
 
 typedef void (*dispatcher_handle_message)(void *opaque,
                                           void *payload);
@@ -40,20 +68,6 @@ typedef struct DispatcherMessage {
     dispatcher_handle_message handler;
 } DispatcherMessage;
 
-struct Dispatcher {
-    int recv_fd;
-    int send_fd;
-    pthread_t self;
-    pthread_mutex_t lock;
-    DispatcherMessage *messages;
-    int stage;  /* message parser stage - sender has no stages */
-    size_t max_message_type;
-    void *payload; /* allocated as max of message sizes */
-    size_t payload_size; /* used to track realloc calls */
-    void *opaque;
-    dispatcher_handle_async_done handle_async_done;
-    dispatcher_handle_any_message any_handler;
-};
 
 /*
  * dispatcher_send_message
@@ -62,15 +76,6 @@ struct Dispatcher {
  */
 void dispatcher_send_message(Dispatcher *dispatcher, uint32_t message_type,
                              void *payload);
-
-/*
- * dispatcher_init
- * @max_message_type: number of message types. Allows upfront allocation
- *  of a DispatcherMessage list.
- * up front, and registration in any order wanted.
- */
-void dispatcher_init(Dispatcher *dispatcher, size_t max_message_type,
-                     void *opaque);
 
 enum {
     DISPATCHER_NONE = 0,
@@ -130,5 +135,7 @@ int dispatcher_get_recv_fd(Dispatcher *);
  * @opaque: opaque to use for callbacks
  */
 void dispatcher_set_opaque(Dispatcher *dispatcher, void *opaque);
+
+pthread_t dispatcher_get_thread_id(Dispatcher *self);
 
 #endif //DISPATCHER_H
