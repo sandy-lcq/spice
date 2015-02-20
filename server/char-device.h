@@ -219,4 +219,6 @@ SpiceCharDeviceState *spicevmc_device_connect(struct RedsState *reds,
 void spicevmc_device_disconnect(struct RedsState *reds,
                                 SpiceCharDeviceInstance *char_device);
 
+SpiceCharDeviceInterface *spice_char_device_get_interface(SpiceCharDeviceInstance *instance);
+
 #endif // CHAR_DEVICE_H_

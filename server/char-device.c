@@ -460,7 +460,7 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
         reds_core_timer_cancel(dev->reds, dev->write_to_dev_timer);
     }
 
-    sif = SPICE_CONTAINEROF(dev->sin->base.sif, SpiceCharDeviceInterface, base);
+    sif = spice_char_device_get_interface(dev->sin);
     while (dev->running) {
         uint32_t write_len;
 
@@ -695,7 +695,7 @@ SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *si
     ring_init(&char_dev->write_bufs_pool);
     ring_init(&char_dev->clients);
 
-    sif = SPICE_CONTAINEROF(char_dev->sin->base.sif, SpiceCharDeviceInterface, base);
+    sif = spice_char_device_get_interface(char_dev->sin);
     if (sif->base.minor_version <= 2 ||
         !(sif->flags & SPICE_CHAR_DEVICE_NOTIFY_WRITABLE)) {
         char_dev->write_to_dev_timer = reds_core_timer_add(reds, spice_char_dev_write_retry, char_dev);
@@ -1043,4 +1043,9 @@ int spice_char_device_state_restore(SpiceCharDeviceState *dev,
 SpiceServer* spice_char_device_get_server(SpiceCharDeviceState *dev)
 {
     return dev->reds;
+}
+
+SpiceCharDeviceInterface *spice_char_device_get_interface(SpiceCharDeviceInstance *instance)
+{
+   return SPICE_CONTAINEROF(instance->base.sif, SpiceCharDeviceInterface, base);
 }

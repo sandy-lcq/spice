@@ -437,7 +437,7 @@ static void reds_reset_vdp(RedsState *reds)
         spice_char_device_reset(state->base);
     }
 
-    sif = SPICE_CONTAINEROF(reds->vdagent->base.sif, SpiceCharDeviceInterface, base);
+    sif = spice_char_device_get_interface(reds->vdagent);
     if (sif->state) {
         sif->state(reds->vdagent, 0);
     }
@@ -712,7 +712,7 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
         return NULL;
     }
     spice_assert(reds->vdagent == sin);
-    sif = SPICE_CONTAINEROF(reds->vdagent->base.sif, SpiceCharDeviceInterface, base);
+    sif = spice_char_device_get_interface(reds->vdagent);
     while (reds->vdagent) {
         switch (state->read_state) {
         case VDI_PORT_READ_STATE_READ_HEADER:
@@ -2978,7 +2978,7 @@ static SpiceCharDeviceState *attach_to_red_agent(RedsState *reds, SpiceCharDevic
     reds->vdagent = sin;
     reds_update_mouse_mode(reds);
 
-    sif = SPICE_CONTAINEROF(reds->vdagent->base.sif, SpiceCharDeviceInterface, base);
+    sif = spice_char_device_get_interface(reds->vdagent);
     if (sif->state) {
         sif->state(reds->vdagent, 1);
     }

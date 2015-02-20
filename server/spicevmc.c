@@ -112,7 +112,7 @@ static SpiceCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharD
     SpiceVmcPipeItem *msg_item;
     int n;
 
-    sif = SPICE_CONTAINEROF(sin->base.sif, SpiceCharDeviceInterface, base);
+    sif = spice_char_device_get_interface(sin);
 
     if (!state->rcc) {
         return NULL;
@@ -212,7 +212,6 @@ static int spicevmc_red_channel_client_config_socket(RedChannelClient *rcc)
 static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     SpiceVmcState *state;
-    SpiceCharDeviceInstance *sin;
     SpiceCharDeviceInterface *sif;
 
     if (!rcc) {
@@ -220,8 +219,6 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
     }
 
     state = SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
-    sin = state->chardev_sin;
-    sif = SPICE_CONTAINEROF(sin->base.sif, SpiceCharDeviceInterface, base);
 
     if (state->recv_from_client_buf) { /* partial message which wasn't pushed to device */
         spice_char_device_write_buffer_release(state->chardev_st, state->recv_from_client_buf);
@@ -243,8 +240,9 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
         red_channel_client_destroy(rcc);
 
     state->rcc = NULL;
+    sif = spice_char_device_get_interface(state->chardev_sin);
     if (sif->state) {
-        sif->state(sin, 0);
+        sif->state(state->chardev_sin, 0);
     }
 }
 
@@ -287,12 +285,10 @@ static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
                                                       uint8_t *msg)
 {
     SpiceVmcState *state;
-    SpiceCharDeviceInstance *sin;
     SpiceCharDeviceInterface *sif;
 
     state = spicevmc_red_channel_client_get_state(rcc);
-    sin = state->chardev_sin;
-    sif = SPICE_CONTAINEROF(sin->base.sif, SpiceCharDeviceInterface, base);
+    sif = spice_char_device_get_interface(state->chardev_sin);
 
     switch (type) {
     case SPICE_MSGC_SPICEVMC_DATA:
@@ -307,7 +303,7 @@ static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
             return FALSE;
         }
         if (sif->base.minor_version >= 2 && sif->event != NULL)
-            sif->event(sin, *msg);
+            sif->event(state->chardev_sin, *msg);
         break;
     default:
         return red_channel_client_handle_message(rcc, size, type, msg);
@@ -467,7 +463,6 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
 
     state = SPICE_CONTAINEROF(channel, SpiceVmcState, channel);
     sin = state->chardev_sin;
-    sif = SPICE_CONTAINEROF(sin->base.sif, SpiceCharDeviceInterface, base);
 
     if (state->rcc) {
         spice_printerr("channel client %d:%d (%p) already connected, refusing second connection",
@@ -499,6 +494,7 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
         return;
     }
 
+    sif = spice_char_device_get_interface(state->chardev_sin);
     if (sif->state) {
         sif->state(sin, 1);
     }

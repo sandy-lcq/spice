@@ -133,7 +133,7 @@ SpiceCharDeviceMsgToClient *smartcard_read_msg_from_device(SpiceCharDeviceInstan
                                                            void *opaque)
 {
     SmartCardDeviceState *state = opaque;
-    SpiceCharDeviceInterface *sif = SPICE_CONTAINEROF(sin->base.sif, SpiceCharDeviceInterface, base);
+    SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
     VSCMsgHeader *vheader = (VSCMsgHeader*)state->buf;
     int n;
     int remaining;
