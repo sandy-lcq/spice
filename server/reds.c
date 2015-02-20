@@ -632,12 +632,12 @@ static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 }
 
 /* returns TRUE if the buffer can be forwarded */
-static int vdi_port_read_buf_process(RedsState *reds, int port, VDIReadBuf *buf)
+static int vdi_port_read_buf_process(RedsState *reds, VDIReadBuf *buf)
 {
     VDIPortState *state = &reds->agent_state;
     int res;
 
-    switch (port) {
+    switch (state->vdi_chunk_header.port) {
     case VDP_CLIENT_PORT: {
         res = agent_msg_filter_process_data(&state->read_filter,
                                             buf->data, buf->len);
@@ -758,7 +758,7 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
             } else {
                 state->read_state = VDI_PORT_READ_STATE_GET_BUFF;
             }
-            if (vdi_port_read_buf_process(reds, state->vdi_chunk_header.port, dispatch_buf)) {
+            if (vdi_port_read_buf_process(reds, dispatch_buf)) {
                 return dispatch_buf;
             } else {
                 vdi_port_read_buf_unref(dispatch_buf);
@@ -1128,7 +1128,7 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
                     !agent_state->read_filter.msg_data_to_read);
 
         read_buf->len = read_data_len;
-        if (vdi_port_read_buf_process(reds, agent_state->vdi_chunk_header.port, read_buf)) {
+        if (vdi_port_read_buf_process(reds, read_buf)) {
             main_channel_client_push_agent_data(mcc,
                                                 read_buf->data,
                                                 read_buf->len,
