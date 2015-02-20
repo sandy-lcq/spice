@@ -6,6 +6,7 @@ AM_CPPFLAGS =					\
 	-DRED_STATISTICS			\
 	$(COMMON_CFLAGS)			\
 	$(GLIB2_CFLAGS)				\
+	$(GOBJECT2_CFLAGS)			\
 	$(LZ4_CFLAGS)				\
 	$(PIXMAN_CFLAGS)			\
 	$(SASL_CFLAGS)				\
@@ -37,6 +38,7 @@ libserver_la_LIBADD =							\
 	$(top_builddir)/spice-common/common/libspice-common-server.la	\
 	$(GL_LIBS)							\
 	$(GLIB2_LIBS)							\
+	$(GOBJECT2_LIBS)						\
 	$(JPEG_LIBS)							\
 	$(LZ4_LIBS)							\
 	$(LIBRT)							\
