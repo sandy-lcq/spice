@@ -118,4 +118,14 @@ void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitor
 void reds_set_mm_time(RedsState *reds, uint32_t mm_time);
 MainDispatcher* reds_get_main_dispatcher(RedsState *reds);
 
+/* fd watches/timers */
+SpiceWatch *reds_core_watch_add(RedsState *reds,
+                                int fd, int event_mask,
+                                SpiceWatchFunc func,
+                                void *opaque);
+void reds_core_watch_update_mask(RedsState *reds,
+                                 SpiceWatch *watch,
+                                 int event_mask);
+void reds_core_watch_remove(RedsState *reds, SpiceWatch *watch);
+
 #endif

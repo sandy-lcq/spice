@@ -2274,10 +2274,12 @@ static void reds_handle_ssl_accept(int fd, int event, void *data)
             reds_link_free(link);
             return;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
-            reds->core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_READ);
+            reds_core_watch_update_mask(reds, link->stream->watch,
+                                        SPICE_WATCH_EVENT_READ);
             return;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
-            reds->core->watch_update_mask(link->stream->watch, SPICE_WATCH_EVENT_WRITE);
+            reds_core_watch_update_mask(reds, link->stream->watch,
+                                        SPICE_WATCH_EVENT_WRITE);
             return;
         case REDS_STREAM_SSL_STATUS_OK:
             reds_stream_remove_watch(link->stream);
@@ -2356,12 +2358,14 @@ static RedLinkInfo *reds_init_client_ssl_connection(RedsState *reds, int socket)
         case REDS_STREAM_SSL_STATUS_ERROR:
             goto error;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
-            link->stream->watch = reds->core->watch_add(reds->core, link->stream->socket, SPICE_WATCH_EVENT_READ,
-                                                        reds_handle_ssl_accept, link);
+            link->stream->watch = reds_core_watch_add(reds, link->stream->socket,
+                                                      SPICE_WATCH_EVENT_READ,
+                                                      reds_handle_ssl_accept, link);
             break;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
-            link->stream->watch = reds->core->watch_add(reds->core, link->stream->socket, SPICE_WATCH_EVENT_WRITE,
-                                                        reds_handle_ssl_accept, link);
+            link->stream->watch = reds_core_watch_add(reds, link->stream->socket,
+                                                      SPICE_WATCH_EVENT_WRITE,
+                                                      reds_handle_ssl_accept, link);
             break;
     }
     return link;
@@ -2555,9 +2559,9 @@ static int reds_init_net(RedsState *reds)
         if (-1 == reds->listen_socket) {
             return -1;
         }
-        reds->listen_watch = reds->core->watch_add(reds->core, reds->listen_socket,
-                                                   SPICE_WATCH_EVENT_READ,
-                                                   reds_accept, reds);
+        reds->listen_watch = reds_core_watch_add(reds, reds->listen_socket,
+                                                 SPICE_WATCH_EVENT_READ,
+                                                 reds_accept, reds);
         if (reds->listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
@@ -2570,9 +2574,9 @@ static int reds_init_net(RedsState *reds)
         if (-1 == reds->secure_listen_socket) {
             return -1;
         }
-        reds->secure_listen_watch = reds->core->watch_add(reds->core, reds->secure_listen_socket,
-                                                          SPICE_WATCH_EVENT_READ,
-                                                          reds_accept_ssl_connection, reds);
+        reds->secure_listen_watch = reds_core_watch_add(reds, reds->secure_listen_socket,
+                                                        SPICE_WATCH_EVENT_READ,
+                                                        reds_accept_ssl_connection, reds);
         if (reds->secure_listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
@@ -2581,9 +2585,9 @@ static int reds_init_net(RedsState *reds)
 
     if (reds->spice_listen_socket_fd != -1 ) {
         reds->listen_socket = reds->spice_listen_socket_fd;
-        reds->listen_watch = reds->core->watch_add(reds->core, reds->listen_socket,
-                                                   SPICE_WATCH_EVENT_READ,
-                                                   reds_accept, reds);
+        reds->listen_watch = reds_core_watch_add(reds, reds->listen_socket,
+                                                 SPICE_WATCH_EVENT_READ,
+                                                 reds_accept, reds);
         if (reds->listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
@@ -4062,6 +4066,38 @@ spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds)
 SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds)
 {
     return reds->core;
+}
+
+SpiceWatch *reds_core_watch_add(RedsState *reds,
+                                int fd, int event_mask,
+                                SpiceWatchFunc func,
+                                void *opaque)
+{
+   g_return_val_if_fail(reds != NULL, NULL);
+   g_return_val_if_fail(reds->core != NULL, NULL);
+   g_return_val_if_fail(reds->core->watch_add != NULL, NULL);
+
+   return reds->core->watch_add(reds->core, fd, event_mask, func, opaque);
+}
+
+void reds_core_watch_update_mask(RedsState *reds,
+                                 SpiceWatch *watch,
+                                 int event_mask)
+{
+   g_return_if_fail(reds != NULL);
+   g_return_if_fail(reds->core != NULL);
+   g_return_if_fail(reds->core->watch_update_mask != NULL);
+
+   reds->core->watch_update_mask(watch, event_mask);
+}
+
+void reds_core_watch_remove(RedsState *reds, SpiceWatch *watch)
+{
+   g_return_if_fail(reds != NULL);
+   g_return_if_fail(reds->core != NULL);
+   g_return_if_fail(reds->core->watch_remove != NULL);
+
+   reds->core->watch_remove(watch);
 }
 
 void reds_update_client_mouse_allowed(RedsState *reds)

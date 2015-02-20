@@ -168,7 +168,7 @@ static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
 void reds_stream_remove_watch(RedsStream* s)
 {
     if (s->watch) {
-        reds_get_core_interface(s->priv->reds)->watch_remove(s->watch);
+        reds_core_watch_remove(s->priv->reds, s->watch);
         s->watch = NULL;
     }
 }
@@ -502,10 +502,9 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
                 switch (errno) {
                 case EAGAIN:
                     if (!stream->watch) {
-                        stream->watch = reds_get_core_interface(reds)->watch_add(reds_get_core_interface(reds),
-                                                                                 stream->socket,
-                                                                                 SPICE_WATCH_EVENT_READ,
-                                                                                 async_read_handler, async);
+                        stream->watch = reds_core_watch_add(reds, stream->socket,
+                                                            SPICE_WATCH_EVENT_READ,
+                                                            async_read_handler, async);
                     }
                     return;
                 case EINTR:

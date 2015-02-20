@@ -221,7 +221,7 @@ static void snd_disconnect_channel(SndChannel *channel)
     channel->cleanup(channel);
     red_channel_client_disconnect(worker->connection->channel_client);
     worker->connection->channel_client = NULL;
-    reds_get_core_interface(reds)->watch_remove(channel->stream->watch);
+    reds_core_watch_remove(reds, channel->stream->watch);
     channel->stream->watch = NULL;
     reds_stream_free(channel->stream);
     channel->stream = NULL;
@@ -275,7 +275,7 @@ static int snd_send_data(SndChannel *channel)
 
             if (channel->blocked) {
                 channel->blocked = FALSE;
-                reds_get_core_interface(reds)->watch_update_mask(channel->stream->watch, SPICE_WATCH_EVENT_READ);
+                reds_core_watch_update_mask(reds, channel->stream->watch, SPICE_WATCH_EVENT_READ);
             }
             break;
         }
@@ -287,7 +287,7 @@ static int snd_send_data(SndChannel *channel)
             switch (errno) {
             case EAGAIN:
                 channel->blocked = TRUE;
-                reds_get_core_interface(reds)->watch_update_mask(channel->stream->watch, SPICE_WATCH_EVENT_READ |
+                reds_core_watch_update_mask(reds, channel->stream->watch, SPICE_WATCH_EVENT_READ |
                                                                  SPICE_WATCH_EVENT_WRITE);
                 return FALSE;
             case EINTR:
@@ -957,9 +957,8 @@ static SndChannel *__new_channel(SndWorker *worker, int size, uint32_t channel_i
     channel->receive_data.end = channel->receive_data.buf + sizeof(channel->receive_data.buf);
     channel->send_data.marshaller = spice_marshaller_new();
 
-    stream->watch = reds_get_core_interface(reds)->watch_add(reds_get_core_interface(reds),
-                                                             stream->socket, SPICE_WATCH_EVENT_READ,
-                                                             snd_event, channel);
+    stream->watch = reds_core_watch_add(reds, stream->socket, SPICE_WATCH_EVENT_READ,
+                                        snd_event, channel);
     if (stream->watch == NULL) {
         spice_printerr("watch_add failed, %s", strerror(errno));
         goto error2;
