@@ -156,7 +156,7 @@ static void spice_char_device_client_free(SpiceCharDeviceState *dev,
     RingItem *item, *next;
 
     if (dev_client->wait_for_tokens_timer) {
-        reds_get_core_interface(dev->reds)->timer_remove(dev_client->wait_for_tokens_timer);
+        reds_core_timer_remove(dev->reds, dev_client->wait_for_tokens_timer);
     }
 
     spice_char_device_client_send_queue_free(dev, dev_client);
@@ -262,8 +262,8 @@ static void spice_char_device_add_msg_to_client_queue(SpiceCharDeviceClientState
     ring_add(&dev_client->send_queue, &msg_item->link);
     dev_client->send_queue_size++;
     if (!dev_client->wait_for_tokens_started) {
-        reds_get_core_interface(dev->reds)->timer_start(dev_client->wait_for_tokens_timer,
-                                                   SPICE_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT);
+        reds_core_timer_start(dev->reds, dev_client->wait_for_tokens_timer,
+                              SPICE_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT);
         dev_client->wait_for_tokens_started = TRUE;
     }
 }
@@ -371,12 +371,12 @@ static void spice_char_device_send_to_client_tokens_absorb(SpiceCharDeviceClient
     }
 
     if (spice_char_device_can_send_to_client(dev_client)) {
-        reds_get_core_interface(dev->reds)->timer_cancel(dev_client->wait_for_tokens_timer);
+        reds_core_timer_cancel(dev->reds, dev_client->wait_for_tokens_timer);
         dev_client->wait_for_tokens_started = FALSE;
         spice_char_device_read_from_device(dev_client->dev);
     } else if (dev_client->send_queue_size) {
-        reds_get_core_interface(dev->reds)->timer_start(dev_client->wait_for_tokens_timer,
-                                                        SPICE_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT);
+        reds_core_timer_start(dev->reds, dev_client->wait_for_tokens_timer,
+                              SPICE_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT);
         dev_client->wait_for_tokens_started = TRUE;
     }
 }
@@ -457,7 +457,7 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
     spice_char_device_state_ref(dev);
 
     if (dev->write_to_dev_timer) {
-        reds_get_core_interface(dev->reds)->timer_cancel(dev->write_to_dev_timer);
+        reds_core_timer_cancel(dev->reds, dev->write_to_dev_timer);
     }
 
     sif = SPICE_CONTAINEROF(dev->sin->base.sif, SpiceCharDeviceInterface, base);
@@ -499,8 +499,8 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
     if (dev->running) {
         if (dev->cur_write_buf) {
             if (dev->write_to_dev_timer) {
-                reds_get_core_interface(dev->reds)->timer_start(dev->write_to_dev_timer,
-                                                                CHAR_DEVICE_WRITE_TO_TIMEOUT);
+                reds_core_timer_start(dev->reds, dev->write_to_dev_timer,
+                                      CHAR_DEVICE_WRITE_TO_TIMEOUT);
             }
         } else {
             spice_assert(ring_is_empty(&dev->write_queue));
@@ -517,7 +517,7 @@ static void spice_char_dev_write_retry(void *opaque)
     SpiceCharDeviceState *dev = opaque;
 
     if (dev->write_to_dev_timer) {
-        reds_get_core_interface(dev->reds)->timer_cancel(dev->write_to_dev_timer);
+        reds_core_timer_cancel(dev->reds, dev->write_to_dev_timer);
     }
     spice_char_device_write_to_device(dev);
 }
@@ -698,8 +698,7 @@ SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *si
     sif = SPICE_CONTAINEROF(char_dev->sin->base.sif, SpiceCharDeviceInterface, base);
     if (sif->base.minor_version <= 2 ||
         !(sif->flags & SPICE_CHAR_DEVICE_NOTIFY_WRITABLE)) {
-        char_dev->write_to_dev_timer = reds_get_core_interface(reds)->timer_add(reds_get_core_interface(reds),
-                                                                                spice_char_dev_write_retry, char_dev);
+        char_dev->write_to_dev_timer = reds_core_timer_add(reds, spice_char_dev_write_retry, char_dev);
         if (!char_dev->write_to_dev_timer) {
             spice_error("failed creating char dev write timer");
         }
@@ -747,7 +746,7 @@ void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
 {
     reds_on_char_device_state_destroy(char_dev->reds, char_dev);
     if (char_dev->write_to_dev_timer) {
-        reds_get_core_interface(char_dev->reds)->timer_remove(char_dev->write_to_dev_timer);
+        reds_core_timer_remove(char_dev->reds, char_dev->write_to_dev_timer);
         char_dev->write_to_dev_timer = NULL;
     }
     write_buffers_queue_free(&char_dev->write_queue);
@@ -799,9 +798,8 @@ int spice_char_device_client_add(SpiceCharDeviceState *dev,
     dev_client->do_flow_control = do_flow_control;
     if (do_flow_control) {
         dev_client->wait_for_tokens_timer =
-            reds_get_core_interface(dev->reds)->timer_add(reds_get_core_interface(dev->reds),
-                                                          device_client_wait_for_tokens_timeout,
-                                                          dev_client);
+            reds_core_timer_add(dev->reds, device_client_wait_for_tokens_timeout,
+                                dev_client);
         if (!dev_client->wait_for_tokens_timer) {
             spice_error("failed to create wait for tokens timer");
         }
@@ -866,7 +864,7 @@ void spice_char_device_stop(SpiceCharDeviceState *dev)
     dev->running = FALSE;
     dev->active = FALSE;
     if (dev->write_to_dev_timer) {
-        reds_get_core_interface(dev->reds)->timer_cancel(dev->write_to_dev_timer);
+        reds_core_timer_cancel(dev->reds, dev->write_to_dev_timer);
     }
 }
 

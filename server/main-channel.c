@@ -1053,9 +1053,9 @@ static void do_ping_client(MainChannelClient *mcc,
         if (has_interval && interval > 0) {
             mcc->ping_interval = interval * MSEC_PER_SEC;
         }
-        reds_get_core_interface(mcc->base.channel->reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
+        reds_core_timer_start(mcc->base.channel->reds, mcc->ping_timer, mcc->ping_interval);
     } else if (!strcmp(opt, "off")) {
-        reds_get_core_interface(mcc->base.channel->reds)->timer_cancel(mcc->ping_timer);
+        reds_core_timer_cancel(mcc->base.channel->reds, mcc->ping_timer);
     } else {
         return;
     }
@@ -1067,11 +1067,11 @@ static void ping_timer_cb(void *opaque)
 
     if (!red_channel_client_is_connected(&mcc->base)) {
         spice_printerr("not connected to peer, ping off");
-        reds_get_core_interface(mcc->base.channel->reds)->timer_cancel(mcc->ping_timer);
+        reds_core_timer_cancel(mcc->base.channel->reds, mcc->ping_timer);
         return;
     }
     do_ping_client(mcc, NULL, 0, 0);
-    reds_get_core_interface(mcc->base.channel->reds)->timer_start(mcc->ping_timer, mcc->ping_interval);
+    reds_core_timer_start(mcc->base.channel->reds, mcc->ping_timer, mcc->ping_interval);
 }
 #endif /* RED_STATISTICS */
 
@@ -1080,7 +1080,6 @@ static MainChannelClient *main_channel_client_create(MainChannel *main_chan, Red
                                                      int num_common_caps, uint32_t *common_caps,
                                                      int num_caps, uint32_t *caps)
 {
-    const SpiceCoreInterfaceInternal *core;
     MainChannelClient *mcc = (MainChannelClient*)
                              red_channel_client_create(sizeof(MainChannelClient), &main_chan->base,
                                                        client, stream, FALSE, num_common_caps,
@@ -1089,8 +1088,7 @@ static MainChannelClient *main_channel_client_create(MainChannel *main_chan, Red
     mcc->connection_id = connection_id;
     mcc->bitrate_per_sec = ~0;
 #ifdef RED_STATISTICS
-    core = reds_get_core_interface(red_channel_get_server(&main_chan->base));
-    if (!(mcc->ping_timer = core->timer_add(core, ping_timer_cb, mcc))) {
+    if (!(mcc->ping_timer = reds_core_timer_add(red_channel_get_server(&main_chan->base), ping_timer_cb, mcc))) {
         spice_error("ping timer create failed");
     }
     mcc->ping_interval = PING_INTERVAL;

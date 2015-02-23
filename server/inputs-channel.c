@@ -194,7 +194,7 @@ static void inputs_channel_release_msg_rcv_buf(RedChannelClient *rcc,
 
 static void activate_modifiers_watch(RedsState *reds)
 {
-    reds_get_core_interface(reds)->timer_start(key_modifiers_timer, KEY_MODIFIERS_TTL);
+    reds_core_timer_start(reds, key_modifiers_timer, KEY_MODIFIERS_TTL);
 }
 
 static void kbd_push_scan(SpiceKbdInstance *sin, uint8_t scan)
@@ -657,8 +657,7 @@ InputsChannel* inputs_channel_new(RedsState *reds)
     red_channel_set_cap(&inputs->base, SPICE_INPUTS_CAP_KEY_SCANCODE);
     reds_register_channel(reds, &inputs->base);
 
-    if (!(key_modifiers_timer = reds_get_core_interface(reds)->timer_add(reds_get_core_interface(reds),
-                                                                         key_modifiers_sender, inputs))) {
+    if (!(key_modifiers_timer = reds_core_timer_add(reds, key_modifiers_sender, inputs))) {
         spice_error("key modifiers timer create failed");
     }
     return inputs;
