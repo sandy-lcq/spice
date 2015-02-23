@@ -120,11 +120,6 @@ typedef struct RedsMigTargetClient {
     Ring pending_links;
 } RedsMigTargetClient;
 
-typedef struct RedsMigWaitDisconnectClient {
-    RingItem link;
-    RedClient *client;
-} RedsMigWaitDisconnectClient;
-
 /* Intermediate state for on going monitors config message from a single
  * client, being passed to the guest */
 typedef struct RedsClientMonitorsConfig {
@@ -160,8 +155,9 @@ struct RedsState {
     int mig_wait_connect; /* src waits for clients to establish connection to dest
                              (before migration starts) */
     int mig_wait_disconnect; /* src waits for clients to disconnect (after migration completes) */
-    Ring mig_wait_disconnect_clients; /* List of RedsMigWaitDisconnectClient. Holds the clients
+    GList *mig_wait_disconnect_clients;/* List of RedsMigWaitDisconnectClient. Holds the clients
                                          which the src waits for their disconnection */
+
 
     int mig_inprogress;
     int expect_migrate;

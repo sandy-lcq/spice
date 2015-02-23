@@ -2834,11 +2834,8 @@ static void reds_mig_fill_wait_disconnect(RedsState *reds)
      * of clients that got connected to the src after migration completion.*/
     RING_FOREACH(client_item, &reds->clients) {
         RedClient *client = SPICE_CONTAINEROF(client_item, RedClient, link);
-        RedsMigWaitDisconnectClient *wait_client;
 
-        wait_client = spice_new0(RedsMigWaitDisconnectClient, 1);
-        wait_client->client = client;
-        ring_add(&reds->mig_wait_disconnect_clients, &wait_client->link);
+        reds->mig_wait_disconnect_clients = g_list_append(reds->mig_wait_disconnect_clients, client);
     }
     reds->mig_wait_disconnect = TRUE;
     reds->core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
@@ -2846,36 +2843,18 @@ static void reds_mig_fill_wait_disconnect(RedsState *reds)
 
 static void reds_mig_cleanup_wait_disconnect(RedsState *reds)
 {
-    RingItem *wait_client_item;
-
-    while ((wait_client_item = ring_get_tail(&reds->mig_wait_disconnect_clients))) {
-        RedsMigWaitDisconnectClient *wait_client;
-
-        wait_client = SPICE_CONTAINEROF(wait_client_item, RedsMigWaitDisconnectClient, link);
-        ring_remove(wait_client_item);
-        free(wait_client);
-    }
+    g_list_free(reds->mig_wait_disconnect_clients);
     reds->mig_wait_disconnect = FALSE;
 }
 
 static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *client)
 {
-    RingItem *wait_client_item;
+    g_warn_if_fail(g_list_find(reds->mig_wait_disconnect_clients, client) != NULL);
 
-    RING_FOREACH(wait_client_item, &reds->mig_wait_disconnect_clients) {
-        RedsMigWaitDisconnectClient *wait_client;
-
-        wait_client = SPICE_CONTAINEROF(wait_client_item, RedsMigWaitDisconnectClient, link);
-        if (wait_client->client == client) {
-            ring_remove(wait_client_item);
-            free(wait_client);
-            if (ring_is_empty(&reds->mig_wait_disconnect_clients)) {
-                reds_mig_cleanup(reds);
-            }
-            return;
-        }
+    reds->mig_wait_disconnect_clients = g_list_remove(reds->mig_wait_disconnect_clients, client);
+    if (reds->mig_wait_disconnect_clients == NULL) {
+       reds_mig_cleanup(reds);
     }
-    spice_warning("client not found %p", client);
 }
 
 static void reds_migrate_channels_seamless(RedsState *reds)
@@ -3337,7 +3316,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     ring_init(&reds->channels);
     ring_init(&reds->mig_target_clients);
     reds->char_devices = NULL;
-    ring_init(&reds->mig_wait_disconnect_clients);
+    reds->mig_wait_disconnect_clients = NULL;
     reds->vm_running = TRUE; /* for backward compatibility */
 
     if (!(reds->mig_timer = reds->core->timer_add(reds->core, migrate_timeout, reds))) {
