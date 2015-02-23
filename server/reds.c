@@ -3065,28 +3065,13 @@ SPICE_GNUC_VISIBLE const char** spice_server_char_device_recognized_subtypes(voi
 
 static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st)
 {
-    SpiceCharDeviceStateItem *item = spice_new0(SpiceCharDeviceStateItem, 1);
-
-    item->st = st;
-
-    ring_add(&reds->char_devs_states, &item->link);
+    reds->char_devices = g_list_append(reds->char_devices, st);
 }
 
 static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState *st)
 {
-    RingItem *item;
-
-    RING_FOREACH(item, &reds->char_devs_states) {
-        SpiceCharDeviceStateItem *st_item;
-
-        st_item = SPICE_CONTAINEROF(item, SpiceCharDeviceStateItem, link);
-        if (st_item->st == st) {
-            ring_remove(item);
-            free(st_item);
-            return;
-        }
-    }
-    spice_error("char dev state not found %p", st);
+    g_warn_if_fail(g_list_find(reds->char_devices, st) != NULL);
+    reds->char_devices = g_list_remove(reds->char_devices, st);
 }
 
 void reds_on_char_device_state_destroy(RedsState *reds, SpiceCharDeviceState *dev)
@@ -3351,7 +3336,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     reds->main_dispatcher = main_dispatcher_new(reds, reds->core);
     ring_init(&reds->channels);
     ring_init(&reds->mig_target_clients);
-    ring_init(&reds->char_devs_states);
+    reds->char_devices = NULL;
     ring_init(&reds->mig_wait_disconnect_clients);
     reds->vm_running = TRUE; /* for backward compatibility */
 
@@ -4001,30 +3986,24 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_switch(SpiceServer *s)
 
 SPICE_GNUC_VISIBLE void spice_server_vm_start(SpiceServer *s)
 {
-    RingItem *item;
+    GList *it;
 
     spice_assert(s == reds);
     reds->vm_running = TRUE;
-    RING_FOREACH(item, &reds->char_devs_states) {
-        SpiceCharDeviceStateItem *st_item;
-
-        st_item = SPICE_CONTAINEROF(item, SpiceCharDeviceStateItem, link);
-        spice_char_device_start(st_item->st);
+    for (it = reds->char_devices; it != NULL; it = it->next) {
+        spice_char_device_start((SpiceCharDeviceState *)it->data);
     }
     reds_on_vm_start(reds);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_vm_stop(SpiceServer *s)
 {
-    RingItem *item;
+    GList *it;
 
     spice_assert(s == reds);
     reds->vm_running = FALSE;
-    RING_FOREACH(item, &reds->char_devs_states) {
-        SpiceCharDeviceStateItem *st_item;
-
-        st_item = SPICE_CONTAINEROF(item, SpiceCharDeviceStateItem, link);
-        spice_char_device_stop(st_item->st);
+    for (it = reds->char_devices; it != NULL; it = it->next) {
+        spice_char_device_stop((SpiceCharDeviceState *)it->data);
     }
     reds_on_vm_stop(reds);
 }

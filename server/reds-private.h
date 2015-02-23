@@ -125,11 +125,6 @@ typedef struct RedsMigWaitDisconnectClient {
     RedClient *client;
 } RedsMigWaitDisconnectClient;
 
-typedef struct SpiceCharDeviceStateItem {
-    RingItem link;
-    SpiceCharDeviceState *st;
-} SpiceCharDeviceStateItem;
-
 /* Intermediate state for on going monitors config message from a single
  * client, being passed to the guest */
 typedef struct RedsClientMonitorsConfig {
@@ -187,7 +182,7 @@ struct RedsState {
     SpiceTimer *mig_timer;
 
     int vm_running;
-    Ring char_devs_states; /* list of SpiceCharDeviceStateItem */
+    GList *char_devices; /* list of SpiceCharDeviceState */
     int seamless_migration_enabled; /* command line arg */
     int keepalive_timeout;
 
