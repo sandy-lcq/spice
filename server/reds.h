@@ -128,4 +128,15 @@ void reds_core_watch_update_mask(RedsState *reds,
                                  int event_mask);
 void reds_core_watch_remove(RedsState *reds, SpiceWatch *watch);
 
+SpiceTimer *reds_core_timer_add(RedsState *reds,
+                                SpiceTimerFunc func,
+                                void *opaque);
+void reds_core_timer_start(RedsState *reds,
+                           SpiceTimer *timer,
+                           uint32_t ms);
+void reds_core_timer_cancel(RedsState *reds,
+                            SpiceTimer *timer);
+void reds_core_timer_remove(RedsState *reds,
+                            SpiceTimer *timer);
+
 #endif

@@ -4100,6 +4100,49 @@ void reds_core_watch_remove(RedsState *reds, SpiceWatch *watch)
    reds->core->watch_remove(watch);
 }
 
+SpiceTimer *reds_core_timer_add(RedsState *reds,
+                                SpiceTimerFunc func,
+                                void *opaque)
+{
+   g_return_val_if_fail(reds != NULL, NULL);
+   g_return_val_if_fail(reds->core != NULL, NULL);
+   g_return_val_if_fail(reds->core->timer_add != NULL, NULL);
+
+   return reds->core->timer_add(reds->core, func, opaque);
+
+}
+
+void reds_core_timer_start(RedsState *reds,
+                           SpiceTimer *timer,
+                           uint32_t ms)
+{
+   g_return_if_fail(reds != NULL);
+   g_return_if_fail(reds->core != NULL);
+   g_return_if_fail(reds->core->timer_start != NULL);
+
+   return reds->core->timer_start(timer, ms);
+}
+
+void reds_core_timer_cancel(RedsState *reds,
+                            SpiceTimer *timer)
+{
+   g_return_if_fail(reds != NULL);
+   g_return_if_fail(reds->core != NULL);
+   g_return_if_fail(reds->core->timer_cancel != NULL);
+
+   return reds->core->timer_cancel(timer);
+}
+
+void reds_core_timer_remove(RedsState *reds,
+                            SpiceTimer *timer)
+{
+   g_return_if_fail(reds != NULL);
+   g_return_if_fail(reds->core != NULL);
+   g_return_if_fail(reds->core->timer_remove != NULL);
+
+   return reds->core->timer_remove(timer);
+}
+
 void reds_update_client_mouse_allowed(RedsState *reds)
 {
     static int allowed = FALSE;
