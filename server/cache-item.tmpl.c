@@ -66,7 +66,6 @@ static CacheItem *FUNC_NAME(find)(CHANNELCLIENT *channel_client, uint64_t id)
 static void FUNC_NAME(remove)(CHANNELCLIENT *channel_client, CacheItem *item)
 {
     CacheItem **now;
-    CHANNEL *channel = CHANNEL_FROM_RCC(&channel_client->common.base);
     spice_assert(item);
 
     now = &channel_client->CACHE_NAME[CACHE_HASH_KEY(item->id)];
@@ -82,7 +81,7 @@ static void FUNC_NAME(remove)(CHANNELCLIENT *channel_client, CacheItem *item)
     channel_client->VAR_NAME(items)--;
     channel_client->VAR_NAME(available) += item->size;
 
-    red_channel_pipe_item_init(&channel->common.base, &item->u.pipe_data, PIPE_ITEM_TYPE_INVAL_ONE);
+    pipe_item_init(&item->u.pipe_data, PIPE_ITEM_TYPE_INVAL_ONE);
     red_channel_client_pipe_add_tail_and_push(&channel_client->common.base, &item->u.pipe_data); // for now
 }
 

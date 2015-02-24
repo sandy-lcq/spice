@@ -1663,7 +1663,7 @@ void red_channel_client_set_message_serial(RedChannelClient *rcc, uint64_t seria
     rcc->send_data.serial = serial;
 }
 
-void red_channel_pipe_item_init(RedChannel *channel, PipeItem *item, int type)
+void pipe_item_init(PipeItem *item, int type)
 {
     ring_item_init(&item->link);
     item->type = type;
@@ -1729,7 +1729,7 @@ void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
 {
     PipeItem *item = spice_new(PipeItem, 1);
 
-    red_channel_pipe_item_init(rcc->channel, item, pipe_item_type);
+    pipe_item_init(item, pipe_item_type);
     red_channel_client_pipe_add(rcc, item);
     red_channel_client_push(rcc);
 }
@@ -1749,7 +1749,7 @@ void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
 {
     EmptyMsgPipeItem *item = spice_new(EmptyMsgPipeItem, 1);
 
-    red_channel_pipe_item_init(rcc->channel, &item->base, PIPE_ITEM_TYPE_EMPTY_MSG);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_EMPTY_MSG);
     item->msg = msg_type;
     red_channel_client_pipe_add(rcc, &item->base);
     red_channel_client_push(rcc);

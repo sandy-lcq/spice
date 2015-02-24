@@ -136,8 +136,7 @@ void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
 StreamClipItem *stream_clip_item_new(DisplayChannelClient* dcc, StreamAgent *agent)
 {
     StreamClipItem *item = spice_new(StreamClipItem, 1);
-    red_channel_pipe_item_init(RED_CHANNEL_CLIENT(dcc)->channel,
-                               (PipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP);
+    pipe_item_init((PipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP);
 
     item->stream_agent = agent;
     agent->stream->refs++;
@@ -735,8 +734,8 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
         StreamActivateReportItem *report_pipe_item = spice_malloc0(sizeof(*report_pipe_item));
 
         agent->report_id = rand();
-        red_channel_pipe_item_init(RED_CHANNEL_CLIENT(dcc)->channel, &report_pipe_item->pipe_item,
-                                   PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
+        pipe_item_init(&report_pipe_item->pipe_item,
+                       PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
         report_pipe_item->stream_id = get_stream_id(DCC_TO_DC(dcc), stream);
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &report_pipe_item->pipe_item);
     }
@@ -782,7 +781,6 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
 
     if (stream->current &&
         region_contains(&stream->current->tree_item.base.rgn, &agent->vis_region)) {
-        RedChannel *channel;
         RedChannelClient *rcc;
         UpgradeItem *upgrade_item;
         int n_rects;
@@ -799,11 +797,9 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
                     stream_id, stream->current->sized_stream != NULL);
         rect_debug(&stream->current->red_drawable->bbox);
         rcc = RED_CHANNEL_CLIENT(dcc);
-        channel = rcc->channel;
         upgrade_item = spice_new(UpgradeItem, 1);
         upgrade_item->refs = 1;
-        red_channel_pipe_item_init(channel,
-                &upgrade_item->base, PIPE_ITEM_TYPE_UPGRADE);
+        pipe_item_init(&upgrade_item->base, PIPE_ITEM_TYPE_UPGRADE);
         upgrade_item->drawable = stream->current;
         upgrade_item->drawable->refs++;
         n_rects = pixman_region32_n_rects(&upgrade_item->drawable->tree_item.base.rgn);

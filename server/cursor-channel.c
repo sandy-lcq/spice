@@ -136,7 +136,7 @@ static PipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int num
 {
     CursorPipeItem *item = spice_malloc0(sizeof(CursorPipeItem));
 
-    red_channel_pipe_item_init(rcc->channel, &item->base, PIPE_ITEM_TYPE_CURSOR);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_CURSOR);
     item->refs = 1;
     item->cursor_item = data;
     item->cursor_item->refs++;

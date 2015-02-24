@@ -234,8 +234,7 @@ static PipeItem *inputs_key_modifiers_item_new(
 {
     KeyModifiersPipeItem *item = spice_malloc(sizeof(KeyModifiersPipeItem));
 
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_KEY_MODIFIERS);
+    pipe_item_init(&item->base, PIPE_ITEM_KEY_MODIFIERS);
     item->modifiers = *(uint8_t *)data;
     return &item->base;
 }
@@ -504,8 +503,7 @@ static void inputs_pipe_add_init(RedChannelClient *rcc)
     InputsInitPipeItem *item = spice_malloc(sizeof(InputsInitPipeItem));
     InputsChannel *inputs = SPICE_CONTAINEROF(rcc->channel, InputsChannel, base);
 
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_INPUTS_INIT);
+    pipe_item_init(&item->base, PIPE_ITEM_INPUTS_INIT);
     item->modifiers = kbd_get_leds(inputs_channel_get_keyboard(inputs));
     red_channel_client_pipe_add_push(rcc, &item->base);
 }

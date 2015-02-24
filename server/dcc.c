@@ -38,8 +38,7 @@ static SurfaceCreateItem *surface_create_item_new(RedChannel* channel,
     create->surface_create.flags = flags;
     create->surface_create.format = format;
 
-    red_channel_pipe_item_init(channel,
-                               &create->pipe_item, PIPE_ITEM_TYPE_CREATE_SURFACE);
+    pipe_item_init(&create->pipe_item, PIPE_ITEM_TYPE_CREATE_SURFACE);
     return create;
 }
 
@@ -167,7 +166,6 @@ ImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc, int surface_id,
                                       SpiceRect *area, PipeItem *pos, int can_lossy)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
-    RedChannel *channel = RED_CHANNEL(display);
     RedSurface *surface = &display->surfaces[surface_id];
     SpiceCanvas *canvas = surface->context.canvas;
     ImageItem *item;
@@ -186,7 +184,7 @@ ImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc, int surface_id,
 
     item = (ImageItem *)spice_malloc_n_m(height, stride, sizeof(ImageItem));
 
-    red_channel_pipe_item_init(channel, &item->link, PIPE_ITEM_TYPE_IMAGE);
+    pipe_item_init(&item->link, PIPE_ITEM_TYPE_IMAGE);
 
     item->refs = 1;
     item->surface_id = surface_id;
@@ -305,8 +303,7 @@ static DrawablePipeItem *drawable_pipe_item_new(DisplayChannelClient *dcc, Drawa
     dpi->dcc = dcc;
     ring_item_init(&dpi->base);
     ring_add(&drawable->pipes, &dpi->base);
-    red_channel_pipe_item_init(RED_CHANNEL_CLIENT(dcc)->channel,
-                               &dpi->dpi_pipe_item, PIPE_ITEM_TYPE_DRAW);
+    pipe_item_init(&dpi->dpi_pipe_item, PIPE_ITEM_TYPE_DRAW);
     dpi->refs++;
     drawable->refs++;
     return dpi;
@@ -340,15 +337,14 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 {
     int i;
     DisplayChannel *display = DCC_TO_DC(dcc);
-    RedChannel *channel = RED_CHANNEL_CLIENT(dcc)->channel;
 
     for (i = 0; i < NUM_STREAMS; i++) {
         StreamAgent *agent = &dcc->stream_agents[i];
         agent->stream = &display->streams_buf[i];
         region_init(&agent->vis_region);
         region_init(&agent->clip);
-        red_channel_pipe_item_init(channel, &agent->create_item, PIPE_ITEM_TYPE_STREAM_CREATE);
-        red_channel_pipe_item_init(channel, &agent->destroy_item, PIPE_ITEM_TYPE_STREAM_DESTROY);
+        pipe_item_init(&agent->create_item, PIPE_ITEM_TYPE_STREAM_CREATE);
+        pipe_item_init(&agent->destroy_item, PIPE_ITEM_TYPE_STREAM_DESTROY);
     }
     dcc->use_mjpeg_encoder_rate_control =
         red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT);
@@ -529,8 +525,7 @@ static MonitorsConfigItem *monitors_config_item_new(RedChannel* channel,
     mci = (MonitorsConfigItem *)spice_malloc(sizeof(*mci));
     mci->monitors_config = monitors_config;
 
-    red_channel_pipe_item_init(channel,
-                               &mci->pipe_item, PIPE_ITEM_TYPE_MONITORS_CONFIG);
+    pipe_item_init(&mci->pipe_item, PIPE_ITEM_TYPE_MONITORS_CONFIG);
     return mci;
 }
 
@@ -563,8 +558,7 @@ static SurfaceDestroyItem *surface_destroy_item_new(RedChannel *channel,
 
     destroy = spice_malloc(sizeof(SurfaceDestroyItem));
     destroy->surface_destroy.surface_id = surface_id;
-    red_channel_pipe_item_init(channel, &destroy->pipe_item,
-                               PIPE_ITEM_TYPE_DESTROY_SURFACE);
+    pipe_item_init(&destroy->pipe_item, PIPE_ITEM_TYPE_DESTROY_SURFACE);
 
     return destroy;
 }
@@ -582,8 +576,7 @@ PipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
         return NULL;
     }
 
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_TYPE_GL_SCANOUT);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_GL_SCANOUT);
 
     return &item->base;
 }
@@ -603,8 +596,7 @@ PipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
 
     dcc->gl_draw_ongoing = TRUE;
     item->draw = *draw;
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_TYPE_GL_DRAW);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_GL_DRAW);
 
     return &item->base;
 }

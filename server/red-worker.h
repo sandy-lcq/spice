@@ -70,7 +70,7 @@ static inline void red_pipe_add_verb(RedChannelClient* rcc, uint16_t verb)
 {
     VerbItem *item = spice_new(VerbItem, 1);
 
-    red_channel_pipe_item_init(rcc->channel, &item->base, PIPE_ITEM_TYPE_VERB);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_VERB);
     item->verb = verb;
     red_channel_client_pipe_add(rcc, &item->base);
 }

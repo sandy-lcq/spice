@@ -121,8 +121,7 @@ static SpiceCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharD
     if (!state->pipe_item) {
         msg_item = spice_new0(SpiceVmcPipeItem, 1);
         msg_item->refs = 1;
-        red_channel_pipe_item_init(&state->channel,
-                                   &msg_item->base, PIPE_ITEM_TYPE_SPICEVMC_DATA);
+        pipe_item_init(&msg_item->base, PIPE_ITEM_TYPE_SPICEVMC_DATA);
     } else {
         spice_assert(state->pipe_item->buf_used == 0);
         msg_item = state->pipe_item;
@@ -159,7 +158,7 @@ static void spicevmc_port_send_init(RedChannelClient *rcc)
     SpiceCharDeviceInstance *sin = state->chardev_sin;
     PortInitPipeItem *item = spice_malloc(sizeof(PortInitPipeItem));
 
-    red_channel_pipe_item_init(rcc->channel, &item->base, PIPE_ITEM_TYPE_PORT_INIT);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_PORT_INIT);
     item->name = strdup(sin->portname);
     item->opened = state->port_opened;
     red_channel_client_pipe_add_push(rcc, &item->base);
@@ -169,7 +168,7 @@ static void spicevmc_port_send_event(RedChannelClient *rcc, uint8_t event)
 {
     PortEventPipeItem *item = spice_malloc(sizeof(PortEventPipeItem));
 
-    red_channel_pipe_item_init(rcc->channel, &item->base, PIPE_ITEM_TYPE_PORT_EVENT);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_PORT_EVENT);
     item->event = event;
     red_channel_client_pipe_add_push(rcc, &item->base);
 }

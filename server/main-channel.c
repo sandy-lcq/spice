@@ -226,8 +226,7 @@ static PipeItem *main_mouse_mode_item_new(RedChannelClient *rcc, void *data, int
     MouseModePipeItem *item = spice_malloc(sizeof(MouseModePipeItem));
     MainMouseModeItemInfo *info = data;
 
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_MOUSE_MODE);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_MOUSE_MODE);
     item->current_mode = info->current_mode;
     item->is_client_mouse_allowed = info->is_client_mouse_allowed;
     return &item->base;
@@ -237,7 +236,7 @@ static PipeItem *main_ping_item_new(MainChannelClient *mcc, int size)
 {
     PingPipeItem *item = spice_malloc(sizeof(PingPipeItem));
 
-    red_channel_pipe_item_init(mcc->base.channel, &item->base, PIPE_ITEM_TYPE_MAIN_PING);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_PING);
     item->size = size;
     return &item->base;
 }
@@ -246,8 +245,7 @@ static PipeItem *main_agent_tokens_item_new(RedChannelClient *rcc, uint32_t num_
 {
     TokensPipeItem *item = spice_malloc(sizeof(TokensPipeItem));
 
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_AGENT_TOKEN);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_AGENT_TOKEN);
     item->tokens = num_tokens;
     return &item->base;
 }
@@ -258,8 +256,7 @@ static PipeItem *main_agent_data_item_new(RedChannelClient *rcc, uint8_t* data, 
 {
     AgentDataPipeItem *item = spice_malloc(sizeof(AgentDataPipeItem));
 
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_AGENT_DATA);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_AGENT_DATA);
     item->data = data;
     item->len = len;
     item->free_data = free_data;
@@ -274,8 +271,7 @@ static PipeItem *main_init_item_new(MainChannelClient *mcc,
 {
     InitPipeItem *item = spice_malloc(sizeof(InitPipeItem));
 
-    red_channel_pipe_item_init(mcc->base.channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_INIT);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_INIT);
     item->connection_id = connection_id;
     item->display_channels_hint = display_channels_hint;
     item->current_mouse_mode = current_mouse_mode;
@@ -289,8 +285,7 @@ static PipeItem *main_name_item_new(MainChannelClient *mcc, const char *name)
 {
     NamePipeItem *item = spice_malloc(sizeof(NamePipeItem) + strlen(name) + 1);
 
-    red_channel_pipe_item_init(mcc->base.channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_NAME);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_NAME);
     item->msg.name_len = strlen(name) + 1;
     memcpy(&item->msg.name, name, item->msg.name_len);
 
@@ -301,8 +296,7 @@ static PipeItem *main_uuid_item_new(MainChannelClient *mcc, const uint8_t uuid[1
 {
     UuidPipeItem *item = spice_malloc(sizeof(UuidPipeItem));
 
-    red_channel_pipe_item_init(mcc->base.channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_UUID);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_UUID);
     memcpy(item->msg.uuid, uuid, sizeof(item->msg.uuid));
 
     return &item->base;
@@ -313,8 +307,7 @@ static PipeItem *main_notify_item_new(RedChannelClient *rcc, void *data, int num
     NotifyPipeItem *item = spice_malloc(sizeof(NotifyPipeItem));
     const char *msg = data;
 
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_NOTIFY);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_NOTIFY);
     item->msg = spice_strdup(msg);
     return &item->base;
 }
@@ -325,8 +318,7 @@ static PipeItem *main_multi_media_time_item_new(
     MultiMediaTimePipeItem *item, *info = data;
 
     item = spice_malloc(sizeof(MultiMediaTimePipeItem));
-    red_channel_pipe_item_init(rcc->channel, &item->base,
-                               PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME);
     item->time = info->time;
     return &item->base;
 }

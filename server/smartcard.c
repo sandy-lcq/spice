@@ -576,8 +576,7 @@ static void smartcard_push_error(RedChannelClient *rcc, uint32_t reader_id, VSCE
 {
     ErrorItem *error_item = spice_new0(ErrorItem, 1);
 
-    red_channel_pipe_item_init(rcc->channel, &error_item->base,
-                               PIPE_ITEM_TYPE_ERROR);
+    pipe_item_init(&error_item->base, PIPE_ITEM_TYPE_ERROR);
 
     error_item->base.type = PIPE_ITEM_TYPE_ERROR;
     error_item->vheader.reader_id = reader_id;
@@ -591,8 +590,7 @@ static MsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc, VSCMsgHeader *
 {
     MsgItem *msg_item = spice_new0(MsgItem, 1);
 
-    red_channel_pipe_item_init(rcc->channel, &msg_item->base,
-                               PIPE_ITEM_TYPE_SMARTCARD_DATA);
+    pipe_item_init(&msg_item->base, PIPE_ITEM_TYPE_SMARTCARD_DATA);
     msg_item->refs = 1;
     msg_item->vheader = vheader;
     return msg_item;

@@ -476,7 +476,7 @@ int red_channel_client_get_roundtrip_ms(RedChannelClient *rcc);
  */
 void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uint32_t timeout_ms);
 
-void red_channel_pipe_item_init(RedChannel *channel, PipeItem *item, int type);
+void pipe_item_init(PipeItem *item, int type);
 
 // TODO: add back the channel_pipe_add functionality - by adding reference counting
 // to the PipeItem.
