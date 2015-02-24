@@ -17,6 +17,10 @@
 #include "red_channel.h"
 #include "test_util.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #define MEM_SLOT_GROUP_ID 0
 
 #define NOTIFY_DISPLAY_BATCH (SINGLE_PART/2)
