@@ -18,9 +18,6 @@
 #ifndef __SMART_CARD_H__
 #define __SMART_CARD_H__
 
-// Maximal length of APDU
-#define APDUBufSize 270
-
 /*
  * connect to smartcard interface, used by smartcard channel
  */

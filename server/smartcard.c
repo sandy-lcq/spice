@@ -46,6 +46,9 @@
  */
 #define SMARTCARD_MAX_READERS 10
 
+// Maximal length of APDU
+#define APDUBufSize 270
+
 typedef struct SmartCardDeviceState SmartCardDeviceState;
 
 typedef struct SmartCardChannelClient {
