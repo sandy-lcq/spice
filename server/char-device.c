@@ -767,6 +767,37 @@ void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
     spice_char_device_state_unref(char_dev);
 }
 
+static SpiceCharDeviceClientState *red_char_device_client_new(RedClient *client,
+                                                              int do_flow_control,
+                                                              uint32_t max_send_queue_size,
+                                                              uint32_t num_client_tokens,
+                                                              uint32_t num_send_tokens)
+{
+    SpiceCharDeviceClientState *dev_client;
+
+    dev_client = spice_new0(SpiceCharDeviceClientState, 1);
+    dev_client->client = client;
+    ring_init(&dev_client->send_queue);
+    dev_client->send_queue_size = 0;
+    dev_client->max_send_queue_size = max_send_queue_size;
+    dev_client->do_flow_control = do_flow_control;
+    if (do_flow_control) {
+        dev_client->wait_for_tokens_timer =
+            reds_core_timer_add(client->reds, device_client_wait_for_tokens_timeout,
+                                dev_client);
+        if (!dev_client->wait_for_tokens_timer) {
+            spice_error("failed to create wait for tokens timer");
+        }
+        dev_client->num_client_tokens = num_client_tokens;
+        dev_client->num_send_tokens = num_send_tokens;
+    } else {
+        dev_client->num_client_tokens = ~0;
+        dev_client->num_send_tokens = ~0;
+    }
+
+    return dev_client;
+}
+
 int spice_char_device_client_add(SpiceCharDeviceState *dev,
                                  RedClient *client,
                                  int do_flow_control,
@@ -789,26 +820,11 @@ int spice_char_device_client_add(SpiceCharDeviceState *dev,
     dev->wait_for_migrate_data = wait_for_migrate_data;
 
     spice_debug("dev_state %p client %p", dev, client);
-    dev_client = spice_new0(SpiceCharDeviceClientState, 1);
+    dev_client = red_char_device_client_new(client, do_flow_control,
+                                            max_send_queue_size,
+                                            num_client_tokens,
+                                            num_send_tokens);
     dev_client->dev = dev;
-    dev_client->client = client;
-    ring_init(&dev_client->send_queue);
-    dev_client->send_queue_size = 0;
-    dev_client->max_send_queue_size = max_send_queue_size;
-    dev_client->do_flow_control = do_flow_control;
-    if (do_flow_control) {
-        dev_client->wait_for_tokens_timer =
-            reds_core_timer_add(dev->reds, device_client_wait_for_tokens_timeout,
-                                dev_client);
-        if (!dev_client->wait_for_tokens_timer) {
-            spice_error("failed to create wait for tokens timer");
-        }
-        dev_client->num_client_tokens = num_client_tokens;
-        dev_client->num_send_tokens = num_send_tokens;
-    } else {
-        dev_client->num_client_tokens = ~0;
-        dev_client->num_send_tokens = ~0;
-    }
     ring_add(&dev->clients, &dev_client->link);
     dev->num_clients++;
     /* Now that we have a client, forward any pending device data */
