@@ -94,6 +94,56 @@ typedef struct SpiceCharDeviceMsgToClientItem {
     SpiceCharDeviceMsgToClient *msg;
 } SpiceCharDeviceMsgToClientItem;
 
+static SpiceCharDeviceMsgToClient *
+spice_char_device_read_one_msg_from_device(SpiceCharDeviceState *dev)
+{
+   return dev->cbs.read_one_msg_from_device(dev->sin, dev->opaque);
+}
+
+static SpiceCharDeviceMsgToClient *
+spice_char_device_ref_msg_to_client(SpiceCharDeviceState *dev,
+                                    SpiceCharDeviceMsgToClient *msg)
+{
+   return dev->cbs.ref_msg_to_client(msg, dev->opaque);
+}
+
+static void
+spice_char_device_unref_msg_to_client(SpiceCharDeviceState *dev,
+                                      SpiceCharDeviceMsgToClient *msg)
+{
+   dev->cbs.unref_msg_to_client(msg, dev->opaque);
+}
+
+static void
+spice_char_device_send_msg_to_client(SpiceCharDeviceState *dev,
+                                     SpiceCharDeviceMsgToClient *msg,
+                                     RedClient *client)
+{
+   dev->cbs.send_msg_to_client(msg, client, dev->opaque);
+}
+
+static void
+spice_char_device_send_tokens_to_client(SpiceCharDeviceState *dev,
+                                        RedClient *client,
+                                        uint32_t tokens)
+{
+   dev->cbs.send_tokens_to_client(client, tokens, dev->opaque);
+}
+
+static void
+spice_char_device_on_free_self_token(SpiceCharDeviceState *dev)
+{
+   if (dev->cbs.on_free_self_token != NULL) {
+       dev->cbs.on_free_self_token(dev->opaque);
+   }
+}
+
+static void
+spice_char_device_remove_client(SpiceCharDeviceState *dev, RedClient *client)
+{
+   dev->cbs.remove_client(client, dev->opaque);
+}
+
 static void spice_char_device_write_buffer_free(SpiceCharDeviceWriteBuffer *buf)
 {
     if (buf == NULL)
@@ -143,7 +193,7 @@ static void spice_char_device_client_send_queue_free(SpiceCharDeviceState *dev,
                                                                      link);
 
         ring_remove(item);
-        dev->cbs.unref_msg_to_client(msg_item->msg, dev->opaque);
+        spice_char_device_unref_msg_to_client(dev, msg_item->msg);
         free(msg_item);
     }
     dev_client->num_send_tokens += dev_client->send_queue_size;
@@ -189,7 +239,7 @@ static void spice_char_device_handle_client_overflow(SpiceCharDeviceClientState 
 {
     SpiceCharDeviceState *dev = dev_client->dev;
     spice_printerr("dev %p client %p ", dev, dev_client);
-    dev->cbs.remove_client(dev_client->client, dev->opaque);
+    spice_char_device_remove_client(dev, dev_client->client);
 }
 
 static SpiceCharDeviceClientState *spice_char_device_client_find(SpiceCharDeviceState *dev,
@@ -258,7 +308,7 @@ static void spice_char_device_add_msg_to_client_queue(SpiceCharDeviceClientState
     }
 
     msg_item = spice_new0(SpiceCharDeviceMsgToClientItem, 1);
-    msg_item->msg = dev->cbs.ref_msg_to_client(msg, dev->opaque);
+    msg_item->msg = spice_char_device_ref_msg_to_client(dev, msg);
     ring_add(&dev_client->send_queue, &msg_item->link);
     dev_client->send_queue_size++;
     if (!dev_client->wait_for_tokens_started) {
@@ -280,7 +330,7 @@ static void spice_char_device_send_msg_to_clients(SpiceCharDeviceState *dev,
         if (spice_char_device_can_send_to_client(dev_client)) {
             dev_client->num_send_tokens--;
             spice_assert(ring_is_empty(&dev_client->send_queue));
-            dev->cbs.send_msg_to_client(msg, dev_client->client, dev->opaque);
+            spice_char_device_send_msg_to_client(dev, msg, dev_client->client);
 
             /* don't refer to dev_client anymore, it may have been released */
         } else {
@@ -317,7 +367,7 @@ static int spice_char_device_read_from_device(SpiceCharDeviceState *dev)
     while ((max_send_tokens || ring_is_empty(&dev->clients)) && dev->running) {
         SpiceCharDeviceMsgToClient *msg;
 
-        msg = dev->cbs.read_one_msg_from_device(dev->sin, dev->opaque);
+        msg = spice_char_device_read_one_msg_from_device(dev);
         if (!msg) {
             if (dev->during_read_from_device > 1) {
                 dev->during_read_from_device = 1;
@@ -328,7 +378,7 @@ static int spice_char_device_read_from_device(SpiceCharDeviceState *dev)
         }
         did_read = TRUE;
         spice_char_device_send_msg_to_clients(dev, msg);
-        dev->cbs.unref_msg_to_client(msg, dev->opaque);
+        spice_char_device_unref_msg_to_client(dev, msg);
         max_send_tokens--;
     }
     dev->during_read_from_device = 0;
@@ -350,10 +400,10 @@ static void spice_char_device_client_send_queue_push(SpiceCharDeviceClientState 
         ring_remove(item);
 
         dev_client->num_send_tokens--;
-        dev_client->dev->cbs.send_msg_to_client(msg_item->msg,
-                                           dev_client->client,
-                                           dev_client->dev->opaque);
-        dev_client->dev->cbs.unref_msg_to_client(msg_item->msg, dev_client->dev->opaque);
+        spice_char_device_send_msg_to_client(dev_client->dev,
+                                             msg_item->msg,
+                                             dev_client->client);
+        spice_char_device_unref_msg_to_client(dev_client->dev, msg_item->msg);
         dev_client->send_queue_size--;
         free(msg_item);
     }
@@ -433,9 +483,7 @@ static void spice_char_device_client_tokens_add(SpiceCharDeviceState *dev,
 
         dev_client->num_client_tokens += dev_client->num_client_tokens_free;
         dev_client->num_client_tokens_free = 0;
-        dev->cbs.send_tokens_to_client(dev_client->client,
-                                       tokens,
-                                       dev->opaque);
+        spice_char_device_send_tokens_to_client(dev, dev_client->client, tokens);
     }
 }
 
@@ -658,9 +706,7 @@ void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
         spice_char_device_client_tokens_add(dev, dev_client, buf_token_price);
     } else if (buf_origin == WRITE_BUFFER_ORIGIN_SERVER) {
         dev->num_self_tokens++;
-        if (dev->cbs.on_free_self_token) {
-            dev->cbs.on_free_self_token(dev->opaque);
-        }
+        spice_char_device_on_free_self_token(dev);
     }
 }
 
