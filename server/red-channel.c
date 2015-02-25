@@ -2075,28 +2075,32 @@ RedClient *red_client_unref(RedClient *client)
 }
 
 /* client mutex should be locked before this call */
-static void red_channel_client_set_migration_seamless(RedChannelClient *rcc)
+static gboolean red_channel_client_set_migration_seamless(RedChannelClient *rcc)
 {
-    spice_assert(rcc->client->during_target_migrate && rcc->client->seamless_migrate);
+    gboolean ret = FALSE;
 
     if (rcc->channel->migration_flags & SPICE_MIGRATE_NEED_DATA_TRANSFER) {
         rcc->wait_migrate_data = TRUE;
-        rcc->client->num_migrated_channels++;
+        ret = TRUE;
     }
     spice_debug("channel type %d id %d rcc %p wait data %d", rcc->channel->type, rcc->channel->id, rcc,
         rcc->wait_migrate_data);
+
+    return ret;
 }
 
 void red_client_set_migration_seamless(RedClient *client) // dest
 {
     RingItem *link;
+    spice_assert(client->during_target_migrate);
     pthread_mutex_lock(&client->lock);
     client->seamless_migrate = TRUE;
     /* update channel clients that got connected before the migration
      * type was set. red_client_add_channel will handle newer channel clients */
     RING_FOREACH(link, &client->channels) {
         RedChannelClient *rcc = SPICE_CONTAINEROF(link, RedChannelClient, client_link);
-        red_channel_client_set_migration_seamless(rcc);
+        if (red_channel_client_set_migration_seamless(rcc))
+            client->num_migrated_channels++;
     }
     pthread_mutex_unlock(&client->lock);
 }
@@ -2176,7 +2180,8 @@ static void red_client_add_channel(RedClient *client, RedChannelClient *rcc)
     spice_assert(rcc && client);
     ring_add(&client->channels, &rcc->client_link);
     if (client->during_target_migrate && client->seamless_migrate) {
-        red_channel_client_set_migration_seamless(rcc);
+        if (red_channel_client_set_migration_seamless(rcc))
+            client->num_migrated_channels++;
     }
     client->channels_num++;
 }
