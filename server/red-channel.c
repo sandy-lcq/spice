@@ -839,7 +839,7 @@ void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uin
     if (rcc->latency_monitor.timer == NULL) {
         rcc->latency_monitor.timer = rcc->channel->core->timer_add(
             rcc->channel->core, red_channel_client_ping_timer, rcc);
-        if (!rcc->client->during_target_migrate) {
+        if (!red_client_during_migrate_at_target(rcc->client)) {
             red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
         }
         rcc->latency_monitor.roundtrip = -1;
@@ -849,7 +849,7 @@ void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uin
         rcc->connectivity_monitor.timer = rcc->channel->core->timer_add(
             rcc->channel->core, red_channel_client_connectivity_timer, rcc);
         rcc->connectivity_monitor.timeout = timeout_ms;
-        if (!rcc->client->during_target_migrate) {
+        if (!red_client_during_migrate_at_target(rcc->client)) {
            rcc->channel->core->timer_start(rcc->connectivity_monitor.timer,
                                            rcc->connectivity_monitor.timeout);
         }
