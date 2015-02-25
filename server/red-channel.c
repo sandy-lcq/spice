@@ -924,23 +924,34 @@ error:
     return NULL;
 }
 
-static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
+/* returns TRUE If all channels are finished migrating, FALSE otherwise */
+static gboolean red_client_seamless_migration_done_for_channel(RedClient *client)
 {
-    RedsState *reds = red_channel_get_server(rcc->channel);
-    rcc->wait_migrate_data = FALSE;
+    gboolean ret = FALSE;
 
-    pthread_mutex_lock(&rcc->client->lock);
-    rcc->client->num_migrated_channels--;
-
+    pthread_mutex_lock(&client->lock);
+    client->num_migrated_channels--;
     /* we assume we always have at least one channel who has migration data transfer,
      * otherwise, this flag will never be set back to FALSE*/
-    if (!rcc->client->num_migrated_channels) {
-        rcc->client->during_target_migrate = FALSE;
-        rcc->client->seamless_migrate = FALSE;
+    if (!client->num_migrated_channels) {
+        client->during_target_migrate = FALSE;
+        client->seamless_migrate = FALSE;
         /* migration completion might have been triggered from a different thread
          * than the main thread */
-        main_dispatcher_seamless_migrate_dst_complete(reds_get_main_dispatcher(reds),
-                                                      rcc->client);
+        main_dispatcher_seamless_migrate_dst_complete(reds_get_main_dispatcher(client->reds),
+                                                      client);
+        ret = TRUE;
+    }
+    pthread_mutex_unlock(&client->lock);
+
+    return ret;
+}
+
+static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
+{
+    rcc->wait_migrate_data = FALSE;
+
+    if (red_client_seamless_migration_done_for_channel(rcc->client)) {
         if (rcc->latency_monitor.timer) {
             red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
         }
@@ -949,7 +960,6 @@ static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
                                             rcc->connectivity_monitor.timeout);
         }
     }
-    pthread_mutex_unlock(&rcc->client->lock);
 }
 
 int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc)
