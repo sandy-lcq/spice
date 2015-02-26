@@ -1825,14 +1825,14 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     }
 
     if (!mig_target) {
-        main_channel_push_init(mcc, g_list_length(reds->qxl_instances),
+        main_channel_client_push_init(mcc, g_list_length(reds->qxl_instances),
             reds->mouse_mode, reds->is_client_mouse_allowed,
             reds_get_mm_time() - MM_TIME_DELTA,
             reds_qxl_ram_size(reds));
         if (reds->config->spice_name)
-            main_channel_push_name(mcc, reds->config->spice_name);
+            main_channel_client_push_name(mcc, reds->config->spice_name);
         if (reds->config->spice_uuid_is_set)
-            main_channel_push_uuid(mcc, reds->config->spice_uuid);
+            main_channel_client_push_uuid(mcc, reds->config->spice_uuid);
     } else {
         reds_mig_target_client_add(reds, client);
     }
@@ -1960,7 +1960,7 @@ void reds_on_client_seamless_migrate_complete(RedsState *reds, RedClient *client
         spice_info("client no longer exists");
         return;
     }
-    main_channel_migrate_dst_complete(red_client_get_main(client));
+    main_channel_client_migrate_dst_complete(red_client_get_main(client));
 }
 
 void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *client)
@@ -1971,12 +1971,13 @@ void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *c
     mcc = red_client_get_main(client);
 
     // TODO: not doing net test. consider doing it on client_migrate_info
-    main_channel_push_init(mcc, g_list_length(reds->qxl_instances),
-                           reds->mouse_mode, reds->is_client_mouse_allowed,
-                           reds_get_mm_time() - MM_TIME_DELTA,
-                           reds_qxl_ram_size(reds));
+    main_channel_client_push_init(mcc, g_list_length(reds->qxl_instances),
+                                  reds->mouse_mode,
+                                  reds->is_client_mouse_allowed,
+                                  reds_get_mm_time() - MM_TIME_DELTA,
+                                  reds_qxl_ram_size(reds));
     reds_link_mig_target_channels(reds, client);
-    main_channel_migrate_dst_complete(mcc);
+    main_channel_client_migrate_dst_complete(mcc);
 }
 
 static void reds_handle_other_links(RedsState *reds, RedLinkInfo *link)

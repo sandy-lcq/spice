@@ -509,10 +509,12 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
     return reds_handle_migrate_data(rcc->channel->reds, mcc, (SpiceMigrateDataMain *)(header + 1), size);
 }
 
-void main_channel_push_init(MainChannelClient *mcc,
-    int display_channels_hint, int current_mouse_mode,
-    int is_client_mouse_allowed, int multi_media_time,
-    int ram_hint)
+void main_channel_client_push_init(MainChannelClient *mcc,
+                                   int display_channels_hint,
+                                   int current_mouse_mode,
+                                   int is_client_mouse_allowed,
+                                   int multi_media_time,
+                                   int ram_hint)
 {
     RedPipeItem *item;
 
@@ -544,7 +546,7 @@ static void main_channel_marshall_init(RedChannelClient *rcc,
     spice_marshall_msg_main_init(m, &init);
 }
 
-void main_channel_push_name(MainChannelClient *mcc, const char *name)
+void main_channel_client_push_name(MainChannelClient *mcc, const char *name)
 {
     RedPipeItem *item;
 
@@ -556,7 +558,7 @@ void main_channel_push_name(MainChannelClient *mcc, const char *name)
     red_channel_client_pipe_add_push(&mcc->base, item);
 }
 
-void main_channel_push_uuid(MainChannelClient *mcc, const uint8_t uuid[16])
+void main_channel_client_push_uuid(MainChannelClient *mcc, const uint8_t uuid[16])
 {
     RedPipeItem *item;
 
@@ -853,7 +855,7 @@ void main_channel_client_handle_migrate_end(MainChannelClient *mcc)
     red_client_semi_seamless_migrate_complete(mcc->base.client);
 }
 
-void main_channel_migrate_dst_complete(MainChannelClient *mcc)
+void main_channel_client_migrate_dst_complete(MainChannelClient *mcc)
 {
     if (mcc->mig_wait_prev_complete) {
         if (mcc->mig_wait_prev_try_seamless) {

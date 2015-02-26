@@ -64,9 +64,12 @@ void main_channel_client_push_agent_data(MainChannelClient *mcc, uint8_t* data, 
 void main_channel_client_start_net_test(MainChannelClient *mcc, int test_rate);
 // TODO: huge. Consider making a reds_* interface for these functions
 // and calling from main.
-void main_channel_push_init(MainChannelClient *mcc, int display_channels_hint,
-    int current_mouse_mode, int is_client_mouse_allowed, int multi_media_time,
-    int ram_hint);
+void main_channel_client_push_init(MainChannelClient *mcc,
+                                   int display_channels_hint,
+                                   int current_mouse_mode,
+                                   int is_client_mouse_allowed,
+                                   int multi_media_time,
+                                   int ram_hint);
 void main_channel_client_push_notify(MainChannelClient *mcc, const char *msg);
 void main_channel_push_multi_media_time(MainChannel *main_chan, int time);
 int main_channel_getsockname(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen);
@@ -96,8 +99,8 @@ int main_channel_migrate_connect(MainChannel *main_channel, RedsMigSpice *mig_ta
 void main_channel_migrate_cancel_wait(MainChannel *main_chan);
 /* returns the number of clients for which SPICE_MSG_MAIN_MIGRATE_END was sent*/
 int main_channel_migrate_src_complete(MainChannel *main_chan, int success);
-void main_channel_migrate_dst_complete(MainChannelClient *mcc);
-void main_channel_push_name(MainChannelClient *mcc, const char *name);
-void main_channel_push_uuid(MainChannelClient *mcc, const uint8_t uuid[16]);
+void main_channel_client_migrate_dst_complete(MainChannelClient *mcc);
+void main_channel_client_push_name(MainChannelClient *mcc, const char *name);
+void main_channel_client_push_uuid(MainChannelClient *mcc, const uint8_t uuid[16]);
 
 #endif
