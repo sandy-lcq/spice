@@ -23,6 +23,7 @@
 #include <common/marshaller.h>
 
 #include "red-channel.h"
+#include "main-channel-client.h"
 
 // TODO: Defines used to calculate receive buffer size, and also by reds.c
 // other options: is to make a reds_main_consts.h, to duplicate defines.
@@ -59,34 +60,11 @@ void main_channel_close(MainChannel *main_chan); // not destroy, just socket clo
 void main_channel_push_mouse_mode(MainChannel *main_chan, int current_mode, int is_client_mouse_allowed);
 void main_channel_push_agent_connected(MainChannel *main_chan);
 void main_channel_push_agent_disconnected(MainChannel *main_chan);
-void main_channel_client_push_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens);
-void main_channel_client_push_agent_data(MainChannelClient *mcc, uint8_t* data, size_t len,
-                                         spice_marshaller_item_free_func free_data, void *opaque);
-void main_channel_client_start_net_test(MainChannelClient *mcc, int test_rate);
-// TODO: huge. Consider making a reds_* interface for these functions
-// and calling from main.
-void main_channel_client_push_init(MainChannelClient *mcc,
-                                   int display_channels_hint,
-                                   int current_mouse_mode,
-                                   int is_client_mouse_allowed,
-                                   int multi_media_time,
-                                   int ram_hint);
-void main_channel_client_push_notify(MainChannelClient *mcc, const char *msg);
 void main_channel_push_multi_media_time(MainChannel *main_chan, int time);
 int main_channel_getsockname(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen);
 int main_channel_getpeername(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen);
 
-/*
- * return TRUE if network test had been completed successfully.
- * If FALSE, bitrate_per_sec is set to MAX_UINT64 and the roundtrip is set to 0
- */
-int main_channel_client_is_network_info_initialized(MainChannelClient *mcc);
-int main_channel_client_is_low_bandwidth(MainChannelClient *mcc);
-uint64_t main_channel_client_get_bitrate_per_sec(MainChannelClient *mcc);
-uint64_t main_channel_client_get_roundtrip_ms(MainChannelClient *mcc);
-
 int main_channel_is_connected(MainChannel *main_chan);
-RedChannelClient* main_channel_client_get_base(MainChannelClient* mcc);
 
 /* switch host migration */
 void main_channel_migrate_switch(MainChannel *main_chan, RedsMigSpice *mig_target);
@@ -100,8 +78,5 @@ int main_channel_migrate_connect(MainChannel *main_channel, RedsMigSpice *mig_ta
 void main_channel_migrate_cancel_wait(MainChannel *main_chan);
 /* returns the number of clients for which SPICE_MSG_MAIN_MIGRATE_END was sent*/
 int main_channel_migrate_src_complete(MainChannel *main_chan, int success);
-void main_channel_client_migrate_dst_complete(MainChannelClient *mcc);
-void main_channel_client_push_name(MainChannelClient *mcc, const char *name);
-void main_channel_client_push_uuid(MainChannelClient *mcc, const uint8_t uuid[16]);
 
 #endif

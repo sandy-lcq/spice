@@ -86,6 +86,8 @@ libserver_la_SOURCES =				\
 	lz4-encoder.h				\
 	main-channel.c				\
 	main-channel.h				\
+	main-channel-client.c			\
+	main-channel-client.h			\
 	mjpeg-encoder.c				\
 	red-channel.c				\
 	red-channel.h				\

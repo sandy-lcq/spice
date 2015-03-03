@@ -39,7 +39,7 @@
 #include "reds.h"
 #include "reds-stream.h"
 #include "red-channel.h"
-#include "main-channel.h"
+#include "main-channel-client.h"
 #include "inputs-channel.h"
 #include "migration-protocol.h"
 #include "utils.h"
