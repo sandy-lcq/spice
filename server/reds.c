@@ -699,7 +699,7 @@ static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
     main_channel_push_mouse_mode(reds->main_channel, reds->mouse_mode, reds->is_client_mouse_allowed);
 }
 
-gboolean reds_get_agent_mouse(const RedsState *reds)
+gboolean reds_config_get_agent_mouse(const RedsState *reds)
 {
     return reds->config->agent_mouse;
 }
@@ -2927,7 +2927,7 @@ static inline void on_activating_ticketing(RedsState *reds)
     }
 }
 
-static void reds_set_image_compression(RedsState *reds, SpiceImageCompression val)
+static void reds_config_set_image_compression(RedsState *reds, SpiceImageCompression val)
 {
     if (val == reds->config->image_compression) {
         return;
@@ -3760,11 +3760,11 @@ SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
     if (comp == SPICE_IMAGE_COMPRESSION_LZ4) {
         spice_warning("LZ4 compression not supported, falling back to auto GLZ");
         comp = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
-        reds_set_image_compression(s, comp);
+        reds_config_set_image_compression(s, comp);
         return -1;
     }
 #endif
-    reds_set_image_compression(s, comp);
+    reds_config_set_image_compression(s, comp);
     return 0;
 }
 
