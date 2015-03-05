@@ -177,6 +177,7 @@ struct RedServerConfig {
     gboolean ticketing_enabled;
     uint32_t streaming_video;
     SpiceImageCompression image_compression;
+    uint32_t playback_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
 
@@ -675,6 +676,11 @@ static void reds_mig_disconnect(RedsState *reds)
     } else {
         reds_mig_cleanup(reds);
     }
+}
+
+int reds_config_get_playback_compression(RedsState *reds)
+{
+    return reds->config->playback_compression;
 }
 
 int reds_get_mouse_mode(RedsState *reds)
@@ -3527,6 +3533,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->config->ticketing_enabled = TRUE; /* ticketing enabled by default */
     reds->config->streaming_video = SPICE_STREAM_VIDEO_FILTER;
     reds->config->image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
+    reds->config->playback_compression = TRUE;
     reds->config->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
     reds->config->zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
     reds->config->agent_mouse = TRUE;
@@ -3886,6 +3893,7 @@ uint32_t reds_get_streaming_video(const RedsState *reds)
 
 SPICE_GNUC_VISIBLE int spice_server_set_playback_compression(SpiceServer *reds, int enable)
 {
+    reds->config->playback_compression = !!enable;
     snd_set_playback_compression(enable);
     return 0;
 }

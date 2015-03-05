@@ -183,7 +183,6 @@ typedef struct RecordChannel {
 
 /* A list of all Spice{Playback,Record}State objects */
 static SndWorker *workers;
-static uint32_t playback_compression = TRUE;
 
 static void snd_receive(SndChannel *channel);
 
@@ -1157,7 +1156,8 @@ void snd_set_playback_latency(RedClient *client, uint32_t latency)
     }
 }
 
-static int snd_desired_audio_mode(int frequency, int client_can_celt, int client_can_opus)
+static int snd_desired_audio_mode(int playback_compression, int frequency,
+                                  int client_can_celt, int client_can_opus)
 {
     if (! playback_compression)
         return SPICE_AUDIO_DATA_MODE_RAW;
@@ -1236,7 +1236,9 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
                                           SPICE_PLAYBACK_CAP_CELT_0_5_1);
     int client_can_opus = red_channel_client_test_remote_cap(playback_channel->base.channel_client,
                                           SPICE_PLAYBACK_CAP_OPUS);
-    int desired_mode = snd_desired_audio_mode(st->frequency, client_can_celt, client_can_opus);
+    int playback_compression = reds_config_get_playback_compression(channel->reds);
+    int desired_mode = snd_desired_audio_mode(playback_compression, st->frequency,
+                                              client_can_celt, client_can_opus);
     playback_channel->mode = SPICE_AUDIO_DATA_MODE_RAW;
     if (desired_mode != SPICE_AUDIO_DATA_MODE_RAW) {
         if (snd_codec_create(&playback_channel->codec, desired_mode, st->frequency, SND_CODEC_ENCODE) == SND_CODEC_OK) {
@@ -1617,8 +1619,6 @@ void snd_set_playback_compression(int on)
 {
     SndWorker *now = workers;
 
-    playback_compression = !!on;
-
     for (; now; now = now->next) {
         if (now->base_channel->type == SPICE_CHANNEL_PLAYBACK && now->connection) {
             PlaybackChannel* playback = (PlaybackChannel*)now->connection;
@@ -1627,7 +1627,8 @@ void snd_set_playback_compression(int on)
                                     SPICE_PLAYBACK_CAP_CELT_0_5_1);
             int client_can_opus = red_channel_client_test_remote_cap(playback->base.channel_client,
                                     SPICE_PLAYBACK_CAP_OPUS);
-            int desired_mode = snd_desired_audio_mode(st->frequency, client_can_opus, client_can_celt);
+            int desired_mode = snd_desired_audio_mode(on, st->frequency,
+                                                      client_can_opus, client_can_celt);
             if (playback->mode != desired_mode) {
                 playback->mode = desired_mode;
                 snd_set_command(now->connection, SND_PLAYBACK_MODE_MASK);

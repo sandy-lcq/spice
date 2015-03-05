@@ -60,6 +60,8 @@ void reds_unregister_channel(RedsState *reds, RedChannel *channel);
 int reds_get_mouse_mode(RedsState *reds); // used by inputs_channel
 gboolean reds_config_get_agent_mouse(const RedsState *reds); // used by inputs_channel
 int reds_has_vdagent(RedsState *reds); // used by inputs channel
+int reds_config_get_playback_compression(RedsState *reds); // used by playback channel
+
 void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mouse_state); // used by inputs_channel
 
 GArray* reds_get_renderers(RedsState *reds);
