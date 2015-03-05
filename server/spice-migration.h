@@ -46,8 +46,8 @@ struct SpiceMigrateInstance {
 /* spice switch-host client migration */
 int spice_server_migrate_info(SpiceServer *s, const char* dest,
                               int port, int secure_port,
-                              const char* cert_subject);
-int spice_server_migrate_switch(SpiceServer *s);
+                              const char* cert_subject) G_GNUC_DEPRECATED;
+int spice_server_migrate_switch(SpiceServer *s) G_GNUC_DEPRECATED;
 
 /* spice (semi-)seamless client migration */
 int spice_server_migrate_connect(SpiceServer *s, const char* dest,
@@ -56,6 +56,6 @@ int spice_server_migrate_connect(SpiceServer *s, const char* dest,
 int spice_server_migrate_start(SpiceServer *s);
 int spice_server_migrate_end(SpiceServer *s, int completed);
 
-void spice_server_set_seamless_migration(SpiceServer *s, int enable);
+void spice_server_set_seamless_migration(SpiceServer *s, int enable) G_GNUC_DEPRECATED;
 
 #endif /* SPICE_MIGRATION_H_ */
