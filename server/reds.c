@@ -977,12 +977,6 @@ void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mou
     red_char_device_write_buffer_add(RED_CHAR_DEVICE(reds->agent_dev), char_dev_buf);
 }
 
-int reds_get_n_channels(RedsState *reds)
-{
-    return reds ? reds->num_of_channels : 0;
-}
-
-
 static int reds_get_n_clients(RedsState *reds)
 {
     return reds ? reds->num_clients : 0;
@@ -1005,7 +999,7 @@ static int channel_supports_multiple_clients(RedChannel *channel)
     return FALSE;
 }
 
-void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
+static void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
 {
     RingItem *now;
     int used_channels = 0;
@@ -1026,6 +1020,20 @@ void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
     if (used_channels != reds->num_of_channels) {
         spice_warning("sent %d out of %d", used_channels, reds->num_of_channels);
     }
+}
+
+SpiceMsgChannels *reds_msg_channels_new(RedsState *reds)
+{
+    SpiceMsgChannels* channels_info;
+
+    spice_assert(reds != NULL);
+
+    channels_info = (SpiceMsgChannels *)spice_malloc(sizeof(SpiceMsgChannels)
+                            + reds->num_of_channels * sizeof(SpiceChannelId));
+
+    reds_fill_channels(reds, channels_info);
+
+    return channels_info;
 }
 
 void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens)

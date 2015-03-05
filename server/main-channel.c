@@ -340,9 +340,7 @@ static void main_channel_marshall_channels(RedChannelClient *rcc,
     SpiceMsgChannels* channels_info;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_CHANNELS_LIST, item);
-    channels_info = (SpiceMsgChannels *)spice_malloc(sizeof(SpiceMsgChannels)
-                            + reds_get_n_channels(rcc->channel->reds) * sizeof(SpiceChannelId));
-    reds_fill_channels(rcc->channel->reds, channels_info);
+    channels_info = reds_msg_channels_new(rcc->channel->reds);
     spice_marshall_msg_main_channels_list(m, channels_info);
     free(channels_info);
 }
