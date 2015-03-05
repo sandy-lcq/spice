@@ -89,8 +89,10 @@ typedef struct RedSSLParameters {
 } RedSSLParameters;
 
 typedef struct RedCharDeviceVDIPort RedCharDeviceVDIPort;
+typedef struct RedServerConfig RedServerConfig;
 
 struct RedsState {
+    RedServerConfig *config;
     int listen_socket;
     int secure_listen_socket;
     SpiceWatch *listen_watch;
@@ -117,7 +119,6 @@ struct RedsState {
                                     between the 2 servers */
     Ring mig_target_clients;
     int num_mig_target_clients;
-    RedsMigSpice *mig_spice;
 
     int num_of_channels;
     Ring channels;
@@ -146,40 +147,9 @@ struct RedsState {
     int mm_time_enabled;
     uint32_t mm_time_latency;
 
-    int default_channel_security;
-    ChannelSecurityOptions *channels_security;
-    GArray *renderers;
-
-    int spice_port;
-    int spice_secure_port;
     SpiceCharDeviceInstance *vdagent;
     SpiceMigrateInstance *migration_interface;
-    int spice_listen_socket_fd;
-    char spice_addr[256];
-    int spice_family;
-    TicketAuthentication taTicket;
 
-    int sasl_enabled;
-#if HAVE_SASL
-    char *sasl_appname;
-#endif
-    char *spice_name;
-
-    bool spice_uuid_is_set;
-    uint8_t spice_uuid[16];
-
-    gboolean ticketing_enabled;
-    uint32_t streaming_video;
-    SpiceImageCompression image_compression;
-    spice_wan_compression_t jpeg_state;
-    spice_wan_compression_t zlib_glz_state;
-
-    gboolean agent_mouse;
-    gboolean agent_copypaste;
-    gboolean agent_file_xfer;
-    gboolean exit_on_disconnect;
-
-    RedSSLParameters ssl_parameters;
     SpiceCoreInterfaceInternal *core;
     GList *qxl_instances;
     MainDispatcher *main_dispatcher;
