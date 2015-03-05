@@ -1004,7 +1004,6 @@ static void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
     RingItem *now;
     int used_channels = 0;
 
-    channels_info->num_of_channels = reds->num_of_channels;
     RING_FOREACH(now, &reds->channels) {
         RedChannel *channel = SPICE_CONTAINEROF(now, RedChannel, link);
         if (reds->num_clients > 1 &&
