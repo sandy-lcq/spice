@@ -412,15 +412,15 @@ static void red_channel_client_default_peer_on_error(RedChannelClient *rcc)
     red_channel_client_disconnect(rcc);
 }
 
-static int red_channel_client_peer_get_out_msg_size(void *opaque)
+static int red_channel_client_get_out_msg_size(void *opaque)
 {
     RedChannelClient *rcc = (RedChannelClient *)opaque;
 
     return rcc->send_data.size;
 }
 
-static void red_channel_client_peer_prepare_out_msg(
-    void *opaque, struct iovec *vec, int *vec_size, int pos)
+static void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
+                                               int *vec_size, int pos)
 {
     RedChannelClient *rcc = (RedChannelClient *)opaque;
 
@@ -428,7 +428,7 @@ static void red_channel_client_peer_prepare_out_msg(
                                             vec, IOV_MAX, pos);
 }
 
-static void red_channel_client_peer_on_out_block(void *opaque)
+static void red_channel_client_on_out_block(void *opaque)
 {
     RedChannelClient *rcc = (RedChannelClient *)opaque;
 
@@ -589,7 +589,7 @@ static inline void red_channel_client_release_sent_item(RedChannelClient *rcc)
     }
 }
 
-static void red_channel_peer_on_out_msg_done(void *opaque)
+static void red_channel_client_on_out_msg_done(void *opaque)
 {
     RedChannelClient *rcc = (RedChannelClient *)opaque;
     int fd;
@@ -1047,12 +1047,12 @@ RedChannel *red_channel_create(int size,
     channel->incoming_cb.on_error =
         (on_incoming_error_proc)red_channel_client_default_peer_on_error;
     channel->incoming_cb.on_input = red_channel_client_on_input;
-    channel->outgoing_cb.get_msg_size = red_channel_client_peer_get_out_msg_size;
-    channel->outgoing_cb.prepare = red_channel_client_peer_prepare_out_msg;
-    channel->outgoing_cb.on_block = red_channel_client_peer_on_out_block;
+    channel->outgoing_cb.get_msg_size = red_channel_client_get_out_msg_size;
+    channel->outgoing_cb.prepare = red_channel_client_prepare_out_msg;
+    channel->outgoing_cb.on_block = red_channel_client_on_out_block;
     channel->outgoing_cb.on_error =
         (on_outgoing_error_proc)red_channel_client_default_peer_on_error;
-    channel->outgoing_cb.on_msg_done = red_channel_peer_on_out_msg_done;
+    channel->outgoing_cb.on_msg_done = red_channel_client_on_out_msg_done;
     channel->outgoing_cb.on_output = red_channel_client_on_output;
 
     client_cbs.connect = red_channel_client_default_connect;
