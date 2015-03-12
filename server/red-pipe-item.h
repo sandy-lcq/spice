@@ -19,6 +19,7 @@
 #define _H_RED_PIPE_ITEM
 
 #include <glib.h>
+#include <common/ring.h>
 
 typedef struct {
     RingItem link;
