@@ -10266,6 +10266,27 @@ static int display_channel_handle_stream_report(DisplayChannelClient *dcc,
     return TRUE;
 }
 
+static int display_channel_handle_preferred_compression(DisplayChannelClient *dcc,
+        SpiceMsgcDisplayPreferredCompression *pc) {
+    DisplayChannel *display_channel = DCC_TO_DC(dcc);
+    switch (pc->image_compression) {
+    case SPICE_IMAGE_COMPRESS_AUTO_LZ:
+    case SPICE_IMAGE_COMPRESS_AUTO_GLZ:
+    case SPICE_IMAGE_COMPRESS_QUIC:
+#ifdef USE_LZ4
+    case SPICE_IMAGE_COMPRESS_LZ4:
+#endif
+    case SPICE_IMAGE_COMPRESS_LZ:
+    case SPICE_IMAGE_COMPRESS_GLZ:
+    case SPICE_IMAGE_COMPRESS_OFF:
+        display_channel->common.worker->image_compression = pc->image_compression;
+        return TRUE;
+    default:
+        spice_warning("preferred-compression: unsupported image compression setting");
+        return FALSE;
+    }
+}
+
 static int display_channel_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type,
                                           void *message)
 {
@@ -10282,6 +10303,10 @@ static int display_channel_handle_message(RedChannelClient *rcc, uint32_t size, 
     case SPICE_MSGC_DISPLAY_STREAM_REPORT:
         return display_channel_handle_stream_report(dcc,
                                                     (SpiceMsgcDisplayStreamReport *)message);
+    case SPICE_MSGC_DISPLAY_PREFERRED_COMPRESSION:
+        return display_channel_handle_preferred_compression(dcc,
+            (SpiceMsgcDisplayPreferredCompression *)message);
+
     default:
         return red_channel_client_handle_message(rcc, size, type, message);
     }
