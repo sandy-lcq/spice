@@ -986,7 +986,7 @@ typedef struct RedWorker {
 
     ImageCache image_cache;
 
-    spice_image_compression_t image_compression;
+    SpiceImageCompress image_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
 
@@ -6557,7 +6557,7 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
                                      compress_send_data_t* o_comp_data)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    spice_image_compression_t image_compression =
+    SpiceImageCompress image_compression =
         display_channel->common.worker->image_compression;
     int quic_compress = FALSE;
 
@@ -6869,7 +6869,7 @@ static void fill_mask(RedChannelClient *rcc, SpiceMarshaller *m,
 
     if (mask_bitmap && m) {
         if (display_channel->common.worker->image_compression != SPICE_IMAGE_COMPRESS_OFF) {
-            spice_image_compression_t save_img_comp =
+            SpiceImageCompress save_img_comp =
                 display_channel->common.worker->image_compression;
             display_channel->common.worker->image_compression = SPICE_IMAGE_COMPRESS_OFF;
             fill_bits(dcc, m, mask_bitmap, drawable, FALSE);
@@ -8815,7 +8815,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
     int comp_succeeded;
     int lossy_comp = FALSE;
     int lz_comp = FALSE;
-    spice_image_compression_t comp_mode;
+    SpiceImageCompress comp_mode;
     SpiceMsgDisplayDrawCopy copy;
     SpiceMarshaller *src_bitmap_out, *mask_bitmap_out;
     SpiceMarshaller *bitmap_palette_out, *lzplt_palette_out;

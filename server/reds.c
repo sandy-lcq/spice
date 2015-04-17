@@ -111,7 +111,7 @@ static int ticketing_enabled = 1; //Ticketing is enabled by default
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
 uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
-spice_image_compression_t image_compression = SPICE_IMAGE_COMPRESS_AUTO_GLZ;
+SpiceImageCompress image_compression = SPICE_IMAGE_COMPRESS_AUTO_GLZ;
 spice_wan_compression_t jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
 spice_wan_compression_t zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
 int agent_mouse = TRUE;
@@ -2709,7 +2709,7 @@ static inline void on_activating_ticketing(void)
     }
 }
 
-static void set_image_compression(spice_image_compression_t val)
+static void set_image_compression(SpiceImageCompress val)
 {
     if (val == image_compression) {
         return;
@@ -3552,7 +3552,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_tls(SpiceServer *s, int port,
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
-                                                          spice_image_compression_t comp)
+                                                          SpiceImageCompress comp)
 {
     spice_assert(reds == s);
 #ifndef USE_LZ4
@@ -3567,7 +3567,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
     return 0;
 }
 
-SPICE_GNUC_VISIBLE spice_image_compression_t spice_server_get_image_compression(SpiceServer *s)
+SPICE_GNUC_VISIBLE SpiceImageCompress spice_server_get_image_compression(SpiceServer *s)
 {
     spice_assert(reds == s);
     return image_compression;

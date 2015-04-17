@@ -70,7 +70,7 @@ struct RedDispatcher {
 };
 
 extern uint32_t streaming_video;
-extern spice_image_compression_t image_compression;
+extern SpiceImageCompress image_compression;
 extern spice_wan_compression_t jpeg_state;
 extern spice_wan_compression_t zlib_glz_state;
 

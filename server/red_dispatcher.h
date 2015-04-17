@@ -167,7 +167,7 @@ typedef struct RedWorkerMessageLoadvmCommands {
 } RedWorkerMessageLoadvmCommands;
 
 typedef struct RedWorkerMessageSetCompression {
-    spice_image_compression_t image_compression;
+    SpiceImageCompress image_compression;
 } RedWorkerMessageSetCompression;
 
 typedef struct RedWorkerMessageSetStreamingVideo {
