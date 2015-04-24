@@ -1232,7 +1232,10 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
         }
     }
 
-    on_new_playback_channel(worker);
+    if (!red_client_during_migrate_at_target(client)) {
+        on_new_playback_channel(worker);
+    }
+
     if (worker->active) {
         spice_server_playback_start(st->sin);
     }
