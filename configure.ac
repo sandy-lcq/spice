@@ -68,6 +68,28 @@ dnl =========================================================================
 dnl Check optional features
 SPICE_CHECK_SMARTCARD
 
+AC_ARG_ENABLE(gstreamer,
+              AS_HELP_STRING([--enable-gstreamer=@<:@auto/yes/no@:>@],
+                             [Enable GStreamer 1.0 support]),,
+              [enable_gstreamer="auto"])
+
+if test "x$enable_gstreamer" != "xno"; then
+    SPICE_CHECK_GSTREAMER(GSTREAMER_1_0, 1.0, [gstreamer-1.0 gstreamer-base-1.0 gstreamer-app-1.0 gstreamer-video-1.0],
+        [enable_gstreamer="yes"
+         SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gst-plugins-base 1.0], [appsrc videoconvert appsink])
+         SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gstreamer-libav 1.0], [avenc_mjpeg])
+         ],
+         [if test "x$enable_gstreamer" = "xyes"; then
+              AC_MSG_ERROR([GStreamer 1.0 support requested but not found. You may set GSTREAMER_1_0_CFLAGS and GSTREAMER_1_0_LIBS to avoid the need to call pkg-config.])
+          fi
+    ])
+fi
+AM_CONDITIONAL(HAVE_GSTREAMER_1_0, test "x$have_gstreamer_1_0" = "xyes")
+
+if test x"$gstreamer_missing" != x; then
+    SPICE_WARNING([The following GStreamer $enable_gstreamer tools/elements are missing:$gstreamer_missing. The GStreamer video encoder can be built but may not work.])
+fi
+
 AC_ARG_ENABLE([automated_tests],
               AS_HELP_STRING([--enable-automated-tests], [Enable automated tests using spicy-screenshot (part of spice-gtk)]),,
               [enable_automated_tests="no"])
@@ -240,6 +262,7 @@ AC_MSG_NOTICE([
 
         LZ4 support:              ${enable_lz4}
         Smartcard:                ${have_smartcard}
+        GStreamer 1.0:            ${have_gstreamer_1_0}
         SASL support:             ${have_sasl}
         Automated tests:          ${enable_automated_tests}
         Manual:                   ${have_asciidoc}

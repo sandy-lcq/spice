@@ -706,6 +706,20 @@ static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
                                         agent->dcc->streams_max_latency);
 }
 
+/* A helper for dcc_create_stream(). */
+static VideoEncoder* dcc_create_video_encoder(uint64_t starting_bit_rate,
+                                              VideoEncoderRateControlCbs *cbs)
+{
+#ifdef HAVE_GSTREAMER_1_0
+    VideoEncoder* video_encoder = gstreamer_encoder_new(starting_bit_rate, cbs);
+    if (video_encoder) {
+        return video_encoder;
+    }
+#endif
+    /* Use the builtin MJPEG video encoder as a fallback */
+    return mjpeg_encoder_new(starting_bit_rate, cbs);
+}
+
 void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
 {
     StreamAgent *agent = &dcc->stream_agents[get_stream_id(DCC_TO_DC(dcc), stream)];
@@ -733,9 +747,9 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
         video_cbs.update_client_playback_delay = update_client_playback_delay;
 
         initial_bit_rate = get_initial_bit_rate(dcc, stream);
-        agent->video_encoder = mjpeg_encoder_new(initial_bit_rate, &video_cbs);
+        agent->video_encoder = dcc_create_video_encoder(initial_bit_rate, &video_cbs);
     } else {
-        agent->video_encoder = mjpeg_encoder_new(0, NULL);
+        agent->video_encoder = dcc_create_video_encoder(0, NULL);
     }
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), stream_create_item_new(agent));
 

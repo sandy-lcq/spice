@@ -45,7 +45,7 @@ struct VideoEncoder {
      *
      * @encoder:       The video encoder.
      * @frame_mm_time: The frame's mm-time timestamp in milliseconds.
-     * @bitmap:        The Spice screen.
+     * @bitmap:        A bitmap containing the source video frame.
      * @src:           A rectangle specifying the area occupied by the video.
      * @top_down:      If true the first video line is specified by src.top.
      * @outbuf:        The buffer for the compressed frame. This must either
@@ -160,5 +160,9 @@ typedef struct VideoEncoderRateControlCbs {
  */
 VideoEncoder* mjpeg_encoder_new(uint64_t starting_bit_rate,
                                 VideoEncoderRateControlCbs *cbs);
+#ifdef HAVE_GSTREAMER_1_0
+VideoEncoder* gstreamer_encoder_new(uint64_t starting_bit_rate,
+                                    VideoEncoderRateControlCbs *cbs);
+#endif
 
 #endif
