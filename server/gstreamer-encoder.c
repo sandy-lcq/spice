@@ -524,9 +524,12 @@ static void spice_gst_encoder_get_stats(VideoEncoder *video_encoder,
     }
 }
 
-VideoEncoder *gstreamer_encoder_new(uint64_t starting_bit_rate,
+VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
+                                    uint64_t starting_bit_rate,
                                     VideoEncoderRateControlCbs *cbs)
 {
+    spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG, NULL);
+
     GError *err = NULL;
     if (!gst_init_check(NULL, NULL, &err)) {
         spice_warning("GStreamer error: %s", err->message);
@@ -541,6 +544,7 @@ VideoEncoder *gstreamer_encoder_new(uint64_t starting_bit_rate,
     encoder->base.notify_server_frame_drop = spice_gst_encoder_notify_server_frame_drop;
     encoder->base.get_bit_rate = spice_gst_encoder_get_bit_rate;
     encoder->base.get_stats = spice_gst_encoder_get_stats;
+    encoder->base.codec_type = codec_type;
 
     if (cbs) {
         encoder->cbs = *cbs;

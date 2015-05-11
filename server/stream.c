@@ -711,17 +711,34 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
                                               uint64_t starting_bit_rate,
                                               VideoEncoderRateControlCbs *cbs)
 {
+    DisplayChannel *display = DCC_TO_DC(dcc);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
     int client_has_multi_codec = red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MULTI_CODEC);
-    if (!client_has_multi_codec || red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_CODEC_MJPEG)) {
-#ifdef HAVE_GSTREAMER_1_0
-        VideoEncoder* video_encoder = gstreamer_encoder_new(starting_bit_rate, cbs);
+    int i;
+
+    for (i = 0; i < display->video_codecs->len; i++) {
+        RedVideoCodec* video_codec = &g_array_index (display->video_codecs, RedVideoCodec, i);
+
+        if (!client_has_multi_codec &&
+            video_codec->type != SPICE_VIDEO_CODEC_TYPE_MJPEG) {
+            /* Old clients only support MJPEG */
+            continue;
+        }
+        if (client_has_multi_codec &&
+            !red_channel_client_test_remote_cap(rcc, video_codec->cap)) {
+            /* The client is recent but does not support this codec */
+            continue;
+        }
+
+        VideoEncoder* video_encoder = video_codec->create(video_codec->type, starting_bit_rate, cbs);
         if (video_encoder) {
             return video_encoder;
         }
-#endif
-        /* Use the builtin MJPEG video encoder as a fallback */
-        return mjpeg_encoder_new(starting_bit_rate, cbs);
+    }
+
+    /* Try to use the builtin MJPEG video encoder as a fallback */
+    if (!client_has_multi_codec || red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_CODEC_MJPEG)) {
+        return mjpeg_encoder_new(SPICE_VIDEO_CODEC_TYPE_MJPEG, starting_bit_rate, cbs);
     }
 
     return NULL;

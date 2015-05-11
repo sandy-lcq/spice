@@ -1045,6 +1045,15 @@ void red_qxl_on_sv_change(QXLInstance *qxl, int sv)
                             &payload);
 }
 
+void red_qxl_on_vc_change(QXLInstance *qxl, GArray *video_codecs)
+{
+    RedWorkerMessageSetVideoCodecs payload;
+    payload.video_codecs = g_array_ref(video_codecs);
+    dispatcher_send_message(qxl->st->dispatcher,
+                            RED_WORKER_MESSAGE_SET_VIDEO_CODECS,
+                            &payload);
+}
+
 void red_qxl_set_mouse_mode(QXLInstance *qxl, uint32_t mode)
 {
     RedWorkerMessageSetMouseMode payload;

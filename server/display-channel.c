@@ -140,6 +140,14 @@ void display_channel_set_stream_video(DisplayChannel *display, int stream_video)
     display->stream_video = stream_video;
 }
 
+void display_channel_set_video_codecs(DisplayChannel *display, GArray *video_codecs)
+{
+    spice_return_if_fail(display);
+
+    g_array_unref(display->video_codecs);
+    display->video_codecs = g_array_ref(video_codecs);
+}
+
 static void stop_streams(DisplayChannel *display)
 {
     Ring *ring = &display->streams;
@@ -1890,6 +1898,7 @@ static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t su
 
 DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker, 
                                     int migrate, int stream_video,
+                                    GArray *video_codecs,
                                     uint32_t n_surfaces)
 {
     DisplayChannel *display;
@@ -1935,6 +1944,7 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
     drawables_init(display);
     image_cache_init(&display->image_cache);
     display->stream_video = stream_video;
+    display->video_codecs = g_array_ref(video_codecs);
     display_channel_init_streams(display);
 
     return display;

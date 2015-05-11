@@ -114,6 +114,14 @@ enum {
 };
 
 int spice_server_set_streaming_video(SpiceServer *s, int value);
+
+enum {
+    SPICE_STREAMING_INVALID,
+    SPICE_STREAMING_SPICE,
+    SPICE_STREAMING_GSTREAMER
+};
+
+int spice_server_set_video_codecs(SpiceServer *s, const char* video_codecs);
 int spice_server_set_playback_compression(SpiceServer *s, int enable);
 int spice_server_set_agent_mouse(SpiceServer *s, int enable);
 int spice_server_set_agent_copypaste(SpiceServer *s, int enable);

@@ -27,6 +27,7 @@ void red_qxl_init(SpiceServer *reds, QXLInstance *qxl);
 
 void red_qxl_on_ic_change(QXLInstance *qxl, SpiceImageCompression ic);
 void red_qxl_on_sv_change(QXLInstance *qxl, int sv);
+void red_qxl_on_vc_change(QXLInstance *qxl, GArray* video_codecs);
 void red_qxl_set_mouse_mode(QXLInstance *qxl, uint32_t mode);
 void red_qxl_attach_worker(QXLInstance *qxl);
 void red_qxl_set_compression_level(QXLInstance *qxl, int level);
@@ -113,6 +114,7 @@ enum {
     RED_WORKER_MESSAGE_DRIVER_UNLOAD,
     RED_WORKER_MESSAGE_GL_SCANOUT,
     RED_WORKER_MESSAGE_GL_DRAW_ASYNC,
+    RED_WORKER_MESSAGE_SET_VIDEO_CODECS,
 
     RED_WORKER_MESSAGE_COUNT // LAST
 };
@@ -249,6 +251,10 @@ typedef struct RedWorkerMessageSetCompression {
 typedef struct RedWorkerMessageSetStreamingVideo {
     uint32_t streaming_video;
 } RedWorkerMessageSetStreamingVideo;
+
+typedef struct RedWorkerMessageSetVideoCodecs {
+    GArray* video_codecs;
+} RedWorkerMessageSetVideoCodecs;
 
 typedef struct RedWorkerMessageSetMouseMode {
     uint32_t mode;

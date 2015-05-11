@@ -168,3 +168,8 @@ global:
     spice_qxl_gl_scanout;
     spice_qxl_gl_draw_async;
 } SPICE_SERVER_0.12.6;
+
+SPICE_SERVER_0.13.2 {
+global:
+    spice_server_set_video_codecs;
+} SPICE_SERVER_0.13.1;
