@@ -308,6 +308,15 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
         gstenc = g_strdup_printf("vp8enc end-usage=cbr min-quantizer=10 error-resilient=default lag-in-frames=0 deadline=1 cpu-used=4");
         break;
         }
+    case SPICE_VIDEO_CODEC_TYPE_H264:
+        /* - Set tune and sliced-threads to ensure a zero-frame latency
+         * - qp-min ensures the bitrate does not get needlessly high.
+         * - Set speed-preset to get realtime speed.
+         * - Set intra-refresh to get more uniform compressed frame sizes,
+         *   thus helping with streaming.
+         */
+        gstenc = g_strdup("x264enc byte-stream=true aud=true qp-min=15 tune=4 sliced-threads=true speed-preset=ultrafast intra-refresh=true");
+        break;
     default:
         /* gstreamer_encoder_new() should have rejected this codec type */
         spice_warning("unsupported codec type %d", encoder->base.codec_type);
@@ -376,6 +385,11 @@ static void set_gstenc_bitrate(SpiceGstEncoder *encoder)
     case SPICE_VIDEO_CODEC_TYPE_VP8:
         g_object_set(G_OBJECT(encoder->gstenc),
                      "target-bitrate", (gint)encoder->bit_rate,
+                     NULL);
+        break;
+    case SPICE_VIDEO_CODEC_TYPE_H264:
+        g_object_set(G_OBJECT(encoder->gstenc),
+                     "bitrate", encoder->bit_rate / 1024,
                      NULL);
         break;
     default:
@@ -838,7 +852,8 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
                                     bitmap_unref_t bitmap_unref)
 {
     spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG ||
-                             codec_type == SPICE_VIDEO_CODEC_TYPE_VP8, NULL);
+                             codec_type == SPICE_VIDEO_CODEC_TYPE_VP8 ||
+                             codec_type == SPICE_VIDEO_CODEC_TYPE_H264, NULL);
 
     GError *err = NULL;
     if (!gst_init_check(NULL, NULL, &err)) {
