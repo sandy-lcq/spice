@@ -3503,6 +3503,8 @@ SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *s,
         taTicket.expiration_time = now + lifetime;
     }
     if (passwd != NULL) {
+        if (strlen(passwd) > SPICE_MAX_PASSWORD_LENGTH)
+            return -1;
         g_strlcpy(taTicket.password, passwd, sizeof(taTicket.password));
     } else {
         memset(taTicket.password, 0, sizeof(taTicket.password));
