@@ -326,7 +326,7 @@ RedsStream *reds_stream_new(int socket)
     RedsStream *stream;
 
     stream = spice_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
-    stream->priv = (RedsStreamPrivate *)(((char *)stream) + sizeof(RedsStream));
+    stream->priv = (RedsStreamPrivate *)(stream+1);
     stream->priv->info = spice_new0(SpiceChannelEventInfo, 1);
     reds_stream_set_socket(stream, socket);
 
