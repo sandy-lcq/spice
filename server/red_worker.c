@@ -1718,8 +1718,7 @@ static SurfaceDestroyItem *get_surface_destroy_item(RedChannel *channel,
 {
     SurfaceDestroyItem *destroy;
 
-    destroy = (SurfaceDestroyItem *)malloc(sizeof(SurfaceDestroyItem));
-    spice_warn_if(!destroy);
+    destroy = spice_malloc(sizeof(SurfaceDestroyItem));
 
     destroy->surface_destroy.surface_id = surface_id;
 
@@ -9577,8 +9576,7 @@ static SurfaceCreateItem *get_surface_create_item(
 {
     SurfaceCreateItem *create;
 
-    create = (SurfaceCreateItem *)malloc(sizeof(SurfaceCreateItem));
-    spice_warn_if(!create);
+    create = spice_malloc(sizeof(SurfaceCreateItem));
 
     create->surface_create.surface_id = surface_id;
     create->surface_create.width = width;
