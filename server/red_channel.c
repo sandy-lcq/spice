@@ -539,7 +539,7 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
         /*
          * When testing latency, TCP_NODELAY must be switched on, otherwise,
          * sending the ping message is delayed by Nagle algorithm, and the
-         * roundtrip measurment is less accurate (bigger).
+         * roundtrip measurement is less accurate (bigger).
          */
         rcc->latency_monitor.tcp_nodelay = 1;
         if (getsockopt(rcc->stream->socket, IPPROTO_TCP, TCP_NODELAY, &delay_val,
