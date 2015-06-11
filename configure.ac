@@ -98,10 +98,7 @@ AC_SUBST(COMMON_CFLAGS)
 AC_CHECK_LIBM
 AC_SUBST(LIBM)
 
-AC_CHECK_LIB(rt, clock_gettime,
-   AC_DEFINE([HAVE_CLOCK_GETTIME], 1, [Defined if we have clock_gettime()])
-   LIBRT=-lrt
-   )
+AC_CHECK_LIB(rt, clock_gettime, LIBRT="-lrt")
 AC_SUBST(LIBRT)
 
 AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" -pthread $LIBM $LIBRT"])
