@@ -120,7 +120,7 @@
 #define RED_STREAM_GRADUAL_FRAMES_START_CONDITION 0.2
 #define RED_STREAM_FRAMES_RESET_CONDITION 100
 #define RED_STREAM_MIN_SIZE (96 * 96)
-#define RED_STREAM_INPUT_FPS_TIMEOUT (5 * 1000) // 5 sec
+#define RED_STREAM_INPUT_FPS_TIMEOUT ((uint64_t)5 * 1000 * 1000 * 1000) // 5 sec
 #define RED_STREAM_CHANNEL_CAPACITY 0.8
 /* the client's stream report frequency is the minimum of the 2 values below */
 #define RED_STREAM_CLIENT_REPORT_WINDOW 5 // #frames
@@ -450,9 +450,8 @@ struct Stream {
     Stream *next;
     RingItem link;
 
-    SpiceTimer *input_fps_timer;
     uint32_t num_input_frames;
-    uint64_t input_fps_timer_start;
+    uint64_t input_fps_start_time;
     uint32_t input_fps;
 };
 
@@ -2531,9 +2530,6 @@ static int is_same_drawable(RedWorker *worker, Drawable *d1, Drawable *d2)
 
 static inline void red_free_stream(RedWorker *worker, Stream *stream)
 {
-    if (stream->input_fps_timer) {
-        spice_timer_remove(stream->input_fps_timer);
-    }
     stream->next = worker->free_streams;
     worker->free_streams = stream;
 }
@@ -2612,7 +2608,17 @@ static void red_attach_stream(RedWorker *worker, Drawable *drawable, Stream *str
     stream->current = drawable;
     drawable->stream = stream;
     stream->last_time = drawable->creation_time;
-    stream->num_input_frames++;
+
+    uint64_t duration = drawable->creation_time - stream->input_fps_start_time;
+    if (duration >= RED_STREAM_INPUT_FPS_TIMEOUT) {
+        /* Round to the nearest integer, for instance 24 for 23.976 */
+        stream->input_fps = ((uint64_t)stream->num_input_frames * 1000 * 1000 * 1000 + duration / 2) / duration;
+        spice_debug("input-fps=%u", stream->input_fps);
+        stream->num_input_frames = 0;
+        stream->input_fps_start_time = drawable->creation_time;
+    } else {
+        stream->num_input_frames++;
+    }
 
     WORKER_FOREACH_DCC_SAFE(worker, item, next, dcc) {
         StreamAgent *agent;
@@ -3122,24 +3128,6 @@ static void red_display_create_stream(DisplayChannelClient *dcc, Stream *stream)
 #endif
 }
 
-static void red_stream_input_fps_timer_cb(void *opaque)
-{
-    Stream *stream = opaque;
-    uint64_t now = red_now();
-    double duration_sec;
-
-    spice_assert(opaque);
-    if (now == stream->input_fps_timer_start) {
-        spice_warning("timer start and expiry time are equal");
-        return;
-    }
-    duration_sec = (now - stream->input_fps_timer_start)/(1000.0*1000*1000);
-    stream->input_fps = stream->num_input_frames / duration_sec;
-    spice_debug("input-fps=%u", stream->input_fps);
-    stream->num_input_frames = 0;
-    stream->input_fps_timer_start = now;
-}
-
 static void red_create_stream(RedWorker *worker, Drawable *drawable)
 {
     DisplayChannelClient *dcc;
@@ -3166,12 +3154,9 @@ static void red_create_stream(RedWorker *worker, Drawable *drawable)
     SpiceBitmap *bitmap = &drawable->red_drawable->u.copy.src_bitmap->u.bitmap;
     stream->top_down = !!(bitmap->flags & SPICE_BITMAP_FLAGS_TOP_DOWN);
     drawable->stream = stream;
-    stream->input_fps_timer = spice_timer_queue_add(red_stream_input_fps_timer_cb, stream);
-    spice_assert(stream->input_fps_timer);
-    spice_timer_set(stream->input_fps_timer, RED_STREAM_INPUT_FPS_TIMEOUT);
-    stream->num_input_frames = 0;
-    stream->input_fps_timer_start = red_now();
     stream->input_fps = MAX_FPS;
+    stream->num_input_frames = 0;
+    stream->input_fps_start_time = drawable->creation_time;
     worker->streams_size_total += stream->width * stream->height;
     worker->stream_count++;
     WORKER_FOREACH_DCC_SAFE(worker, dcc_ring_item, next, dcc) {
