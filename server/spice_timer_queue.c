@@ -233,7 +233,7 @@ unsigned int spice_timer_queue_get_timeout_ms(void)
     head_timer = SPICE_CONTAINEROF(head, SpiceTimer, active_link);
 
     clock_gettime(CLOCK_MONOTONIC, &now);
-    now_ms = ((int64_t)now.tv_sec * 1000) - (now.tv_nsec / 1000 / 1000);
+    now_ms = ((int64_t)now.tv_sec * 1000) + (now.tv_nsec / 1000 / 1000);
 
     return MAX(0, ((int64_t)head_timer->expiry_time - now_ms));
 }
