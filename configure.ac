@@ -70,30 +70,31 @@ esac
 
 dnl =========================================================================
 dnl Check optional features
-AC_ARG_ENABLE(opengl,
-[  --enable-opengl         Enable opengl requirement / support (not recommended)],,
-[enable_opengl="no"])
+AC_ARG_ENABLE([opengl],
+              AS_HELP_STRING([--enable-opengl],
+              [Enable opengl requirement / support (not recommended)]),,
+              [enable_opengl="no"])
 AS_IF([test x"$enable_opengl" != "xno"], [enable_opengl="yes"])
 AM_CONDITIONAL(SUPPORT_GL, test "x$enable_opengl" = "xyes")
 
-AC_ARG_ENABLE(lz4,
-[  --enable-lz4         Enable lz4 compression algorithm],,
-[enable_lz4="no"])
+AC_ARG_ENABLE([lz4],
+              AS_HELP_STRING([--enable-lz4],[Enable lz4 compression algorithm]),,
+              [enable_lz4="no"])
 AS_IF([test x"$enable_lz4" != "xno"], [enable_lz4="yes"])
 AM_CONDITIONAL(SUPPORT_LZ4, test "x$enable_lz4" = "xyes")
 
-AC_ARG_ENABLE(smartcard,
-[  --enable-smartcard         Enable network redirection],,
-[enable_smartcard="no"])
+AC_ARG_ENABLE([smartcard],
+              AS_HELP_STRING([--enable-smartcard], [Enable network redirection]),,
+              [enable_smartcard="no"])
 AS_IF([test x"$enable_smartcard" != "xno"], [enable_smartcard="yes"])
 AM_CONDITIONAL(SUPPORT_SMARTCARD, test "x$enable_smartcard" != "xno")
 if test "x$enable_smartcard" = "xyes"; then
    AC_DEFINE([USE_SMARTCARD], [1], [Define if supporting smartcard proxying])
 fi
 
-AC_ARG_ENABLE(automated_tests,
-[  --enable-automated-tests     Enable automated tests using spicy-screenshot (part of spice--gtk)],,
-[enable_automated_tests="no"])
+AC_ARG_ENABLE([automated_tests],
+              AS_HELP_STRING([--enable-automated-tests], [Enable automated tests using spicy-screenshot (part of spice--gtk)]),,
+              [enable_automated_tests="no"])
 AS_IF([test x"$enable_automated_tests" != "xno"], [enable_automated_tests="yes"])
 AM_CONDITIONAL(SUPPORT_AUTOMATED_TESTS, test "x$enable_automated_tests" != "xno")
 
@@ -136,9 +137,9 @@ AC_SUBST(PIXMAN_CFLAGS)
 AC_SUBST(PIXMAN_LIBS)
 AS_VAR_APPEND([SPICE_REQUIRES], [" pixman-1 >= 0.17.7"])
 
-AC_ARG_ENABLE(celt051,
-    [  --disable-celt051       Disable celt051 audio codec (enabled by default)],,
-        [enable_celt051="yes"])
+AC_ARG_ENABLE([celt051],
+              AS_HELP_STRING([--disable-celt051], [Disable celt051 audio codec (enabled by default)]),,
+              [enable_celt051="yes"])
 
 if test "x$enable_celt051" = "xyes"; then
     PKG_CHECK_MODULES(CELT051, celt051 >= 0.5.1.1, AS_VAR_APPEND([SPICE_REQUIRES], [" celt051 >= 0.5.1.1"]))
