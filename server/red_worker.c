@@ -3404,7 +3404,7 @@ static inline void red_update_copy_graduality(RedWorker* worker, Drawable *drawa
     SpiceBitmap *bitmap;
     spice_assert(drawable->red_drawable->type == QXL_DRAW_COPY);
 
-    if (worker->streaming_video != STREAM_VIDEO_FILTER) {
+    if (worker->streaming_video != SPICE_STREAM_VIDEO_FILTER) {
         drawable->copy_bitmap_graduality = BITMAP_GRADUAL_INVALID;
         return;
     }
@@ -3883,7 +3883,7 @@ static inline void red_update_streamable(RedWorker *worker, Drawable *drawable,
 {
     SpiceImage *image;
 
-    if (worker->streaming_video == STREAM_VIDEO_OFF) {
+    if (worker->streaming_video == SPICE_STREAM_VIDEO_OFF) {
         return;
     }
 
@@ -3903,7 +3903,7 @@ static inline void red_update_streamable(RedWorker *worker, Drawable *drawable,
         return;
     }
 
-    if (worker->streaming_video == STREAM_VIDEO_FILTER) {
+    if (worker->streaming_video == SPICE_STREAM_VIDEO_FILTER) {
         SpiceRect* rect;
         int size;
 
@@ -11774,15 +11774,15 @@ void handle_dev_set_streaming_video(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     worker->streaming_video = msg->streaming_video;
-    spice_assert(worker->streaming_video != STREAM_VIDEO_INVALID);
+    spice_assert(worker->streaming_video != SPICE_STREAM_VIDEO_INVALID);
     switch(worker->streaming_video) {
-        case STREAM_VIDEO_ALL:
+        case SPICE_STREAM_VIDEO_ALL:
             spice_info("sv all");
             break;
-        case STREAM_VIDEO_FILTER:
+        case SPICE_STREAM_VIDEO_FILTER:
             spice_info("sv filter");
             break;
-        case STREAM_VIDEO_OFF:
+        case SPICE_STREAM_VIDEO_OFF:
             spice_info("sv off");
             break;
         default:

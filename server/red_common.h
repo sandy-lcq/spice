@@ -31,13 +31,6 @@
 
 #define SPICE_GNUC_VISIBLE __attribute__ ((visibility ("default")))
 
-enum {
-    STREAM_VIDEO_INVALID,
-    STREAM_VIDEO_OFF,
-    STREAM_VIDEO_ALL,
-    STREAM_VIDEO_FILTER
-};
-
 static const LzImageType MAP_BITMAP_FMT_TO_LZ_IMAGE_TYPE[] = {
     LZ_IMAGE_TYPE_INVALID,
     LZ_IMAGE_TYPE_PLT1_LE,

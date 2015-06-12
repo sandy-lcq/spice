@@ -110,7 +110,7 @@ static uint8_t spice_uuid[16] = { 0, };
 static int ticketing_enabled = 1; //Ticketing is enabled by default
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
-uint32_t streaming_video = STREAM_VIDEO_FILTER;
+uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
 spice_image_compression_t image_compression = SPICE_IMAGE_COMPRESS_AUTO_GLZ;
 spice_wan_compression_t jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
 spice_wan_compression_t zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;

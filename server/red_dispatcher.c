@@ -743,8 +743,8 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
 
 static inline int calc_compression_level(void)
 {
-    spice_assert(streaming_video != STREAM_VIDEO_INVALID);
-    if ((streaming_video != STREAM_VIDEO_OFF) ||
+    spice_assert(streaming_video != SPICE_STREAM_VIDEO_INVALID);
+    if ((streaming_video != SPICE_STREAM_VIDEO_OFF) ||
         (image_compression != SPICE_IMAGE_COMPRESS_QUIC)) {
         return 0;
     } else {
