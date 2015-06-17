@@ -75,11 +75,6 @@ AS_IF([test x"$enable_opengl" != "xno"], [
       AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
 ])
 
-AC_ARG_ENABLE([lz4],
-              AS_HELP_STRING([--enable-lz4],[Enable lz4 compression algorithm]),,
-              [enable_lz4="no"])
-AS_IF([test x"$enable_lz4" != "xno"], [enable_lz4="yes"])
-AM_CONDITIONAL(SUPPORT_LZ4, test "x$enable_lz4" = "xyes")
 
 SPICE_CHECK_SMARTCARD([SMARTCARD])
 AM_CONDITIONAL(SUPPORT_SMARTCARD, test "x$have_smartcard" = "xyes")
@@ -90,6 +85,7 @@ AC_ARG_ENABLE([automated_tests],
 AS_IF([test x"$enable_automated_tests" != "xno"], [enable_automated_tests="yes"])
 AM_CONDITIONAL(SUPPORT_AUTOMATED_TESTS, test "x$enable_automated_tests" != "xno")
 
+SPICE_CHECK_LZ4([LZ4])
 
 dnl =========================================================================
 dnl Check deps
@@ -146,12 +142,6 @@ AC_SUBST(SSL_CFLAGS)
 AC_SUBST(SSL_LIBS)
 AS_VAR_APPEND([SPICE_REQUIRES], [" openssl"])
 
-if test "x$enable_lz4" = "xyes"; then
-    PKG_CHECK_MODULES(LZ4, liblz4)
-    AC_DEFINE([USE_LZ4], [1], [Define to build with Lz4 support])
-fi
-AC_SUBST(LZ4_CFLAGS)
-AC_SUBST(LZ4_LIBS)
 AC_CHECK_LIB(jpeg, jpeg_destroy_decompress,
     AC_MSG_CHECKING([for jpeglib.h])
     AC_TRY_CPP(
