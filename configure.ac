@@ -28,7 +28,7 @@ fi
 SPICE_SERVER_VERSION=`printf "0x%02x%02x%02x" $major $minor $micro`
 AC_SUBST(SPICE_SERVER_VERSION)
 
-AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_MACRO_DIRS([m4 spice-common/m4])
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_AUX_DIR(.)
 
@@ -83,14 +83,8 @@ AC_ARG_ENABLE([lz4],
 AS_IF([test x"$enable_lz4" != "xno"], [enable_lz4="yes"])
 AM_CONDITIONAL(SUPPORT_LZ4, test "x$enable_lz4" = "xyes")
 
-AC_ARG_ENABLE([smartcard],
-              AS_HELP_STRING([--enable-smartcard], [Enable network redirection]),,
-              [enable_smartcard="no"])
-AS_IF([test x"$enable_smartcard" != "xno"], [enable_smartcard="yes"])
-AM_CONDITIONAL(SUPPORT_SMARTCARD, test "x$enable_smartcard" != "xno")
-if test "x$enable_smartcard" = "xyes"; then
-   AC_DEFINE([USE_SMARTCARD], [1], [Define if supporting smartcard proxying])
-fi
+SPICE_CHECK_SMARTCARD([SMARTCARD])
+AM_CONDITIONAL(SUPPORT_SMARTCARD, test "x$have_smartcard" = "xyes")
 
 AC_ARG_ENABLE([automated_tests],
               AS_HELP_STRING([--enable-automated-tests], [Enable automated tests using spicy-screenshot (part of spice--gtk)]),,
@@ -119,15 +113,9 @@ AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" -pthread $LIBM $LIBRT"])
 
 SPICE_REQUIRES=""
 
-if test "x$enable_smartcard" = "xyes"; then
-    PKG_CHECK_MODULES(CAC_CARD, libcacard >= 0.1.2)
-    SMARTCARD_LIBS="$CAC_CARD_LIBS"
-    SMARTCARD_CFLAGS="$CAC_CARD_CFLAGS"
-    AC_SUBST(SMARTCARD_LIBS)
-    AC_SUBST(SMARTCARD_CFLAGS)
+AS_IF([test x"$have_smartcard" = "xyes"], [
     AS_VAR_APPEND([SPICE_REQUIRES], [" libcacard >= 0.1.2"])
-fi
-
+])
 
 PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.22])
 AS_VAR_APPEND([SPICE_REQUIRES], [" glib-2.0 >= 2.22"])
@@ -358,7 +346,7 @@ echo "
 
         LZ4 support:              ${enable_lz4}
 
-        Smartcard:                ${enable_smartcard}
+        Smartcard:                ${have_smartcard}
 
         SASL support:             ${enable_sasl}
 
