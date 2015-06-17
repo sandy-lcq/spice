@@ -70,12 +70,10 @@ esac
 
 dnl =========================================================================
 dnl Check optional features
-AC_ARG_ENABLE([opengl],
-              AS_HELP_STRING([--enable-opengl],
-              [Enable opengl requirement / support (not recommended)]),,
-              [enable_opengl="no"])
-AS_IF([test x"$enable_opengl" != "xno"], [enable_opengl="yes"])
-AM_CONDITIONAL(SUPPORT_GL, test "x$enable_opengl" = "xyes")
+SPICE_CHECK_OPENGL([GL])
+AS_IF([test x"$enable_opengl" != "xno"], [
+      AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
+])
 
 AC_ARG_ENABLE([lz4],
               AS_HELP_STRING([--enable-lz4],[Enable lz4 compression algorithm]),,
@@ -148,35 +146,12 @@ AC_SUBST(SSL_CFLAGS)
 AC_SUBST(SSL_LIBS)
 AS_VAR_APPEND([SPICE_REQUIRES], [" openssl"])
 
-# These are commented out because the gl libraries on RHEL 5 do not have pkgconfig files
-#
-# PKG_CHECK_MODULES(GL, gl glu)
-# AC_SUBST(GL_CFLAGS)
-# AC_SUBST(GL_LIBS)
-# AS_VAR_APPEND([SPICE_REQUIRES], [" gl glu"])
-
-if test "x$enable_opengl" = "xyes"; then
-   AC_CHECK_LIB(GL, glBlendFunc, GL_LIBS="$GL_LIBS -lGL", enable_opengl=no)
-   AC_CHECK_LIB(GLU, gluSphere, GL_LIBS="$GL_LIBS -lGLU", enable_opengl=no)
-   AC_DEFINE([USE_OPENGL], [1], [Define to build with OpenGL support])
-   AC_DEFINE([GL_GLEXT_PROTOTYPES], [], [Enable GLExt prototypes])
-
-   if test "x$enable_opengl" = "xno"; then
-      AC_MSG_ERROR([GL libraries not available])
-   fi
-fi
-
-AC_SUBST(GL_CFLAGS)
-AC_SUBST(GL_LIBS)
-AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
-
 if test "x$enable_lz4" = "xyes"; then
     PKG_CHECK_MODULES(LZ4, liblz4)
     AC_DEFINE([USE_LZ4], [1], [Define to build with Lz4 support])
 fi
 AC_SUBST(LZ4_CFLAGS)
 AC_SUBST(LZ4_LIBS)
-
 AC_CHECK_LIB(jpeg, jpeg_destroy_decompress,
     AC_MSG_CHECKING([for jpeglib.h])
     AC_TRY_CPP(
