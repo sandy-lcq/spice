@@ -66,6 +66,7 @@ struct RedDispatcher {
     Ring async_commands;
     pthread_mutex_t  async_lock;
     QXLDevSurfaceCreate surface_create;
+    unsigned int max_monitors;
 };
 
 extern uint32_t streaming_video;
@@ -693,6 +694,7 @@ static void red_dispatcher_monitors_config_async(RedDispatcher *dispatcher,
     payload.base.cmd = async_command_alloc(dispatcher, message, cookie);
     payload.monitors_config = monitors_config;
     payload.group_id = group_id;
+    payload.max_monitors = dispatcher->max_monitors;
 
     dispatcher_send_message(&dispatcher->dispatcher, message, &payload);
 }
@@ -987,6 +989,12 @@ void spice_qxl_monitors_config_async(QXLInstance *instance, QXLPHYSICAL monitors
 }
 
 SPICE_GNUC_VISIBLE
+void spice_qxl_set_max_monitors(QXLInstance *instance, unsigned int max_monitors)
+{
+    instance->st->dispatcher->max_monitors = MAX(1u, max_monitors);
+}
+
+SPICE_GNUC_VISIBLE
 void spice_qxl_driver_unload(QXLInstance *instance)
 {
     red_dispatcher_driver_unload(instance->st->dispatcher);
@@ -1109,6 +1117,8 @@ void red_dispatcher_init(QXLInstance *qxl)
     red_dispatcher->base.reset_cursor = qxl_worker_reset_cursor;
     red_dispatcher->base.destroy_surface_wait = qxl_worker_destroy_surface_wait;
     red_dispatcher->base.loadvm_commands = qxl_worker_loadvm_commands;
+
+    red_dispatcher->max_monitors = UINT_MAX;
 
     qxl->st->qif->get_init_info(qxl, &init_info);
 

@@ -200,6 +200,7 @@ typedef struct RedWorkerMessageMonitorsConfigAsync {
     RedWorkerMessageAsync base;
     QXLPHYSICAL monitors_config;
     int group_id;
+    unsigned int max_monitors;
 } RedWorkerMessageMonitorsConfigAsync;
 
 typedef struct RedWorkerMessageDriverUnload {

@@ -97,6 +97,9 @@ void spice_qxl_monitors_config_async(QXLInstance *instance, QXLPHYSICAL monitors
                                      int group_id, uint64_t cookie);
 /* since spice 0.12.3 */
 void spice_qxl_driver_unload(QXLInstance *instance);
+/* since spice 0.12.6 */
+void spice_qxl_set_max_monitors(QXLInstance *instance,
+                                unsigned int max_monitors);
 
 typedef struct QXLDrawArea {
     uint8_t *buf;

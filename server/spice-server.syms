@@ -153,3 +153,8 @@ global:
     spice_server_get_best_record_rate;
     spice_server_set_record_rate;
 } SPICE_SERVER_0.12.4;
+
+SPICE_SERVER_0.12.6 {
+global:
+    spice_qxl_set_max_monitors;
+} SPICE_SERVER_0.12.5;

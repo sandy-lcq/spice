@@ -11217,11 +11217,13 @@ static inline void red_monitors_config_item_add(DisplayChannelClient *dcc)
 }
 
 static void worker_update_monitors_config(RedWorker *worker,
-                                          QXLMonitorsConfig *dev_monitors_config)
+                                          QXLMonitorsConfig *dev_monitors_config,
+                                          unsigned int max_monitors)
 {
     int heads_size;
     MonitorsConfig *monitors_config;
     int i;
+    unsigned int count = MIN(dev_monitors_config->count, max_monitors);
 
     monitors_config_decref(worker->monitors_config);
 
@@ -11235,13 +11237,13 @@ static void worker_update_monitors_config(RedWorker *worker,
                     dev_monitors_config->heads[i].width,
                     dev_monitors_config->heads[i].height);
     }
-    heads_size = dev_monitors_config->count * sizeof(QXLHead);
+    heads_size = count * sizeof(QXLHead);
     worker->monitors_config = monitors_config =
         spice_malloc(sizeof(*monitors_config) + heads_size);
     monitors_config->refs = 1;
     monitors_config->worker = worker;
-    monitors_config->count = dev_monitors_config->count;
-    monitors_config->max_allowed = dev_monitors_config->max_allowed;
+    monitors_config->count = count;
+    monitors_config->max_allowed = MIN(dev_monitors_config->max_allowed, max_monitors);
     memcpy(monitors_config->heads, dev_monitors_config->heads, heads_size);
 }
 
@@ -11651,7 +11653,7 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
                       dev_monitors_config->max_allowed);
         return;
     }
-    worker_update_monitors_config(worker, dev_monitors_config);
+    worker_update_monitors_config(worker, dev_monitors_config, msg->max_monitors);
     red_worker_push_monitors_config(worker);
 }
 
