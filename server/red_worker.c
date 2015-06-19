@@ -8812,9 +8812,9 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
     SpiceBitmap bitmap;
     SpiceChunks *chunks;
     QRegion *surface_lossy_region;
-    int comp_succeeded;
+    int comp_succeeded = FALSE;
     int lossy_comp = FALSE;
-    int lz_comp = FALSE;
+    int quic_comp = FALSE;
     SpiceImageCompress comp_mode;
     SpiceMsgDisplayDrawCopy copy;
     SpiceMarshaller *src_bitmap_out, *mask_bitmap_out;
@@ -8883,12 +8883,11 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
             if (grad_level == BITMAP_GRADUAL_HIGH) {
                 // if we use lz for alpha, the stride can't be extra
                 lossy_comp = display_channel->enable_jpeg && item->can_lossy;
-            } else {
-                lz_comp = TRUE;
+                quic_comp = TRUE;
             }
-        } else {
-            lz_comp = TRUE;
         }
+    } else if (comp_mode == SPICE_IMAGE_COMPRESS_QUIC) {
+        quic_comp = TRUE;
     }
 
     if (lossy_comp) {
@@ -8896,7 +8895,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
                                                  &bitmap, &comp_send_data,
                                                  worker->mem_slots.internal_groupslot_id);
     } else {
-        if (!lz_comp) {
+        if (quic_comp) {
             comp_succeeded = red_quic_compress_image(dcc, &red_image, &bitmap,
                                                      &comp_send_data,
                                                      worker->mem_slots.internal_groupslot_id);
@@ -8911,6 +8910,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
                                                         worker->mem_slots.internal_groupslot_id);
             } else
 #endif
+            if (comp_mode != SPICE_IMAGE_COMPRESS_OFF)
                 comp_succeeded = red_lz_compress_image(dcc, &red_image, &bitmap,
                                                        &comp_send_data,
                                                        worker->mem_slots.internal_groupslot_id);
