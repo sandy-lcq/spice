@@ -28,7 +28,8 @@ fi
 SPICE_SERVER_VERSION=`printf "0x%02x%02x%02x" $major $minor $micro`
 AC_SUBST(SPICE_SERVER_VERSION)
 
-AC_CONFIG_MACRO_DIRS([m4 spice-common/m4])
+AC_CONFIG_MACRO_DIR([m4])
+m4_include([spice-common/m4/spice-deps.m4])
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_AUX_DIR(.)
 
