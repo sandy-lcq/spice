@@ -6686,9 +6686,9 @@ static inline void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
     if ((image->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_ME)) {
         spice_assert(image->descriptor.width * image->descriptor.height > 0);
         if (!(io_image->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_REPLACE_ME)) {
-            if (pixmap_cache_add(dcc->pixmap_cache, image->descriptor.id,
-                                 image->descriptor.width * image->descriptor.height, is_lossy,
-                                 dcc)) {
+            if (pixmap_cache_unlocked_add(dcc->pixmap_cache, image->descriptor.id,
+                                          image->descriptor.width * image->descriptor.height, is_lossy,
+                                          dcc)) {
                 io_image->descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_ME;
                 dcc->send_data.pixmap_cache_items[dcc->send_data.num_pixmap_cache_items++] =
                                                                                image->descriptor.id;
@@ -6733,11 +6733,12 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
     if (simage->descriptor.flags & SPICE_IMAGE_FLAGS_HIGH_BITS_SET) {
         image.descriptor.flags = SPICE_IMAGE_FLAGS_HIGH_BITS_SET;
     }
+    pthread_mutex_lock(&dcc->pixmap_cache->lock);
 
     if ((simage->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_ME)) {
         int lossy_cache_item;
-        if (pixmap_cache_hit(dcc->pixmap_cache, image.descriptor.id,
-                             &lossy_cache_item, dcc)) {
+        if (pixmap_cache_unlocked_hit(dcc->pixmap_cache, image.descriptor.id,
+                                      &lossy_cache_item, dcc)) {
             dcc->send_data.pixmap_cache_items[dcc->send_data.num_pixmap_cache_items++] =
                                                                                image.descriptor.id;
             if (can_lossy || !lossy_cache_item) {
@@ -6754,10 +6755,11 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                 spice_assert(bitmap_palette_out == NULL);
                 spice_assert(lzplt_palette_out == NULL);
                 stat_inc_counter(display_channel->cache_hits_counter, 1);
+                pthread_mutex_unlock(&dcc->pixmap_cache->lock);
                 return FILL_BITS_TYPE_CACHE;
             } else {
-                pixmap_cache_set_lossy(dcc->pixmap_cache, simage->descriptor.id,
-                                       FALSE);
+                pixmap_cache_unlocked_set_lossy(dcc->pixmap_cache, simage->descriptor.id,
+                                                FALSE);
                 image.descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_REPLACE_ME;
             }
         }
@@ -6771,6 +6773,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         surface_id = simage->u.surface.surface_id;
         if (!validate_surface(worker, surface_id)) {
             rendering_incorrect("SPICE_IMAGE_TYPE_SURFACE");
+            pthread_mutex_unlock(&dcc->pixmap_cache->lock);
             return FILL_BITS_TYPE_SURFACE;
         }
 
@@ -6785,6 +6788,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                              &bitmap_palette_out, &lzplt_palette_out);
         spice_assert(bitmap_palette_out == NULL);
         spice_assert(lzplt_palette_out == NULL);
+        pthread_mutex_unlock(&dcc->pixmap_cache->lock);
         return FILL_BITS_TYPE_SURFACE;
     }
     case SPICE_IMAGE_TYPE_BITMAP: {
@@ -6816,6 +6820,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
             }
 
             spice_marshaller_add_ref_chunks(m, bitmap->data);
+            pthread_mutex_unlock(&dcc->pixmap_cache->lock);
             return FILL_BITS_TYPE_BITMAP;
         } else {
             red_display_add_image_to_pixmap_cache(rcc, simage, &image,
@@ -6833,6 +6838,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
             }
 
             spice_assert(!comp_send_data.is_lossy || can_lossy);
+            pthread_mutex_unlock(&dcc->pixmap_cache->lock);
             return (comp_send_data.is_lossy ? FILL_BITS_TYPE_COMPRESS_LOSSY :
                                               FILL_BITS_TYPE_COMPRESS_LOSSLESS);
         }
@@ -6846,11 +6852,12 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         spice_assert(bitmap_palette_out == NULL);
         spice_assert(lzplt_palette_out == NULL);
         spice_marshaller_add_ref_chunks(m, image.u.quic.data);
+        pthread_mutex_unlock(&dcc->pixmap_cache->lock);
         return FILL_BITS_TYPE_COMPRESS_LOSSLESS;
     default:
         spice_error("invalid image type %u", image.descriptor.type);
     }
-
+    pthread_mutex_unlock(&dcc->pixmap_cache->lock);
     return 0;
 }
 

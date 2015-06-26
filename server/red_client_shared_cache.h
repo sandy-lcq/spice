@@ -36,13 +36,12 @@
 
 #define CHANNEL_FROM_RCC(rcc) SPICE_CONTAINEROF((rcc)->channel, CHANNEL, common.base);
 
-static int FUNC_NAME(hit)(CACHE *cache, uint64_t id, int *lossy, DisplayChannelClient *dcc)
+static int FUNC_NAME(unlocked_hit)(CACHE *cache, uint64_t id, int *lossy, DisplayChannelClient *dcc)
 {
     NewCacheItem *item;
     uint64_t serial;
 
     serial = red_channel_client_get_message_serial(&dcc->common.base);
-    pthread_mutex_lock(&cache->lock);
     item = cache->hash_table[CACHE_HASH_KEY(id)];
 
     while (item) {
@@ -57,15 +56,22 @@ static int FUNC_NAME(hit)(CACHE *cache, uint64_t id, int *lossy, DisplayChannelC
         }
         item = item->next;
     }
-    pthread_mutex_unlock(&cache->lock);
 
     return !!item;
 }
 
-static int FUNC_NAME(set_lossy)(CACHE *cache, uint64_t id, int lossy)
+static int FUNC_NAME(hit)(CACHE *cache, uint64_t id, int *lossy, DisplayChannelClient *dcc)
+{
+    int hit;
+    pthread_mutex_lock(&cache->lock);
+    hit = FUNC_NAME(unlocked_hit)(cache,id,lossy, dcc);
+    pthread_mutex_unlock(&cache->lock);
+    return hit;
+}
+
+static int FUNC_NAME(unlocked_set_lossy)(CACHE *cache, uint64_t id, int lossy)
 {
     NewCacheItem *item;
-    pthread_mutex_lock(&cache->lock);
 
     item = cache->hash_table[CACHE_HASH_KEY(id)];
 
@@ -76,11 +82,10 @@ static int FUNC_NAME(set_lossy)(CACHE *cache, uint64_t id, int lossy)
         }
         item = item->next;
     }
-    pthread_mutex_unlock(&cache->lock);
     return !!item;
 }
 
-static int FUNC_NAME(add)(CACHE *cache, uint64_t id, uint32_t size, int lossy, DisplayChannelClient *dcc)
+static int FUNC_NAME(unlocked_add)(CACHE *cache, uint64_t id, uint32_t size, int lossy, DisplayChannelClient *dcc)
 {
     NewCacheItem *item;
     uint64_t serial;
@@ -91,15 +96,12 @@ static int FUNC_NAME(add)(CACHE *cache, uint64_t id, uint32_t size, int lossy, D
     item = spice_new(NewCacheItem, 1);
     serial = red_channel_client_get_message_serial(&dcc->common.base);
 
-    pthread_mutex_lock(&cache->lock);
-
     if (cache->generation != dcc->CACH_GENERATION) {
         if (!dcc->pending_pixmaps_sync) {
             red_channel_client_pipe_add_type(
                 &dcc->common.base, PIPE_ITEM_TYPE_PIXMAP_SYNC);
             dcc->pending_pixmaps_sync = TRUE;
         }
-        pthread_mutex_unlock(&cache->lock);
         free(item);
         return FALSE;
     }
@@ -112,7 +114,6 @@ static int FUNC_NAME(add)(CACHE *cache, uint64_t id, uint32_t size, int lossy, D
         if (!(tail = (NewCacheItem *)ring_get_tail(&cache->lru)) ||
                                                    tail->sync[dcc->common.id] == serial) {
             cache->available += size;
-            pthread_mutex_unlock(&cache->lock);
             free(item);
             return FALSE;
         }
@@ -144,7 +145,6 @@ static int FUNC_NAME(add)(CACHE *cache, uint64_t id, uint32_t size, int lossy, D
     memset(item->sync, 0, sizeof(item->sync));
     item->sync[dcc->common.id] = serial;
     cache->sync[dcc->common.id] = serial;
-    pthread_mutex_unlock(&cache->lock);
     return TRUE;
 }
 
