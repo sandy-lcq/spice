@@ -111,7 +111,7 @@ static int ticketing_enabled = 1; //Ticketing is enabled by default
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
 uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
-SpiceImageCompress image_compression = SPICE_IMAGE_COMPRESS_AUTO_GLZ;
+SpiceImageCompression image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
 spice_wan_compression_t jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
 spice_wan_compression_t zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
 int agent_mouse = TRUE;
@@ -2709,7 +2709,7 @@ static inline void on_activating_ticketing(void)
     }
 }
 
-static void set_image_compression(SpiceImageCompress val)
+static void set_image_compression(SpiceImageCompression val)
 {
     if (val == image_compression) {
         return;
@@ -3553,13 +3553,13 @@ SPICE_GNUC_VISIBLE int spice_server_set_tls(SpiceServer *s, int port,
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
-                                                          SpiceImageCompress comp)
+                                                          SpiceImageCompression comp)
 {
     spice_assert(reds == s);
 #ifndef USE_LZ4
-    if (comp == SPICE_IMAGE_COMPRESS_LZ4) {
+    if (comp == SPICE_IMAGE_COMPRESSION_LZ4) {
         spice_warning("LZ4 compression not supported, falling back to auto GLZ");
-        comp = SPICE_IMAGE_COMPRESS_AUTO_GLZ;
+        comp = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
         set_image_compression(comp);
         return -1;
     }
@@ -3568,7 +3568,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
     return 0;
 }
 
-SPICE_GNUC_VISIBLE SpiceImageCompress spice_server_get_image_compression(SpiceServer *s)
+SPICE_GNUC_VISIBLE SpiceImageCompression spice_server_get_image_compression(SpiceServer *s)
 {
     spice_assert(reds == s);
     return image_compression;

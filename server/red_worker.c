@@ -986,7 +986,7 @@ typedef struct RedWorker {
 
     ImageCache image_cache;
 
-    SpiceImageCompress image_compression;
+    SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
 
@@ -6557,14 +6557,14 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
                                      compress_send_data_t* o_comp_data)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    SpiceImageCompress image_compression =
+    SpiceImageCompression image_compression =
         display_channel->common.worker->image_compression;
     int quic_compress = FALSE;
 
-    if ((image_compression == SPICE_IMAGE_COMPRESS_OFF) ||
+    if ((image_compression == SPICE_IMAGE_COMPRESSION_OFF) ||
         ((src->y * src->stride) < MIN_SIZE_TO_COMPRESS)) { // TODO: change the size cond
         return FALSE;
-    } else if (image_compression == SPICE_IMAGE_COMPRESS_QUIC) {
+    } else if (image_compression == SPICE_IMAGE_COMPRESSION_QUIC) {
         if (BITMAP_FMT_IS_PLT[src->format]) {
             return FALSE;
         } else {
@@ -6576,17 +6576,17 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
             of the image in bytes (2) unstable bitmaps
         */
         if (_stride_is_extra(src) || (src->data->flags & SPICE_CHUNKS_FLAGS_UNSTABLE)) {
-            if ((image_compression == SPICE_IMAGE_COMPRESS_LZ) ||
-                (image_compression == SPICE_IMAGE_COMPRESS_GLZ) ||
-                (image_compression == SPICE_IMAGE_COMPRESS_LZ4) ||
+            if ((image_compression == SPICE_IMAGE_COMPRESSION_LZ) ||
+                (image_compression == SPICE_IMAGE_COMPRESSION_GLZ) ||
+                (image_compression == SPICE_IMAGE_COMPRESSION_LZ4) ||
                 BITMAP_FMT_IS_PLT[src->format]) {
                 return FALSE;
             } else {
                 quic_compress = TRUE;
             }
         } else {
-            if ((image_compression == SPICE_IMAGE_COMPRESS_AUTO_LZ) ||
-                (image_compression == SPICE_IMAGE_COMPRESS_AUTO_GLZ)) {
+            if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
+                (image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ)) {
                 if ((src->x < MIN_DIMENSION_TO_QUIC) || (src->y < MIN_DIMENSION_TO_QUIC)) {
                     quic_compress = FALSE;
                 } else {
@@ -6611,8 +6611,8 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
 #endif
         // if bitmaps is picture-like, compress it using jpeg
         if (can_lossy && display_channel->enable_jpeg &&
-            ((image_compression == SPICE_IMAGE_COMPRESS_AUTO_LZ) ||
-            (image_compression == SPICE_IMAGE_COMPRESS_AUTO_GLZ))) {
+            ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
+            (image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ))) {
             // if we use lz for alpha, the stride can't be extra
             if (src->format != SPICE_BITMAP_FMT_RGBA || !_stride_is_extra(src)) {
                 return red_jpeg_compress_image(dcc, dest,
@@ -6624,14 +6624,14 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
     } else {
         int glz;
         int ret;
-        if ((image_compression == SPICE_IMAGE_COMPRESS_AUTO_GLZ) ||
-            (image_compression == SPICE_IMAGE_COMPRESS_GLZ)) {
+        if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ) ||
+            (image_compression == SPICE_IMAGE_COMPRESSION_GLZ)) {
             glz = BITMAP_FMT_HAS_GRADUALITY(src->format) && (
                     (src->x * src->y) < glz_enc_dictionary_get_size(
                         dcc->glz_dict->dict));
-        } else if ((image_compression == SPICE_IMAGE_COMPRESS_AUTO_LZ) ||
-                   (image_compression == SPICE_IMAGE_COMPRESS_LZ) ||
-                   (image_compression == SPICE_IMAGE_COMPRESS_LZ4)) {
+        } else if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
+                   (image_compression == SPICE_IMAGE_COMPRESSION_LZ) ||
+                   (image_compression == SPICE_IMAGE_COMPRESSION_LZ4)) {
             glz = FALSE;
         } else {
             spice_error("invalid image compression type %u", image_compression);
@@ -6653,7 +6653,7 @@ static inline int red_compress_image(DisplayChannelClient *dcc,
 
         if (!glz) {
 #ifdef USE_LZ4
-            if (image_compression == SPICE_IMAGE_COMPRESS_LZ4 &&
+            if (image_compression == SPICE_IMAGE_COMPRESSION_LZ4 &&
                 bitmap_fmt_is_rgb(src->format) &&
                 red_channel_client_test_remote_cap(&dcc->common.base,
                         SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
@@ -6868,10 +6868,10 @@ static void fill_mask(RedChannelClient *rcc, SpiceMarshaller *m,
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
 
     if (mask_bitmap && m) {
-        if (display_channel->common.worker->image_compression != SPICE_IMAGE_COMPRESS_OFF) {
-            SpiceImageCompress save_img_comp =
+        if (display_channel->common.worker->image_compression != SPICE_IMAGE_COMPRESSION_OFF) {
+            SpiceImageCompression save_img_comp =
                 display_channel->common.worker->image_compression;
-            display_channel->common.worker->image_compression = SPICE_IMAGE_COMPRESS_OFF;
+            display_channel->common.worker->image_compression = SPICE_IMAGE_COMPRESSION_OFF;
             fill_bits(dcc, m, mask_bitmap, drawable, FALSE);
             display_channel->common.worker->image_compression = save_img_comp;
         } else {
@@ -8815,7 +8815,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
     int comp_succeeded = FALSE;
     int lossy_comp = FALSE;
     int quic_comp = FALSE;
-    SpiceImageCompress comp_mode;
+    SpiceImageCompression comp_mode;
     SpiceMsgDisplayDrawCopy copy;
     SpiceMarshaller *src_bitmap_out, *mask_bitmap_out;
     SpiceMarshaller *bitmap_palette_out, *lzplt_palette_out;
@@ -8871,8 +8871,8 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
 
     comp_mode = display_channel->common.worker->image_compression;
 
-    if (((comp_mode == SPICE_IMAGE_COMPRESS_AUTO_LZ) ||
-        (comp_mode == SPICE_IMAGE_COMPRESS_AUTO_GLZ)) && !_stride_is_extra(&bitmap)) {
+    if (((comp_mode == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
+        (comp_mode == SPICE_IMAGE_COMPRESSION_AUTO_GLZ)) && !_stride_is_extra(&bitmap)) {
 
         if (BITMAP_FMT_HAS_GRADUALITY(item->image_format)) {
             BitmapGradualType grad_level;
@@ -8886,7 +8886,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
                 quic_comp = TRUE;
             }
         }
-    } else if (comp_mode == SPICE_IMAGE_COMPRESS_QUIC) {
+    } else if (comp_mode == SPICE_IMAGE_COMPRESSION_QUIC) {
         quic_comp = TRUE;
     }
 
@@ -8901,7 +8901,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
                                                      worker->mem_slots.internal_groupslot_id);
         } else {
 #ifdef USE_LZ4
-            if (comp_mode == SPICE_IMAGE_COMPRESS_LZ4 &&
+            if (comp_mode == SPICE_IMAGE_COMPRESSION_LZ4 &&
                 bitmap_fmt_is_rgb(bitmap.format) &&
                 red_channel_client_test_remote_cap(&dcc->common.base,
                         SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
@@ -8910,7 +8910,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
                                                         worker->mem_slots.internal_groupslot_id);
             } else
 #endif
-            if (comp_mode != SPICE_IMAGE_COMPRESS_OFF)
+            if (comp_mode != SPICE_IMAGE_COMPRESSION_OFF)
                 comp_succeeded = red_lz_compress_image(dcc, &red_image, &bitmap,
                                                        &comp_send_data,
                                                        worker->mem_slots.internal_groupslot_id);
@@ -10270,15 +10270,15 @@ static int display_channel_handle_preferred_compression(DisplayChannelClient *dc
         SpiceMsgcDisplayPreferredCompression *pc) {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     switch (pc->image_compression) {
-    case SPICE_IMAGE_COMPRESS_AUTO_LZ:
-    case SPICE_IMAGE_COMPRESS_AUTO_GLZ:
-    case SPICE_IMAGE_COMPRESS_QUIC:
+    case SPICE_IMAGE_COMPRESSION_AUTO_LZ:
+    case SPICE_IMAGE_COMPRESSION_AUTO_GLZ:
+    case SPICE_IMAGE_COMPRESSION_QUIC:
 #ifdef USE_LZ4
-    case SPICE_IMAGE_COMPRESS_LZ4:
+    case SPICE_IMAGE_COMPRESSION_LZ4:
 #endif
-    case SPICE_IMAGE_COMPRESS_LZ:
-    case SPICE_IMAGE_COMPRESS_GLZ:
-    case SPICE_IMAGE_COMPRESS_OFF:
+    case SPICE_IMAGE_COMPRESSION_LZ:
+    case SPICE_IMAGE_COMPRESSION_GLZ:
+    case SPICE_IMAGE_COMPRESSION_OFF:
         display_channel->common.worker->image_compression = pc->image_compression;
         return TRUE;
     default:
@@ -11745,27 +11745,27 @@ void handle_dev_set_compression(void *opaque, void *payload)
 
     worker->image_compression = msg->image_compression;
     switch (worker->image_compression) {
-    case SPICE_IMAGE_COMPRESS_AUTO_LZ:
+    case SPICE_IMAGE_COMPRESSION_AUTO_LZ:
         spice_info("ic auto_lz");
         break;
-    case SPICE_IMAGE_COMPRESS_AUTO_GLZ:
+    case SPICE_IMAGE_COMPRESSION_AUTO_GLZ:
         spice_info("ic auto_glz");
         break;
-    case SPICE_IMAGE_COMPRESS_QUIC:
+    case SPICE_IMAGE_COMPRESSION_QUIC:
         spice_info("ic quic");
         break;
 #ifdef USE_LZ4
-    case SPICE_IMAGE_COMPRESS_LZ4:
+    case SPICE_IMAGE_COMPRESSION_LZ4:
         spice_info("ic lz4");
         break;
 #endif
-    case SPICE_IMAGE_COMPRESS_LZ:
+    case SPICE_IMAGE_COMPRESSION_LZ:
         spice_info("ic lz");
         break;
-    case SPICE_IMAGE_COMPRESS_GLZ:
+    case SPICE_IMAGE_COMPRESSION_GLZ:
         spice_info("ic glz");
         break;
-    case SPICE_IMAGE_COMPRESS_OFF:
+    case SPICE_IMAGE_COMPRESSION_OFF:
         spice_info("ic off");
         break;
     default:

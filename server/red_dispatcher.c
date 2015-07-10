@@ -70,7 +70,7 @@ struct RedDispatcher {
 };
 
 extern uint32_t streaming_video;
-extern SpiceImageCompress image_compression;
+extern SpiceImageCompression image_compression;
 extern spice_wan_compression_t jpeg_state;
 extern spice_wan_compression_t zlib_glz_state;
 
@@ -747,7 +747,7 @@ static inline int calc_compression_level(void)
 {
     spice_assert(streaming_video != SPICE_STREAM_VIDEO_INVALID);
     if ((streaming_video != SPICE_STREAM_VIDEO_OFF) ||
-        (image_compression != SPICE_IMAGE_COMPRESS_QUIC)) {
+        (image_compression != SPICE_IMAGE_COMPRESSION_QUIC)) {
         return 0;
     } else {
         return 1;

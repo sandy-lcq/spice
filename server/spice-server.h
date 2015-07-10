@@ -68,11 +68,19 @@ int spice_server_add_interface(SpiceServer *s,
 int spice_server_remove_interface(SpiceBaseInstance *sin);
 
 // Needed for backward API compatibility
-typedef SpiceImageCompress spice_image_compression_t;
+typedef SpiceImageCompression spice_image_compression_t;
+#define SPICE_IMAGE_COMPRESS_INVALID SPICE_IMAGE_COMPRESSION_INVALID
+#define SPICE_IMAGE_COMPRESS_OFF SPICE_IMAGE_COMPRESSION_OFF
+#define SPICE_IMAGE_COMPRESS_AUTO_GLZ SPICE_IMAGE_COMPRESSION_AUTO_GLZ
+#define SPICE_IMAGE_COMPRESS_AUTO_LZ SPICE_IMAGE_COMPRESSION_AUTO_LZ
+#define SPICE_IMAGE_COMPRESS_QUIC SPICE_IMAGE_COMPRESSION_QUIC
+#define SPICE_IMAGE_COMPRESS_GLZ SPICE_IMAGE_COMPRESSION_GLZ
+#define SPICE_IMAGE_COMPRESS_LZ SPICE_IMAGE_COMPRESSION_LZ
+#define SPICE_IMAGE_COMPRESS_LZ4 SPICE_IMAGE_COMPRESSION_LZ4
 
 int spice_server_set_image_compression(SpiceServer *s,
-                                       SpiceImageCompress comp);
-SpiceImageCompress spice_server_get_image_compression(SpiceServer *s);
+                                       SpiceImageCompression comp);
+SpiceImageCompression spice_server_get_image_compression(SpiceServer *s);
 
 typedef enum {
     SPICE_WAN_COMPRESSION_INVALID,

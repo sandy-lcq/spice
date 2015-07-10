@@ -92,7 +92,7 @@ typedef struct WorkerInitData {
     uint32_t *pending;
     uint32_t num_renderers;
     uint32_t renderers[RED_MAX_RENDERERS];
-    SpiceImageCompress image_compression;
+    SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
     int streaming_video;

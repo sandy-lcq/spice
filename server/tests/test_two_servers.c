@@ -26,7 +26,7 @@ int main(void)
     core = basic_event_loop_init();
     t1 = test_new(core);
     t2 = test_new(core);
-    //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESS_OFF);
+    //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESSION_OFF);
     test_add_display_interface(t1);
     test_add_display_interface(t2);
     test_set_simple_command_list(t1, simple_commands, COUNT(simple_commands));

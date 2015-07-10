@@ -56,7 +56,7 @@ int main(void)
 
     core = basic_event_loop_init();
     test = test_new(core);
-    //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESS_OFF);
+    //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESSION_OFF);
     test_add_display_interface(test);
     test_set_command_list(test, commands, COUNT(commands));
 
