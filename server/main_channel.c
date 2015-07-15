@@ -961,11 +961,12 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             case NET_TEST_STAGE_WARMUP:
                 mcc->net_test_id++;
                 mcc->net_test_stage = NET_TEST_STAGE_LATENCY;
+                mcc->latency = roundtrip;
                 break;
             case NET_TEST_STAGE_LATENCY:
                 mcc->net_test_id++;
                 mcc->net_test_stage = NET_TEST_STAGE_RATE;
-                mcc->latency = roundtrip;
+                mcc->latency = MIN(mcc->latency, roundtrip);
                 break;
             case NET_TEST_STAGE_RATE:
                 mcc->net_test_id = 0;
