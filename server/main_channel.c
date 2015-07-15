@@ -971,11 +971,11 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
                 mcc->net_test_id = 0;
                 if (roundtrip <= mcc->latency) {
                     // probably high load on client or server result with incorrect values
+                    spice_printerr("net test: invalid values, latency %" PRIu64
+                                   " roundtrip %" PRIu64 ". assuming high"
+                                   " bandwidth", mcc->latency, roundtrip);
                     mcc->latency = 0;
                     mcc->net_test_stage = NET_TEST_STAGE_INVALID;
-                    spice_printerr("net test: invalid values, latency %" PRIu64
-                               " roundtrip %" PRIu64 ". assuming high"
-                               "bandwidth", mcc->latency, roundtrip);
                     red_channel_client_start_connectivity_monitoring(&mcc->base,
                                                                      CLIENT_CONNECTIVITY_TIMEOUT);
                     break;
