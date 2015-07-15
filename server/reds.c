@@ -1002,11 +1002,11 @@ static void reds_on_main_agent_monitors_config(
     msg_header = (VDAgentMessage *)cmc->buffer;
     if (sizeof(VDAgentMessage) > cmc->buffer_size ||
             msg_header->size > cmc->buffer_size - sizeof(VDAgentMessage)) {
-        spice_debug("not enough data yet. %d\n", cmc->buffer_size);
+        spice_debug("not enough data yet. %d", cmc->buffer_size);
         return;
     }
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
-    spice_debug("%s: %d\n", __func__, monitors_config->num_of_monitors);
+    spice_debug("%s: %d", __func__, monitors_config->num_of_monitors);
     red_dispatcher_client_monitors_config(monitors_config);
     reds_client_monitors_config_cleanup();
 }

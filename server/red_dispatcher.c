@@ -324,7 +324,7 @@ void red_dispatcher_client_monitors_config(VDAgentMonitorsConfig *monitors_confi
             !now->qxl->st->qif->client_monitors_config(now->qxl,
                                                        monitors_config)) {
             /* this is a normal condition, some qemu devices might not implement it */
-            spice_debug("QXLInterface::client_monitors_config failed\n");
+            spice_debug("QXLInterface::client_monitors_config failed");
         }
         now = now->next;
     }
