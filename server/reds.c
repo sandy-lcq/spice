@@ -3291,6 +3291,7 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
     shm_name_len = strlen(SPICE_STAT_SHM_NAME) + 20;
     reds->stat_shm_name = (char *)spice_malloc(shm_name_len);
     snprintf(reds->stat_shm_name, shm_name_len, SPICE_STAT_SHM_NAME, getpid());
+    shm_unlink(reds->stat_shm_name);
     if ((fd = shm_open(reds->stat_shm_name, O_CREAT | O_RDWR, 0444)) == -1) {
         spice_error("statistics shm_open failed, %s", strerror(errno));
     }
