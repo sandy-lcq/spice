@@ -381,10 +381,6 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
     // TODO: tune quality according to bandwidth
     dcc->encoders.jpeg_quality = 85;
 
-    size_t stream_buf_size;
-    stream_buf_size = 32*1024;
-    dcc->send_data.stream_outbuf = spice_malloc(stream_buf_size);
-    dcc->send_data.stream_outbuf_size = stream_buf_size;
     dcc->send_data.free_list.res =
         spice_malloc(sizeof(SpiceResourceList) +
                      DISPLAY_FREE_LIST_DEFAULT_SIZE * sizeof(SpiceResourceID));
@@ -491,7 +487,6 @@ void dcc_stop(DisplayChannelClient *dcc)
     dcc->pixmap_cache = NULL;
     image_encoders_release_glz(&dcc->encoders);
     dcc_palette_cache_reset(dcc);
-    free(dcc->send_data.stream_outbuf);
     free(dcc->send_data.free_list.res);
     dcc_destroy_stream_agents(dcc);
     image_encoders_free(&dcc->encoders);

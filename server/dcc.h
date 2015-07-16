@@ -75,9 +75,6 @@ struct DisplayChannelClient {
     uint32_t palette_cache_items;
 
     struct {
-        uint32_t stream_outbuf_size;
-        uint8_t *stream_outbuf; // caution stream buffer is also used as compress bufs!!!
-
         FreeList free_list;
         uint64_t pixmap_cache_items[MAX_DRAWABLE_PIXMAP_CACHE_ITEMS];
         int num_pixmap_cache_items;

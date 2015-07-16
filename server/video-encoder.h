@@ -24,6 +24,23 @@
 #include <inttypes.h>
 #include <common/draw.h>
 
+
+/* A structure containing the data for a compressed frame. See encode_frame(). */
+typedef struct VideoBuffer VideoBuffer;
+struct VideoBuffer {
+    /* A pointer to the compressed frame data. */
+    uint8_t *data;
+
+    /* The size of the compressed frame in bytes. */
+    uint32_t size;
+
+    /* Releases the video buffer resources and deallocates it.
+     *
+     * @buffer:   The video buffer.
+     */
+    void (*free)(VideoBuffer *buffer);
+};
+
 enum {
     VIDEO_ENCODER_FRAME_UNSUPPORTED = -1,
     VIDEO_ENCODER_FRAME_DROP,
@@ -48,11 +65,9 @@ struct VideoEncoder {
      * @bitmap:        A bitmap containing the source video frame.
      * @src:           A rectangle specifying the area occupied by the video.
      * @top_down:      If true the first video line is specified by src.top.
-     * @outbuf:        The buffer for the compressed frame. This must either
-     *                 be NULL or point to a buffer allocated by malloc
-     *                 since it may be reallocated, if its size is too small.
-     * @outbuf_size:   The size of the outbuf buffer.
-     * @data_size:     The size of the compressed frame.
+     * @outbuf:        A pointer to a VideoBuffer structure containing the
+     *                 compressed frame if successful. Call the buffer's
+     *                 free() method as soon as it is no longer needed.
      * @return:
      *     VIDEO_ENCODER_FRAME_ENCODE_DONE if successful.
      *     VIDEO_ENCODER_FRAME_UNSUPPORTED if the frame cannot be encoded.
@@ -62,8 +77,7 @@ struct VideoEncoder {
     int (*encode_frame)(VideoEncoder *encoder, uint32_t frame_mm_time,
                         const SpiceBitmap *bitmap,
                         const SpiceRect *src, int top_down,
-                        uint8_t **outbuf, size_t *outbuf_size,
-                        uint32_t *data_size);
+                        VideoBuffer** outbuf);
 
     /*
      * Bit rate control methods.

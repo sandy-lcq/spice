@@ -37,6 +37,12 @@ typedef struct {
     uint32_t bpp;
 } SpiceFormatForGStreamer;
 
+typedef struct SpiceGstVideoBuffer {
+    VideoBuffer base;
+    GstBuffer *gst_buffer;
+    GstMapInfo map;
+} SpiceGstVideoBuffer;
+
 typedef struct SpiceGstEncoder {
     VideoEncoder base;
 
@@ -79,6 +85,26 @@ typedef struct SpiceGstEncoder {
     /* The default bit rate. */
 #   define SPICE_GST_DEFAULT_BITRATE (8 * 1024 * 1024)
 } SpiceGstEncoder;
+
+
+/* ---------- The SpiceGstVideoBuffer implementation ---------- */
+
+static void spice_gst_video_buffer_free(VideoBuffer *video_buffer)
+{
+    SpiceGstVideoBuffer *buffer = (SpiceGstVideoBuffer*)video_buffer;
+    if (buffer->gst_buffer) {
+        gst_buffer_unmap(buffer->gst_buffer, &buffer->map);
+        gst_buffer_unref(buffer->gst_buffer);
+    }
+    free(buffer);
+}
+
+static SpiceGstVideoBuffer* create_gst_video_buffer(void)
+{
+    SpiceGstVideoBuffer *buffer = spice_new0(SpiceGstVideoBuffer, 1);
+    buffer->base.free = spice_gst_video_buffer_free;
+    return buffer;
+}
 
 
 /* ---------- Miscellaneous SpiceGstEncoder helpers ---------- */
@@ -445,29 +471,22 @@ static int push_raw_frame(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
 
 /* A helper for spice_gst_encoder_encode_frame() */
 static int pull_compressed_buffer(SpiceGstEncoder *encoder,
-                                  uint8_t **outbuf, size_t *outbuf_size,
-                                  uint32_t *data_size)
+                                  VideoBuffer **outbuf)
 {
-    spice_return_val_if_fail(outbuf && outbuf_size, VIDEO_ENCODER_FRAME_UNSUPPORTED);
-
     GstSample *sample = gst_app_sink_pull_sample(encoder->appsink);
     if (sample) {
-        GstMapInfo map;
-        GstBuffer *buffer = gst_sample_get_buffer(sample);
-        if (buffer && gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-            gint size = gst_buffer_get_size(buffer);
-            if (!*outbuf || *outbuf_size < size) {
-                free(*outbuf);
-                *outbuf = spice_malloc(size);
-                *outbuf_size = size;
-            }
-            /* TODO Try to avoid this copy by changing the GstBuffer handling */
-            memcpy(*outbuf, map.data, size);
-            *data_size = size;
-            gst_buffer_unmap(buffer, &map);
+        SpiceGstVideoBuffer *buffer = create_gst_video_buffer();
+        buffer->gst_buffer = gst_sample_get_buffer(sample);
+        if (buffer->gst_buffer &&
+            gst_buffer_map(buffer->gst_buffer, &buffer->map, GST_MAP_READ)) {
+            buffer->base.data = buffer->map.data;
+            buffer->base.size = gst_buffer_get_size(buffer->gst_buffer);
+            *outbuf = (VideoBuffer*)buffer;
+            gst_buffer_ref(buffer->gst_buffer);
             gst_sample_unref(sample);
             return VIDEO_ENCODER_FRAME_ENCODE_DONE;
         }
+        buffer->base.free((VideoBuffer*)buffer);
         gst_sample_unref(sample);
     }
     spice_debug("failed to pull the compressed buffer");
@@ -488,10 +507,11 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
                                           uint32_t frame_mm_time,
                                           const SpiceBitmap *bitmap,
                                           const SpiceRect *src, int top_down,
-                                          uint8_t **outbuf, size_t *outbuf_size,
-                                          uint32_t *data_size)
+                                          VideoBuffer **outbuf)
 {
     SpiceGstEncoder *encoder = (SpiceGstEncoder*)video_encoder;
+    g_return_val_if_fail(outbuf != NULL, VIDEO_ENCODER_FRAME_UNSUPPORTED);
+    *outbuf = NULL;
 
     uint32_t width = src->right - src->left;
     uint32_t height = src->bottom - src->top;
@@ -519,7 +539,7 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
 
     int rc = push_raw_frame(encoder, bitmap, src, top_down);
     if (rc == VIDEO_ENCODER_FRAME_ENCODE_DONE) {
-        rc = pull_compressed_buffer(encoder, outbuf, outbuf_size, data_size);
+        rc = pull_compressed_buffer(encoder, outbuf);
         if (rc != VIDEO_ENCODER_FRAME_ENCODE_DONE) {
             /* The input buffer will be stuck in the pipeline, preventing
              * later ones from being processed. Furthermore something went
