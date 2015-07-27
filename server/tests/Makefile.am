@@ -20,6 +20,7 @@ LDADD =								\
 	$(top_builddir)/spice-common/common/libspice-common.la	\
 	$(top_builddir)/server/libspice-server.la		\
 	$(GLIB2_LIBS)						\
+	$(SPICE_NONPKGCONFIG_LIBS)		                \
 	$(NULL)
 
 COMMON_BASE =					\
