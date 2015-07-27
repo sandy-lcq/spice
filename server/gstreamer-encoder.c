@@ -20,6 +20,8 @@
 #include <config.h>
 #endif
 
+#include <inttypes.h>
+
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
@@ -95,6 +97,7 @@ typedef struct SpiceGstEncoder {
     GstAppSrc *appsrc;
     GstCaps *src_caps;
     GstElement *gstenc;
+    GParamSpec *gstenc_bitrate_param;
 
     /* Pipeline parameters to modify before the next frame. */
 #   define SPICE_GST_VIDEO_PIPELINE_STATE    0x1
@@ -911,6 +914,16 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
         gst_pipeline_use_clock(GST_PIPELINE(encoder->pipeline), NULL);
     }
 
+    /* Figure out which parameter controls the GStreamer encoder's bitrate */
+    GObjectClass *class = G_OBJECT_GET_CLASS(encoder->gstenc);
+    encoder->gstenc_bitrate_param = g_object_class_find_property(class, "bitrate");
+    if (encoder->gstenc_bitrate_param == NULL) {
+        encoder->gstenc_bitrate_param = g_object_class_find_property(class, "target-bitrate");
+    }
+    if (!encoder->gstenc_bitrate_param) {
+        spice_warning("GStreamer error: could not find the %s bitrate parameter", gstenc_name);
+    }
+
     set_pipeline_changes(encoder, SPICE_GST_VIDEO_PIPELINE_STATE |
                                   SPICE_GST_VIDEO_PIPELINE_BITRATE |
                                   SPICE_GST_VIDEO_PIPELINE_CAPS);
@@ -921,28 +934,48 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
 /* A helper for configure_pipeline() */
 static void set_gstenc_bitrate(SpiceGstEncoder *encoder)
 {
-    /* Configure the encoder bitrate */
-    switch (encoder->base.codec_type) {
-    case SPICE_VIDEO_CODEC_TYPE_MJPEG:
-        g_object_set(G_OBJECT(encoder->gstenc),
-                     "bitrate", (gint)encoder->video_bit_rate,
-                     NULL);
-        break;
-    case SPICE_VIDEO_CODEC_TYPE_VP8:
-        g_object_set(G_OBJECT(encoder->gstenc),
-                     "target-bitrate", (gint)encoder->video_bit_rate,
-                     NULL);
-        break;
-    case SPICE_VIDEO_CODEC_TYPE_H264:
-        g_object_set(G_OBJECT(encoder->gstenc),
-                     "bitrate", (guint)(encoder->bit_rate / 1024),
-                     NULL);
-        break;
-    default:
-        /* gstreamer_encoder_new() should have rejected this codec type */
-        spice_warning("unsupported codec type %d", encoder->base.codec_type);
-        free_pipeline(encoder);
+    GParamSpec *param = encoder->gstenc_bitrate_param;
+    if (!param) {
+        return;
     }
+
+    uint64_t gst_bit_rate = encoder->video_bit_rate;
+    if (strstr(g_param_spec_get_blurb(param), "kbit")) {
+        gst_bit_rate = gst_bit_rate / 1024;
+    }
+
+    GObject * gobject = G_OBJECT(encoder->gstenc);
+    const gchar *prop = g_param_spec_get_name(param);
+    switch (param->value_type) {
+    case G_TYPE_INT: {
+        GParamSpecInt *range = G_PARAM_SPEC_INT(param);
+        gst_bit_rate = MAX(range->minimum, MIN(range->maximum, gst_bit_rate));
+        g_object_set(gobject, prop, (gint)gst_bit_rate, NULL);
+        break;
+        }
+    case G_TYPE_UINT: {
+        GParamSpecUInt *range = G_PARAM_SPEC_UINT(param);
+        gst_bit_rate = MAX(range->minimum, MIN(range->maximum, gst_bit_rate));
+        g_object_set(gobject, prop, (guint)gst_bit_rate, NULL);
+        break;
+        }
+    case G_TYPE_INT64: {
+        GParamSpecInt64 *range = G_PARAM_SPEC_INT64(param);
+        gst_bit_rate = MAX(range->minimum, MIN(range->maximum, gst_bit_rate));
+        g_object_set(gobject, prop, (gint64)gst_bit_rate, NULL);
+        break;
+        }
+    case G_TYPE_UINT64: {
+        GParamSpecUInt64 *range = G_PARAM_SPEC_UINT64(param);
+        gst_bit_rate = MAX(range->minimum, MIN(range->maximum, gst_bit_rate));
+        g_object_set(gobject, prop, (guint64)gst_bit_rate, NULL);
+        break;
+        }
+    default:
+        spice_warning("the %s property has an unsupported type %zu",
+                      prop, param->value_type);
+    }
+    spice_debug("setting the GStreamer %s to %"PRIu64, prop, gst_bit_rate);
 }
 
 /* A helper for spice_gst_encoder_encode_frame() */
