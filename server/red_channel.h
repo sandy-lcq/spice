@@ -127,11 +127,6 @@ typedef struct OutgoingHandler {
 
 /* Red Channel interface */
 
-typedef struct BufDescriptor {
-    uint32_t size;
-    uint8_t *data;
-} BufDescriptor;
-
 typedef struct RedChannel RedChannel;
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;
