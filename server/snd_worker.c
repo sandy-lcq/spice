@@ -1623,8 +1623,3 @@ void snd_set_playback_compression(int on)
         }
     }
 }
-
-int snd_get_playback_compression(void)
-{
-    return playback_compression;
-}
