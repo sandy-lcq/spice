@@ -13,7 +13,7 @@
  * device attached: call spice_char_device_state_create
  * device detached: call spice_char_device_state_destroy/reset
  *
- * client connected and assoicated with a device: spice_char_device_client_add
+ * client connected and associated with a device: spice_char_device_client_add
  * client disconnected: spice_char_device_client_remove
  *
  * Writing to the device
