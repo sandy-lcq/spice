@@ -78,11 +78,6 @@ enum {
     PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS,
 };
 
-typedef struct RedsOutItem RedsOutItem;
-struct RedsOutItem {
-    PipeItem base;
-};
-
 typedef struct RefsPipeItem {
     PipeItem base;
     int *refs;
