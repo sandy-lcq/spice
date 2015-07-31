@@ -982,8 +982,6 @@ typedef struct RedWorker {
 
     RedMemSlotInfo mem_slots;
 
-    uint32_t preload_group_id;
-
     ImageCache image_cache;
 
     SpiceImageCompression image_compression;
@@ -4406,8 +4404,6 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     canvas = surface->context.canvas;
 
     image_cache_aging(&worker->image_cache);
-
-    worker->preload_group_id = drawable->group_id;
 
     region_add(&surface->draw_dirty_region, &drawable->red_drawable->bbox);
 
