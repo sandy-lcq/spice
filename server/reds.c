@@ -156,6 +156,10 @@ static void reds_char_device_add_state(SpiceCharDeviceState *st);
 static void reds_char_device_remove_state(SpiceCharDeviceState *st);
 static void reds_send_mm_time(void);
 
+static VDIReadBuf *vdi_port_read_buf_get(void);
+static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
+static void vdi_port_read_buf_unref(VDIReadBuf *buf);
+
 static ChannelSecurityOptions *channels_security = NULL;
 static int default_channel_security =
     SPICE_CHANNEL_SECURITY_NONE | SPICE_CHANNEL_SECURITY_SSL;

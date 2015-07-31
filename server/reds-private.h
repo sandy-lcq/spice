@@ -33,10 +33,6 @@ typedef struct VDIReadBuf {
     uint8_t data[SPICE_AGENT_MAX_DATA_SIZE];
 } VDIReadBuf;
 
-static VDIReadBuf *vdi_port_read_buf_get(void);
-static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
-static void vdi_port_read_buf_unref(VDIReadBuf *buf);
-
 enum {
     VDI_PORT_READ_STATE_READ_HEADER,
     VDI_PORT_READ_STATE_GET_BUFF,
