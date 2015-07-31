@@ -44,13 +44,6 @@ struct SpiceMigrateState {
     int dummy;
 };
 
-typedef struct RedsMigSpice {
-    char *host;
-    char *cert_subject;
-    int port;
-    int sport;
-} RedsMigSpice;
-
 /* main thread only */
 void reds_handle_channel_event(int event, SpiceChannelEventInfo *info);
 

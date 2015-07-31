@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <spice/vd_agent.h>
 #include "common/marshaller.h"
-#include "reds.h"
 #include "red_channel.h"
 
 // TODO: Defines used to calculate receive buffer size, and also by reds.c
@@ -32,6 +31,14 @@
 // approximate max receive message size for main channel
 #define MAIN_CHANNEL_RECEIVE_BUF_SIZE \
     (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
+
+struct RedsMigSpice {
+    char *host;
+    char *cert_subject;
+    int port;
+    int sport;
+};
+typedef struct RedsMigSpice RedsMigSpice;
 
 typedef struct MainChannel {
     RedChannel base;
