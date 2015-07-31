@@ -394,8 +394,8 @@ static void reds_reset_vdp(void)
     /* Throw away pending chunks from the current (if any) and future
      * messages written by the client.
      * TODO: client should clear its agent messages queue when the agent
-     * is disconnect. Currently, when and agent gets disconnected and reconnected,
-     * messeges that were directed to the previous instance of the agent continues
+     * is disconnected. Currently, when an agent gets disconnected and reconnected,
+     * messages that were directed to the previous instance of the agent continue
      * to be sent from the client. This TODO will require server, protocol, and client changes */
     state->write_filter.result = AGENT_MSG_FILTER_DISCARD;
     state->write_filter.discard_all = TRUE;
