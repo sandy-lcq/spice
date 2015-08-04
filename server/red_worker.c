@@ -7171,9 +7171,8 @@ static void red_pipe_replace_rendered_drawables_with_images(RedWorker *worker,
                                                             int first_surface_id,
                                                             SpiceRect *first_area)
 {
-    /* TODO: can't have those statics with multiple clients */
-    static int resent_surface_ids[MAX_PIPE_SIZE];
-    static SpiceRect resent_areas[MAX_PIPE_SIZE]; // not pointers since drawbales may be released
+    int resent_surface_ids[MAX_PIPE_SIZE];
+    SpiceRect resent_areas[MAX_PIPE_SIZE]; // not pointers since drawables may be released
     int num_resent;
     PipeItem *pipe_item;
     Ring *pipe;
