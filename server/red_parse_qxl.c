@@ -362,10 +362,6 @@ static int bitmap_consistent(SpiceBitmap *bitmap)
     return TRUE;
 }
 
-// This is based on SPICE_BITMAP_FMT_*, copied from server/red_worker.c
-// to avoid a possible unoptimization from making it non static.
-static const int BITMAP_FMT_IS_RGB[] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
-
 static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
                                  QXLPHYSICAL addr, uint32_t flags, int is_mask)
 {
