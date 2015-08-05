@@ -445,7 +445,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
             red->u.bitmap.palette = rp;
             red->u.bitmap.palette_id = rp->unique;
         }
-        bitmap_size = red->u.bitmap.y * abs(red->u.bitmap.stride);
+        bitmap_size = red->u.bitmap.y * red->u.bitmap.stride;
         if (qxl_flags & QXL_BITMAP_DIRECT) {
             red->u.bitmap.data = red_get_image_data_flat(slots, group_id,
                                                          qxl->bitmap.data,
