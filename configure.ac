@@ -109,8 +109,9 @@ AS_IF([test x"$have_smartcard" = "xyes"], [
     AS_VAR_APPEND([SPICE_REQUIRES], [" libcacard >= 0.1.2"])
 ])
 
-PKG_CHECK_MODULES([SPICE_PROTOCOL], [spice-protocol >= 0.12.10])
-AS_VAR_APPEND([SPICE_REQUIRES], [" spice-protocol >= 0.12.10"])
+SPICE_PROTOCOL_MIN_VER=0.12.10
+PKG_CHECK_MODULES([SPICE_PROTOCOL], [spice-protocol >= $SPICE_PROTOCOL_MIN_VER])
+AC_SUBST([SPICE_PROTOCOL_MIN_VER])
 
 PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.22])
 AS_VAR_APPEND([SPICE_REQUIRES], [" glib-2.0 >= 2.22"])

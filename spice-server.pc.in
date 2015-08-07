@@ -7,6 +7,7 @@ Name: spice
 Description: SPICE server library
 Version: @VERSION@
 
+Requires: spice-protocol >= @SPICE_PROTOCOL_MIN_VER@
 Requires.private: @SPICE_REQUIRES@
 Libs: -L${libdir} -lspice-server
 Libs.private: @SPICE_NONPKGCONFIG_LIBS@
