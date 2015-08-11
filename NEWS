@@ -1,3 +1,17 @@
+Major changes in 0.12.6:
+========================
+* Removed spicec client code, it has been superseded by remote-viewer and other
+  spice-gtk based clients
+* Unix socket support
+* LZ4 support
+* Let clients specify their preferred image compression format
+* Allow to record and replay a spice-server session
+* Fix for CVE-2015-3247
+* spice-protocol submodule has been removed,, spice-protocol must now be
+  installed when building spice-server
+* Remove write polling in chardevs to reduce wakeups
+* Various bugs, crashes fixes, code cleanups, ...
+
 Major changes in 0.12.5:
 ========================
 * Added Opus support. Celt support will be obsoleted in a future release.
