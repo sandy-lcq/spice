@@ -149,6 +149,3 @@ EXTRA_DIST =					\
 	$(NULL)
 
 BUILT_SOURCES = $(spice_built_sources)
-
-dist-hook:
-	if test ./tests/test_spice_version.sh && ! test ./tests/test_spice_version.sh; then exit 1; fi
