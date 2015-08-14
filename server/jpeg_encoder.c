@@ -35,7 +35,7 @@ typedef struct JpegEncoder {
         int height;
         int stride;
         unsigned int out_size;
-        void (*convert_line_to_RGB24) (uint8_t *line, int width, uint8_t **out_line);
+        void (*convert_line_to_RGB24) (void *line, int width, uint8_t **out_line);
     } cur_image;
 } JpegEncoder;
 
@@ -104,9 +104,9 @@ void jpeg_encoder_destroy(JpegEncoderContext* encoder)
     free(encoder);
 }
 
-static void convert_RGB16_to_RGB24(uint8_t *line, int width, uint8_t **out_line)
+static void convert_RGB16_to_RGB24(void *line, int width, uint8_t **out_line)
 {
-    uint16_t *src_line = (uint16_t *)line;
+    uint16_t *src_line = line;
     uint8_t *out_pix;
     int x;
 
@@ -122,11 +122,11 @@ static void convert_RGB16_to_RGB24(uint8_t *line, int width, uint8_t **out_line)
    }
 }
 
-static void convert_BGR24_to_RGB24(uint8_t *line, int width, uint8_t **out_line)
+static void convert_BGR24_to_RGB24(void *in_line, int width, uint8_t **out_line)
 {
     int x;
     uint8_t *out_pix;
-
+    uint8_t *line = in_line;
     spice_assert(out_line && *out_line);
 
     out_pix = *out_line;
@@ -139,9 +139,9 @@ static void convert_BGR24_to_RGB24(uint8_t *line, int width, uint8_t **out_line)
     }
 }
 
-static void convert_BGRX32_to_RGB24(uint8_t *line, int width, uint8_t **out_line)
+static void convert_BGRX32_to_RGB24(void *line, int width, uint8_t **out_line)
 {
-    uint32_t *src_line = (uint32_t *)line;
+    uint32_t *src_line = line;
     uint8_t *out_pix;
     int x;
 
@@ -157,7 +157,7 @@ static void convert_BGRX32_to_RGB24(uint8_t *line, int width, uint8_t **out_line
     }
 }
 
-static void convert_RGB24_to_RGB24(uint8_t *line, int width, uint8_t **out_line)
+static void convert_RGB24_to_RGB24(void *line, int width, uint8_t **out_line)
 {
     *out_line = line;
 }

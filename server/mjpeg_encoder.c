@@ -162,7 +162,7 @@ struct MJpegEncoder {
     struct jpeg_error_mgr jerr;
 
     unsigned int bytes_per_pixel; /* bytes per pixel of the input buffer */
-    void (*pixel_converter)(uint8_t *src, uint8_t *dest);
+    void (*pixel_converter)(void *src, uint8_t *dest);
 
     MJpegEncoderRateControl rate_control;
     MJpegEncoderRateControlCbs cbs;
@@ -238,15 +238,16 @@ uint8_t mjpeg_encoder_get_bytes_per_pixel(MJpegEncoder *encoder)
 
 #ifndef JCS_EXTENSIONS
 /* Pixel conversion routines */
-static void pixel_rgb24bpp_to_24(uint8_t *src, uint8_t *dest)
+static void pixel_rgb24bpp_to_24(void *src_ptr, uint8_t *dest)
 {
+    uint8_t *src = src_ptr;
     /* libjpegs stores rgb, spice/win32 stores bgr */
     *dest++ = src[2]; /* red */
     *dest++ = src[1]; /* green */
     *dest++ = src[0]; /* blue */
 }
 
-static void pixel_rgb32bpp_to_24(uint8_t *src, uint8_t *dest)
+static void pixel_rgb32bpp_to_24(void *src, uint8_t *dest)
 {
     uint32_t pixel = *(uint32_t *)src;
     *dest++ = (pixel >> 16) & 0xff;
@@ -255,7 +256,7 @@ static void pixel_rgb32bpp_to_24(uint8_t *src, uint8_t *dest)
 }
 #endif
 
-static void pixel_rgb16bpp_to_24(uint8_t *src, uint8_t *dest)
+static void pixel_rgb16bpp_to_24(void *src, uint8_t *dest)
 {
     uint16_t pixel = *(uint16_t *)src;
     *dest++ = ((pixel >> 7) & 0xf8) | ((pixel >> 12) & 0x7);
@@ -842,6 +843,7 @@ int mjpeg_encoder_encode_scanline(MJpegEncoder *encoder, uint8_t *src_pixels,
     if (encoder->pixel_converter) {
         unsigned int x;
         for (x = 0; x < image_width; x++) {
+            /* src_pixels is expected to be 4 bytes aligned */
             encoder->pixel_converter(src_pixels, row);
             row += 3;
             src_pixels += encoder->bytes_per_pixel;
