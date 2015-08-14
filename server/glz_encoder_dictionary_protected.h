@@ -61,8 +61,8 @@ struct WindowImage {
    An encoded match can refer to only one segment.*/
 struct WindowImageSegment {
     WindowImage     *image;
-    uint8_t         *lines;
-    uint8_t         *lines_end;
+    void            *lines;
+    void            *lines_end;
     uint32_t pixels_num;            // Number of pixels in the segment
     uint64_t pixels_so_far;         // Total no. pixels passed through the window till this segment.
                                     // NOTE - never use size delta independently. It should
