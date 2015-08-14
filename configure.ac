@@ -92,7 +92,7 @@ dnl =========================================================================
 dnl Check deps
 
 AC_CONFIG_SUBDIRS([spice-common])
-COMMON_CFLAGS='-I ${top_srcdir}/spice-common/ -I ${top_builddir}/spice-common/ -I ${top_srcdir}/spice-common/spice-protocol/'
+COMMON_CFLAGS='-I ${top_srcdir}/spice-common/ -I ${top_builddir}/spice-common/'
 AC_SUBST(COMMON_CFLAGS)
 
 AC_CHECK_LIBM
@@ -108,6 +108,9 @@ SPICE_REQUIRES=""
 AS_IF([test x"$have_smartcard" = "xyes"], [
     AS_VAR_APPEND([SPICE_REQUIRES], [" libcacard >= 0.1.2"])
 ])
+
+PKG_CHECK_MODULES([SPICE_PROTOCOL], [spice-protocol >= 0.12.10])
+AS_VAR_APPEND([SPICE_REQUIRES], [" spice-protocol >= 0.12.10"])
 
 PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.22])
 AS_VAR_APPEND([SPICE_REQUIRES], [" glib-2.0 >= 2.22"])
