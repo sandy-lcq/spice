@@ -18,6 +18,7 @@
 #ifndef _H_MIGRATION_PROTOCOL
 #define _H_MIGRATION_PROTOCOL
 
+#include <spice/macros.h>
 #include <spice/vd_agent.h>
 #include "glz_encoder_dictionary.h"
 
@@ -60,7 +61,7 @@ typedef struct __attribute__ ((__packed__)) SpiceMigrateDataCharDevice {
 
 #define SPICE_MIGRATE_DATA_SPICEVMC_VERSION 1 /* NOTE: increase version when CHAR_DEVICE_VERSION
                                                  is increased */
-#define SPICE_MIGRATE_DATA_SPICEVMC_MAGIC (*(uint32_t *)"SVMD")
+#define SPICE_MIGRATE_DATA_SPICEVMC_MAGIC SPICE_MAGIC_CONST("SVMD")
 typedef struct __attribute__ ((__packed__)) SpiceMigrateDataSpiceVmc {
     SpiceMigrateDataCharDevice base;
 } SpiceMigrateDataSpiceVmc;
@@ -71,7 +72,7 @@ typedef struct __attribute__ ((__packed__)) SpiceMigrateDataSpiceVmc {
 
 #define SPICE_MIGRATE_DATA_SMARTCARD_VERSION 1 /* NOTE: increase version when CHAR_DEVICE_VERSION
                                                   is increased */
-#define SPICE_MIGRATE_DATA_SMARTCARD_MAGIC (*(uint32_t *)"SCMD")
+#define SPICE_MIGRATE_DATA_SMARTCARD_MAGIC SPICE_MAGIC_CONST("SCMD")
 typedef struct __attribute__ ((__packed__)) SpiceMigrateDataSmartcard {
     SpiceMigrateDataCharDevice base;
     uint8_t reader_added;
@@ -84,7 +85,7 @@ typedef struct __attribute__ ((__packed__)) SpiceMigrateDataSmartcard {
  * *********************************/
 #define SPICE_MIGRATE_DATA_MAIN_VERSION 1 /* NOTE: increase version when CHAR_DEVICE_VERSION
                                              is increased */
-#define SPICE_MIGRATE_DATA_MAIN_MAGIC (*(uint32_t *)"MNMD")
+#define SPICE_MIGRATE_DATA_MAIN_MAGIC SPICE_MAGIC_CONST("MNMD")
 
 typedef struct __attribute__ ((__packed__)) SpiceMigrateDataMain {
     SpiceMigrateDataCharDevice agent_base;
@@ -115,7 +116,7 @@ typedef struct __attribute__ ((__packed__)) SpiceMigrateDataMain {
  * ***************/
 
 #define SPICE_MIGRATE_DATA_DISPLAY_VERSION 1
-#define SPICE_MIGRATE_DATA_DISPLAY_MAGIC (*(uint32_t *)"DCMD")
+#define SPICE_MIGRATE_DATA_DISPLAY_MAGIC SPICE_MAGIC_CONST("DCMD")
 
 /*
  * TODO: store the cache and dictionary data only in one channel (the
@@ -187,7 +188,7 @@ typedef struct __attribute__ ((__packed__)) MigrateDisplaySurfacesAtClientLossy 
  * ***************/
 
 #define SPICE_MIGRATE_DATA_INPUTS_VERSION 1
-#define SPICE_MIGRATE_DATA_INPUTS_MAGIC (*(uint32_t *)"ICMD")
+#define SPICE_MIGRATE_DATA_INPUTS_MAGIC SPICE_MAGIC_CONST("ICMD")
 
 
 typedef struct __attribute__ ((__packed__)) SpiceMigrateDataInputs {
