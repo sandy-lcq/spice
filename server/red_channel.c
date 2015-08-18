@@ -2291,7 +2291,7 @@ uint32_t red_channel_max_pipe_size(RedChannel *channel)
 
     RING_FOREACH(link, &channel->clients) {
         rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
-        pipe_size = pipe_size > rcc->pipe_size ? pipe_size : rcc->pipe_size;
+        pipe_size = MAX(pipe_size, rcc->pipe_size);
     }
     return pipe_size;
 }
