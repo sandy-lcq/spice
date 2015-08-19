@@ -27,6 +27,7 @@
 
 #define CHAR_DEVICE_WRITE_TO_TIMEOUT 100
 #define SPICE_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT 30000
+#define MAX_POOL_SIZE (10 * 64 * 1024)
 
 typedef struct SpiceCharDeviceClientState SpiceCharDeviceClientState;
 struct SpiceCharDeviceClientState {
@@ -52,6 +53,7 @@ struct SpiceCharDeviceState {
 
     Ring write_queue;
     Ring write_bufs_pool;
+    uint64_t cur_pool_size;
     SpiceCharDeviceWriteBuffer *cur_write_buf;
     uint8_t *cur_write_buf_pos;
     SpiceTimer *write_to_dev_timer;
@@ -114,10 +116,12 @@ static void write_buffers_queue_free(Ring *write_queue)
 static void spice_char_device_write_buffer_pool_add(SpiceCharDeviceState *dev,
                                                     SpiceCharDeviceWriteBuffer *buf)
 {
-    if (buf->refs == 1) {
+    if (buf->refs == 1 &&
+        dev->cur_pool_size < MAX_POOL_SIZE) {
         buf->buf_used = 0;
         buf->origin = WRITE_BUFFER_ORIGIN_NONE;
         buf->client = NULL;
+        dev->cur_pool_size += buf->buf_size;
         ring_add(&dev->write_bufs_pool, &buf->link);
         return;
     }
@@ -529,6 +533,7 @@ static SpiceCharDeviceWriteBuffer *__spice_char_device_write_buffer_get(
     if ((item = ring_get_tail(&dev->write_bufs_pool))) {
         ret = SPICE_CONTAINEROF(item, SpiceCharDeviceWriteBuffer, link);
         ring_remove(item);
+        dev->cur_pool_size -= ret->buf_size;
     } else {
         ret = spice_new0(SpiceCharDeviceWriteBuffer, 1);
     }
@@ -569,6 +574,7 @@ static SpiceCharDeviceWriteBuffer *__spice_char_device_write_buffer_get(
     ret->refs = 1;
     return ret;
 error:
+    dev->cur_pool_size += ret->buf_size;
     ring_add(&dev->write_bufs_pool, &ret->link);
     return NULL;
 }
@@ -739,6 +745,7 @@ void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
     }
     write_buffers_queue_free(&char_dev->write_queue);
     write_buffers_queue_free(&char_dev->write_bufs_pool);
+    char_dev->cur_pool_size = 0;
     spice_char_device_write_buffer_free(char_dev->cur_write_buf);
 
     while (!ring_is_empty(&char_dev->clients)) {
