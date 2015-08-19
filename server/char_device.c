@@ -826,6 +826,12 @@ void spice_char_device_client_remove(SpiceCharDeviceState *dev,
         dev->wait_for_migrate_data  = FALSE;
         spice_char_device_read_from_device(dev);
     }
+
+    if (dev->num_clients == 0) {
+        spice_debug("client removed, memory pool will be freed (%lu bytes)", dev->cur_pool_size);
+        write_buffers_queue_free(&dev->write_bufs_pool);
+        dev->cur_pool_size = 0;
+    }
 }
 
 int spice_char_device_client_exists(SpiceCharDeviceState *dev,
