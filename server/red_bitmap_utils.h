@@ -52,8 +52,6 @@
 
 
 #define SAMPLE_JUMP 15
-#define SAME_PIXEL(p1, p2) (GET_r(p1) == GET_r(p2) && GET_g(p1) == GET_g(p2) && \
-                            GET_b(p1) == GET_b(p2))
 
 static const double FNAME(PIX_PAIR_SCORE)[] = {
     SAME_PIXEL_WEIGHT,
@@ -148,7 +146,6 @@ static void FNAME(compute_lines_gradual_score)(PIXEL *lines, int width, int num_
 
 #undef PIXEL
 #undef FNAME
-#undef SAME_PIXEL
 #undef GET_r
 #undef GET_g
 #undef GET_b
