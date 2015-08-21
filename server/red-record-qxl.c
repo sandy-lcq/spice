@@ -21,6 +21,8 @@
 
 #include <stdbool.h>
 #include <inttypes.h>
+#include <fcntl.h>
+#include <glib.h>
 #include "red-worker.h"
 #include "red-common.h"
 #include "memslot.h"
@@ -834,16 +836,59 @@ void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
     }
 }
 
+/**
+ * Redirects child output to the file specified
+ */
+static void child_output_setup(gpointer user_data)
+{
+    int fd = GPOINTER_TO_INT(user_data);
+
+    while (dup2(fd, STDOUT_FILENO) < 0 && errno == EINTR)
+        continue;
+    close(fd);
+
+    // make sure file is not closed calling exec()
+    fcntl(STDOUT_FILENO, F_SETFD, 0);
+}
+
 RedRecord *red_record_new(const char *filename)
 {
     static const char header[] = "SPICE_REPLAY 1\n";
 
+    const char *filter;
     FILE *f;
     RedRecord *record;
 
     f = fopen(filename, "w+");
     if (!f) {
         spice_error("failed to open recording file %s\n", filename);
+    }
+
+    filter = getenv("SPICE_WORKER_RECORD_FILTER");
+    if (filter) {
+        gint argc;
+        gchar **argv = NULL;
+        GError *error = NULL;
+        GPid child_pid;
+        gboolean ret;
+        gint fd_in;
+
+        ret = g_shell_parse_argv(filter, &argc, &argv, &error);
+
+        if (ret)
+            ret = g_spawn_async_with_pipes(NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
+                               child_output_setup, GINT_TO_POINTER(fileno(f)), &child_pid,
+                               &fd_in, NULL, NULL, &error);
+
+        g_strfreev(argv);
+        if (!ret) {
+            g_error_free(error);
+            fclose(f);
+            spice_error("failed to setup filter for replay");
+        }
+        while (dup2(fd_in, fileno(f)) < 0 && errno == EINTR)
+            continue;
+        close(fd_in);
     }
 
     if (fwrite(header, sizeof(header)-1, 1, f) != 1) {
