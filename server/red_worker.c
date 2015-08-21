@@ -12189,11 +12189,12 @@ SPICE_GNUC_NORETURN void *red_worker_main(void *arg)
 
     for (;;) {
         int i, num_events;
-        unsigned int timers_queue_timeout;
+        unsigned int timeout;
 
-        timers_queue_timeout = spice_timer_queue_get_timeout_ms();
-        worker->event_timeout = MIN(red_get_streams_timout(worker), worker->event_timeout);
-        worker->event_timeout = MIN(timers_queue_timeout, worker->event_timeout);
+        timeout = spice_timer_queue_get_timeout_ms();
+        worker->event_timeout = MIN(timeout, worker->event_timeout);
+        timeout = red_get_streams_timout(worker);
+        worker->event_timeout = MIN(timeout, worker->event_timeout);
         num_events = poll(worker->poll_fds, MAX_EVENT_SOURCES, worker->event_timeout);
         red_handle_streams_timout(worker);
         spice_timer_queue_cb();
