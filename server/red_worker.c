@@ -164,7 +164,7 @@ static void rendering_incorrect(const char *msg)
 
 static inline red_time_t timespec_to_red_time(struct timespec *time)
 {
-    return time->tv_sec * (1000 * 1000 * 1000) + time->tv_nsec;
+    return (red_time_t) time->tv_sec * (1000 * 1000 * 1000) + time->tv_nsec;
 }
 
 static clockid_t clock_id;
