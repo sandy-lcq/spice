@@ -73,6 +73,7 @@
 #include "mjpeg_encoder.h"
 #include "red_memslots.h"
 #include "red_parse_qxl.h"
+#include "red_record_qxl.h"
 #include "jpeg_encoder.h"
 #ifdef USE_LZ4
 #include "lz4_encoder.h"
@@ -166,7 +167,6 @@ static inline red_time_t timespec_to_red_time(struct timespec *time)
     return time->tv_sec * (1000 * 1000 * 1000) + time->tv_nsec;
 }
 
-#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
 static clockid_t clock_id;
 
 typedef unsigned long stat_time_t;
@@ -179,6 +179,7 @@ static stat_time_t stat_now(void)
     return ts.tv_nsec + ts.tv_sec * 1000 * 1000 * 1000;
 }
 
+#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
 double stat_cpu_time_to_sec(stat_time_t time)
 {
     return (double)time / (1000 * 1000 * 1000);
@@ -1034,6 +1035,8 @@ typedef struct RedWorker {
 
     int driver_cap_monitors_config;
     int set_client_capabilities_pending;
+
+    FILE *record_fd;
 } RedWorker;
 
 typedef enum {
@@ -5045,6 +5048,11 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
             }
             continue;
         }
+
+        if (worker->record_fd)
+            red_record_qxl_command(worker->record_fd, &worker->mem_slots, ext_cmd,
+                                   stat_now());
+
         stat_inc_counter(worker->command_counter, 1);
         worker->repoll_cmd_ring = 0;
         switch (ext_cmd.cmd.type) {
@@ -11337,6 +11345,11 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
     if (error) {
         return;
     }
+    if (worker->record_fd) {
+        red_record_dev_input_primary_surface_create(worker->record_fd,
+                    &surface, line_0);
+    }
+
     if (surface.stride < 0) {
         line_0 -= (int32_t)(surface.stride * (surface.height -1));
     }
@@ -11882,6 +11895,13 @@ static void worker_handle_dispatcher_async_done(void *opaque,
     red_dispatcher_async_complete(worker->red_dispatcher, msg_async->cmd);
 }
 
+static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *payload)
+{
+    RedWorker *worker = opaque;
+
+    red_record_event(worker->record_fd, 1, message_type, stat_now());
+}
+
 static void register_callbacks(Dispatcher *dispatcher)
 {
     dispatcher_register_async_done_callback(
@@ -12078,10 +12098,23 @@ static void red_init(RedWorker *worker, WorkerInitData *init_data)
     RedWorkerMessage message;
     Dispatcher *dispatcher;
     int i;
+    const char *record_filename;
 
     spice_assert(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
     memset(worker, 0, sizeof(RedWorker));
+    record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
+    if (record_filename) {
+        static const char header[] = "SPICE_REPLAY 1\n";
+
+        worker->record_fd = fopen(record_filename, "w+");
+        if (worker->record_fd == NULL) {
+            spice_error("failed to open recording file %s\n", record_filename);
+        }
+	if (fwrite(header, sizeof(header)-1, 1, worker->record_fd) != 1) {
+            spice_error("failed to write replay header");
+        }
+    }
     dispatcher = red_dispatcher_get_dispatcher(init_data->red_dispatcher);
     dispatcher_set_opaque(dispatcher, worker);
     worker->red_dispatcher = init_data->red_dispatcher;
@@ -12089,6 +12122,9 @@ static void red_init(RedWorker *worker, WorkerInitData *init_data)
     worker->id = init_data->id;
     worker->channel = dispatcher_get_recv_fd(dispatcher);
     register_callbacks(dispatcher);
+    if (worker->record_fd) {
+        dispatcher_register_universal_handler(dispatcher, worker_dispatcher_record);
+    }
     worker->pending = init_data->pending;
     worker->cursor_visible = TRUE;
     spice_assert(init_data->num_renderers > 0);
@@ -12170,11 +12206,9 @@ SPICE_GNUC_NORETURN void *red_worker_main(void *arg)
     spice_assert(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
            MAX_PIPE_SIZE > NARROW_CLIENT_ACK_WINDOW); //ensure wakeup by ack message
 
-#if  defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
     if (pthread_getcpuclockid(pthread_self(), &clock_id)) {
         spice_error("pthread_getcpuclockid failed");
     }
-#endif
 
     red_init(worker, (WorkerInitData *)arg);
 
