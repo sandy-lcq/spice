@@ -855,9 +855,6 @@ struct Drawable {
     uint32_t group_id;
     DependItem depend_items[3];
 
-    uint8_t *backed_surface_data;
-    DependItem pipe_depend_items[3];
-
     int surface_id;
     int surfaces_dest[3];
 
