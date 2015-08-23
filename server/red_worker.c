@@ -1772,20 +1772,11 @@ static inline void red_destroy_surface(RedWorker *worker, uint32_t surface_id)
     }
 }
 
-static inline void set_surface_release_info(RedWorker *worker, uint32_t surface_id, int is_create,
+static inline void set_surface_release_info(QXLReleaseInfoExt *release_info_ext,
                                             QXLReleaseInfo *release_info, uint32_t group_id)
 {
-    RedSurface *surface;
-
-    surface = &worker->surfaces[surface_id];
-
-    if (is_create) {
-        surface->create.info = release_info;
-        surface->create.group_id = group_id;
-    } else {
-        surface->destroy.info = release_info;
-        surface->destroy.group_id = group_id;
-    }
+    release_info_ext->info = release_info;
+    release_info_ext->group_id = group_id;
 }
 
 static RedDrawable *ref_red_drawable(RedDrawable *drawable)
@@ -4296,12 +4287,12 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
                            reloaded_surface,
                            // reloaded surfaces will be sent on demand
                            !reloaded_surface);
-        set_surface_release_info(worker, surface_id, 1, surface->release_info, group_id);
+        set_surface_release_info(&red_surface->create, surface->release_info, group_id);
         break;
     }
     case QXL_SURFACE_CMD_DESTROY:
         spice_warn_if(!red_surface->context.canvas);
-        set_surface_release_info(worker, surface_id, 0, surface->release_info, group_id);
+        set_surface_release_info(&red_surface->destroy, surface->release_info, group_id);
         red_handle_depends_on_target_surface(worker, surface_id);
         /* note that red_handle_depends_on_target_surface must be called before red_current_clear.
            otherwise "current" will hold items that other drawables may depend on, and then
