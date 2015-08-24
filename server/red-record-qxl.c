@@ -26,6 +26,12 @@
 #include "memslot.h"
 #include "red-parse-qxl.h"
 #include "zlib-encoder.h"
+#include "red-record-qxl.h"
+
+struct RedRecord {
+    FILE *fd;
+    unsigned int counter;
+};
 
 #if 0
 static void hexdump_qxl(RedMemSlotInfo *slots, int group_id,
@@ -782,9 +788,11 @@ void red_record_cursor_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id,
     }
 }
 
-void red_record_dev_input_primary_surface_create(FILE *fd,
+void red_record_dev_input_primary_surface_create(RedRecord *record,
     QXLDevSurfaceCreate* surface, uint8_t *line_0)
 {
+    FILE *fd = record->fd;
+
     fprintf(fd, "%d %d %d %d\n", surface->width, surface->height,
         surface->stride, surface->format);
     fprintf(fd, "%d %d %d %d\n", surface->position, surface->mouse_mode,
@@ -793,22 +801,22 @@ void red_record_dev_input_primary_surface_create(FILE *fd,
         line_0);
 }
 
-void red_record_event(FILE *fd, int what, uint32_t type, unsigned long ts)
+void red_record_event(RedRecord *record, int what, uint32_t type, unsigned long ts)
 {
-    static int counter = 0;
-
     // TODO: record the size of the packet in the header. This would make
     // navigating it much faster (well, I can add an index while I'm at it..)
     // and make it trivial to get a histogram from a file.
     // But to implement that I would need some temporary buffer for each event.
     // (that can be up to VGA_FRAMEBUFFER large)
-    fprintf(fd, "event %d %d %u %lu\n", counter++, what, type, ts);
+    fprintf(record->fd, "event %u %d %u %lu\n", record->counter++, what, type, ts);
 }
 
-void red_record_qxl_command(FILE *fd, RedMemSlotInfo *slots,
+void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
                             QXLCommandExt ext_cmd, unsigned long ts)
 {
-    red_record_event(fd, 0, ext_cmd.cmd.type, ts);
+    FILE *fd = record->fd;
+
+    red_record_event(record, 0, ext_cmd.cmd.type, ts);
 
     switch (ext_cmd.cmd.type) {
     case QXL_CMD_DRAW:
@@ -823,5 +831,35 @@ void red_record_qxl_command(FILE *fd, RedMemSlotInfo *slots,
     case QXL_CMD_SURFACE:
         red_record_surface_cmd(fd, slots, ext_cmd.group_id, ext_cmd.cmd.data);
         break;
+    }
+}
+
+RedRecord *red_record_new(const char *filename)
+{
+    static const char header[] = "SPICE_REPLAY 1\n";
+
+    FILE *f;
+    RedRecord *record;
+
+    f = fopen(filename, "w+");
+    if (!f) {
+        spice_error("failed to open recording file %s\n", filename);
+    }
+
+    if (fwrite(header, sizeof(header)-1, 1, f) != 1) {
+        spice_error("failed to write replay header");
+    }
+
+    record = g_new(RedRecord, 1);
+    record->fd = f;
+    record->counter = 0;
+    return record;
+}
+
+void red_record_free(RedRecord *record)
+{
+    if (record) {
+        fclose(record->fd);
+        g_free(record);
     }
 }

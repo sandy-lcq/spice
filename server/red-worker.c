@@ -88,7 +88,7 @@ struct RedWorker {
 
     int driver_cap_monitors_config;
 
-    FILE *record_fd;
+    RedRecord *record;
 };
 
 static RedsState* red_worker_get_server(RedWorker *worker);
@@ -215,8 +215,8 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             return n;
         }
 
-        if (worker->record_fd)
-            red_record_qxl_command(worker->record_fd, &worker->mem_slots, ext_cmd,
+        if (worker->record)
+            red_record_qxl_command(worker->record, &worker->mem_slots, ext_cmd,
                                    stat_now(CLOCK_MONOTONIC));
 
         stat_inc_counter(reds, worker->command_counter, 1);
@@ -663,9 +663,9 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
     if (error) {
         return;
     }
-    if (worker->record_fd) {
-        red_record_dev_input_primary_surface_create(worker->record_fd,
-                    &surface, line_0);
+    if (worker->record) {
+        red_record_dev_input_primary_surface_create(worker->record,
+                                                    &surface, line_0);
     }
 
     if (surface.stride < 0) {
@@ -1176,7 +1176,7 @@ static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *
 {
     RedWorker *worker = opaque;
 
-    red_record_event(worker->record_fd, 1, message_type, stat_now(CLOCK_MONOTONIC));
+    red_record_event(worker->record, 1, message_type, stat_now(CLOCK_MONOTONIC));
 }
 
 static void register_callbacks(Dispatcher *dispatcher)
@@ -1456,22 +1456,14 @@ RedWorker* red_worker_new(QXLInstance *qxl,
 
     record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
     if (record_filename) {
-        static const char header[] = "SPICE_REPLAY 1\n";
-
-        worker->record_fd = fopen(record_filename, "w+");
-        if (worker->record_fd == NULL) {
-            spice_error("failed to open recording file %s\n", record_filename);
-        }
-        if (fwrite(header, sizeof(header)-1, 1, worker->record_fd) != 1) {
-            spice_error("failed to write replay header");
-        }
+        worker->record = red_record_new(record_filename);
     }
     dispatcher = red_qxl_get_dispatcher(qxl);
     dispatcher_set_opaque(dispatcher, worker);
 
     worker->qxl = qxl;
     register_callbacks(dispatcher);
-    if (worker->record_fd) {
+    if (worker->record) {
         dispatcher_register_universal_handler(dispatcher, worker_dispatcher_record);
     }
 

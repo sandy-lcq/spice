@@ -24,12 +24,23 @@
 #include "red-common.h"
 #include "memslot.h"
 
-void red_record_dev_input_primary_surface_create(
-                           FILE *fd, QXLDevSurfaceCreate *surface, uint8_t *line_0);
+typedef struct RedRecord RedRecord;
 
-void red_record_event(FILE *fd, int what, uint32_t type, unsigned long ts);
+/**
+ * Create a new structure to handle recording.
+ * This function never returns NULL.
+ */
+RedRecord* red_record_new(const char *filename);
 
-void red_record_qxl_command(FILE *fd, RedMemSlotInfo *slots,
+void red_record_free(RedRecord *record);
+
+void red_record_dev_input_primary_surface_create(RedRecord *record,
+                                                 QXLDevSurfaceCreate *surface,
+                                                 uint8_t *line_0);
+
+void red_record_event(RedRecord *record, int what, uint32_t type, unsigned long ts);
+
+void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
                             QXLCommandExt ext_cmd, unsigned long ts);
 
 #endif
