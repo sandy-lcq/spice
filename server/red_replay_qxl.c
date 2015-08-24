@@ -1060,7 +1060,7 @@ static void replay_handle_create_primary(QXLWorker *worker, SpiceReplay *replay)
 
     if (replay->created_primary) {
         spice_printerr(
-            "WARNING: %d: orignal recording event not preceded by a destroy primary",
+            "WARNING: %d: original recording event not preceded by a destroy primary",
             replay->counter);
         worker->destroy_primary_surface(worker, 0);
     }
