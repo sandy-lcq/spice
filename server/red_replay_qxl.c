@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <zlib.h>
+#include <pthread.h>
 #include "reds.h"
 #include "red_worker.h"
 #include "red_common.h"
@@ -46,9 +47,8 @@ struct SpiceReplay {
     GArray *id_free; // free list
     int nsurfaces;
 
-    /* FIXME: some API requires 2.32 */
-    GMutex mutex;
-    GCond cond;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
 };
 
 static int replay_fread(SpiceReplay *replay, uint8_t *buf, size_t size)
@@ -93,13 +93,13 @@ static uint32_t replay_id_get(SpiceReplay *replay, uint32_t id)
     if (id == -1)
         return id;
 
-    g_mutex_lock(&replay->mutex);
+    pthread_mutex_lock(&replay->mutex);
     if (replay->id_map->len <= id) {
         spice_warn_if_reached();
     } else {
         newid = g_array_index(replay->id_map, uint32_t, id);
     }
-    g_mutex_unlock(&replay->mutex);
+    pthread_mutex_unlock(&replay->mutex);
 
     return newid;
 }
@@ -109,7 +109,7 @@ static uint32_t replay_id_new(SpiceReplay *replay, uint32_t id)
     uint32_t new_id;
     uint32_t *map;
 
-    g_mutex_lock(&replay->mutex);
+    pthread_mutex_lock(&replay->mutex);
     while (1) {
         if (replay->id_free->len > 0) {
             new_id = g_array_index(replay->id_free, uint32_t, 0);
@@ -120,7 +120,7 @@ static uint32_t replay_id_new(SpiceReplay *replay, uint32_t id)
 
         if (new_id < replay->nsurfaces)
             break;
-        g_cond_wait(&replay->cond, &replay->mutex);
+        pthread_cond_wait(&replay->cond, &replay->mutex);
     }
 
     if (replay->id_map->len <= id)
@@ -132,7 +132,7 @@ static uint32_t replay_id_new(SpiceReplay *replay, uint32_t id)
     *map = new_id;
     map = &g_array_index(replay->id_map_inv, uint32_t, new_id);
     *map = id;
-    g_mutex_unlock(&replay->mutex);
+    pthread_mutex_unlock(&replay->mutex);
 
     spice_debug("%u -> %u (map %u, inv %u)", id, new_id,
                 replay->id_map->len, replay->id_map_inv->len);
@@ -145,7 +145,7 @@ static void replay_id_free(SpiceReplay *replay, uint32_t id)
     uint32_t old_id;
     uint32_t *map;
 
-    g_mutex_lock(&replay->mutex);
+    pthread_mutex_lock(&replay->mutex);
     map = &g_array_index(replay->id_map_inv, uint32_t, id);
     old_id = *map;
     *map = -1;
@@ -157,8 +157,8 @@ static void replay_id_free(SpiceReplay *replay, uint32_t id)
 
         g_array_append_val(replay->id_free, id);
     }
-    g_cond_signal(&replay->cond);
-    g_mutex_unlock(&replay->mutex);
+    pthread_cond_signal(&replay->cond);
+    pthread_mutex_unlock(&replay->mutex);
 }
 
 
@@ -1216,8 +1216,8 @@ SpiceReplay *spice_replay_new(FILE *file, int nsurfaces)
     replay->eof = 0;
     replay->fd = file;
     replay->created_primary = FALSE;
-    g_mutex_init(&replay->mutex);
-    g_cond_init(&replay->cond);
+    pthread_mutex_init(&replay->mutex, NULL);
+    pthread_cond_init(&replay->cond, NULL);
     replay->id_map = g_array_new(FALSE, FALSE, sizeof(uint32_t));
     replay->id_map_inv = g_array_new(FALSE, FALSE, sizeof(uint32_t));
     replay->id_free = g_array_new(FALSE, FALSE, sizeof(uint32_t));
@@ -1233,8 +1233,8 @@ SPICE_GNUC_VISIBLE void spice_replay_free(SpiceReplay *replay)
 {
     spice_return_if_fail(replay != NULL);
 
-    g_mutex_clear(&replay->mutex);
-    g_cond_clear(&replay->cond);
+    pthread_mutex_destroy(&replay->mutex);
+    pthread_cond_destroy(&replay->cond);
     g_array_free(replay->id_map, TRUE);
     g_array_free(replay->id_map_inv, TRUE);
     g_array_free(replay->id_free, TRUE);
