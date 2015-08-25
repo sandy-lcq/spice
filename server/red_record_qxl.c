@@ -724,7 +724,7 @@ static void red_record_surface_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id
         fprintf(fd, "u.surface_create.height %d\n", qxl->u.surface_create.height);
         fprintf(fd, "u.surface_create.stride %d\n", qxl->u.surface_create.stride);
         size = qxl->u.surface_create.height * abs(qxl->u.surface_create.stride);
-        if (qxl->flags && QXL_SURF_FLAG_KEEP_DATA) {
+        if ((qxl->flags & QXL_SURF_FLAG_KEEP_DATA) != 0) {
             write_binary(fd, "data", size,
                 (uint8_t*)get_virt(slots, qxl->u.surface_create.data, size, group_id,
                                    &error));

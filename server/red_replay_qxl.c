@@ -1025,7 +1025,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
         replay_fscanf(replay, "u.surface_create.height %d\n", &qxl->u.surface_create.height);
         replay_fscanf(replay, "u.surface_create.stride %d\n", &qxl->u.surface_create.stride);
         size = qxl->u.surface_create.height * abs(qxl->u.surface_create.stride);
-        if (qxl->flags && QXL_SURF_FLAG_KEEP_DATA) {
+        if ((qxl->flags & QXL_SURF_FLAG_KEEP_DATA) != 0) {
             read_binary(replay, "data", &read_size, (uint8_t**)&qxl->u.surface_create.data, 0);
             if (read_size != size) {
                 spice_printerr("mismatch %ld != %ld", size, read_size);
