@@ -1888,7 +1888,7 @@ static void reds_handle_ticket(void *opaque)
                       RSA_size(link->tiTicketing.rsa), SPICE_MAX_PASSWORD_LENGTH);
     }
 
-    password = g_malloc0(RSA_size(link->tiTicketing.rsa) + 1);
+    password = spice_malloc0(RSA_size(link->tiTicketing.rsa) + 1);
     password_size = RSA_private_decrypt(link->tiTicketing.rsa_size,
                                         link->tiTicketing.encrypted_ticket.encrypted_data,
                                         (unsigned char *)password,
@@ -1928,7 +1928,7 @@ error:
     reds_link_free(link);
 
 end:
-    g_free(password);
+    free(password);
 }
 
 static void reds_get_spice_ticket(RedLinkInfo *link)
