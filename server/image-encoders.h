@@ -58,6 +58,8 @@ void glz_retention_detach_drawables(GlzImageRetention *ret);
 
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 struct RedCompressBuf {
+    RedCompressBuf *send_next;
+
     /* This buffer provide space for compression algorithms.
      * Some algorithms access the buffer as an array of 32 bit words
      * so is defined to make sure is always aligned that way.
@@ -66,7 +68,6 @@ struct RedCompressBuf {
         uint8_t  bytes[RED_COMPRESS_BUF_SIZE];
         uint32_t words[RED_COMPRESS_BUF_SIZE / 4];
     } buf;
-    RedCompressBuf *send_next;
 };
 
 static inline void compress_buf_free(RedCompressBuf *buf)
