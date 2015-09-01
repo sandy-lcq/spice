@@ -22,11 +22,11 @@ int debug = 0;
 #define NOT_IMPLEMENTED printf("%s not implemented\n", __func__);
 
 
-typedef struct SpiceTimer {
+struct SpiceTimer {
     SpiceTimerFunc func;
     void *opaque;
     guint source_id;
-} SpiceTimer;
+};
 
 static SpiceTimer* timer_add(SpiceTimerFunc func, void *opaque)
 {
@@ -71,12 +71,12 @@ static void timer_remove(SpiceTimer *timer)
     g_free(timer);
 }
 
-typedef struct SpiceWatch {
+struct SpiceWatch {
     void *opaque;
     guint source_id;
     GIOChannel *channel;
     SpiceWatchFunc func;
-} SpiceWatch;
+};
 
 static GIOCondition spice_event_to_condition(int event_mask)
 {
