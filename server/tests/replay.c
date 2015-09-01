@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <glib.h>
+#include <pthread.h>
 
 #include <spice/macros.h>
 #include "red_replay_qxl.h"
@@ -30,7 +31,7 @@ static GMainLoop *loop = NULL;
 static GAsyncQueue *aqueue = NULL;
 static long total_size;
 
-static GMutex mutex;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static guint fill_source_id = 0;
 
 
@@ -102,9 +103,9 @@ static gboolean fill_queue_idle(gpointer user_data)
 
 end:
     if (!keep) {
-        g_mutex_lock(&mutex);
+        pthread_mutex_lock(&mutex);
         fill_source_id = 0;
-        g_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&mutex);
     }
     spice_qxl_wakeup(&display_sin);
 
@@ -113,7 +114,7 @@ end:
 
 static void fill_queue(void)
 {
-    g_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex);
 
     if (!started)
         goto end;
@@ -124,7 +125,7 @@ static void fill_queue(void)
     fill_source_id = g_idle_add(fill_queue_idle, NULL);
 
 end:
-    g_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex);
 }
 
 
