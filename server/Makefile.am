@@ -101,7 +101,9 @@ libspice_server_la_SOURCES =			\
 	red_memslots.h				\
 	red_parse_qxl.c				\
 	red_record_qxl.c			\
+	red_record_qxl.h			\
 	red_replay_qxl.c			\
+	red_replay_qxl.h			\
 	red_parse_qxl.h				\
 	red_time.h				\
 	red_worker.c				\
