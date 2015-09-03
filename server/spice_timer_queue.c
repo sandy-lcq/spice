@@ -261,8 +261,13 @@ void spice_timer_queue_cb(void)
         if (timer->expiry_time > now_ms) {
             break;
         } else {
-            timer->func(timer->opaque);
+            /* Remove active timer before calling the timer function.
+             * Timer function could delete the timer making the timer
+             * pointer point to freed data.
+             */
             spice_timer_cancel(timer);
+            timer->func(timer->opaque);
+            /* timer could now be invalid ! */
         }
     }
 }
