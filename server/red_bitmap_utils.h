@@ -49,6 +49,7 @@
 #else
 #define CONTRAST_TH 8
 #endif
+#define CONTRASTING(n) ((n) <= -CONTRAST_TH || (n) >= CONTRAST_TH)
 
 
 #define SAMPLE_JUMP 15
@@ -62,29 +63,27 @@ static const double FNAME(PIX_PAIR_SCORE)[] = {
 // return 0 - equal, 1 - for contrast, 2 for no contrast (PIX_PAIR_SCORE is defined accordingly)
 static inline int FNAME(pixelcmp)(PIXEL p1, PIXEL p2)
 {
-    int diff = ABS(GET_r(p1) - GET_r(p2));
-    int equal;
+    int diff, any_different;
 
-    if (diff >= CONTRAST_TH) {
-        return 1;
-    }
-    equal = !diff;
-
-    diff = ABS(GET_g(p1) - GET_g(p2));
-
-    if (diff >= CONTRAST_TH) {
+    diff = GET_r(p1) - GET_r(p2);
+    any_different = diff;
+    if (CONTRASTING(diff)) {
         return 1;
     }
 
-    equal = equal && !diff;
-
-    diff = ABS(GET_b(p1) - GET_b(p2));
-    if (diff >= CONTRAST_TH) {
+    diff = GET_g(p1) - GET_g(p2);
+    any_different |= diff;
+    if (CONTRASTING(diff)) {
         return 1;
     }
-    equal = equal && !diff;
 
-    if (equal) {
+    diff = GET_b(p1) - GET_b(p2);
+    any_different |= diff;
+    if (CONTRASTING(diff)) {
+        return 1;
+    }
+
+    if (!any_different) {
         return 0;
     } else {
         return 2;
@@ -93,22 +92,22 @@ static inline int FNAME(pixelcmp)(PIXEL p1, PIXEL p2)
 
 static inline double FNAME(pixels_square_score)(PIXEL *line1, PIXEL *line2)
 {
-    double ret = 0.0;
-    int all_ident = TRUE;
+    double ret;
+    int any_different = 0;
     int cmp_res;
     cmp_res = FNAME(pixelcmp)(*line1, line1[1]);
-    all_ident = all_ident && (!cmp_res);
-    ret += FNAME(PIX_PAIR_SCORE)[cmp_res];
+    any_different |= cmp_res;
+    ret  = FNAME(PIX_PAIR_SCORE)[cmp_res];
     cmp_res = FNAME(pixelcmp)(*line1, *line2);
-    all_ident = all_ident && (!cmp_res);
+    any_different |= cmp_res;
     ret += FNAME(PIX_PAIR_SCORE)[cmp_res];
     cmp_res = FNAME(pixelcmp)(*line1, line2[1]);
-    all_ident = all_ident && (!cmp_res);
+    any_different |= cmp_res;
     ret += FNAME(PIX_PAIR_SCORE)[cmp_res];
 
     // ignore squares where all pixels are identical
-    if (all_ident) {
-        ret -= (FNAME(PIX_PAIR_SCORE)[0]) * 3;
+    if (!any_different) {
+        ret = 0;
     }
 
     return ret;
