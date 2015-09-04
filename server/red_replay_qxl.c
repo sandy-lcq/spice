@@ -310,7 +310,7 @@ static void red_replay_rect_ptr(SpiceReplay *replay, const char *prefix, QXLRect
 {
     char template[1024];
 
-    snprintf(template, sizeof(template), "rect %s %%d %%d %%d %%d %%d", prefix);
+    snprintf(template, sizeof(template), "rect %s %%d %%d %%d %%d\n", prefix);
     replay_fscanf(replay, template, &qxl->top, &qxl->left, &qxl->bottom, &qxl->right);
 }
 
