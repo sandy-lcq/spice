@@ -63,10 +63,11 @@ m4_ifndef([AS_VAR_APPEND],
 
 # Check for the CPU we are using
 case $host_cpu in
-  i386|i486|i586|i686|i786|k6|k7|x86_64|armv6|armv6l|armv6hl|armv7|armv7l|armv7hl)
+  x86_64)
+        arch_warn=""
         ;;
   *)
-        arch_warn=1
+        arch_warn="spice-server on non-x86_64 architectures hasn't been extensively tested"
 esac
 
 dnl =========================================================================
@@ -322,8 +323,8 @@ echo "
         Manual:                   ${have_asciidoc}
 "
 
-if test x"$arch_warn" = x1; then
-        AC_MSG_WARN([spice-server on non-x86/x86_64 architectures hasn't been extensively tested])
+if test x"$arch_warn" != x; then
+        AC_MSG_WARN([$arch_warn])
         echo ""
 fi
 
