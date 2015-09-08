@@ -107,34 +107,43 @@ static size_t red_get_data_chunks_ptr(RedMemSlotInfo *slots, int group_id,
     red->data_size = qxl->data_size;
     data_size += red->data_size;
     red->data = qxl->data;
+    red->prev_chunk = red->next_chunk = NULL;
     if (!validate_virt(slots, (intptr_t)red->data, memslot_id, red->data_size, group_id)) {
         red->data = NULL;
         return 0;
     }
-    red->prev_chunk = NULL;
 
     while ((next_chunk = qxl->next_chunk) != 0) {
         red_prev = red;
-        red = spice_new(RedDataChunk, 1);
+        red = spice_new0(RedDataChunk, 1);
+        red->prev_chunk = red_prev;
+        red_prev->next_chunk = red;
+
         memslot_id = get_memslot_id(slots, next_chunk);
         qxl = (QXLDataChunk *)get_virt(slots, next_chunk, sizeof(*qxl), group_id,
                                       &error);
-        if (error) {
-            return 0;
-        }
+        if (error)
+            goto error;
         red->data_size = qxl->data_size;
         data_size += red->data_size;
         red->data = qxl->data;
-        if (!validate_virt(slots, (intptr_t)red->data, memslot_id, red->data_size, group_id)) {
-            red->data = NULL;
-            return 0;
-        }
-        red->prev_chunk = red_prev;
-        red_prev->next_chunk = red;
+        if (!validate_virt(slots, (intptr_t)red->data, memslot_id, red->data_size, group_id))
+            goto error;
     }
 
     red->next_chunk = NULL;
     return data_size;
+
+error:
+    while (red->prev_chunk) {
+        red_prev = red->prev_chunk;
+        free(red);
+        red = red_prev;
+    }
+    red->data_size = 0;
+    red->next_chunk = NULL;
+    red->data = NULL;
+    return 0;
 }
 
 static size_t red_get_data_chunks(RedMemSlotInfo *slots, int group_id,
