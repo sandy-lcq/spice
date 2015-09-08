@@ -361,7 +361,14 @@ static const int MAP_BITMAP_FMT_TO_BITS_PER_PIXEL[] = {0, 1, 1, 4, 4, 8, 16, 24,
 
 static int bitmap_consistent(SpiceBitmap *bitmap)
 {
-    int bpp = MAP_BITMAP_FMT_TO_BITS_PER_PIXEL[bitmap->format];
+    int bpp;
+
+    if (bitmap->format >= SPICE_N_ELEMENTS(MAP_BITMAP_FMT_TO_BITS_PER_PIXEL)) {
+        spice_warning("wrong format specified for image\n");
+        return FALSE;
+    }
+
+    bpp = MAP_BITMAP_FMT_TO_BITS_PER_PIXEL[bitmap->format];
 
     if (bitmap->stride < ((bitmap->x * bpp + 7) / 8)) {
         spice_warning("image stride too small for width: %d < ((%d * %d + 7) / 8) (%s=%d)\n",
