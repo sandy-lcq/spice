@@ -804,7 +804,9 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
     uint8_t *data;
     bool free_data;
     size_t chunk_size, qxl_size, red_size, glyph_size;
-    int glyphs, bpp = 0, i;
+    int glyphs, i;
+    /* use unsigned to prevent integer overflow in multiplication below */
+    unsigned int bpp = 0;
     int error;
     uint16_t qxl_flags, qxl_length;
 
@@ -843,7 +845,7 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
     while (start < end) {
         spice_assert((QXLRasterGlyph*)(&start->data[0]) <= end);
         glyphs++;
-        glyph_size = start->height * ((start->width * bpp + 7) / 8);
+        glyph_size = start->height * ((start->width * bpp + 7u) / 8u);
         red_size += sizeof(SpiceRasterGlyph *) + SPICE_ALIGN(sizeof(SpiceRasterGlyph) + glyph_size, 4);
         start = (QXLRasterGlyph*)(&start->data[glyph_size]);
     }
@@ -864,7 +866,7 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
         glyph->height = start->height;
         red_get_point_ptr(&glyph->render_pos, &start->render_pos);
         red_get_point_ptr(&glyph->glyph_origin, &start->glyph_origin);
-        glyph_size = glyph->height * ((glyph->width * bpp + 7) / 8);
+        glyph_size = glyph->height * ((glyph->width * bpp + 7u) / 8u);
         spice_assert((QXLRasterGlyph*)(&start->data[glyph_size]) <= end);
         memcpy(glyph->data, start->data, glyph_size);
         start = (QXLRasterGlyph*)(&start->data[glyph_size]);
