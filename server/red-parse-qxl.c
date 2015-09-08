@@ -332,7 +332,12 @@ static SpiceClipRects *red_get_clip_rects(RedMemSlotInfo *slots, int group_id,
     red_put_data_chunks(&chunks);
 
     num_rects = qxl->num_rects;
-    spice_assert(num_rects * sizeof(QXLRect) == size);
+    /* The cast is needed to prevent 32 bit integer overflows.
+     * This check is enough as size is limited to 31 bit
+     * by red_get_data_chunks_ptr checks.
+     */
+    spice_assert((uint64_t) num_rects * sizeof(QXLRect) == size);
+    G_STATIC_ASSERT(sizeof(SpiceRect) == sizeof(QXLRect));
     red = spice_malloc(sizeof(*red) + num_rects * sizeof(SpiceRect));
     red->num_rects = num_rects;
 
