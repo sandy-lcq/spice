@@ -806,6 +806,7 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
     size_t chunk_size, qxl_size, red_size, glyph_size;
     int glyphs, bpp = 0, i;
     int error;
+    uint16_t qxl_flags, qxl_length;
 
     qxl = (QXLString *)get_virt(slots, addr, sizeof(*qxl), group_id, &error);
     if (error) {
@@ -822,13 +823,15 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
     red_put_data_chunks(&chunks);
 
     qxl_size = qxl->data_size;
+    qxl_flags = qxl->flags;
+    qxl_length = qxl->length;
     spice_assert(chunk_size == qxl_size);
 
-    if (qxl->flags & SPICE_STRING_FLAGS_RASTER_A1) {
+    if (qxl_flags & SPICE_STRING_FLAGS_RASTER_A1) {
         bpp = 1;
-    } else if (qxl->flags & SPICE_STRING_FLAGS_RASTER_A4) {
+    } else if (qxl_flags & SPICE_STRING_FLAGS_RASTER_A4) {
         bpp = 4;
-    } else if (qxl->flags & SPICE_STRING_FLAGS_RASTER_A8) {
+    } else if (qxl_flags & SPICE_STRING_FLAGS_RASTER_A8) {
         bpp = 8;
     }
     spice_assert(bpp != 0);
@@ -845,11 +848,11 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
         start = (QXLRasterGlyph*)(&start->data[glyph_size]);
     }
     spice_assert(start <= end);
-    spice_assert(glyphs == qxl->length);
+    spice_assert(glyphs == qxl_length);
 
     red = spice_malloc(red_size);
-    red->length = qxl->length;
-    red->flags = qxl->flags;
+    red->length = qxl_length;
+    red->flags = qxl_flags;
 
     start = (QXLRasterGlyph*)data;
     end = (QXLRasterGlyph*)(data + chunk_size);
