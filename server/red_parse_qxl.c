@@ -393,6 +393,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
     uint64_t bitmap_size, size;
     uint8_t qxl_flags;
     int error;
+    QXLPHYSICAL palette;
 
     if (addr == 0) {
         return NULL;
@@ -418,12 +419,16 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
     switch (red->descriptor.type) {
     case SPICE_IMAGE_TYPE_BITMAP:
         red->u.bitmap.format = qxl->bitmap.format;
-        if (!bitmap_fmt_is_rgb(qxl->bitmap.format) && !qxl->bitmap.palette && !is_mask) {
+        red->u.bitmap.x      = qxl->bitmap.x;
+        red->u.bitmap.y      = qxl->bitmap.y;
+        red->u.bitmap.stride = qxl->bitmap.stride;
+        palette = qxl->bitmap.palette;
+        if (!bitmap_fmt_is_rgb(red->u.bitmap.format) && !palette && !is_mask) {
             spice_warning("guest error: missing palette on bitmap format=%d\n",
                           red->u.bitmap.format);
             goto error;
         }
-        if (qxl->bitmap.x == 0 || qxl->bitmap.y == 0) {
+        if (red->u.bitmap.x == 0 || red->u.bitmap.y == 0) {
             spice_warning("guest error: zero area bitmap\n");
             goto error;
         }
@@ -431,23 +436,20 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
         if (qxl_flags & QXL_BITMAP_TOP_DOWN) {
             red->u.bitmap.flags = SPICE_BITMAP_FLAGS_TOP_DOWN;
         }
-        red->u.bitmap.x      = qxl->bitmap.x;
-        red->u.bitmap.y      = qxl->bitmap.y;
-        red->u.bitmap.stride = qxl->bitmap.stride;
         if (!bitmap_consistent(&red->u.bitmap)) {
             goto error;
         }
-        if (qxl->bitmap.palette) {
+        if (palette) {
             QXLPalette *qp;
             int i, num_ents;
-            qp = (QXLPalette *)get_virt(slots, qxl->bitmap.palette,
+            qp = (QXLPalette *)get_virt(slots, palette,
                                         sizeof(*qp), group_id, &error);
             if (error) {
                 goto error;
             }
             num_ents = qp->num_ents;
             if (!validate_virt(slots, (intptr_t)qp->ents,
-                               get_memslot_id(slots, qxl->bitmap.palette),
+                               get_memslot_id(slots, palette),
                                num_ents * sizeof(qp->ents[0]), group_id)) {
                 goto error;
             }
