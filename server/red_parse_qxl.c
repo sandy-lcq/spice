@@ -892,6 +892,11 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
         glyphs++;
         glyph_size = start->height * ((start->width * bpp + 7u) / 8u);
         red_size += sizeof(SpiceRasterGlyph *) + SPICE_ALIGN(sizeof(SpiceRasterGlyph) + glyph_size, 4);
+        /* do the test correctly, we know end - start->data[0] cannot
+         * overflow, don't use start->data[glyph_size] to test for
+         * buffer overflow as this on 32 bit can cause overflow
+         * on the pointer arithmetic */
+        spice_assert(glyph_size <= (char*) end - (char*) &start->data[0]);
         start = (QXLRasterGlyph*)(&start->data[glyph_size]);
     }
     spice_assert(start <= end);
@@ -912,7 +917,8 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
         red_get_point_ptr(&glyph->render_pos, &start->render_pos);
         red_get_point_ptr(&glyph->glyph_origin, &start->glyph_origin);
         glyph_size = glyph->height * ((glyph->width * bpp + 7u) / 8u);
-        spice_assert((QXLRasterGlyph*)(&start->data[glyph_size]) <= end);
+        /* see above for similar test */
+        spice_assert(glyph_size <= (char*) end - (char*) &start->data[0]);
         memcpy(glyph->data, start->data, glyph_size);
         start = (QXLRasterGlyph*)(&start->data[glyph_size]);
         glyph = (SpiceRasterGlyph*)
