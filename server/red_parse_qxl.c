@@ -273,6 +273,7 @@ static SpiceClipRects *red_get_clip_rects(RedMemSlotInfo *slots, int group_id,
     size_t size;
     int i;
     int error;
+    uint32_t num_rects;
 
     qxl = (QXLClipRects *)get_virt(slots, addr, sizeof(*qxl), group_id, &error);
     if (error) {
@@ -284,9 +285,10 @@ static SpiceClipRects *red_get_clip_rects(RedMemSlotInfo *slots, int group_id,
     data = red_linearize_chunk(&chunks, size, &free_data);
     red_put_data_chunks(&chunks);
 
-    spice_assert(qxl->num_rects * sizeof(QXLRect) == size);
-    red = spice_malloc(sizeof(*red) + qxl->num_rects * sizeof(SpiceRect));
-    red->num_rects = qxl->num_rects;
+    num_rects = qxl->num_rects;
+    spice_assert(num_rects * sizeof(QXLRect) == size);
+    red = spice_malloc(sizeof(*red) + num_rects * sizeof(SpiceRect));
+    red->num_rects = num_rects;
 
     start = (QXLRect*)data;
     for (i = 0; i < red->num_rects; i++) {
