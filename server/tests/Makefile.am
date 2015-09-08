@@ -47,6 +47,7 @@ noinst_PROGRAMS =				\
 
 TESTS =	\
 	stat_test				\
+	test-qxl-parsing			\
 	$(NULL)
 
 check_PROGRAMS = $(TESTS)
@@ -144,3 +145,9 @@ libstat_test3_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORK
 
 libstat_test4_a_SOURCES = stat-test.c
 libstat_test4_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test4
+
+test_qxl_parsing_SOURCES =           \
+	test-qxl-parsing.c      \
+	../red-parse-qxl.c      \
+	../memslot.c            \
+	$(NULL)
