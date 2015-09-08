@@ -21,10 +21,21 @@
 
 #include <stdbool.h>
 #include <inttypes.h>
+#include <glib.h>
 #include "common/lz_common.h"
 #include "red_common.h"
 #include "red_memslots.h"
 #include "red_parse_qxl.h"
+
+/* Max size in bytes for any data field used in a QXL command.
+ * This will for example be useful to prevent the guest from saturating the
+ * host memory if it tries to send overlapping chunks.
+ * This value should be big enough for all requests but limited
+ * to 32 bits. Even better if it fits on 31 bits to detect integer overflows.
+ */
+#define MAX_DATA_CHUNK 0x7ffffffflu
+
+G_STATIC_ASSERT(MAX_DATA_CHUNK <= G_MAXINT32);
 
 #if 0
 static void hexdump_qxl(RedMemSlotInfo *slots, int group_id,
