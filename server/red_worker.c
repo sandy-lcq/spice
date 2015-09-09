@@ -4278,6 +4278,10 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
         int32_t stride = surface->u.surface_create.stride;
         int reloaded_surface = loadvm || (surface->flags & QXL_SURF_FLAG_KEEP_DATA);
 
+        if (red_surface->refs) {
+            spice_warning("avoiding creating a surface twice");
+            break;
+        }
         data = surface->u.surface_create.data;
         if (stride < 0) {
             data -= (int32_t)(stride * (height - 1));
@@ -4291,7 +4295,10 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
         break;
     }
     case QXL_SURFACE_CMD_DESTROY:
-        spice_warn_if(!red_surface->context.canvas);
+        if (!red_surface->refs) {
+            spice_warning("avoiding destroying a surface twice");
+            break;
+        }
         set_surface_release_info(&red_surface->destroy, surface->release_info, group_id);
         red_handle_depends_on_target_surface(worker, surface_id);
         /* note that red_handle_depends_on_target_surface must be called before red_current_clear.
