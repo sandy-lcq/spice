@@ -1051,6 +1051,7 @@ typedef struct BitmapData {
     SpiceRect lossy_rect;
 } BitmapData;
 
+static inline int validate_surface(RedWorker *worker, uint32_t surface_id);
 static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable);
 static void red_current_flush(RedWorker *worker, int surface_id);
 #ifdef DRAW_ALL
@@ -1270,11 +1271,6 @@ static inline int is_primary_surface(RedWorker *worker, uint32_t surface_id)
     return FALSE;
 }
 
-static inline void __validate_surface(RedWorker *worker, uint32_t surface_id)
-{
-    spice_warn_if(surface_id >= worker->n_surfaces);
-}
-
 static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
 {
         DrawContext *context;
@@ -1283,7 +1279,7 @@ static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
         /* surface_id must be validated before calling into
          * validate_drawable_bbox
          */
-        __validate_surface(worker, surface_id);
+        VALIDATE_SURFACE_RETVAL(worker, surface_id, FALSE);
         context = &worker->surfaces[surface_id].context;
 
         if (drawable->bbox.top < 0)
@@ -1304,7 +1300,10 @@ static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
 
 static inline int validate_surface(RedWorker *worker, uint32_t surface_id)
 {
-    spice_warn_if(surface_id >= worker->n_surfaces);
+    if SPICE_UNLIKELY(surface_id >= worker->n_surfaces) {
+        spice_warning("invalid surface_id %u", surface_id);
+        return 0;
+    }
     if (!worker->surfaces[surface_id].context.canvas) {
         spice_warning("canvas address is %p for %d (and is NULL)\n",
                    &(worker->surfaces[surface_id].context.canvas), surface_id);
@@ -4262,12 +4261,14 @@ static inline void red_create_surface(RedWorker *worker, uint32_t surface_id,uin
 static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface,
                                        uint32_t group_id, int loadvm)
 {
-    int surface_id;
+    uint32_t surface_id;
     RedSurface *red_surface;
     uint8_t *data;
 
     surface_id = surface->surface_id;
-    __validate_surface(worker, surface_id);
+    if SPICE_UNLIKELY(surface_id >= worker->n_surfaces) {
+        goto exit;
+    }
 
     red_surface = &worker->surfaces[surface_id];
 
@@ -4303,6 +4304,7 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
     default:
             spice_error("unknown surface command");
     };
+exit:
     red_put_surface_cmd(surface);
     free(surface);
 }
@@ -11036,7 +11038,7 @@ void handle_dev_update(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
     RedWorkerMessageUpdate *msg = payload;
-    SpiceRect *rect = spice_new0(SpiceRect, 1);
+    SpiceRect *rect;
     RedSurface *surface;
     uint32_t surface_id = msg->surface_id;
     const QXLRect *qxl_area = msg->qxl_area;
@@ -11044,17 +11046,16 @@ void handle_dev_update(void *opaque, void *payload)
     QXLRect *qxl_dirty_rects = msg->qxl_dirty_rects;
     uint32_t clear_dirty_region = msg->clear_dirty_region;
 
+    VALIDATE_SURFACE_RET(worker, surface_id);
+
+    rect = spice_new0(SpiceRect, 1);
     surface = &worker->surfaces[surface_id];
     red_get_rect_ptr(rect, qxl_area);
     flush_display_commands(worker);
 
     spice_assert(worker->running);
 
-    if (validate_surface(worker, surface_id)) {
-        red_update_area(worker, rect, surface_id);
-    } else {
-        rendering_incorrect(__func__);
-    }
+    red_update_area(worker, rect, surface_id);
     free(rect);
 
     surface_dirty_region_to_rects(surface, qxl_dirty_rects, num_dirty_rects,
@@ -11093,6 +11094,7 @@ void handle_dev_del_memslot(void *opaque, void *payload)
  * surface_id == 0, maybe move the assert upward and merge the two functions? */
 static inline void destroy_surface_wait(RedWorker *worker, int surface_id)
 {
+    VALIDATE_SURFACE_RET(worker, surface_id);
     if (!worker->surfaces[surface_id].context.canvas) {
         return;
     }
@@ -11362,6 +11364,7 @@ void handle_dev_create_primary_surface(void *opaque, void *payload)
 
 static void dev_destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
 {
+    VALIDATE_SURFACE_RET(worker, surface_id);
     spice_warn_if(surface_id != 0);
 
     spice_debug(NULL);
