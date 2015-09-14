@@ -803,7 +803,9 @@ Configuration
 
 .Using virt-manager
 
-It's currently not possible to configure folder sharing with virt-manager.
+In the hardware details, click on "Add Hardware", then select
+"Channel". Add a "Spice port" device type with the
+"org.spice-space.webdav.0" name.
 
 .Using libvirt
 
