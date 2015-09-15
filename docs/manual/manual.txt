@@ -565,7 +565,7 @@ Configuration
 
 To add an additional QXL device for Windows guests, simply go to your
 virtual machine details. Check that you already have a "Video QXL"
-device, if notclick on "Add Hardware", and add a "Video" device with
+device, if not, click on "Add Hardware", and add a "Video" device with
 model "QXL". This can also work with Linux guests if your are willing
 to configure X.Org to use Xinerama (instead of XRandR).
 
