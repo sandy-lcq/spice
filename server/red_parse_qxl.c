@@ -272,7 +272,7 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
     seg = (SpicePathSeg*)&red->segments[n_segments];
     n_segments = 0;
     mem_size2 = sizeof(*red);
-    while (start+1 < end) {
+    while (start+1 < end && n_segments < red->num_segments) {
         red->segments[n_segments++] = seg;
         count = start->count;
 
