@@ -276,6 +276,9 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
         count = start->count;
         segment_size = sizeof(SpicePathSeg) + (uint64_t) count * sizeof(SpicePointFix);
         mem_size += sizeof(SpicePathSeg *) + SPICE_ALIGN(segment_size, 4);
+        /* avoid going backward with 32 bit architectures */
+        spice_assert((uint64_t) count * sizeof(QXLPointFix)
+                     <= (char*) end - (char*) &start->points[0]);
         start = (QXLPathSeg*)(&start->points[count]);
     }
 
