@@ -246,7 +246,8 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
     bool free_data;
     QXLPath *qxl;
     SpicePath *red;
-    size_t size, mem_size, mem_size2, dsize, segment_size;
+    size_t size;
+    uint64_t mem_size, mem_size2, segment_size;
     int n_segments;
     int i;
     uint32_t count;
@@ -273,7 +274,7 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
     while (start+1 < end) {
         n_segments++;
         count = start->count;
-        segment_size = sizeof(SpicePathSeg) + count * sizeof(SpicePointFix);
+        segment_size = sizeof(SpicePathSeg) + (uint64_t) count * sizeof(SpicePointFix);
         mem_size += sizeof(SpicePathSeg *) + SPICE_ALIGN(segment_size, 4);
         start = (QXLPathSeg*)(&start->points[count]);
     }
@@ -292,14 +293,8 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
 
         /* Protect against overflow in size calculations before
            writing to memory */
-        spice_assert(mem_size2 + sizeof(SpicePathSeg) > mem_size2);
-        mem_size2  += sizeof(SpicePathSeg);
-        spice_assert(count < UINT32_MAX / sizeof(SpicePointFix));
-        dsize = count * sizeof(SpicePointFix);
-        spice_assert(mem_size2 + dsize > mem_size2);
-        mem_size2  += dsize;
-
         /* Verify that we didn't overflow due to guest changing data */
+        mem_size2 += sizeof(SpicePathSeg) + (uint64_t) count * sizeof(SpicePointFix);
         spice_assert(mem_size2 <= mem_size);
 
         seg->flags = start->flags;
