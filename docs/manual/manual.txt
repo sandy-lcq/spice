@@ -540,6 +540,60 @@ which are described when running remote-viewer with `--help-spice`.
 You may need additional services running in the client, such as the
 Spice USB Clerk service on Windows.
 
+CAC smartcard redirection
+=========================
+
+Spice has a dedicated channel for smartcard redirection, using
+libcacard, which currently supports limited CAC emulation.
+
+You may consider redirecting your USB card reader instead. This is
+easier to setup but will prevent from sharing the smartcard with both
+the client and the remote simultaneously.
+
+libcacard is actually emulating a simple CAC card, sharing the card
+and its certificates. It can successfully be used with the coolkey
+PKCS#11 module.
+
+Configuration
+-------------
+
+.Using virt-manager
+
+In the hardware details, click on "Add Hardware", then select
+"Smartcard". Add a "passthrough" device type.
+
+.Using libvirt
+
+Setup a "passthrough" smartcard of type "spicevmc" on a CCID
+controller:
+
+[source,xml]
+<controller type='ccid' index='0'/>
+<smartcard mode='passthrough' type='spicevmc'>
+  <address type='ccid' controller='0' slot='0'/>
+</smartcard>
+
+.Using QEMU
+
+With the qemu command line, you must add a USB CCID device, and a
+"ccid-card-passthru" associated with a "spicevmc" channel with the
+name "smartcard":
+
+[source,sh]
+-device usb-ccid -chardev spicevmc,name=smartcard -device ccid-card-passthru,chardev=ccid
+
+Client
+------
+
+In order for the client certificates to be shared with the remote, you
+need a NSS database configured to access the smartcard. Please look
+for instructions on coolkey or NSS setup and make sure you certficates
+can be listed with certutil.
+
+[NOTE]
+Most Spice clients disable smartcard support by default, and
+need `--spice-smartcard` or similar configuration.
+
 Multiple monitor support
 ========================
 
