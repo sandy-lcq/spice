@@ -526,6 +526,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
                                        &chunks, qxl->bitmap.data);
             spice_assert(size == bitmap_size);
             if (size != bitmap_size) {
+                red_put_data_chunks(&chunks);
                 goto error;
             }
             red->u.bitmap.data = red_get_image_data_chunked(slots, group_id,
@@ -546,6 +547,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
                                        &chunks, (QXLDataChunk *)qxl->quic.data);
         spice_assert(size == red->u.quic.data_size);
         if (size != red->u.quic.data_size) {
+            red_put_data_chunks(&chunks);
             goto error;
         }
         red->u.quic.data = red_get_image_data_chunked(slots, group_id,
