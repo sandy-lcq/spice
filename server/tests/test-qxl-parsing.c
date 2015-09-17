@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <strings.h>
+#include <unistd.h>
 #include <assert.h>
 
 #include <spice/macros.h>
@@ -28,12 +29,26 @@ test(const char *desc)
 {
     test_name = desc;
     printf("Starting test %s\n", desc);
+    alarm(5);
 }
 
 static inline QXLPHYSICAL
 to_physical(const void *ptr)
 {
     return (uintptr_t) ptr;
+}
+
+static void*
+create_chunk(size_t prefix, uint32_t size, QXLDataChunk* prev, int fill)
+{
+    uint8_t *ptr = spice_malloc0(prefix + sizeof(QXLDataChunk) + size);
+    QXLDataChunk *qxl = (QXLDataChunk *) (ptr + prefix);
+    memset(&qxl->data[0], fill, size);
+    qxl->data_size = size;
+    qxl->prev_chunk = to_physical(prev);
+    if (prev)
+        prev->next_chunk = to_physical(qxl);
+    return ptr;
 }
 
 int main(int argc, char **argv)
@@ -44,6 +59,11 @@ int main(int argc, char **argv)
 
     RedSurfaceCmd cmd;
     QXLSurfaceCmd qxl;
+
+    RedCursorCmd red_cursor_cmd;
+    QXLCursorCmd cursor_cmd;
+    QXLCursor *cursor;
+    QXLDataChunk *chunks[2];
 
     memset(&qxl, 0, sizeof(qxl));
 
@@ -81,6 +101,77 @@ int main(int argc, char **argv)
     qxl.u.surface_create.height = 0x40000020;
     if (!red_get_surface_cmd(&mem_info, 0, &cmd, to_physical(&qxl)))
         failure();
+
+    /* test base cursor with no problems */
+    test("base cursor command");
+    memset(&cursor_cmd, 0, sizeof(cursor_cmd));
+    cursor_cmd.type = QXL_CURSOR_SET;
+
+    cursor = create_chunk(SPICE_OFFSETOF(QXLCursor, chunk), 128 * 128 * 4, NULL, 0xaa);
+    cursor->header.unique = 1;
+    cursor->header.width = 128;
+    cursor->header.height = 128;
+    cursor->data_size = 128 * 128 * 4;
+
+    cursor_cmd.u.set.shape = to_physical(cursor);
+
+    if (red_get_cursor_cmd(&mem_info, 0, &red_cursor_cmd, to_physical(&cursor_cmd)))
+        failure();
+    free(cursor);
+
+    /* a circular list of empty chunks should not be a problems */
+    test("circular empty chunks");
+    memset(&cursor_cmd, 0, sizeof(cursor_cmd));
+    cursor_cmd.type = QXL_CURSOR_SET;
+
+    cursor = create_chunk(SPICE_OFFSETOF(QXLCursor, chunk), 0, NULL, 0xaa);
+    cursor->header.unique = 1;
+    cursor->header.width = 128;
+    cursor->header.height = 128;
+    cursor->data_size = 128 * 128 * 4;
+
+    chunks[0] = create_chunk(0, 0, &cursor->chunk, 0xaa);
+    chunks[0]->next_chunk = to_physical(&cursor->chunk);
+
+    cursor_cmd.u.set.shape = to_physical(cursor);
+
+    memset(&red_cursor_cmd, 0xaa, sizeof(red_cursor_cmd));
+    if (!red_get_cursor_cmd(&mem_info, 0, &red_cursor_cmd, to_physical(&cursor_cmd))) {
+        /* function does not return errors so there should be no data */
+        assert(red_cursor_cmd.type == QXL_CURSOR_SET);
+        assert(red_cursor_cmd.u.set.position.x == 0);
+        assert(red_cursor_cmd.u.set.position.y == 0);
+        assert(red_cursor_cmd.u.set.shape.data_size == 0);
+    }
+    free(cursor);
+    free(chunks[0]);
+
+    /* a circular list of small chunks should not be a problems */
+    test("circular small chunks");
+    memset(&cursor_cmd, 0, sizeof(cursor_cmd));
+    cursor_cmd.type = QXL_CURSOR_SET;
+
+    cursor = create_chunk(SPICE_OFFSETOF(QXLCursor, chunk), 1, NULL, 0xaa);
+    cursor->header.unique = 1;
+    cursor->header.width = 128;
+    cursor->header.height = 128;
+    cursor->data_size = 128 * 128 * 4;
+
+    chunks[0] = create_chunk(0, 1, &cursor->chunk, 0xaa);
+    chunks[0]->next_chunk = to_physical(&cursor->chunk);
+
+    cursor_cmd.u.set.shape = to_physical(cursor);
+
+    memset(&red_cursor_cmd, 0xaa, sizeof(red_cursor_cmd));
+    if (!red_get_cursor_cmd(&mem_info, 0, &red_cursor_cmd, to_physical(&cursor_cmd))) {
+        /* function does not return errors so there should be no data */
+        assert(red_cursor_cmd.type == QXL_CURSOR_SET);
+        assert(red_cursor_cmd.u.set.position.x == 0);
+        assert(red_cursor_cmd.u.set.position.y == 0);
+        assert(red_cursor_cmd.u.set.shape.data_size == 0);
+    }
+    free(cursor);
+    free(chunks[0]);
 
     return exit_code;
 }
