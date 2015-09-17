@@ -380,7 +380,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
     QXLImage *qxl;
     SpiceImage *red = NULL;
     SpicePalette *rp = NULL;
-    size_t bitmap_size, size;
+    uint64_t bitmap_size, size;
     uint8_t qxl_flags;
     int error;
 
@@ -456,7 +456,10 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
             red->u.bitmap.palette = rp;
             red->u.bitmap.palette_id = rp->unique;
         }
-        bitmap_size = red->u.bitmap.y * red->u.bitmap.stride;
+        bitmap_size = (uint64_t) red->u.bitmap.y * red->u.bitmap.stride;
+        if (bitmap_size > MAX_DATA_CHUNK) {
+            goto error;
+        }
         if (qxl_flags & QXL_BITMAP_DIRECT) {
             red->u.bitmap.data = red_get_image_data_flat(slots, group_id,
                                                          qxl->bitmap.data,
@@ -1217,7 +1220,7 @@ int red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
                         RedSurfaceCmd *red, QXLPHYSICAL addr)
 {
     QXLSurfaceCmd *qxl;
-    size_t size;
+    uint64_t size;
     int error;
 
     qxl = (QXLSurfaceCmd *)get_virt(slots, addr, sizeof(*qxl), group_id,
@@ -1237,7 +1240,11 @@ int red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
         red->u.surface_create.width  = qxl->u.surface_create.width;
         red->u.surface_create.height = qxl->u.surface_create.height;
         red->u.surface_create.stride = qxl->u.surface_create.stride;
-        size = red->u.surface_create.height * abs(red->u.surface_create.stride);
+        /* the multiplication can overflow, also abs(-2^31) may return a negative value */
+        size = (uint64_t) red->u.surface_create.height * abs(red->u.surface_create.stride);
+        if (size > MAX_DATA_CHUNK || red->u.surface_create.stride == G_MININT32) {
+            return 1;
+        }
         red->u.surface_create.data =
             (uint8_t*)get_virt(slots, qxl->u.surface_create.data, size, group_id, &error);
         if (error) {
