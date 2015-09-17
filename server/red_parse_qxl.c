@@ -1388,6 +1388,7 @@ static int red_get_cursor(RedMemSlotInfo *slots, int group_id,
     size = red_get_data_chunks_ptr(slots, group_id,
                                    get_memslot_id(slots, addr),
                                    &chunks, &qxl->chunk);
+    red->data_size = MIN(red->data_size, size);
     data = red_linearize_chunk(&chunks, size, &free_data);
     red_put_data_chunks(&chunks);
     if (free_data) {
