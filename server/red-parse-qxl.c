@@ -45,6 +45,8 @@ G_STATIC_ASSERT(MAX_DATA_CHUNK <= G_MAXINT32);
  */
 #define MAX_CHUNKS (MAX_DATA_CHUNK/1024u)
 
+#define INVALID_SIZE ((size_t) -1)
+
 #if 0
 static void hexdump_qxl(RedMemSlotInfo *slots, int group_id,
                         QXLPHYSICAL addr, uint8_t bytes)
@@ -120,7 +122,7 @@ static size_t red_get_data_chunks_ptr(RedMemSlotInfo *slots, int group_id,
     red->prev_chunk = red->next_chunk = NULL;
     if (!memslot_validate_virt(slots, (intptr_t)red->data, memslot_id, red->data_size, group_id)) {
         red->data = NULL;
-        return 0;
+        return INVALID_SIZE;
     }
 
     while ((next_chunk = qxl->next_chunk) != 0) {
@@ -177,7 +179,7 @@ error:
     red->data_size = 0;
     red->next_chunk = NULL;
     red->data = NULL;
-    return 0;
+    return INVALID_SIZE;
 }
 
 static size_t red_get_data_chunks(RedMemSlotInfo *slots, int group_id,
@@ -189,7 +191,7 @@ static size_t red_get_data_chunks(RedMemSlotInfo *slots, int group_id,
 
     qxl = (QXLDataChunk *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id, &error);
     if (error) {
-        return 0;
+        return INVALID_SIZE;
     }
     return red_get_data_chunks_ptr(slots, group_id, memslot_id, red, qxl);
 }
@@ -249,6 +251,9 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
     size = red_get_data_chunks_ptr(slots, group_id,
                                    memslot_get_id(slots, addr),
                                    &chunks, &qxl->chunk);
+    if (size == INVALID_SIZE) {
+        return NULL;
+    }
     data = red_linearize_chunk(&chunks, size, &free_data);
     red_put_data_chunks(&chunks);
 
@@ -328,6 +333,9 @@ static SpiceClipRects *red_get_clip_rects(RedMemSlotInfo *slots, int group_id,
     size = red_get_data_chunks_ptr(slots, group_id,
                                    memslot_get_id(slots, addr),
                                    &chunks, &qxl->chunk);
+    if (size == INVALID_SIZE) {
+        return NULL;
+    }
     data = red_linearize_chunk(&chunks, size, &free_data);
     red_put_data_chunks(&chunks);
 
@@ -530,8 +538,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
         } else {
             size = red_get_data_chunks(slots, group_id,
                                        &chunks, qxl->bitmap.data);
-            spice_assert(size == bitmap_size);
-            if (size != bitmap_size) {
+            if (size == INVALID_SIZE || size != bitmap_size) {
                 red_put_data_chunks(&chunks);
                 goto error;
             }
@@ -551,8 +558,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
         size = red_get_data_chunks_ptr(slots, group_id,
                                        memslot_get_id(slots, addr),
                                        &chunks, (QXLDataChunk *)qxl->quic.data);
-        spice_assert(size == red->u.quic.data_size);
-        if (size != red->u.quic.data_size) {
+        if (size == INVALID_SIZE || size != red->u.quic.data_size) {
             red_put_data_chunks(&chunks);
             goto error;
         }
@@ -870,8 +876,7 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
     chunk_size = red_get_data_chunks_ptr(slots, group_id,
                                          memslot_get_id(slots, addr),
                                          &chunks, &qxl->chunk);
-    if (!chunk_size) {
-        /* XXX could be a zero sized string.. */
+    if (chunk_size == INVALID_SIZE) {
         return NULL;
     }
     data = red_linearize_chunk(&chunks, chunk_size, &free_data);
@@ -1396,6 +1401,9 @@ static int red_get_cursor(RedMemSlotInfo *slots, int group_id,
     size = red_get_data_chunks_ptr(slots, group_id,
                                    memslot_get_id(slots, addr),
                                    &chunks, &qxl->chunk);
+    if (size == INVALID_SIZE) {
+        return 1;
+    }
     red->data_size = MIN(red->data_size, size);
     data = red_linearize_chunk(&chunks, size, &free_data);
     red_put_data_chunks(&chunks);
