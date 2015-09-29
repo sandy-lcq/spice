@@ -223,6 +223,11 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
     sin = state->chardev_sin;
     sif = SPICE_CONTAINEROF(sin->base.sif, SpiceCharDeviceInterface, base);
 
+    if (state->recv_from_client_buf) { /* partial message which wasn't pushed to device */
+        spice_char_device_write_buffer_release(state->chardev_st, state->recv_from_client_buf);
+        state->recv_from_client_buf = NULL;
+    }
+
     if (state->chardev_st) {
         if (spice_char_device_client_exists(state->chardev_st, rcc->client)) {
             spice_char_device_client_remove(state->chardev_st, rcc->client);
