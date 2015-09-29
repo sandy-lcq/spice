@@ -223,8 +223,6 @@ static QXLInterface display_sif = {
 
 static void replay_channel_event(int event, SpiceChannelEventInfo *info)
 {
-    g_printerr("");
-
     if (info->type == SPICE_CHANNEL_DISPLAY &&
         event == SPICE_CHANNEL_EVENT_INITIALIZED) {
         started = TRUE;
