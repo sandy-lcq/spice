@@ -1183,7 +1183,7 @@ Manual authors
 
 The following people have contributed to this manual:
 
-Arnon Giloba +
+Arnon Gilboa +
 Christophe Fergeau +
 Lubos Kocman +
 Marc-André Lureau +
