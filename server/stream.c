@@ -331,11 +331,10 @@ void detach_stream(DisplayChannel *display, Stream *stream)
 static void before_reattach_stream(DisplayChannel *display,
                                    Stream *stream, Drawable *new_frame)
 {
-    RedDrawablePipeItem *dpi;
     DisplayChannelClient *dcc;
     int index;
     StreamAgent *agent;
-    RingItem *ring_item, *next;
+    GList *dpi_link, *dpi_next;
     GList *link, *link_next;
 
     spice_return_if_fail(stream->current);
@@ -350,7 +349,9 @@ static void before_reattach_stream(DisplayChannel *display,
     }
 
     index = display_channel_get_stream_id(display, stream);
-    DRAWABLE_FOREACH_DPI_SAFE(stream->current, ring_item, next, dpi) {
+    for (dpi_link = stream->current->pipes; dpi_link; dpi_link = dpi_next) {
+        RedDrawablePipeItem *dpi = dpi_link->data;
+        dpi_next = dpi_link->next;
         dcc = dpi->dcc;
         agent = dcc_get_stream_agent(dcc, index);
 

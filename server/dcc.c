@@ -49,9 +49,10 @@ static RedSurfaceCreateItem *red_surface_create_item_new(RedChannel* channel,
 int dcc_drawable_is_in_pipe(DisplayChannelClient *dcc, Drawable *drawable)
 {
     RedDrawablePipeItem *dpi;
-    RingItem *dpi_link, *dpi_next;
+    GList *l;
 
-    DRAWABLE_FOREACH_DPI_SAFE(drawable, dpi_link, dpi_next, dpi) {
+    for (l = drawable->pipes; l != NULL; l = l->next) {
+        dpi = l->data;
         if (dpi->dcc == dcc) {
             return TRUE;
         }
@@ -276,9 +277,7 @@ static void red_drawable_pipe_item_free(RedPipeItem *item)
                                                  dpi_pipe_item);
     spice_assert(item->refcount == 0);
 
-    if (ring_item_is_linked(&dpi->base)) {
-        ring_remove(&dpi->base);
-    }
+    dpi->drawable->pipes = g_list_remove(dpi->drawable->pipes, dpi);
     drawable_unref(dpi->drawable);
     free(dpi);
 }
@@ -291,8 +290,7 @@ static RedDrawablePipeItem *red_drawable_pipe_item_new(DisplayChannelClient *dcc
     dpi = spice_malloc0(sizeof(*dpi));
     dpi->drawable = drawable;
     dpi->dcc = dcc;
-    ring_item_init(&dpi->base);
-    ring_add(&drawable->pipes, &dpi->base);
+    drawable->pipes = g_list_prepend(drawable->pipes, dpi);
     red_pipe_item_init_full(&dpi->dpi_pipe_item, RED_PIPE_ITEM_TYPE_DRAW,
                             red_drawable_pipe_item_free);
     drawable->refs++;

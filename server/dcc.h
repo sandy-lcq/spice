@@ -91,7 +91,6 @@ typedef struct RedImageItem {
 } RedImageItem;
 
 typedef struct RedDrawablePipeItem {
-    RingItem base;  /* link for a list of pipe items held by Drawable */
     RedPipeItem dpi_pipe_item; /* link for the client's pipe itself */
     Drawable *drawable;
     DisplayChannelClient *dcc;

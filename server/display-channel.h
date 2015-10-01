@@ -54,7 +54,7 @@ struct Drawable {
     RingItem surface_list_link;
     RingItem list_link;
     DrawItem tree_item;
-    Ring pipes;
+    GList *pipes;
     RedPipeItem *pipe_item_rest;
     uint32_t size_pipe_item_rest;
     RedDrawable *red_drawable;
@@ -79,10 +79,6 @@ struct Drawable {
 };
 
 void drawable_unref (Drawable *drawable);
-
-#define LINK_TO_DPI(ptr) SPICE_UPCAST(RedDrawablePipeItem, (ptr))
-#define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)            \
-    SAFE_FOREACH(link, next, drawable,  &(drawable)->pipes, dpi, LINK_TO_DPI(link))
 
 enum {
     RED_PIPE_ITEM_TYPE_DRAW = RED_PIPE_ITEM_TYPE_COMMON_LAST,

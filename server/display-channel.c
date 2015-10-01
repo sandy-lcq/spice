@@ -255,7 +255,7 @@ static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
     DisplayChannelClient *dcc;
     GList *link, *next;
 
-    spice_warn_if_fail(ring_is_empty(&drawable->pipes));
+    spice_warn_if_fail(drawable->pipes == NULL);
     FOREACH_CLIENT(display, link, next, dcc) {
         dcc_prepend_drawable(dcc, drawable);
     }
@@ -265,14 +265,17 @@ static void pipes_add_drawable_after(DisplayChannel *display,
                                      Drawable *drawable, Drawable *pos_after)
 {
     RedDrawablePipeItem *dpi_pos_after;
-    RingItem *dpi_link, *dpi_next;
     DisplayChannelClient *dcc;
     int num_other_linked = 0;
+    GList *l;
 
-    DRAWABLE_FOREACH_DPI_SAFE(pos_after, dpi_link, dpi_next, dpi_pos_after) {
+    for (l = pos_after->pipes; l != NULL; l = l->next) {
+        dpi_pos_after = l->data;
+
         num_other_linked++;
         dcc_add_drawable_after(dpi_pos_after->dcc, drawable, &dpi_pos_after->dpi_pipe_item);
     }
+
     if (num_other_linked == 0) {
         pipes_add_drawable(display, drawable);
         return;
@@ -282,12 +285,15 @@ static void pipes_add_drawable_after(DisplayChannel *display,
         spice_debug("TODO: not O(n^2)");
         FOREACH_CLIENT(display, link, next, dcc) {
             int sent = 0;
-            DRAWABLE_FOREACH_DPI_SAFE(pos_after, dpi_link, dpi_next, dpi_pos_after) {
+            GList *l;
+            for (l = pos_after->pipes; l != NULL; l = l->next) {
+                dpi_pos_after = l->data;
                 if (dpi_pos_after->dcc == dcc) {
                     sent = 1;
                     break;
                 }
             }
+
             if (!sent) {
                 dcc_prepend_drawable(dcc, drawable);
             }
@@ -324,14 +330,17 @@ static void current_remove_drawable(DisplayChannel *display, Drawable *item)
 static void drawable_remove_from_pipes(Drawable *drawable)
 {
     RedDrawablePipeItem *dpi;
-    RingItem *item, *next;
+    GList *l;
 
-    RING_FOREACH_SAFE(item, next, &drawable->pipes) {
+    l = drawable->pipes;
+    while (l) {
+        GList *next = l->next;
         RedChannelClient *rcc;
 
-        dpi = SPICE_UPCAST(RedDrawablePipeItem, item);
+        dpi = l->data;
         rcc = RED_CHANNEL_CLIENT(dpi->dcc);
         red_channel_client_pipe_remove_and_release(rcc, &dpi->dpi_pipe_item);
+        l = next;
     }
 }
 
@@ -424,7 +433,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
         if (is_same_drawable(drawable, other_drawable)) {
 
             DisplayChannelClient *dcc;
-            RingItem *dpi_ring_item;
+            GList *dpi_item;
             GList *link, *next;
 
             other_drawable->refs++;
@@ -432,11 +441,11 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
 
             /* sending the drawable to clients that already received
              * (or will receive) other_drawable */
-            dpi_ring_item = ring_get_head(&other_drawable->pipes);
+            dpi_item = g_list_first(other_drawable->pipes);
             /* dpi contains a sublist of dcc's, ordered the same */
             FOREACH_CLIENT(display, link, next, dcc) {
-                if (dpi_ring_item && dcc == SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item)->dcc) {
-                    dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
+                if (dpi_item && dcc == ((RedDrawablePipeItem *) dpi_item->data)->dcc) {
+                    dpi_item = dpi_item->next;
                 } else {
                     dcc_prepend_drawable(dcc, drawable);
                 }
@@ -1292,7 +1301,6 @@ static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
     ring_item_init(&drawable->tree_item.base.siblings_link);
     drawable->tree_item.base.type = TREE_ITEM_TYPE_DRAWABLE;
     region_init(&drawable->tree_item.base.rgn);
-    ring_init(&drawable->pipes);
     glz_retention_init(&drawable->glz_retention);
     drawable->process_commands_generation = process_commands_generation;
 
@@ -1343,7 +1351,7 @@ void drawable_unref(Drawable *drawable)
         return;
 
     spice_warn_if_fail(!drawable->tree_item.shadow);
-    spice_warn_if_fail(ring_is_empty(&drawable->pipes));
+    spice_warn_if_fail(drawable->pipes == NULL);
 
     if (drawable->stream) {
         detach_stream(display, drawable->stream);
