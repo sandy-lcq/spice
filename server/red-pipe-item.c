@@ -42,7 +42,6 @@ void red_pipe_item_init_full(RedPipeItem *item,
                              gint type,
                              red_pipe_item_free_t *free_func)
 {
-    ring_item_init(&item->link);
     item->type = type;
     item->refcount = 1;
     item->free_func = free_func ? free_func : (red_pipe_item_free_t *)free;

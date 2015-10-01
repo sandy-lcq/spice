@@ -238,7 +238,7 @@ struct RedCharDeviceVDIPortPrivate {
     AgentMsgFilter write_filter;
 
     /* read from agent */
-    Ring read_bufs;
+    GList *read_bufs;
     uint32_t read_state;
     uint32_t message_receive_len;
     uint8_t *receive_pos;
@@ -795,15 +795,15 @@ static void vdi_read_buf_init(RedVDIReadBuf *buf)
 
 static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
 {
-    RingItem *item;
+    GList *item;
     RedVDIReadBuf *buf;
 
-    if (!(item = ring_get_head(&dev->priv->read_bufs))) {
+    if (!(item = g_list_first(dev->priv->read_bufs))) {
         return NULL;
     }
 
-    ring_remove(item);
-    buf = SPICE_CONTAINEROF(item, RedVDIReadBuf, base.link);
+    buf = item->data;
+    dev->priv->read_bufs = g_list_delete_link(dev->priv->read_bufs, item);
 
     g_warn_if_fail(buf->base.refcount == 0);
     vdi_read_buf_init(buf);
@@ -816,7 +816,7 @@ static void vdi_port_read_buf_free(RedPipeItem *base)
     RedVDIReadBuf *buf = SPICE_UPCAST(RedVDIReadBuf, base);
 
     g_warn_if_fail(buf->base.refcount == 0);
-    ring_add(&buf->dev->priv->read_bufs, &buf->base.link);
+    buf->dev->priv->read_bufs = g_list_prepend(buf->dev->priv->read_bufs, buf);
 
     /* read_one_msg_from_vdi_port may have never completed because the read_bufs
        ring was empty. So we call it again so it can complete its work if
@@ -4476,8 +4476,6 @@ red_char_device_vdi_port_init(RedCharDeviceVDIPort *self)
     int i;
 
     self->priv = RED_CHAR_DEVICE_VDIPORT_PRIVATE(self);
-
-    ring_init(&self->priv->read_bufs);
 
     self->priv->read_state = VDI_PORT_READ_STATE_READ_HEADER;
     self->priv->receive_pos = (uint8_t *)&self->priv->vdi_chunk_header;

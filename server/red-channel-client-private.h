@@ -59,8 +59,7 @@ struct RedChannelClientPrivate
 
     int during_send;
     int id; // debugging purposes
-    Ring pipe;
-    uint32_t pipe_size;
+    GQueue pipe;
 
     RedChannelCapabilities remote_caps;
     int is_mini_header;

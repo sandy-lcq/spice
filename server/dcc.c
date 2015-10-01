@@ -67,8 +67,7 @@ int dcc_drawable_is_in_pipe(DisplayChannelClient *dcc, Drawable *drawable)
 int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface_id,
                                           int wait_if_used)
 {
-    Ring *ring;
-    RedPipeItem *item;
+    GList *l;
     int x;
     RedChannelClient *rcc;
 
@@ -77,13 +76,14 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
        no other drawable depends on them */
 
     rcc = RED_CHANNEL_CLIENT(dcc);
-    ring = &rcc->priv->pipe;
-    item = (RedPipeItem *) ring;
-    while ((item = (RedPipeItem *)ring_next(ring, &item->link))) {
+    for (l = rcc->priv->pipe.head; l != NULL; ) {
         Drawable *drawable;
         RedDrawablePipeItem *dpi = NULL;
         int depend_found = FALSE;
+        RedPipeItem *item = l->data;
+        GList *item_pos = l;
 
+        l = l->next;
         if (item->type == RED_PIPE_ITEM_TYPE_DRAW) {
             dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, dpi_pipe_item);
             drawable = dpi->drawable;
@@ -94,12 +94,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
         }
 
         if (drawable->surface_id == surface_id) {
-            RedPipeItem *tmp_item = item;
-            item = (RedPipeItem *)ring_prev(ring, &item->link);
-            red_channel_client_pipe_remove_and_release(rcc, tmp_item);
-            if (!item) {
-                item = (RedPipeItem *)ring;
-            }
+            red_channel_client_pipe_remove_and_release_pos(rcc, item_pos);
             continue;
         }
 
@@ -112,11 +107,11 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
 
         if (depend_found) {
             spice_debug("surface %d dependent item found %p, %p", surface_id, drawable, item);
-            if (wait_if_used) {
-                break;
-            } else {
+            if (!wait_if_used) {
                 return TRUE;
             }
+            return red_channel_client_wait_pipe_item_sent(rcc, item_pos,
+                                                          COMMON_CLIENT_TIMEOUT);
         }
     }
 
@@ -124,18 +119,11 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
         return TRUE;
     }
 
-    if (item) {
-        return red_channel_client_wait_pipe_item_sent(RED_CHANNEL_CLIENT(dcc), item,
-                                                      COMMON_CLIENT_TIMEOUT);
-    } else {
-        /*
-         * in case that the pipe didn't contain any item that is dependent on the surface, but
-         * there is one during sending. Use a shorter timeout, since it is just one item
-         */
-        return red_channel_client_wait_outgoing_item(RED_CHANNEL_CLIENT(dcc),
-                                                     DISPLAY_CLIENT_SHORT_TIMEOUT);
-    }
-    return TRUE;
+    /*
+     * in case that the pipe didn't contain any item that is dependent on the surface, but
+     * there is one during sending. Use a shorter timeout, since it is just one item
+     */
+    return red_channel_client_wait_outgoing_item(rcc, DISPLAY_CLIENT_SHORT_TIMEOUT);
 }
 
 void dcc_create_surface(DisplayChannelClient *dcc, int surface_id)
@@ -170,7 +158,7 @@ void dcc_create_surface(DisplayChannelClient *dcc, int surface_id)
 RedImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc,
                                          int surface_id,
                                          SpiceRect *area,
-                                         RedPipeItem *pos,
+                                         GList *pipe_item_pos,
                                          int can_lossy)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
@@ -220,8 +208,8 @@ RedImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc,
         }
     }
 
-    if (pos) {
-        red_channel_client_pipe_add_after(RED_CHANNEL_CLIENT(dcc), &item->base, pos);
+    if (pipe_item_pos) {
+        red_channel_client_pipe_add_after_pos(RED_CHANNEL_CLIENT(dcc), &item->base, pipe_item_pos);
     } else {
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &item->base);
     }
@@ -288,7 +276,6 @@ static void red_drawable_pipe_item_free(RedPipeItem *item)
                                                  dpi_pipe_item);
     spice_assert(item->refcount == 0);
 
-    spice_warn_if_fail(!ring_item_is_linked(&item->link));
     if (ring_item_is_linked(&dpi->base)) {
         ring_remove(&dpi->base);
     }

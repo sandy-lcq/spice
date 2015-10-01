@@ -344,7 +344,7 @@ void red_channel_client_on_out_msg_done(void *opaque)
     } else {
         if (rcc->priv->latency_monitor.timer
             && !rcc->priv->send_data.blocked
-            && rcc->priv->pipe_size == 0) {
+            && g_queue_is_empty(&rcc->priv->pipe)) {
             /* It is possible that the socket will become idle, so we may be able to test latency */
             red_channel_client_restart_ping_timer(rcc);
         }
@@ -352,10 +352,9 @@ void red_channel_client_on_out_msg_done(void *opaque)
 
 }
 
-static void red_channel_client_pipe_remove(RedChannelClient *rcc, RedPipeItem *item)
+static gboolean red_channel_client_pipe_remove(RedChannelClient *rcc, RedPipeItem *item)
 {
-    rcc->priv->pipe_size--;
-    ring_remove(&item->link);
+    return g_queue_remove(&rcc->priv->pipe, item);
 }
 
 static void red_channel_client_set_remote_caps(RedChannelClient* rcc,
@@ -681,8 +680,7 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
         goto error;
     }
 
-    ring_init(&rcc->priv->pipe);
-    rcc->priv->pipe_size = 0;
+    g_queue_init(&rcc->priv->pipe);
 
     stream->watch = channel->core->watch_add(channel->core,
                                            stream->socket,
@@ -743,7 +741,7 @@ RedChannelClient *red_channel_client_create_dummy(int size,
 
     rcc->incoming.header.data = rcc->incoming.header_buf;
     rcc->incoming.serial = 1;
-    ring_init(&rcc->priv->pipe);
+    g_queue_init(&rcc->priv->pipe);
 
     rcc->priv->dummy = TRUE;
     rcc->priv->dummy_connected = TRUE;
@@ -1039,15 +1037,11 @@ void red_channel_client_send(RedChannelClient *rcc)
 
 static inline RedPipeItem *red_channel_client_pipe_item_get(RedChannelClient *rcc)
 {
-    RedPipeItem *item;
-
     if (!rcc || rcc->priv->send_data.blocked
-             || red_channel_client_waiting_for_ack(rcc)
-             || !(item = (RedPipeItem *)ring_get_tail(&rcc->priv->pipe))) {
+             || red_channel_client_waiting_for_ack(rcc)) {
         return NULL;
     }
-    red_channel_client_pipe_remove(rcc, item);
-    return item;
+    return g_queue_pop_tail(&rcc->priv->pipe);
 }
 
 void red_channel_client_push(RedChannelClient *rcc)
@@ -1072,7 +1066,7 @@ void red_channel_client_push(RedChannelClient *rcc)
     while ((pipe_item = red_channel_client_pipe_item_get(rcc))) {
         red_channel_client_send_item(rcc, pipe_item);
     }
-    if (red_channel_client_no_item_being_sent(rcc) && ring_is_empty(&rcc->priv->pipe)
+    if (red_channel_client_no_item_being_sent(rcc) && g_queue_is_empty(&rcc->priv->pipe)
         && rcc->priv->stream->watch) {
         rcc->priv->channel->core->watch_update_mask(rcc->priv->stream->watch,
                                                     SPICE_WATCH_EVENT_READ);
@@ -1286,7 +1280,7 @@ void red_channel_client_set_message_serial(RedChannelClient *rcc, uint64_t seria
     rcc->priv->send_data.serial = serial;
 }
 
-static inline gboolean client_pipe_add(RedChannelClient *rcc, RedPipeItem *item, RingItem *pos)
+static inline gboolean prepare_pipe_add(RedChannelClient *rcc, RedPipeItem *item)
 {
     spice_assert(rcc && item);
     if (SPICE_UNLIKELY(!red_channel_client_is_connected(rcc))) {
@@ -1294,20 +1288,21 @@ static inline gboolean client_pipe_add(RedChannelClient *rcc, RedPipeItem *item,
         red_pipe_item_unref(item);
         return FALSE;
     }
-    if (ring_is_empty(&rcc->priv->pipe) && rcc->priv->stream->watch) {
+    if (g_queue_is_empty(&rcc->priv->pipe) && rcc->priv->stream->watch) {
         rcc->priv->channel->core->watch_update_mask(rcc->priv->stream->watch,
                                                     SPICE_WATCH_EVENT_READ |
                                                     SPICE_WATCH_EVENT_WRITE);
     }
-    rcc->priv->pipe_size++;
-    ring_add(pos, &item->link);
     return TRUE;
 }
 
 void red_channel_client_pipe_add(RedChannelClient *rcc, RedPipeItem *item)
 {
 
-    client_pipe_add(rcc, item, &rcc->priv->pipe);
+    if (!prepare_pipe_add(rcc, item)) {
+        return;
+    }
+    g_queue_push_head(&rcc->priv->pipe, item);
 }
 
 void red_channel_client_pipe_add_push(RedChannelClient *rcc, RedPipeItem *item)
@@ -1316,31 +1311,53 @@ void red_channel_client_pipe_add_push(RedChannelClient *rcc, RedPipeItem *item)
     red_channel_client_push(rcc);
 }
 
+void red_channel_client_pipe_add_after_pos(RedChannelClient *rcc,
+                                           RedPipeItem *item,
+                                           GList *pipe_item_pos)
+{
+    spice_assert(pipe_item_pos);
+    if (!prepare_pipe_add(rcc, item)) {
+        return;
+    }
+
+    g_queue_insert_after(&rcc->priv->pipe, pipe_item_pos, item);
+}
+
 void red_channel_client_pipe_add_after(RedChannelClient *rcc,
                                        RedPipeItem *item,
                                        RedPipeItem *pos)
 {
+    GList *prev;
+
     spice_assert(pos);
-    client_pipe_add(rcc, item, &pos->link);
+    prev = g_queue_find(&rcc->priv->pipe, pos);
+    g_return_if_fail(prev != NULL);
+
+    red_channel_client_pipe_add_after_pos(rcc, item, prev);
 }
 
 int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc,
                                            RedPipeItem *item)
 {
-    return ring_item_is_linked(&item->link);
+    return g_queue_find(&rcc->priv->pipe, item) != NULL;
 }
 
 void red_channel_client_pipe_add_tail(RedChannelClient *rcc,
                                       RedPipeItem *item)
 {
-    client_pipe_add(rcc, item, rcc->priv->pipe.prev);
+    if (!prepare_pipe_add(rcc, item)) {
+        return;
+    }
+    g_queue_push_tail(&rcc->priv->pipe, item);
 }
 
 void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, RedPipeItem *item)
 {
-    if (client_pipe_add(rcc, item, rcc->priv->pipe.prev)) {
-        red_channel_client_push(rcc);
+    if (!prepare_pipe_add(rcc, item)) {
+        return;
     }
+    g_queue_push_tail(&rcc->priv->pipe, item);
+    red_channel_client_push(rcc);
 }
 
 void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
@@ -1365,15 +1382,15 @@ void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
 gboolean red_channel_client_pipe_is_empty(RedChannelClient *rcc)
 {
     g_return_val_if_fail(rcc != NULL, TRUE);
-    return (rcc->priv->pipe_size == 0) && (ring_is_empty(&rcc->priv->pipe));
+    return g_queue_is_empty(&rcc->priv->pipe);
 }
 
 uint32_t red_channel_client_get_pipe_size(RedChannelClient *rcc)
 {
-    return rcc->priv->pipe_size;
+    return g_queue_get_length(&rcc->priv->pipe);
 }
 
-Ring* red_channel_client_get_pipe(RedChannelClient *rcc)
+GQueue* red_channel_client_get_pipe(RedChannelClient *rcc)
 {
     return &rcc->priv->pipe;
 }
@@ -1410,11 +1427,9 @@ static void red_channel_client_pipe_clear(RedChannelClient *rcc)
     if (rcc) {
         red_channel_client_clear_sent_item(rcc);
     }
-    while ((item = (RedPipeItem *)ring_get_head(&rcc->priv->pipe))) {
-        ring_remove(&item->link);
+    while ((item = g_queue_pop_head(&rcc->priv->pipe)) != NULL) {
         red_pipe_item_unref(item);
     }
-    rcc->priv->pipe_size = 0;
 }
 
 void red_channel_client_ack_zero_messages_window(RedChannelClient *rcc)
@@ -1517,7 +1532,7 @@ static void marker_pipe_item_free(RedPipeItem *base)
 
 /* TODO: more evil sync stuff. anything with the word wait in it's name. */
 int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
-                                           RedPipeItem *item,
+                                           GList *item_pos,
                                            int64_t timeout)
 {
     uint64_t end_time;
@@ -1537,7 +1552,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
                             marker_pipe_item_free);
     item_in_pipe = TRUE;
     mark_item->item_in_pipe = &item_in_pipe;
-    red_channel_client_pipe_add_after(rcc, &mark_item->base, item);
+    red_channel_client_pipe_add_after_pos(rcc, &mark_item->base, item_pos);
 
     if (red_channel_client_is_blocked(rcc)) {
         red_channel_client_receive(rcc);
@@ -1545,8 +1560,8 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     }
     red_channel_client_push(rcc);
 
-    while(item_in_pipe &&
-          (timeout == -1 || spice_get_monotonic_time_ns() < end_time)) {
+    while (item_in_pipe &&
+           (timeout == -1 || spice_get_monotonic_time_ns() < end_time)) {
         usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
         red_channel_client_receive(rcc);
         red_channel_client_send(rcc);
@@ -1598,7 +1613,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
 
 void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc)
 {
-    if (red_channel_client_is_blocked(rcc) || rcc->priv->pipe_size > 0) {
+    if (red_channel_client_is_blocked(rcc) || !g_queue_is_empty(&rcc->priv->pipe)) {
         red_channel_client_disconnect(rcc);
     } else {
         spice_assert(red_channel_client_no_item_being_sent(rcc));
@@ -1613,7 +1628,17 @@ gboolean red_channel_client_no_item_being_sent(RedChannelClient *rcc)
 void red_channel_client_pipe_remove_and_release(RedChannelClient *rcc,
                                                 RedPipeItem *item)
 {
-    red_channel_client_pipe_remove(rcc, item);
+    if (red_channel_client_pipe_remove(rcc, item)) {
+        red_pipe_item_unref(item);
+    }
+}
+
+void red_channel_client_pipe_remove_and_release_pos(RedChannelClient *rcc,
+                                                    GList *item_pos)
+{
+    RedPipeItem *item = item_pos->data;
+
+    g_queue_delete_link(&rcc->priv->pipe, item_pos);
     red_pipe_item_unref(item);
 }
 

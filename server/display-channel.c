@@ -327,11 +327,11 @@ static void drawable_remove_from_pipes(Drawable *drawable)
     RingItem *item, *next;
 
     RING_FOREACH_SAFE(item, next, &drawable->pipes) {
+        RedChannelClient *rcc;
+
         dpi = SPICE_UPCAST(RedDrawablePipeItem, item);
-        if (red_pipe_item_is_linked(&dpi->dpi_pipe_item)) {
-            red_channel_client_pipe_remove_and_release(RED_CHANNEL_CLIENT(dpi->dcc),
-                                                       &dpi->dpi_pipe_item);
-        }
+        rcc = RED_CHANNEL_CLIENT(dpi->dcc);
+        red_channel_client_pipe_remove_and_release(rcc, &dpi->dpi_pipe_item);
     }
 }
 

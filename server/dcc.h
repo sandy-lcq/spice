@@ -129,7 +129,7 @@ void                       dcc_push_surface_image                    (DisplayCha
 RedImageItem *             dcc_add_surface_area_image                (DisplayChannelClient *dcc,
                                                                       int surface_id,
                                                                       SpiceRect *area,
-                                                                      RedPipeItem *pos,
+                                                                      GList *pipe_item_pos,
                                                                       int can_lossy);
 void                       dcc_palette_cache_reset                   (DisplayChannelClient *dcc);
 void                       dcc_palette_cache_palette                 (DisplayChannelClient *dcc,

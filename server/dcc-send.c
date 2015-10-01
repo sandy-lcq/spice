@@ -176,9 +176,9 @@ static int is_brush_lossy(RedChannelClient *rcc, SpiceBrush *brush,
     }
 }
 
-static RedPipeItem *dcc_get_tail(DisplayChannelClient *dcc)
+static GList *dcc_get_tail(DisplayChannelClient *dcc)
 {
-    return (RedPipeItem*)ring_get_tail(red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc)));
+    return red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc))->tail;
 }
 
 static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
@@ -606,17 +606,13 @@ static int pipe_rendered_drawables_intersect_with_areas(DisplayChannelClient *dc
                                                         SpiceRect *surface_areas[],
                                                         int num_surfaces)
 {
-    RedPipeItem *pipe_item;
-    Ring *pipe;
+    GList *l;
 
     spice_assert(num_surfaces);
-    pipe = red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc));
 
-    for (pipe_item = (RedPipeItem *)ring_get_head(pipe);
-         pipe_item;
-         pipe_item = (RedPipeItem *)ring_next(pipe, &pipe_item->link))
-    {
+    for (l = red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc))->head; l != NULL; l = l->next) {
         Drawable *drawable;
+        RedPipeItem *pipe_item = l->data;
 
         if (pipe_item->type != RED_PIPE_ITEM_TYPE_DRAW)
             continue;
@@ -695,8 +691,8 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
     int resent_surface_ids[MAX_PIPE_SIZE];
     SpiceRect resent_areas[MAX_PIPE_SIZE]; // not pointers since drawables may be released
     int num_resent;
-    RedPipeItem *pipe_item;
-    Ring *pipe;
+    GList *l;
+    GQueue *pipe;
 
     resent_surface_ids[0] = first_surface_id;
     resent_areas[0] = *first_area;
@@ -705,9 +701,8 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
     pipe = red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc));
 
     // going from the oldest to the newest
-    for (pipe_item = (RedPipeItem *)ring_get_tail(pipe);
-         pipe_item;
-         pipe_item = (RedPipeItem *)ring_prev(pipe, &pipe_item->link)) {
+    for (l = pipe->tail; l != NULL; l = l->prev) {
+        RedPipeItem *pipe_item = l->data;
         Drawable *drawable;
         RedDrawablePipeItem *dpi;
         RedImageItem *image;
@@ -731,13 +726,13 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
         }
 
         image = dcc_add_surface_area_image(dcc, drawable->red_drawable->surface_id,
-                                           &drawable->red_drawable->bbox, pipe_item, TRUE);
+                                           &drawable->red_drawable->bbox, l, TRUE);
         resent_surface_ids[num_resent] = drawable->red_drawable->surface_id;
         resent_areas[num_resent] = drawable->red_drawable->bbox;
         num_resent++;
 
         spice_assert(image);
-        red_channel_client_pipe_remove_and_release(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item);
+        red_channel_client_pipe_remove_and_release_pos(RED_CHANNEL_CLIENT(dcc), l);
         pipe_item = &image->base;
     }
 }

@@ -359,7 +359,8 @@ static void before_reattach_stream(DisplayChannel *display,
             continue;
         }
 
-        if (red_pipe_item_is_linked(&dpi->dpi_pipe_item)) {
+        if (red_channel_client_pipe_item_is_linked(RED_CHANNEL_CLIENT(dcc),
+                                                   &dpi->dpi_pipe_item)) {
 #ifdef STREAM_STATS
             agent->stats.num_drops_pipe++;
 #endif

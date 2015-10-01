@@ -189,8 +189,6 @@ static void cursor_pipe_item_free(RedPipeItem *base)
 
     RedCursorPipeItem *pipe_item = SPICE_UPCAST(RedCursorPipeItem, base);
 
-    spice_assert(!red_pipe_item_is_linked(&pipe_item->base));
-
     cursor_item_unref(pipe_item->cursor_item);
     free(pipe_item);
 }
