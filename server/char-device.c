@@ -50,8 +50,8 @@ struct RedCharDevicePrivate {
     int active; /* has read/write been performed since the device was started */
     int wait_for_migrate_data;
 
-    Ring write_queue;
-    Ring write_bufs_pool;
+    GQueue write_queue;
+    GQueue write_bufs_pool;
     uint64_t cur_pool_size;
     RedCharDeviceWriteBuffer *cur_write_buf;
     uint8_t *cur_write_buf_pos;
@@ -150,16 +150,11 @@ static void red_char_device_write_buffer_free(RedCharDeviceWriteBuffer *buf)
     free(buf);
 }
 
-static void write_buffers_queue_free(Ring *write_queue)
+static void write_buffers_queue_free(GQueue *write_queue)
 {
-    while (!ring_is_empty(write_queue)) {
-        RingItem *item = ring_get_tail(write_queue);
-        RedCharDeviceWriteBuffer *buf;
-
-        ring_remove(item);
-        buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
+    RedCharDeviceWriteBuffer *buf;
+    while ((buf = g_queue_pop_tail(write_queue)))
         red_char_device_write_buffer_free(buf);
-    }
 }
 
 static void red_char_device_write_buffer_pool_add(RedCharDevice *dev,
@@ -171,7 +166,7 @@ static void red_char_device_write_buffer_pool_add(RedCharDevice *dev,
         buf->origin = WRITE_BUFFER_ORIGIN_NONE;
         buf->client = NULL;
         dev->priv->cur_pool_size += buf->buf_size;
-        ring_add(&dev->priv->write_bufs_pool, &buf->link);
+        g_queue_push_head(&dev->priv->write_bufs_pool, buf);
         return;
     }
 
@@ -182,7 +177,7 @@ static void red_char_device_write_buffer_pool_add(RedCharDevice *dev,
 static void red_char_device_client_free(RedCharDevice *dev,
                                         RedCharDeviceClient *dev_client)
 {
-    RingItem *item, *next;
+    GList *l, *next;
 
     if (dev_client->wait_for_tokens_timer) {
         reds_core_timer_remove(dev->priv->reds, dev_client->wait_for_tokens_timer);
@@ -192,16 +187,18 @@ static void red_char_device_client_free(RedCharDevice *dev,
     g_queue_free_full(dev_client->send_queue, (GDestroyNotify)red_pipe_item_unref);
 
     /* remove write buffers that are associated with the client */
-    spice_debug("write_queue_is_empty %d", ring_is_empty(&dev->priv->write_queue) && !dev->priv->cur_write_buf);
-    RING_FOREACH_SAFE(item, next, &dev->priv->write_queue) {
-        RedCharDeviceWriteBuffer *write_buf;
+    spice_debug("write_queue_is_empty %d", g_queue_is_empty(&dev->priv->write_queue) && !dev->priv->cur_write_buf);
+    l = g_queue_peek_head_link(&dev->priv->write_queue);
+    while (l) {
+        RedCharDeviceWriteBuffer *write_buf = l->data;
+        next = l->next;
 
-        write_buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
         if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
             write_buf->client == dev_client->client) {
-            ring_remove(item);
+            g_queue_delete_link(&dev->priv->write_queue, l);
             red_char_device_write_buffer_pool_add(dev, write_buf);
         }
+        l = next;
     }
 
     if (dev->priv->cur_write_buf && dev->priv->cur_write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
@@ -483,13 +480,10 @@ static int red_char_device_write_to_device(RedCharDevice *dev)
         uint32_t write_len;
 
         if (!dev->priv->cur_write_buf) {
-            RingItem *item = ring_get_tail(&dev->priv->write_queue);
-            if (!item) {
+            dev->priv->cur_write_buf = g_queue_pop_tail(&dev->priv->write_queue);
+            if (!dev->priv->cur_write_buf)
                 break;
-            }
-            dev->priv->cur_write_buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
             dev->priv->cur_write_buf_pos = dev->priv->cur_write_buf->buf;
-            ring_remove(item);
         }
 
         write_len = dev->priv->cur_write_buf->buf + dev->priv->cur_write_buf->buf_used -
@@ -519,7 +513,7 @@ static int red_char_device_write_to_device(RedCharDevice *dev)
                                       CHAR_DEVICE_WRITE_TO_TIMEOUT);
             }
         } else {
-            spice_assert(ring_is_empty(&dev->priv->write_queue));
+            spice_assert(g_queue_is_empty(&dev->priv->write_queue));
         }
         dev->priv->active = dev->priv->active || total;
     }
@@ -542,16 +536,14 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
     RedCharDevice *dev, RedClient *client,
     int size, int origin, int migrated_data_tokens)
 {
-    RingItem *item;
     RedCharDeviceWriteBuffer *ret;
 
     if (origin == WRITE_BUFFER_ORIGIN_SERVER && !dev->priv->num_self_tokens) {
         return NULL;
     }
 
-    if ((item = ring_get_tail(&dev->priv->write_bufs_pool))) {
-        ret = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
-        ring_remove(item);
+    ret = g_queue_pop_tail(&dev->priv->write_bufs_pool);
+    if (ret) {
         dev->priv->cur_pool_size -= ret->buf_size;
     } else {
         ret = spice_new0(RedCharDeviceWriteBuffer, 1);
@@ -594,7 +586,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
     return ret;
 error:
     dev->priv->cur_pool_size += ret->buf_size;
-    ring_add(&dev->priv->write_bufs_pool, &ret->link);
+    g_queue_push_head(&dev->priv->write_bufs_pool, ret);
     return NULL;
 }
 
@@ -643,7 +635,7 @@ void red_char_device_write_buffer_add(RedCharDevice *dev,
         return;
     }
 
-    ring_add(&dev->priv->write_queue, &write_buf->link);
+    g_queue_push_head(&dev->priv->write_queue, write_buf);
     red_char_device_write_to_device(dev);
 }
 
@@ -660,7 +652,6 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
     uint32_t buf_token_price = write_buf->token_price;
     RedClient *client = write_buf->client;
 
-    spice_assert(!ring_item_is_linked(&write_buf->link));
     if (!dev) {
         spice_printerr("no device. write buffer is freed");
         red_char_device_write_buffer_free(write_buf);
@@ -828,17 +819,12 @@ void red_char_device_stop(RedCharDevice *dev)
 void red_char_device_reset(RedCharDevice *dev)
 {
     RingItem *client_item;
+    RedCharDeviceWriteBuffer *buf;
 
     red_char_device_stop(dev);
     dev->priv->wait_for_migrate_data = FALSE;
     spice_debug("char device %p", dev);
-    while (!ring_is_empty(&dev->priv->write_queue)) {
-        RingItem *item = ring_get_tail(&dev->priv->write_queue);
-        RedCharDeviceWriteBuffer *buf;
-
-        ring_remove(item);
-        buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
-        /* tracking the tokens */
+    while ((buf = g_queue_pop_tail(&dev->priv->write_queue))) {
         red_char_device_write_buffer_release(dev, &buf);
     }
     red_char_device_write_buffer_release(dev, &dev->priv->cur_write_buf);
@@ -894,7 +880,7 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                            SpiceMarshaller *m)
 {
     RedCharDeviceClient *dev_client;
-    RingItem *item;
+    GList *item;
     uint32_t *write_to_dev_size_ptr;
     uint32_t *write_to_dev_tokens_ptr;
     SpiceMarshaller *m2;
@@ -932,10 +918,9 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
         }
     }
 
-    RING_FOREACH_REVERSED(item, &dev->priv->write_queue) {
-        RedCharDeviceWriteBuffer *write_buf;
+    for (item = g_queue_peek_tail_link(&dev->priv->write_queue); item != NULL; item = item->prev) {
+        RedCharDeviceWriteBuffer *write_buf = item->data;
 
-        write_buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
         spice_marshaller_add_ref_full(m2, write_buf->buf, write_buf->buf_used,
                                       migrate_data_marshaller_write_buffer_free,
                                       red_char_device_write_buffer_ref(write_buf)
@@ -966,7 +951,7 @@ int red_char_device_restore(RedCharDevice *dev,
                     dev, mig_data->version, SPICE_MIGRATE_DATA_CHAR_DEVICE_VERSION);
         return FALSE;
     }
-    spice_assert(!dev->priv->cur_write_buf && ring_is_empty(&dev->priv->write_queue));
+    spice_assert(!dev->priv->cur_write_buf && g_queue_is_empty(&dev->priv->write_queue));
     spice_assert(mig_data->connected);
 
     client_tokens_window = dev_client->num_client_tokens; /* initial state of tokens */
@@ -1195,8 +1180,8 @@ red_char_device_init(RedCharDevice *self)
 {
     self->priv = RED_CHAR_DEVICE_PRIVATE(self);
 
-    ring_init(&self->priv->write_queue);
-    ring_init(&self->priv->write_bufs_pool);
+    g_queue_init(&self->priv->write_queue);
+    g_queue_init(&self->priv->write_bufs_pool);
     ring_init(&self->priv->clients);
 
     g_signal_connect(self, "notify::sin", G_CALLBACK(red_char_device_on_sin_changed), NULL);
