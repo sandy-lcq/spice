@@ -32,7 +32,6 @@
 
 typedef struct RedCharDeviceClient RedCharDeviceClient;
 struct RedCharDeviceClient {
-    RingItem link;
     RedCharDevice *dev;
     RedClient *client;
     int do_flow_control;
@@ -58,8 +57,7 @@ struct RedCharDevicePrivate {
     SpiceTimer *write_to_dev_timer;
     uint64_t num_self_tokens;
 
-    Ring clients; /* list of RedCharDeviceClient */
-    uint32_t num_clients;
+    GList *clients; /* list of RedCharDeviceClient */
 
     uint64_t client_tokens_interval; /* frequency of returning tokens to the client */
     SpiceCharDeviceInstance *sin;
@@ -207,8 +205,7 @@ static void red_char_device_client_free(RedCharDevice *dev,
         dev->priv->cur_write_buf->client = NULL;
     }
 
-    dev->priv->num_clients--;
-    ring_remove(&dev_client->link);
+    dev->priv->clients = g_list_remove(dev->priv->clients, dev_client);
     free(dev_client);
 }
 
@@ -222,12 +219,11 @@ static void red_char_device_handle_client_overflow(RedCharDeviceClient *dev_clie
 static RedCharDeviceClient *red_char_device_client_find(RedCharDevice *dev,
                                                         RedClient *client)
 {
-    RingItem *item;
+    GList *item;
 
-    RING_FOREACH(item, &dev->priv->clients) {
-        RedCharDeviceClient *dev_client;
+    for (item = dev->priv->clients; item != NULL; item = item->next) {
+        RedCharDeviceClient *dev_client = item->data;
 
-        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
         if (dev_client->client == client) {
             return dev_client;
         }
@@ -253,13 +249,11 @@ static int red_char_device_can_send_to_client(RedCharDeviceClient *dev_client)
 
 static uint64_t red_char_device_max_send_tokens(RedCharDevice *dev)
 {
-    RingItem *item;
+    GList *item;
     uint64_t max = 0;
 
-    RING_FOREACH(item, &dev->priv->clients) {
-        RedCharDeviceClient *dev_client;
-
-        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
+    for (item = dev->priv->clients; item != NULL; item = item->next) {
+        RedCharDeviceClient *dev_client = item->data;
 
         if (!dev_client->do_flow_control) {
             max = ~0;
@@ -295,12 +289,13 @@ static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_cli
 static void red_char_device_send_msg_to_clients(RedCharDevice *dev,
                                                 RedPipeItem *msg)
 {
-    RingItem *item, *next;
+    GList *l;
 
-    RING_FOREACH_SAFE(item, next, &dev->priv->clients) {
-        RedCharDeviceClient *dev_client;
+    l = dev->priv->clients;
+    while (l) {
+        GList *next = l->next;
+        RedCharDeviceClient *dev_client = l->data;
 
-        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
         if (red_char_device_can_send_to_client(dev_client)) {
             dev_client->num_send_tokens--;
             spice_assert(g_queue_is_empty(dev_client->send_queue));
@@ -310,6 +305,7 @@ static void red_char_device_send_msg_to_clients(RedCharDevice *dev,
         } else {
             red_char_device_add_msg_to_client_queue(dev_client, msg);
         }
+        l = next;
     }
 }
 
@@ -338,7 +334,7 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
      * Reading from the device only in case at least one of the clients have a free token.
      * All messages will be discarded if no client is attached to the device
      */
-    while ((max_send_tokens || ring_is_empty(&dev->priv->clients)) && dev->priv->running) {
+    while ((max_send_tokens || (dev->priv->clients == NULL)) && dev->priv->running) {
         RedPipeItem *msg;
 
         msg = red_char_device_read_one_msg_from_device(dev);
@@ -743,7 +739,7 @@ int red_char_device_client_add(RedCharDevice *dev,
     spice_assert(dev);
     spice_assert(client);
 
-    if (wait_for_migrate_data && (dev->priv->num_clients > 0 || dev->priv->active)) {
+    if (wait_for_migrate_data && (dev->priv->clients != NULL || dev->priv->active)) {
         spice_warning("can't restore device %p from migration data. The device "
                       "has already been active", dev);
         return FALSE;
@@ -757,8 +753,7 @@ int red_char_device_client_add(RedCharDevice *dev,
                                             num_client_tokens,
                                             num_send_tokens);
     dev_client->dev = dev;
-    ring_add(&dev->priv->clients, &dev_client->link);
-    dev->priv->num_clients++;
+    dev->priv->clients = g_list_prepend(dev->priv->clients, dev_client);
     /* Now that we have a client, forward any pending device data */
     red_char_device_wakeup(dev);
     return TRUE;
@@ -778,12 +773,12 @@ void red_char_device_client_remove(RedCharDevice *dev,
     }
     red_char_device_client_free(dev, dev_client);
     if (dev->priv->wait_for_migrate_data) {
-        spice_assert(dev->priv->num_clients == 0);
+        spice_assert(dev->priv->clients == NULL);
         dev->priv->wait_for_migrate_data  = FALSE;
         red_char_device_read_from_device(dev);
     }
 
-    if (dev->priv->num_clients == 0) {
+    if (dev->priv->clients == NULL) {
         spice_debug("client removed, memory pool will be freed (%"PRIu64" bytes)", dev->priv->cur_pool_size);
         write_buffers_queue_free(&dev->priv->write_bufs_pool);
         dev->priv->cur_pool_size = 0;
@@ -818,7 +813,7 @@ void red_char_device_stop(RedCharDevice *dev)
 
 void red_char_device_reset(RedCharDevice *dev)
 {
-    RingItem *client_item;
+    GList *client_item;
     RedCharDeviceWriteBuffer *buf;
 
     red_char_device_stop(dev);
@@ -829,10 +824,9 @@ void red_char_device_reset(RedCharDevice *dev)
     }
     red_char_device_write_buffer_release(dev, &dev->priv->cur_write_buf);
 
-    RING_FOREACH(client_item, &dev->priv->clients) {
-        RedCharDeviceClient *dev_client;
+    for (client_item = dev->priv->clients; client_item != NULL; client_item = client_item->next) {
+        RedCharDeviceClient *dev_client = client_item->data;
 
-        dev_client = SPICE_CONTAINEROF(client_item, RedCharDeviceClient, link);
         spice_debug("send_queue_empty %d", g_queue_is_empty(dev_client->send_queue));
         dev_client->num_send_tokens += g_queue_get_length(dev_client->send_queue);
         g_queue_foreach(dev_client->send_queue, (GFunc)red_pipe_item_unref, NULL);
@@ -886,10 +880,8 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
     SpiceMarshaller *m2;
 
     /* multi-clients are not supported */
-    spice_assert(dev->priv->num_clients == 1);
-    dev_client = SPICE_CONTAINEROF(ring_get_tail(&dev->priv->clients),
-                                   RedCharDeviceClient,
-                                   link);
+    spice_assert(g_list_length(dev->priv->clients) == 1);
+    dev_client = g_list_last(dev->priv->clients)->data;
     /* FIXME: if there were more than one client before the marshalling,
      * it is possible that the send_queue length > 0, and the send data
      * should be migrated as well */
@@ -941,11 +933,10 @@ int red_char_device_restore(RedCharDevice *dev,
     RedCharDeviceClient *dev_client;
     uint32_t client_tokens_window;
 
-    spice_assert(dev->priv->num_clients == 1 && dev->priv->wait_for_migrate_data);
+    spice_assert(g_list_length(dev->priv->clients) == 1 &&
+                 dev->priv->wait_for_migrate_data);
 
-    dev_client = SPICE_CONTAINEROF(ring_get_tail(&dev->priv->clients),
-                                     RedCharDeviceClient,
-                                     link);
+    dev_client = g_list_last(dev->priv->clients)->data;
     if (mig_data->version > SPICE_MIGRATE_DATA_CHAR_DEVICE_VERSION) {
         spice_error("dev %p error: migration data version %u is bigger than self %u",
                     dev, mig_data->version, SPICE_MIGRATE_DATA_CHAR_DEVICE_VERSION);
@@ -1110,11 +1101,8 @@ red_char_device_finalize(GObject *object)
     red_char_device_write_buffer_free(self->priv->cur_write_buf);
     self->priv->cur_write_buf = NULL;
 
-    while (!ring_is_empty(&self->priv->clients)) {
-        RingItem *item = ring_get_tail(&self->priv->clients);
-        RedCharDeviceClient *dev_client;
-
-        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
+    while (self->priv->clients != NULL) {
+        RedCharDeviceClient *dev_client = self->priv->clients->data;
         red_char_device_client_free(self, dev_client);
     }
     self->priv->running = FALSE;
@@ -1182,7 +1170,6 @@ red_char_device_init(RedCharDevice *self)
 
     g_queue_init(&self->priv->write_queue);
     g_queue_init(&self->priv->write_bufs_pool);
-    ring_init(&self->priv->clients);
 
     g_signal_connect(self, "notify::sin", G_CALLBACK(red_char_device_on_sin_changed), NULL);
 }
