@@ -6,7 +6,7 @@ Major changes in 0.12.6:
 * LZ4 support
 * Let clients specify their preferred image compression format
 * Allow to record and replay a spice-server session
-* Fix for CVE-2015-3247
+* Fixes for CVE-2015-3247 CVE-2015-5260 and CVE-2015-5261
 * spice-protocol submodule has been removed,, spice-protocol must now be
   installed when building spice-server
 * Remove write polling in chardevs to reduce wakeups
