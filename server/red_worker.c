@@ -12117,7 +12117,7 @@ static void red_init(RedWorker *worker, WorkerInitData *init_data)
         if (worker->record_fd == NULL) {
             spice_error("failed to open recording file %s\n", record_filename);
         }
-	if (fwrite(header, sizeof(header)-1, 1, worker->record_fd) != 1) {
+        if (fwrite(header, sizeof(header)-1, 1, worker->record_fd) != 1) {
             spice_error("failed to write replay header");
         }
     }
