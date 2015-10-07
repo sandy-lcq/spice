@@ -134,7 +134,7 @@ exclude_file_name_regexp--sc_bindtextdomain = ^server/tests|common/region.c|tool
 
 exclude_file_name_regexp--sc_preprocessor_indentation = ^*/*.[ch]
 
-exclude_file_name_regexp--sc_prohibit_empty_lines_at_EOF = docs/.*.odt|server/tests/base_test.ppm
+exclude_file_name_regexp--sc_prohibit_empty_lines_at_EOF = docs/.*.odt|server/tests/base_test.ppm|docs/manual/images/.*.png
 
 # XXX this should be removed & all cases fixed
 exclude_file_name_regexp--sc_prohibit_have_config_h = ^*/.*(c|cpp|h)
