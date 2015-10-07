@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <strings.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <unistd.h>
