@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include "spice_image_cache.h"
 
 static ImageCacheItem *image_cache_find(ImageCache *cache, uint64_t id)
