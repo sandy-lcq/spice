@@ -274,9 +274,9 @@ static void pixel_rgb16bpp_to_24(void *src, uint8_t *dest)
 typedef struct {
   struct jpeg_destination_mgr pub; /* public fields */
 
-  unsigned char ** outbuffer;	/* target buffer */
+  unsigned char ** outbuffer;      /* target buffer */
   size_t * outsize;
-  uint8_t * buffer;		/* start of buffer */
+  uint8_t * buffer;                /* start of buffer */
   size_t bufsize;
 } mem_destination_mgr;
 
@@ -334,15 +334,15 @@ spice_jpeg_mem_dest(j_compress_ptr cinfo,
                     unsigned char ** outbuffer, size_t * outsize)
 {
   mem_destination_mgr *dest;
-#define OUTPUT_BUF_SIZE  4096	/* choose an efficiently fwrite'able size */
+#define OUTPUT_BUF_SIZE  4096 /* choose an efficiently fwrite'able size */
 
-  if (outbuffer == NULL || outsize == NULL)	/* sanity check */
+  if (outbuffer == NULL || outsize == NULL) /* sanity check */
     ERREXIT(cinfo, JERR_BUFFER_SIZE);
 
   /* The destination object is made permanent so that multiple JPEG images
    * can be written to the same buffer without re-executing jpeg_mem_dest.
    */
-  if (cinfo->dest == NULL) {	/* first time for this JPEG object? */
+  if (cinfo->dest == NULL) { /* first time for this JPEG object? */
     cinfo->dest = spice_malloc(sizeof(mem_destination_mgr));
   }
 
