@@ -130,16 +130,6 @@ if test "x$enable_celt051" = "xyes"; then
     PKG_CHECK_MODULES(CELT051, celt051 >= 0.5.1.1, AS_VAR_APPEND([SPICE_REQUIRES], [" celt051 >= 0.5.1.1"]))
 fi
 
-if test ! -e client/generated_marshallers.cpp; then
-AC_MSG_CHECKING([for pyparsing python module])
-echo "import pyparsing" | ${PYTHON} - >/dev/null 2>&1
-if test $? -ne 0 ; then
-    AC_MSG_RESULT([not found])
-    AC_MSG_ERROR([pyparsing python module is required to compile this package])
-fi
-AC_MSG_RESULT([found])
-fi
-
 PKG_CHECK_MODULES(SSL, openssl)
 AC_SUBST(SSL_CFLAGS)
 AC_SUBST(SSL_LIBS)
