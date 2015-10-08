@@ -150,3 +150,5 @@ exclude_file_name_regexp--sc_trailing_blank = ^common/win/my_getopt-1.5/getopt.3
 exclude_file_name_regexp--sc_unmarked_diagnostics = ^.*\.(c|py|h)
 
 exclude_file_name_regexp--sc_prohibit_path_max_allocation = server/tests/test_display_base.c
+
+exclude_file_name_regexp--sc_cast_of_argument_to_free = server/red_replay_qxl.c
