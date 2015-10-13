@@ -41,7 +41,6 @@ typedef struct DispatcherMessage {
 } DispatcherMessage;
 
 struct Dispatcher {
-    SpiceCoreInterface *recv_core;
     int recv_fd;
     int send_fd;
     pthread_t self;
