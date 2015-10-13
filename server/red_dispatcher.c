@@ -335,9 +335,10 @@ static AsyncCommand *async_command_alloc(RedDispatcher *dispatcher,
 {
     AsyncCommand *async_command = spice_new0(AsyncCommand, 1);
 
-    pthread_mutex_lock(&dispatcher->async_lock);
     async_command->cookie = cookie;
     async_command->message = message;
+
+    pthread_mutex_lock(&dispatcher->async_lock);
     ring_add(&dispatcher->async_commands, &async_command->link);
     pthread_mutex_unlock(&dispatcher->async_lock);
     spice_debug("%p", async_command);
