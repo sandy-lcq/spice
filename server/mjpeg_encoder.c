@@ -226,6 +226,7 @@ MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
 
 void mjpeg_encoder_destroy(MJpegEncoder *encoder)
 {
+    free(encoder->cinfo.dest);
     jpeg_destroy_compress(&encoder->cinfo);
     free(encoder->row);
     free(encoder);
