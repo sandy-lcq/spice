@@ -66,6 +66,7 @@ void memslot_info_init(RedMemSlotInfo *info,
                        uint8_t generation_bits,
                        uint8_t id_bits,
                        uint8_t internal_groupslot_id);
+void memslot_info_destroy(RedMemSlotInfo *info);
 void memslot_info_add_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uint32_t slot_id,
                            uint64_t addr_delta, unsigned long virt_start, unsigned long virt_end,
                            uint32_t generation);

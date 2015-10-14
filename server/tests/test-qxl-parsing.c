@@ -197,8 +197,7 @@ int main(int argc, char **argv)
     free(cursor);
     free(chunks[0]);
 
-    free(mem_info.mem_slots[0]);
-    free(mem_info.mem_slots);
+    memslot_info_destroy(&mem_info);
     free(surface_mem);
 
     return exit_code;

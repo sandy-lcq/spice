@@ -166,6 +166,16 @@ void memslot_info_init(RedMemSlotInfo *info,
                                        (info->mem_slot_bits + info->generation_bits));
 }
 
+void memslot_info_destroy(RedMemSlotInfo *info)
+{
+    uint32_t i;
+
+    for (i = 0; i < info->num_memslots_groups; ++i) {
+        free(info->mem_slots[i]);
+    }
+    free(info->mem_slots);
+}
+
 void memslot_info_add_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uint32_t slot_id,
                            uint64_t addr_delta, unsigned long virt_start, unsigned long virt_end,
                            uint32_t generation)
