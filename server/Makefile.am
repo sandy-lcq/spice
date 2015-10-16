@@ -130,14 +130,14 @@ libspice_server_la_SOURCES =			\
 	spice_image_cache.c			\
 	$(NULL)
 
-if SUPPORT_GL
+if HAVE_GL
 libspice_server_la_SOURCES +=	\
 	reds_gl_canvas.c	\
 	reds_gl_canvas.h	\
 	$(NULL)
 endif
 
-if SUPPORT_SMARTCARD
+if HAVE_SMARTCARD
 libspice_server_la_SOURCES +=	\
 	smartcard.c		\
 	smartcard.h		\
