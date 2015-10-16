@@ -72,14 +72,13 @@ esac
 
 dnl =========================================================================
 dnl Check optional features
-SPICE_CHECK_OPENGL([GL])
+SPICE_CHECK_OPENGL
 AS_IF([test x"$enable_opengl" != "xno"], [
       AS_VAR_APPEND([SPICE_NONPKGCONFIG_LIBS], [" $GL_LIBS"])
 ])
 
 
-SPICE_CHECK_SMARTCARD([SMARTCARD])
-AM_CONDITIONAL(SUPPORT_SMARTCARD, test "x$have_smartcard" = "xyes")
+SPICE_CHECK_SMARTCARD
 
 AC_ARG_ENABLE([automated_tests],
               AS_HELP_STRING([--enable-automated-tests], [Enable automated tests using spicy-screenshot (part of spice--gtk)]),,
@@ -87,7 +86,7 @@ AC_ARG_ENABLE([automated_tests],
 AS_IF([test x"$enable_automated_tests" != "xno"], [enable_automated_tests="yes"])
 AM_CONDITIONAL(SUPPORT_AUTOMATED_TESTS, test "x$enable_automated_tests" != "xno")
 
-SPICE_CHECK_LZ4([LZ4])
+SPICE_CHECK_LZ4
 
 dnl =========================================================================
 dnl Check deps
