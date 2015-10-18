@@ -2939,7 +2939,7 @@ static void red_stream_update_client_playback_latency(void *opaque, uint32_t del
     if (delay_ms > agent->dcc->streams_max_latency) {
          agent->dcc->streams_max_latency = delay_ms;
     }
-    spice_debug("reseting client latency: %u", agent->dcc->streams_max_latency);
+    spice_debug("resetting client latency: %u", agent->dcc->streams_max_latency);
     main_dispatcher_set_mm_time_latency(agent->dcc->common.base.client, agent->dcc->streams_max_latency);
 }
 
