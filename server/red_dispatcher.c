@@ -624,14 +624,24 @@ static void qxl_worker_reset_memslots(QXLWorker *qxl_worker)
     red_dispatcher_reset_memslots((RedDispatcher*)qxl_worker);
 }
 
+static bool red_dispatcher_set_pending(RedDispatcher *dispatcher, int pending)
+{
+    // this is not atomic but is not an issue
+    if (test_bit(pending, dispatcher->pending)) {
+        return TRUE;
+    }
+
+    set_bit(pending, &dispatcher->pending);
+    return FALSE;
+}
+
 static void red_dispatcher_wakeup(RedDispatcher *dispatcher)
 {
     RedWorkerMessageWakeup payload;
 
-    if (test_bit(RED_WORKER_PENDING_WAKEUP, dispatcher->pending)) {
+    if (red_dispatcher_set_pending(dispatcher, RED_DISPATCHER_PENDING_WAKEUP))
         return;
-    }
-    set_bit(RED_WORKER_PENDING_WAKEUP, &dispatcher->pending);
+
     dispatcher_send_message(&dispatcher->dispatcher,
                             RED_WORKER_MESSAGE_WAKEUP,
                             &payload);
@@ -646,10 +656,9 @@ static void red_dispatcher_oom(RedDispatcher *dispatcher)
 {
     RedWorkerMessageOom payload;
 
-    if (test_bit(RED_WORKER_PENDING_OOM, dispatcher->pending)) {
+    if (red_dispatcher_set_pending(dispatcher, RED_DISPATCHER_PENDING_OOM))
         return;
-    }
-    set_bit(RED_WORKER_PENDING_OOM, &dispatcher->pending);
+
     dispatcher_send_message(&dispatcher->dispatcher,
                             RED_WORKER_MESSAGE_OOM,
                             &payload);
@@ -1176,4 +1185,11 @@ void red_dispatcher_set_dispatcher_opaque(RedDispatcher *red_dispatcher,
                                           void *opaque)
 {
     dispatcher_set_opaque(&red_dispatcher->dispatcher, opaque);
+}
+
+void red_dispatcher_clear_pending(RedDispatcher *red_dispatcher, int pending)
+{
+    spice_return_if_fail(red_dispatcher != NULL);
+
+    clear_bit(pending, &red_dispatcher->pending);
 }

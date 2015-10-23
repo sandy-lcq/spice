@@ -610,7 +610,6 @@ typedef struct RedWorker {
 
     int channel;
     int running;
-    uint32_t *pending;
     struct pollfd poll_fds[MAX_EVENT_SOURCES];
     struct SpiceWatch watches[MAX_EVENT_SOURCES];
     unsigned int event_timeout;
@@ -11007,8 +11006,8 @@ void handle_dev_wakeup(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
 
-    clear_bit(RED_WORKER_PENDING_WAKEUP, worker->pending);
     stat_inc_counter(worker->wakeup_counter, 1);
+    red_dispatcher_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_WAKEUP);
 }
 
 void handle_dev_oom(void *opaque, void *payload)
@@ -11041,7 +11040,7 @@ void handle_dev_oom(void *opaque, void *payload)
                 worker->current_size,
                 worker->display_channel ?
                 red_channel_sum_pipes_size(display_red_channel) : 0);
-    clear_bit(RED_WORKER_PENDING_OOM, worker->pending);
+    red_dispatcher_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_OOM);
 }
 
 void handle_dev_reset_cursor(void *opaque, void *payload)
@@ -11616,7 +11615,6 @@ RedWorker* red_worker_new(WorkerInitData *init_data)
     if (worker->record_fd) {
         dispatcher_register_universal_handler(dispatcher, worker_dispatcher_record);
     }
-    worker->pending = init_data->pending;
     worker->cursor_visible = TRUE;
     spice_assert(init_data->num_renderers > 0);
     worker->num_renderers = init_data->num_renderers;

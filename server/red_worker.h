@@ -24,11 +24,6 @@
 #include "red_dispatcher.h"
 
 enum {
-    RED_WORKER_PENDING_WAKEUP,
-    RED_WORKER_PENDING_OOM,
-};
-
-enum {
     RED_RENDERER_INVALID,
     RED_RENDERER_SW,
     RED_RENDERER_OGL_PBUF,
