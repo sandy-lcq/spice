@@ -11587,12 +11587,17 @@ static void handle_dev_input(int fd, int event, void *opaque)
     dispatcher_handle_recv_read(red_dispatcher_get_dispatcher(worker->red_dispatcher));
 }
 
-RedWorker* red_worker_new(WorkerInitData *init_data)
+RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 {
-    RedWorker *worker = spice_new0(RedWorker, 1);
+    QXLDevInitInfo init_info;
+    RedWorker *worker;
     Dispatcher *dispatcher;
     int i;
     const char *record_filename;
+
+    qxl->st->qif->get_init_info(qxl, &init_info);
+
+    worker = spice_new0(RedWorker, 1);
 
     record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
     if (record_filename) {
@@ -11606,25 +11611,26 @@ RedWorker* red_worker_new(WorkerInitData *init_data)
             spice_error("failed to write replay header");
         }
     }
-    dispatcher = red_dispatcher_get_dispatcher(init_data->red_dispatcher);
+    dispatcher = red_dispatcher_get_dispatcher(red_dispatcher);
     dispatcher_set_opaque(dispatcher, worker);
-    worker->red_dispatcher = init_data->red_dispatcher;
-    worker->qxl = init_data->qxl;
+
+    worker->red_dispatcher = red_dispatcher;
+    worker->qxl = qxl;
     worker->channel = dispatcher_get_recv_fd(dispatcher);
     register_callbacks(dispatcher);
     if (worker->record_fd) {
         dispatcher_register_universal_handler(dispatcher, worker_dispatcher_record);
     }
     worker->cursor_visible = TRUE;
-    spice_assert(init_data->num_renderers > 0);
-    worker->num_renderers = init_data->num_renderers;
-    memcpy(worker->renderers, init_data->renderers, sizeof(worker->renderers));
+    spice_assert(num_renderers > 0);
+    worker->num_renderers = num_renderers;
+    memcpy(worker->renderers, renderers, sizeof(worker->renderers));
     worker->renderer = RED_RENDERER_INVALID;
     worker->mouse_mode = SPICE_MOUSE_MODE_SERVER;
-    worker->image_compression = init_data->image_compression;
-    worker->jpeg_state = init_data->jpeg_state;
-    worker->zlib_glz_state = init_data->zlib_glz_state;
-    worker->streaming_video = init_data->streaming_video;
+    worker->image_compression = image_compression;
+    worker->jpeg_state = jpeg_state;
+    worker->zlib_glz_state = zlib_glz_state;
+    worker->streaming_video = streaming_video;
     worker->driver_cap_monitors_config = 0;
     ring_init(&worker->current_list);
     image_cache_init(&worker->image_cache);
@@ -11653,14 +11659,14 @@ RedWorker* red_worker_new(WorkerInitData *init_data)
     worker->watches[0].watch_func_opaque = worker;
 
     red_memslot_info_init(&worker->mem_slots,
-                          init_data->num_memslots_groups,
-                          init_data->num_memslots,
-                          init_data->memslot_gen_bits,
-                          init_data->memslot_id_bits,
-                          init_data->internal_groupslot_id);
+                          init_info.num_memslots_groups,
+                          init_info.num_memslots,
+                          init_info.memslot_gen_bits,
+                          init_info.memslot_id_bits,
+                          init_info.internal_groupslot_id);
 
-    spice_warn_if(init_data->n_surfaces > NUM_SURFACES);
-    worker->n_surfaces = init_data->n_surfaces;
+    spice_warn_if(init_info.n_surfaces > NUM_SURFACES);
+    worker->n_surfaces = init_info.n_surfaces;
 
     if (!spice_timer_queue_create()) {
         spice_error("failed to create timer queue");
