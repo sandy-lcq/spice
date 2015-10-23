@@ -1171,7 +1171,7 @@ struct Dispatcher *red_dispatcher_get_dispatcher(RedDispatcher *red_dispatcher)
     return &red_dispatcher->dispatcher;
 }
 
-void red_dispatcher_set_dispatcher_opaque(struct RedDispatcher *red_dispatcher,
+void red_dispatcher_set_dispatcher_opaque(RedDispatcher *red_dispatcher,
                                           void *opaque)
 {
     dispatcher_set_opaque(&red_dispatcher->dispatcher, opaque);
