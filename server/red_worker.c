@@ -266,10 +266,6 @@ struct SpiceWatch {
 };
 
 enum {
-    BUF_TYPE_RAW = 1,
-};
-
-enum {
     PIPE_ITEM_TYPE_DRAW = PIPE_ITEM_TYPE_CHANNEL_BASE,
     PIPE_ITEM_TYPE_INVAL_ONE,
     PIPE_ITEM_TYPE_CURSOR,
@@ -4688,7 +4684,6 @@ static void red_push_surface_image(DisplayChannelClient *dcc, int surface_id)
 }
 
 typedef struct {
-    uint32_t type;
     void *data;
     uint32_t size;
 } AddBufInfo;
@@ -4711,11 +4706,7 @@ static void marshaller_add_compressed(SpiceMarshaller *m,
 static void add_buf_from_info(SpiceMarshaller *m, AddBufInfo *info)
 {
     if (info->data) {
-        switch (info->type) {
-        case BUF_TYPE_RAW:
-            spice_marshaller_add_ref(m, info->data, info->size);
-            break;
-        }
+        spice_marshaller_add_ref(m, info->data, info->size);
     }
 }
 
@@ -6435,7 +6426,6 @@ static void fill_cursor(CursorChannelClient *ccc, SpiceCursor *red_cursor,
     }
 
     if (red_cursor->data_size) {
-        addbuf->type = BUF_TYPE_RAW;
         addbuf->data = red_cursor->data;
         addbuf->size = red_cursor->data_size;
     }
