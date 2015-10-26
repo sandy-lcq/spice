@@ -646,9 +646,6 @@ typedef struct RedWorker {
     _Drawable drawables[NUM_DRAWABLES];
     _Drawable *free_drawables;
 
-    _CursorItem cursor_items[NUM_CURSORS];
-    _CursorItem *free_cursor_items;
-
     RedMemSlotInfo mem_slots;
 
     ImageCache image_cache;
@@ -4234,8 +4231,6 @@ static void red_update_area(RedWorker *worker, const SpiceRect *area, int surfac
     validate_area(worker, area, surface_id);
 }
 
-static inline void free_cursor_item(RedWorker *worker, CursorItem *item);
-
 static void red_release_cursor(RedWorker *worker, CursorItem *cursor)
 {
     if (!--cursor->refs) {
@@ -4246,9 +4241,10 @@ static void red_release_cursor(RedWorker *worker, CursorItem *cursor)
         release_info_ext.group_id = cursor->group_id;
         release_info_ext.info = cursor_cmd->release_info;
         worker->qxl->st->qif->release_resource(worker->qxl, release_info_ext);
-        free_cursor_item(worker, cursor);
         red_put_cursor_cmd(cursor_cmd);
         free(cursor_cmd);
+
+        g_slice_free(CursorItem, cursor);
     }
 }
 
@@ -4261,52 +4257,23 @@ static void red_set_cursor(RedWorker *worker, CursorItem *cursor)
     worker->cursor = cursor;
 }
 
-#ifdef DEBUG_CURSORS
-static int _cursor_count = 0;
-#endif
-
-static inline CursorItem *alloc_cursor_item(RedWorker *worker)
-{
-    CursorItem *cursor;
-
-    if (!worker->free_cursor_items) {
-        return NULL;
-    }
-#ifdef DEBUG_CURSORS
-    --_cursor_count;
-#endif
-    cursor = &worker->free_cursor_items->u.cursor_item;
-    worker->free_cursor_items = worker->free_cursor_items->u.next;
-    return cursor;
-}
-
-static inline void free_cursor_item(RedWorker *worker, CursorItem *item)
-{
-    ((_CursorItem *)item)->u.next = worker->free_cursor_items;
-    worker->free_cursor_items = (_CursorItem *)item;
-#ifdef DEBUG_CURSORS
-    ++_cursor_count;
-    spice_assert(_cursor_count <= NUM_CURSORS);
-#endif
-}
-
-static void cursor_items_init(RedWorker *worker)
-{
-    int i;
-
-    worker->free_cursor_items = NULL;
-    for (i = 0; i < NUM_CURSORS; i++) {
-        free_cursor_item(worker, &worker->cursor_items[i].u.cursor_item);
-    }
-}
-
-static CursorItem *get_cursor_item(RedWorker *worker, RedCursorCmd *cmd, uint32_t group_id)
+static inline CursorItem *alloc_cursor_item(void)
 {
     CursorItem *cursor_item;
 
-    spice_warn_if(!(cursor_item = alloc_cursor_item(worker)));
-
+    cursor_item = g_slice_new0(CursorItem);
     cursor_item->refs = 1;
+
+    return cursor_item;
+}
+
+static CursorItem *get_cursor_item(RedCursorCmd *cmd, uint32_t group_id)
+{
+    CursorItem *cursor_item;
+
+    spice_return_val_if_fail(cmd != NULL, NULL);
+    cursor_item = alloc_cursor_item();
+
     cursor_item->group_id = group_id;
     cursor_item->red_cursor = cmd;
 
@@ -4350,7 +4317,7 @@ static void qxl_process_cursor(RedWorker *worker, RedCursorCmd *cursor_cmd, uint
     CursorItem *cursor_item;
     int cursor_show = FALSE;
 
-    cursor_item = get_cursor_item(worker, cursor_cmd, group_id);
+    cursor_item = get_cursor_item(cursor_cmd, group_id);
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
@@ -11629,7 +11596,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     image_cache_init(&worker->image_cache);
     image_surface_init(worker);
     drawables_init(worker);
-    cursor_items_init(worker);
     red_init_streams(worker);
     stat_init(&worker->add_stat, add_stat_name);
     stat_init(&worker->exclude_stat, exclude_stat_name);

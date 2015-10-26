@@ -64,15 +64,6 @@ typedef struct CursorChannel {
 #endif
 } CursorChannel;
 
-typedef struct _CursorItem _CursorItem;
-
-struct _CursorItem {
-    union {
-        CursorItem cursor_item;
-        _CursorItem *next;
-    } u;
-};
-
 G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
 
