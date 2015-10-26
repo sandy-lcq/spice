@@ -11671,10 +11671,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     spice_warn_if(init_info.n_surfaces > NUM_SURFACES);
     worker->n_surfaces = init_info.n_surfaces;
 
-    if (!spice_timer_queue_create()) {
-        spice_error("failed to create timer queue");
-    }
-
     red_init_quic(worker);
     red_init_lz(worker);
     red_init_jpeg(worker);
@@ -11701,6 +11697,10 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
     spice_info("begin");
     spice_assert(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
            MAX_PIPE_SIZE > NARROW_CLIENT_ACK_WINDOW); //ensure wakeup by ack message
+
+    if (!spice_timer_queue_create()) {
+        spice_error("failed to create timer queue");
+    }
 
     if (pthread_getcpuclockid(pthread_self(), &worker->clockid)) {
         spice_warning("getcpuclockid failed");
