@@ -732,7 +732,7 @@ static void red_draw_drawable(RedWorker *worker, Drawable *item);
 static void red_update_area(RedWorker *worker, const SpiceRect *area, int surface_id);
 static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int surface_id,
                                  Drawable *last);
-static void red_release_cursor(RedWorker *worker, CursorItem *cursor);
+static void cursor_item_unref(RedWorker *worker, CursorItem *cursor);
 static inline void release_drawable(RedWorker *worker, Drawable *item);
 static void red_display_release_stream(RedWorker *worker, StreamAgent *agent);
 static inline void red_detach_stream(RedWorker *worker, Stream *stream, int detach_sized);
@@ -4231,7 +4231,7 @@ static void red_update_area(RedWorker *worker, const SpiceRect *area, int surfac
     validate_area(worker, area, surface_id);
 }
 
-static void red_release_cursor(RedWorker *worker, CursorItem *cursor)
+static void cursor_item_unref(RedWorker *worker, CursorItem *cursor)
 {
     if (!--cursor->refs) {
         QXLReleaseInfoExt release_info_ext;
@@ -4251,7 +4251,7 @@ static void red_release_cursor(RedWorker *worker, CursorItem *cursor)
 static void red_set_cursor(RedWorker *worker, CursorItem *cursor)
 {
     if (worker->cursor) {
-        red_release_cursor(worker, worker->cursor);
+        cursor_item_unref(worker, worker->cursor);
     }
     ++cursor->refs;
     worker->cursor = cursor;
@@ -4267,7 +4267,7 @@ static inline CursorItem *alloc_cursor_item(void)
     return cursor_item;
 }
 
-static CursorItem *get_cursor_item(RedCursorCmd *cmd, uint32_t group_id)
+static CursorItem *cursor_item_new(RedCursorCmd *cmd, uint32_t group_id)
 {
     CursorItem *cursor_item;
 
@@ -4280,7 +4280,7 @@ static CursorItem *get_cursor_item(RedCursorCmd *cmd, uint32_t group_id)
     return cursor_item;
 }
 
-static CursorPipeItem *ref_cursor_pipe_item(CursorPipeItem *item)
+static CursorPipeItem *cursor_pipe_item_ref(CursorPipeItem *item)
 {
     spice_assert(item);
     item->refs++;
@@ -4308,7 +4308,7 @@ static void put_cursor_pipe_item(CursorChannelClient *ccc, CursorPipeItem *pipe_
 
     spice_assert(!pipe_item_is_linked(&pipe_item->base));
 
-    red_release_cursor(ccc->common.worker, pipe_item->cursor_item);
+    cursor_item_unref(ccc->common.worker, pipe_item->cursor_item);
     free(pipe_item);
 }
 
@@ -4317,7 +4317,7 @@ static void qxl_process_cursor(RedWorker *worker, RedCursorCmd *cursor_cmd, uint
     CursorItem *cursor_item;
     int cursor_show = FALSE;
 
-    cursor_item = get_cursor_item(cursor_cmd, group_id);
+    cursor_item = cursor_item_new(cursor_cmd, group_id);
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
@@ -4345,7 +4345,7 @@ static void qxl_process_cursor(RedWorker *worker, RedCursorCmd *cursor_cmd, uint
         red_channel_pipes_new_add(&worker->cursor_channel->common.base, new_cursor_pipe_item,
                                   (void*)cursor_item);
     }
-    red_release_cursor(worker, cursor_item);
+    cursor_item_unref(worker, cursor_item);
 }
 
 static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
@@ -6368,7 +6368,7 @@ static void fill_attr(SpiceMarshaller *m, SpiceLineAttr *attr, uint32_t group_id
     }
 }
 
-static void fill_cursor(CursorChannelClient *ccc, SpiceCursor *red_cursor,
+static void cursor_fill(CursorChannelClient *ccc, SpiceCursor *red_cursor,
                         CursorItem *cursor, AddBufInfo *addbuf)
 {
     RedCursorCmd *cursor_cmd;
@@ -8571,12 +8571,12 @@ static void red_marshall_cursor_init(RedChannelClient *rcc, SpiceMarshaller *bas
     msg.trail_length = worker->cursor_trail_length;
     msg.trail_frequency = worker->cursor_trail_frequency;
 
-    fill_cursor(ccc, &msg.cursor, worker->cursor, &info);
+    cursor_fill(ccc, &msg.cursor, worker->cursor, &info);
     spice_marshall_msg_cursor_init(base_marshaller, &msg);
     add_buf_from_info(base_marshaller, &info);
 }
 
-static void red_marshall_cursor(RedChannelClient *rcc,
+static void cursor_marshall(RedChannelClient *rcc,
                    SpiceMarshaller *m, CursorPipeItem *cursor_pipe_item)
 {
     CursorChannel *cursor_channel = SPICE_CONTAINEROF(rcc->channel, CursorChannel, common.base);
@@ -8609,7 +8609,7 @@ static void red_marshall_cursor(RedChannelClient *rcc,
             cursor_set.position = cmd->u.set.position;
             cursor_set.visible = worker->cursor_visible;
 
-            fill_cursor(ccc, &cursor_set.cursor, cursor, &info);
+            cursor_fill(ccc, &cursor_set.cursor, cursor, &info);
             spice_marshall_msg_cursor_set(m, &cursor_set);
             add_buf_from_info(m, &info);
             break;
@@ -8796,7 +8796,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
 
     switch (pipe_item->type) {
     case PIPE_ITEM_TYPE_CURSOR:
-        red_marshall_cursor(rcc, m, SPICE_CONTAINEROF(pipe_item, CursorPipeItem, base));
+        cursor_marshall(rcc, m, SPICE_CONTAINEROF(pipe_item, CursorPipeItem, base));
         break;
     case PIPE_ITEM_TYPE_INVAL_ONE:
         red_cursor_marshall_inval(rcc, m, (CacheItem *)pipe_item);
@@ -10338,7 +10338,7 @@ static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item)
     CursorPipeItem *cursor_pipe_item;
     spice_assert(item);
     cursor_pipe_item = SPICE_CONTAINEROF(item, CursorPipeItem, base);
-    ref_cursor_pipe_item(cursor_pipe_item);
+    cursor_pipe_item_ref(cursor_pipe_item);
 }
 
 // TODO: share code between before/after_push since most of the items need the same
@@ -10593,7 +10593,7 @@ void handle_dev_destroy_surface_wait(void *opaque, void *payload)
 static inline void red_cursor_reset(RedWorker *worker)
 {
     if (worker->cursor) {
-        red_release_cursor(worker, worker->cursor);
+        cursor_item_unref(worker, worker->cursor);
         worker->cursor = NULL;
     }
 
