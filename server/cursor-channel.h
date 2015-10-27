@@ -18,7 +18,11 @@
 #ifndef CURSOR_CHANNEL_H_
 # define CURSOR_CHANNEL_H_
 
+#include "spice.h"
+#include "reds.h"
 #include "red_worker.h"
+#include "red_parse_qxl.h"
+#include "cache-item.h"
 #include "stat.h"
 
 #define CLIENT_CURSOR_CACHE_SIZE 256
@@ -59,6 +63,13 @@ typedef struct CursorChannelClient {
 typedef struct CursorChannel {
     CommonChannel common; // Must be the first thing
 
+    CursorItem *item;
+    int cursor_visible;
+    SpicePoint16 cursor_position;
+    uint16_t cursor_trail_length;
+    uint16_t cursor_trail_frequency;
+    uint32_t mouse_mode;
+
 #ifdef RED_STATISTICS
     StatNodeRef stat;
 #endif
@@ -66,5 +77,20 @@ typedef struct CursorChannel {
 
 G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
+CursorChannel*       cursor_channel_new         (RedWorker *worker, int migrate);
+void                 cursor_channel_disconnect  (RedChannel *channel);
+void                 cursor_channel_reset       (CursorChannel *cursor);
+void                 cursor_channel_process_cmd (CursorChannel *cursor, RedCursorCmd *cursor_cmd,
+                                                 uint32_t group_id);
+
+CursorItem*          cursor_item_new            (RedCursorCmd *cmd, uint32_t group_id);
+void                 cursor_item_unref          (QXLInstance *qxl, CursorItem *cursor);
+
+
+CursorChannelClient *cursor_channel_client_new(CommonChannel *common,
+                                               RedClient *client, RedsStream *stream,
+                                               int mig_target,
+                                               uint32_t *common_caps, int num_common_caps,
+                                               uint32_t *caps, int num_caps);
 
 #endif /* CURSOR_CHANNEL_H_ */

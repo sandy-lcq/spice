@@ -108,6 +108,7 @@ libspice_server_la_SOURCES =			\
 	red_worker.c				\
 	red_worker.h				\
 	display-channel.h			\
+	cursor-channel.c			\
 	cursor-channel.h			\
 	reds.c					\
 	reds.h					\
