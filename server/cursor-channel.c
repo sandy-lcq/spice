@@ -357,7 +357,7 @@ static void cursor_channel_release_item(RedChannelClient *rcc, PipeItem *item, i
     }
 }
 
-CursorChannel* cursor_channel_new(RedWorker *worker, int migrate)
+CursorChannel* cursor_channel_new(RedWorker *worker)
 {
     CursorChannel* cursor;
 

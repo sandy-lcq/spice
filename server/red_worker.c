@@ -10632,7 +10632,7 @@ void handle_dev_cursor_channel_create(void *opaque, void *payload)
 
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
     if (!worker->cursor_channel) {
-        worker->cursor_channel = cursor_channel_new(worker, FALSE);
+        worker->cursor_channel = cursor_channel_new(worker);
     }
     red_channel = &worker->cursor_channel->common.base;
     send_data(worker->channel, &red_channel, sizeof(RedChannel *));
