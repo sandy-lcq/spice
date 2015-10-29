@@ -9508,16 +9508,16 @@ SpiceCoreInterface worker_core = {
     .watch_remove = worker_watch_remove,
 };
 
-CommonChannelClient *common_channel_client_create(int size,
-                                                  CommonChannel *common,
-                                                  RedClient *client,
-                                                  RedsStream *stream,
-                                                  int mig_target,
-                                                  int monitor_latency,
-                                                  uint32_t *common_caps,
-                                                  int num_common_caps,
-                                                  uint32_t *caps,
-                                                  int num_caps)
+CommonChannelClient *common_channel_new_client(CommonChannel *common,
+                                               int size,
+                                               RedClient *client,
+                                               RedsStream *stream,
+                                               int mig_target,
+                                               int monitor_latency,
+                                               uint32_t *common_caps,
+                                               int num_common_caps,
+                                               uint32_t *caps,
+                                               int num_caps)
 {
     RedChannelClient *rcc =
         red_channel_client_create(size, &common->base, client, stream, monitor_latency,
@@ -9545,8 +9545,8 @@ DisplayChannelClient *display_channel_client_create(CommonChannel *common,
                                                     uint32_t *caps, int num_caps)
 {
     DisplayChannelClient *dcc =
-        (DisplayChannelClient*)common_channel_client_create(
-            sizeof(DisplayChannelClient), common, client, stream,
+        (DisplayChannelClient*)common_channel_new_client(
+            common, sizeof(DisplayChannelClient), client, stream,
             mig_target,
             TRUE,
             common_caps, num_common_caps,

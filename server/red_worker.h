@@ -118,17 +118,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher);
 bool       red_worker_run(RedWorker *worker);
 QXLInstance* red_worker_get_qxl(RedWorker *worker);
 
-CommonChannelClient *common_channel_client_create(int size,
-                                                  CommonChannel *common,
-                                                  RedClient *client,
-                                                  RedsStream *stream,
-                                                  int mig_target,
-                                                  int monitor_latency,
-                                                  uint32_t *common_caps,
-                                                  int num_common_caps,
-                                                  uint32_t *caps,
-                                                  int num_caps);
-
 RedChannel *__new_channel(RedWorker *worker, int size, uint32_t channel_type,
                           int migration_flags,
                           channel_disconnect_proc on_disconnect,
@@ -139,5 +128,16 @@ RedChannel *__new_channel(RedWorker *worker, int size, uint32_t channel_type,
                           channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark,
                           channel_handle_migrate_data_proc handle_migrate_data,
                           channel_handle_migrate_data_get_serial_proc migrate_get_serial);
+
+CommonChannelClient *common_channel_new_client(CommonChannel *common,
+                                               int size,
+                                               RedClient *client,
+                                               RedsStream *stream,
+                                               int mig_target,
+                                               int monitor_latency,
+                                               uint32_t *common_caps,
+                                               int num_common_caps,
+                                               uint32_t *caps,
+                                               int num_caps);
 
 #endif

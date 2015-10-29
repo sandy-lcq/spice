@@ -388,15 +388,15 @@ CursorChannelClient *cursor_channel_client_new(CommonChannel *common,
                                                uint32_t *caps, int num_caps)
 {
     CursorChannelClient *ccc =
-        (CursorChannelClient*)common_channel_client_create(
-            sizeof(CursorChannelClient), common, client, stream,
-            mig_target,
-            FALSE,
-            common_caps,
-            num_common_caps,
-            caps,
-            num_caps);
-
+        (CursorChannelClient*)common_channel_new_client(common,
+                                                        sizeof(CursorChannelClient),
+                                                        client, stream,
+                                                        mig_target,
+                                                        FALSE,
+                                                        common_caps,
+                                                        num_common_caps,
+                                                        caps,
+                                                        num_caps);
     if (!ccc) {
         return NULL;
     }
