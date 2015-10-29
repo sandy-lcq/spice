@@ -24,6 +24,10 @@
 
 #include "spice-core.h"
 
+#ifndef SPICE_CAPABILITIES_SIZE
+#define SPICE_CAPABILITIES_SIZE (sizeof(((QXLRom*)0)->client_capabilities))
+#endif
+
 /* qxl interface */
 
 #define SPICE_INTERFACE_QXL "qxl"
@@ -175,7 +179,7 @@ struct QXLInterface {
                                  uint32_t num_updated_rects);
     void (*set_client_capabilities)(QXLInstance *qin,
                                     uint8_t client_present,
-                                    uint8_t caps[58]);
+                                    uint8_t caps[SPICE_CAPABILITIES_SIZE]);
     /* returns 1 if the interface is supported, 0 otherwise.
      * if monitors_config is NULL nothing is done except reporting the
      * return code. */

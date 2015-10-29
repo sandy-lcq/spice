@@ -9802,7 +9802,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
     DisplayChannelClient *dcc;
     RedChannelClient *rcc;
     RingItem *link, *next;
-    uint8_t caps[58] = { 0 };
+    uint8_t caps[SPICE_CAPABILITIES_SIZE] = { 0 };
     int caps_available[] = {
         SPICE_DISPLAY_CAP_SIZED_STREAM,
         SPICE_DISPLAY_CAP_MONITORS_CONFIG,
