@@ -74,10 +74,10 @@ typedef struct VerbItem {
     uint16_t verb;
 } VerbItem;
 
-static inline void red_marshall_verb(RedChannelClient *rcc, uint16_t verb)
+static inline void red_marshall_verb(RedChannelClient *rcc, VerbItem *item)
 {
     spice_assert(rcc);
-    red_channel_client_init_send_data(rcc, verb, NULL);
+    red_channel_client_init_send_data(rcc, item->verb, NULL);
 }
 
 static inline void red_pipe_add_verb(RedChannelClient* rcc, uint16_t verb)

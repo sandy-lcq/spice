@@ -309,7 +309,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
         red_cursor_marshall_inval(rcc, m, (CacheItem *)pipe_item);
         break;
     case PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, ((VerbItem*)pipe_item)->verb);
+        red_marshall_verb(rcc, (VerbItem*)pipe_item);
         break;
     case PIPE_ITEM_TYPE_CURSOR_INIT:
         red_reset_cursor_cache(rcc);
@@ -317,7 +317,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
         break;
     case PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE:
         red_reset_cursor_cache(rcc);
-        red_marshall_verb(rcc, SPICE_MSG_CURSOR_INVAL_ALL);
+        red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_INVAL_ALL, NULL);
         break;
     default:
         spice_error("invalid pipe item type");

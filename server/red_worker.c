@@ -8394,7 +8394,7 @@ static void display_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item
         red_display_marshall_upgrade(rcc, m, (UpgradeItem *)pipe_item);
         break;
     case PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, ((VerbItem*)pipe_item)->verb);
+        red_marshall_verb(rcc, (VerbItem*)pipe_item);
         break;
     case PIPE_ITEM_TYPE_MIGRATE_DATA:
         display_channel_marshall_migrate_data(rcc, m);
@@ -8410,7 +8410,7 @@ static void display_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item
         break;
     case PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
         red_reset_palette_cache(dcc);
-        red_marshall_verb(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES);
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES, NULL);
         break;
     case PIPE_ITEM_TYPE_CREATE_SURFACE: {
         SurfaceCreateItem *surface_create = SPICE_CONTAINEROF(pipe_item, SurfaceCreateItem,
