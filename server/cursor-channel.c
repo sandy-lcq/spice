@@ -85,55 +85,58 @@ struct CursorChannelClient {
 #include "cache_item.tmpl.c"
 #undef CLIENT_CURSOR_CACHE
 
-static inline CursorItem *alloc_cursor_item(void)
-{
-    CursorItem *cursor_item;
-
-    cursor_item = g_slice_new0(CursorItem);
-    cursor_item->refs = 1;
-
-    return cursor_item;
-}
-
-static CursorItem *cursor_item_new(RedCursorCmd *cmd, uint32_t group_id)
+static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd, uint32_t group_id)
 {
     CursorItem *cursor_item;
 
     spice_return_val_if_fail(cmd != NULL, NULL);
-    cursor_item = alloc_cursor_item();
 
+    cursor_item = g_slice_new0(CursorItem);
+    cursor_item->qxl = qxl;
+    cursor_item->refs = 1;
     cursor_item->group_id = group_id;
     cursor_item->red_cursor = cmd;
 
     return cursor_item;
 }
 
-static void cursor_item_unref(QXLInstance *qxl, CursorItem *cursor)
+static CursorItem *cursor_item_ref(CursorItem *item)
 {
-    if (!--cursor->refs) {
-        QXLReleaseInfoExt release_info_ext;
-        RedCursorCmd *cursor_cmd;
+    spice_return_val_if_fail(item != NULL, NULL);
+    spice_return_val_if_fail(item->refs > 0, NULL);
 
-        cursor_cmd = cursor->red_cursor;
-        release_info_ext.group_id = cursor->group_id;
-        release_info_ext.info = cursor_cmd->release_info;
-        qxl->st->qif->release_resource(qxl, release_info_ext);
-        red_put_cursor_cmd(cursor_cmd);
-        free(cursor_cmd);
+    item->refs++;
 
-        g_slice_free(CursorItem, cursor);
-    }
+    return item;
+}
+
+static void cursor_item_unref(CursorItem *item)
+{
+    QXLReleaseInfoExt release_info_ext;
+    RedCursorCmd *cursor_cmd;
+
+    spice_return_if_fail(item != NULL);
+
+    if (--item->refs)
+        return;
+
+    cursor_cmd = item->red_cursor;
+    release_info_ext.group_id = item->group_id;
+    release_info_ext.info = cursor_cmd->release_info;
+    item->qxl->st->qif->release_resource(item->qxl, release_info_ext);
+    red_put_cursor_cmd(cursor_cmd);
+    free(cursor_cmd);
+
+    g_slice_free(CursorItem, item);
+
 }
 
 static void cursor_set_item(CursorChannel *cursor, CursorItem *item)
 {
     if (cursor->item)
-        cursor_item_unref(red_worker_get_qxl(cursor->common.worker), cursor->item);
+        cursor_item_unref(cursor->item);
 
-    if (item)
-        item->refs++;
-
-    cursor->item = item;
+    cursor->item = item ? cursor_item_ref(item) : NULL;
 }
 
 static PipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int num)
@@ -217,7 +220,7 @@ static void put_cursor_pipe_item(CursorChannelClient *ccc, CursorPipeItem *pipe_
 
     spice_assert(!pipe_item_is_linked(&pipe_item->base));
 
-    cursor_item_unref(red_worker_get_qxl(ccc->common.worker), pipe_item->cursor_item);
+    cursor_item_unref(pipe_item->cursor_item);
     free(pipe_item);
 }
 
@@ -475,7 +478,11 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd,
     CursorItem *cursor_item;
     int cursor_show = FALSE;
 
-    cursor_item = cursor_item_new(cursor_cmd, group_id);
+    spice_return_if_fail(cursor);
+    spice_return_if_fail(cursor_cmd);
+
+    cursor_item = cursor_item_new(red_worker_get_qxl(cursor->common.worker),
+                                  cursor_cmd, group_id);
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
@@ -505,7 +512,8 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd,
         red_channel_pipes_new_add(&cursor->common.base,
                                   new_cursor_pipe_item, cursor_item);
     }
-    cursor_item_unref(red_worker_get_qxl(cursor->common.worker), cursor_item);
+
+    cursor_item_unref(cursor_item);
 }
 
 void cursor_channel_reset(CursorChannel *cursor)
