@@ -32,6 +32,12 @@
 #define CURSOR_CACHE_HASH_MASK (CURSOR_CACHE_HASH_SIZE - 1)
 #define CURSOR_CACHE_HASH_KEY(id) ((id) & CURSOR_CACHE_HASH_MASK)
 
+enum {
+    PIPE_ITEM_TYPE_CURSOR = PIPE_ITEM_TYPE_COMMON_LAST,
+    PIPE_ITEM_TYPE_CURSOR_INIT,
+    PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE,
+};
+
 typedef struct CursorItem {
     uint32_t group_id;
     int refs;
