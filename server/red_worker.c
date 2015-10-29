@@ -9894,29 +9894,6 @@ static void handle_new_display_channel(RedWorker *worker, RedClient *client, Red
     on_new_display_channel_client(dcc);
 }
 
-static void red_migrate_cursor(RedWorker *worker, RedChannelClient *rcc)
-{
-    if (red_channel_client_is_connected(rcc)) {
-        red_channel_client_pipe_add_type(rcc,
-                                         PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
-        red_channel_client_default_migrate(rcc);
-    }
-}
-
-static void on_new_cursor_channel(RedWorker *worker, RedChannelClient *rcc)
-{
-    CursorChannel *channel = worker->cursor_channel;
-
-    spice_assert(channel);
-    red_channel_client_ack_zero_messages_window(rcc);
-    red_channel_client_push_set_ack(rcc);
-    // TODO: why do we check for context.canvas? defer this to after display cc is connected
-    // and test it's canvas? this is just a test to see if there is an active renderer?
-    if (worker->surfaces[0].context.canvas && !channel->common.during_target_migrate) {
-        red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_CURSOR_INIT);
-    }
-}
-
 static void red_connect_cursor(RedWorker *worker, RedClient *client, RedsStream *stream,
                                int migrate,
                                uint32_t *common_caps, int num_common_caps,
@@ -9942,7 +9919,15 @@ static void red_connect_cursor(RedWorker *worker, RedClient *client, RedsStream 
     channel->stat = stat_add_node(worker->stat, "cursor_channel", TRUE);
     channel->common.base.out_bytes_counter = stat_add_counter(channel->stat, "out_bytes", TRUE);
 #endif
-    on_new_cursor_channel(worker, &ccc->common.base);
+
+    RedChannelClient *rcc = &ccc->common.base;
+    red_channel_client_ack_zero_messages_window(rcc);
+    red_channel_client_push_set_ack(rcc);
+    // TODO: why do we check for context.canvas? defer this to after display cc is connected
+    // and test it's canvas? this is just a test to see if there is an active renderer?
+    if (worker->surfaces[0].context.canvas && !channel->common.during_target_migrate) {
+        red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_CURSOR_INIT);
+    }
 }
 
 static void surface_dirty_region_to_rects(RedSurface *surface,
@@ -10667,12 +10652,15 @@ void handle_dev_cursor_disconnect(void *opaque, void *payload)
 void handle_dev_cursor_migrate(void *opaque, void *payload)
 {
     RedWorkerMessageCursorMigrate *msg = payload;
-    RedWorker *worker = opaque;
     RedChannelClient *rcc = msg->rcc;
 
     spice_info("migrate cursor client");
     spice_assert(rcc);
-    red_migrate_cursor(worker, rcc);
+    if (!red_channel_client_is_connected(rcc))
+        return;
+
+    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
+    red_channel_client_default_migrate(rcc);
 }
 
 void handle_dev_set_compression(void *opaque, void *payload)

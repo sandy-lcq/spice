@@ -289,13 +289,6 @@ static inline void red_marshall_inval(RedChannelClient *rcc,
     spice_marshall_msg_cursor_inval_one(base_marshaller, &inval_one);
 }
 
-static void red_cursor_marshall_inval(RedChannelClient *rcc,
-                SpiceMarshaller *m, CacheItem *cach_item)
-{
-    spice_assert(rcc);
-    red_marshall_inval(rcc, m, cach_item);
-}
-
 static void cursor_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -306,7 +299,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
         cursor_marshall(rcc, m, SPICE_CONTAINEROF(pipe_item, CursorPipeItem, base));
         break;
     case PIPE_ITEM_TYPE_INVAL_ONE:
-        red_cursor_marshall_inval(rcc, m, (CacheItem *)pipe_item);
+        red_marshall_inval(rcc, m, (CacheItem *)pipe_item);
         break;
     case PIPE_ITEM_TYPE_VERB:
         red_marshall_verb(rcc, (VerbItem*)pipe_item);
