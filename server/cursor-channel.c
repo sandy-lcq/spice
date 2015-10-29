@@ -381,14 +381,13 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
     return cursor;
 }
 
-CursorChannelClient *cursor_channel_client_new(CommonChannel *common,
-                                               RedClient *client, RedsStream *stream,
+CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient *client, RedsStream *stream,
                                                int mig_target,
                                                uint32_t *common_caps, int num_common_caps,
                                                uint32_t *caps, int num_caps)
 {
     CursorChannelClient *ccc =
-        (CursorChannelClient*)common_channel_new_client(common,
+        (CursorChannelClient*)common_channel_new_client(&cursor->common,
                                                         sizeof(CursorChannelClient),
                                                         client, stream,
                                                         mig_target,

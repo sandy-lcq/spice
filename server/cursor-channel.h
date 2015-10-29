@@ -87,7 +87,7 @@ CursorItem*          cursor_item_new            (RedCursorCmd *cmd, uint32_t gro
 void                 cursor_item_unref          (QXLInstance *qxl, CursorItem *cursor);
 
 
-CursorChannelClient *cursor_channel_client_new(CommonChannel *common,
+CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
                                                RedClient *client, RedsStream *stream,
                                                int mig_target,
                                                uint32_t *common_caps, int num_common_caps,

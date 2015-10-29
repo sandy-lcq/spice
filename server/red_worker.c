@@ -9931,7 +9931,7 @@ static void red_connect_cursor(RedWorker *worker, RedClient *client, RedsStream 
     }
     channel = worker->cursor_channel;
     spice_info("add cursor channel client");
-    ccc = cursor_channel_client_new(&channel->common, client, stream,
+    ccc = cursor_channel_client_new(channel, client, stream,
                                     migrate,
                                     common_caps, num_common_caps,
                                     caps, num_caps);
