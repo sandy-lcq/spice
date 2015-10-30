@@ -118,16 +118,10 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher);
 bool       red_worker_run(RedWorker *worker);
 QXLInstance* red_worker_get_qxl(RedWorker *worker);
 
-RedChannel *__new_channel(RedWorker *worker, int size, uint32_t channel_type,
-                          int migration_flags,
-                          channel_disconnect_proc on_disconnect,
-                          channel_send_pipe_item_proc send_item,
-                          channel_hold_pipe_item_proc hold_item,
-                          channel_release_pipe_item_proc release_item,
-                          channel_handle_parsed_proc handle_parsed,
-                          channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark,
-                          channel_handle_migrate_data_proc handle_migrate_data,
-                          channel_handle_migrate_data_get_serial_proc migrate_get_serial);
+RedChannel *red_worker_new_channel(RedWorker *worker, int size,
+                                   uint32_t channel_type, int migration_flags,
+                                   ChannelCbs *channel_cbs,
+                                   channel_handle_parsed_proc handle_parsed);
 
 CommonChannelClient *common_channel_new_client(CommonChannel *common,
                                                int size,

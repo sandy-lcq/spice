@@ -354,26 +354,25 @@ static void cursor_channel_release_item(RedChannelClient *rcc, PipeItem *item, i
 
 CursorChannel* cursor_channel_new(RedWorker *worker)
 {
-    CursorChannel* cursor;
+    CursorChannel *cursor_channel;
+    RedChannel *channel = NULL;
+    ChannelCbs cbs = {
+        .on_disconnect =  cursor_channel_client_on_disconnect,
+        .send_item = cursor_channel_send_item,
+        .hold_item = cursor_channel_hold_pipe_item,
+        .release_item = cursor_channel_release_item
+    };
 
     spice_info("create cursor channel");
-    cursor = (CursorChannel *)__new_channel(
-        worker, sizeof(CursorChannel),
-        SPICE_CHANNEL_CURSOR,
-        0,
-        cursor_channel_client_on_disconnect,
-        cursor_channel_send_item,
-        cursor_channel_hold_pipe_item,
-        cursor_channel_release_item,
-        red_channel_client_handle_message,
-        NULL,
-        NULL,
-        NULL);
+    channel = red_worker_new_channel(worker, sizeof(CursorChannel),
+                                     SPICE_CHANNEL_CURSOR, 0,
+                                     &cbs, red_channel_client_handle_message);
 
-    cursor->cursor_visible = TRUE;
-    cursor->mouse_mode = SPICE_MOUSE_MODE_SERVER;
+    cursor_channel = (CursorChannel *)channel;
+    cursor_channel->cursor_visible = TRUE;
+    cursor_channel->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 
-    return cursor;
+    return cursor_channel;
 }
 
 CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient *client, RedsStream *stream,

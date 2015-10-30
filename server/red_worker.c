@@ -9492,38 +9492,30 @@ DisplayChannelClient *display_channel_client_create(CommonChannel *common,
     return dcc;
 }
 
-RedChannel *__new_channel(RedWorker *worker, int size, uint32_t channel_type,
-                          int migration_flags,
-                          channel_disconnect_proc on_disconnect,
-                          channel_send_pipe_item_proc send_item,
-                          channel_hold_pipe_item_proc hold_item,
-                          channel_release_pipe_item_proc release_item,
-                          channel_handle_parsed_proc handle_parsed,
-                          channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark,
-                          channel_handle_migrate_data_proc handle_migrate_data,
-                          channel_handle_migrate_data_get_serial_proc migrate_get_serial)
+RedChannel *red_worker_new_channel(RedWorker *worker, int size,
+                                   uint32_t channel_type, int migration_flags,
+                                   ChannelCbs *channel_cbs,
+                                   channel_handle_parsed_proc handle_parsed)
 {
     RedChannel *channel = NULL;
     CommonChannel *common;
-    ChannelCbs channel_cbs = { NULL, };
 
-    channel_cbs.config_socket = common_channel_config_socket;
-    channel_cbs.on_disconnect = on_disconnect;
-    channel_cbs.send_item = send_item;
-    channel_cbs.hold_item = hold_item;
-    channel_cbs.release_item = release_item;
-    channel_cbs.alloc_recv_buf = common_alloc_recv_buf;
-    channel_cbs.release_recv_buf = common_release_recv_buf;
-    channel_cbs.handle_migrate_flush_mark = handle_migrate_flush_mark;
-    channel_cbs.handle_migrate_data = handle_migrate_data;
-    channel_cbs.handle_migrate_data_get_serial = migrate_get_serial;
+    spice_return_val_if_fail(worker, NULL);
+    spice_return_val_if_fail(channel_cbs, NULL);
+    spice_return_val_if_fail(!channel_cbs->config_socket, NULL);
+    spice_return_val_if_fail(!channel_cbs->alloc_recv_buf, NULL);
+    spice_return_val_if_fail(!channel_cbs->release_recv_buf, NULL);
+
+    channel_cbs->config_socket = common_channel_config_socket;
+    channel_cbs->alloc_recv_buf = common_alloc_recv_buf;
+    channel_cbs->release_recv_buf = common_release_recv_buf;
 
     channel = red_channel_create_parser(size, &worker_core,
                                         channel_type, worker->qxl->id,
                                         TRUE /* handle_acks */,
                                         spice_get_client_channel_parser(channel_type, NULL),
                                         handle_parsed,
-                                        &channel_cbs,
+                                        channel_cbs,
                                         migration_flags);
     common = (CommonChannel *)channel;
     if (!channel) {
@@ -9673,25 +9665,26 @@ static void display_channel_release_item(RedChannelClient *rcc, PipeItem *item, 
 static void display_channel_create(RedWorker *worker, int migrate)
 {
     DisplayChannel *display_channel;
+    ChannelCbs cbs = {
+        .on_disconnect = display_channel_client_on_disconnect,
+        .send_item = display_channel_send_item,
+        .hold_item = display_channel_hold_pipe_item,
+        .release_item = display_channel_release_item,
+        .handle_migrate_flush_mark = display_channel_handle_migrate_mark,
+        .handle_migrate_data = display_channel_handle_migrate_data,
+        .handle_migrate_data_get_serial = display_channel_handle_migrate_data_get_serial
+    };
 
     if (worker->display_channel) {
         return;
     }
 
     spice_info("create display channel");
-    if (!(worker->display_channel = (DisplayChannel *)__new_channel(
+    if (!(worker->display_channel = (DisplayChannel *)red_worker_new_channel(
             worker, sizeof(*display_channel),
             SPICE_CHANNEL_DISPLAY,
             SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER,
-            display_channel_client_on_disconnect,
-            display_channel_send_item,
-            display_channel_hold_pipe_item,
-            display_channel_release_item,
-            display_channel_handle_message,
-            display_channel_handle_migrate_mark,
-            display_channel_handle_migrate_data,
-            display_channel_handle_migrate_data_get_serial
-            ))) {
+            &cbs, display_channel_handle_message))) {
         spice_warning("failed to create display channel");
         return;
     }
