@@ -10196,7 +10196,8 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
         red_channel_push(&worker->display_channel->common.base);
     }
 
-    if (cursor_is_connected(worker) && !worker->cursor_channel->common.during_target_migrate) {
+    if (cursor_is_connected(worker)
+        && !worker->cursor_channel->common.during_target_migrate) {
         red_channel_pipes_add_type(&worker->cursor_channel->common.base,
                                    PIPE_ITEM_TYPE_CURSOR_INIT);
     }
@@ -10398,7 +10399,9 @@ void handle_dev_oom(void *opaque, void *payload)
 
 void handle_dev_reset_cursor(void *opaque, void *payload)
 {
-    cursor_channel_reset(((RedWorker*)opaque)->cursor_channel);
+    RedWorker *worker = opaque;
+
+    cursor_channel_reset(worker->cursor_channel);
 }
 
 void handle_dev_reset_image_cache(void *opaque, void *payload)

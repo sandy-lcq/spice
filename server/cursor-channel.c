@@ -228,17 +228,17 @@ static void red_marshall_cursor_init(RedChannelClient *rcc, SpiceMarshaller *bas
 }
 
 static void cursor_marshall(RedChannelClient *rcc,
-                   SpiceMarshaller *m, CursorPipeItem *cursor_pipe_item)
+                            SpiceMarshaller *m, CursorPipeItem *cursor_pipe_item)
 {
     CursorChannel *cursor_channel = SPICE_CONTAINEROF(rcc->channel, CursorChannel, common.base);
     CursorChannelClient *ccc = RCC_TO_CCC(rcc);
-    CursorItem *cursor = cursor_pipe_item->cursor_item;
+    CursorItem *item = cursor_pipe_item->cursor_item;
     PipeItem *pipe_item = &cursor_pipe_item->base;
     RedCursorCmd *cmd;
 
     spice_assert(cursor_channel);
 
-    cmd = cursor->red_cursor;
+    cmd = item->red_cursor;
     switch (cmd->type) {
     case QXL_CURSOR_MOVE:
         {
@@ -257,7 +257,7 @@ static void cursor_marshall(RedChannelClient *rcc,
             cursor_set.position = cmd->u.set.position;
             cursor_set.visible = cursor_channel->cursor_visible;
 
-            cursor_fill(ccc, &cursor_set.cursor, cursor, &info);
+            cursor_fill(ccc, &cursor_set.cursor, item, &info);
             spice_marshall_msg_cursor_set(m, &cursor_set);
             add_buf_from_info(m, &info);
             break;
@@ -281,7 +281,7 @@ static void cursor_marshall(RedChannelClient *rcc,
 }
 
 static inline void red_marshall_inval(RedChannelClient *rcc,
-        SpiceMarshaller *base_marshaller, CacheItem *cach_item)
+                                      SpiceMarshaller *base_marshaller, CacheItem *cach_item)
 {
     SpiceMsgDisplayInvalOne inval_one;
 
@@ -427,31 +427,36 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd,
         spice_error("invalid cursor command %u", cursor_cmd->type);
     }
 
-    if (red_channel_is_connected(&cursor->common.base) && (cursor->mouse_mode == SPICE_MOUSE_MODE_SERVER ||
-                                   cursor_cmd->type != QXL_CURSOR_MOVE || cursor_show)) {
-        red_channel_pipes_new_add(&cursor->common.base, new_cursor_pipe_item,
-                                  (void*)cursor_item);
+    if (red_channel_is_connected(&cursor->common.base) &&
+        (cursor->mouse_mode == SPICE_MOUSE_MODE_SERVER
+         || cursor_cmd->type != QXL_CURSOR_MOVE
+         || cursor_show)) {
+        red_channel_pipes_new_add(&cursor->common.base,
+                                  new_cursor_pipe_item, cursor_item);
     }
     cursor_item_unref(red_worker_get_qxl(cursor->common.worker), cursor_item);
 }
 
 void cursor_channel_reset(CursorChannel *cursor)
 {
+    RedChannel *channel = &cursor->common.base;
+
+    spice_return_if_fail(cursor);
+
     cursor_set_item(cursor, NULL);
     cursor->cursor_visible = TRUE;
     cursor->cursor_position.x = cursor->cursor_position.y = 0;
     cursor->cursor_trail_length = cursor->cursor_trail_frequency = 0;
 
-    if (red_channel_is_connected(&cursor->common.base)) {
-        red_channel_pipes_add_type(&cursor->common.base,
-                                   PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
+    if (red_channel_is_connected(channel)) {
+        red_channel_pipes_add_type(channel, PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
         if (!cursor->common.during_target_migrate) {
-            red_pipes_add_verb(&cursor->common.base, SPICE_MSG_CURSOR_RESET);
+            red_pipes_add_verb(channel, SPICE_MSG_CURSOR_RESET);
         }
         if (!red_channel_wait_all_sent(&cursor->common.base,
                                        DISPLAY_CLIENT_TIMEOUT)) {
-            red_channel_apply_clients(&cursor->common.base,
-                               red_channel_client_disconnect_if_pending_send);
+            red_channel_apply_clients(channel,
+                                      red_channel_client_disconnect_if_pending_send);
         }
     }
 }
