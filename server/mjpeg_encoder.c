@@ -21,6 +21,7 @@
 
 #include "red_common.h"
 #include "mjpeg_encoder.h"
+#include "utils.h"
 #include <jerror.h>
 #include <jpeglib.h>
 #include <inttypes.h>
@@ -714,12 +715,10 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
 
     if (rate_control_is_active(encoder)) {
         MJpegEncoderRateControl *rate_control = &encoder->rate_control;
-        struct timespec time;
         uint64_t now;
         uint64_t interval;
 
-        clock_gettime(CLOCK_MONOTONIC, &time);
-        now = ((uint64_t) time.tv_sec) * 1000000000 + time.tv_nsec;
+        now = red_get_monotonic_time();
 
         if (!rate_control->adjusted_fps_start_time) {
             rate_control->adjusted_fps_start_time = now;
@@ -996,11 +995,9 @@ static void mjpeg_encoder_decrease_bit_rate(MJpegEncoder *encoder)
     rate_control->client_state.max_video_latency = 0;
     rate_control->client_state.max_audio_latency = 0;
     if (rate_control->warmup_start_time) {
-        struct timespec time;
         uint64_t now;
 
-        clock_gettime(CLOCK_MONOTONIC, &time);
-        now = ((uint64_t) time.tv_sec) * 1000000000 + time.tv_nsec;
+        now = red_get_monotonic_time();
         if (now - rate_control->warmup_start_time < MJPEG_WARMUP_TIME*1000*1000) {
             spice_debug("during warmup. ignoring");
             return;

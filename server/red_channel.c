@@ -529,7 +529,6 @@ static void red_channel_client_send_empty_msg(RedChannelClient *rcc, PipeItem *b
 static void red_channel_client_send_ping(RedChannelClient *rcc)
 {
     SpiceMsgPing ping;
-    struct timespec ts;
 
     if (!rcc->latency_monitor.warmup_was_sent) { // latency test start
         int delay_val;
@@ -561,8 +560,7 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_PING, NULL);
     ping.id = rcc->latency_monitor.id;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    ping.timestamp = ts.tv_sec * 1000000000LL + ts.tv_nsec;
+    ping.timestamp = red_get_monotonic_time();
     spice_marshall_msg_ping(rcc->send_data.marshaller, &ping);
     red_channel_client_begin_send_message(rcc);
 }
@@ -1439,12 +1437,9 @@ static void red_channel_handle_migrate_data(RedChannelClient *rcc, uint32_t size
 
 static void red_channel_client_restart_ping_timer(RedChannelClient *rcc)
 {
-    struct timespec ts;
     uint64_t passed, timeout;
 
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    passed = ts.tv_sec * 1000000000LL + ts.tv_nsec;
+    passed = red_get_monotonic_time();
     passed = passed - rcc->latency_monitor.last_pong_time;
     passed /= 1000*1000;
     timeout = PING_TEST_IDLE_NET_TIMEOUT_MS;
@@ -1483,7 +1478,6 @@ static void red_channel_client_cancel_ping_timer(RedChannelClient *rcc)
 static void red_channel_client_handle_pong(RedChannelClient *rcc, SpiceMsgPing *ping)
 {
     uint64_t now;
-    struct timespec ts;
 
     /* ignoring unexpected pongs, or post-migration pongs for pings that
      * started just before migration */
@@ -1493,8 +1487,7 @@ static void red_channel_client_handle_pong(RedChannelClient *rcc, SpiceMsgPing *
         return;
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    now =  ts.tv_sec * 1000000000LL + ts.tv_nsec;
+    now = red_get_monotonic_time();
 
     if (rcc->latency_monitor.state == PING_STATE_WARMUP) {
         rcc->latency_monitor.state = PING_STATE_LATENCY;
