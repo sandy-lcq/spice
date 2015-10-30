@@ -78,7 +78,7 @@ typedef struct CursorChannel {
 G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
 CursorChannel*       cursor_channel_new         (RedWorker *worker);
-void                 cursor_channel_disconnect  (RedChannel *channel);
+void                 cursor_channel_disconnect  (CursorChannel *cursor_channel);
 void                 cursor_channel_reset       (CursorChannel *cursor);
 void                 cursor_channel_process_cmd (CursorChannel *cursor, RedCursorCmd *cursor_cmd,
                                                  uint32_t group_id);

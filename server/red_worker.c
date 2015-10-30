@@ -8828,7 +8828,7 @@ static inline void flush_cursor_commands(RedWorker *worker)
             red_channel_send(channel);
             if (red_get_monotonic_time() >= end_time) {
                 spice_warning("flush cursor timeout");
-                cursor_channel_disconnect(channel);
+                cursor_channel_disconnect(worker->cursor_channel);
                 worker->cursor_channel = NULL;
             } else {
                 sleep_count++;

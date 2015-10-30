@@ -135,8 +135,10 @@ static void red_reset_cursor_cache(RedChannelClient *rcc)
     red_cursor_cache_reset(RCC_TO_CCC(rcc), CLIENT_CURSOR_CACHE_SIZE);
 }
 
-void cursor_channel_disconnect(RedChannel *channel)
+void cursor_channel_disconnect(CursorChannel *cursor_channel)
 {
+    RedChannel *channel = (RedChannel *)cursor_channel;
+
     if (!channel || !red_channel_is_connected(channel)) {
         return;
     }
