@@ -555,7 +555,6 @@ typedef struct RedWorker {
 #endif
 
     int driver_cap_monitors_config;
-    int set_client_capabilities_pending;
 
     FILE *record_fd;
 } RedWorker;
@@ -9313,7 +9312,6 @@ static void guest_set_client_capabilities(RedWorker *worker)
         ((a)[(c) / 8] &= ~(1 << ((c) % 8)))
 
     if (!worker->running) {
-        worker->set_client_capabilities_pending = 1;
         return;
     }
     if ((worker->display_channel == NULL) ||
@@ -9333,7 +9331,6 @@ static void guest_set_client_capabilities(RedWorker *worker)
         }
         worker->qxl->st->qif->set_client_capabilities(worker->qxl, TRUE, caps);
     }
-    worker->set_client_capabilities_pending = 0;
 }
 
 static void handle_new_display_channel(RedWorker *worker, RedClient *client, RedsStream *stream,
