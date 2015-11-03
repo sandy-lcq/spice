@@ -7458,15 +7458,17 @@ static inline void marshall_qxl_drawable(RedChannelClient *rcc,
         red_lossy_marshall_qxl_drawable(display_channel->common.worker, rcc, m, dpi);
 }
 
-static inline void red_marshall_inval(RedChannelClient *rcc,
-                                      SpiceMarshaller *base_marshaller, CacheItem *cach_item)
+static inline void red_marshall_inval_palette(RedChannelClient *rcc,
+                                              SpiceMarshaller *base_marshaller,
+                                              CacheItem *cache_item)
 {
     SpiceMsgDisplayInvalOne inval_one;
 
-    red_channel_client_init_send_data(rcc, cach_item->inval_type, NULL);
-    inval_one.id = *(uint64_t *)&cach_item->id;
+    red_channel_client_init_send_data(rcc, cache_item->inval_type, NULL);
+    inval_one.id = *(uint64_t *)&cache_item->id;
 
-    spice_marshall_msg_cursor_inval_one(base_marshaller, &inval_one);
+    spice_marshall_msg_display_inval_palette(base_marshaller, &inval_one);
+
 }
 
 static void display_channel_marshall_migrate_data_surfaces(DisplayChannelClient *dcc,
@@ -7923,7 +7925,7 @@ static void display_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item
         break;
     }
     case PIPE_ITEM_TYPE_INVAL_ONE:
-        red_marshall_inval(rcc, m, (CacheItem *)pipe_item);
+        red_marshall_inval_palette(rcc, m, (CacheItem *)pipe_item);
         break;
     case PIPE_ITEM_TYPE_STREAM_CREATE: {
         StreamAgent *agent = SPICE_CONTAINEROF(pipe_item, StreamAgent, create_item);
