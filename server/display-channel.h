@@ -53,8 +53,10 @@
 #include "spice_bitmap_utils.h"
 #include "spice_image_cache.h"
 #include "utils.h"
+#include "tree.h"
 
 typedef struct DisplayChannel DisplayChannel;
+typedef struct DisplayChannelClient DisplayChannelClient;
 
 typedef struct Drawable Drawable;
 
@@ -143,6 +145,40 @@ struct Stream {
     uint32_t input_fps;
 };
 
+typedef struct DependItem {
+    Drawable *drawable;
+    RingItem ring_item;
+} DependItem;
+
+struct Drawable {
+    uint8_t refs;
+    RingItem surface_list_link;
+    RingItem list_link;
+    DrawItem tree_item;
+    Ring pipes;
+    PipeItem *pipe_item_rest;
+    uint32_t size_pipe_item_rest;
+    RedDrawable *red_drawable;
+
+    Ring glz_ring;
+
+    red_time_t creation_time;
+    int frames_count;
+    int gradual_frames_count;
+    int last_gradual_frame;
+    Stream *stream;
+    Stream *sized_stream;
+    int streamable;
+    BitmapGradualType copy_bitmap_graduality;
+    uint32_t group_id;
+    DependItem depend_items[3];
+
+    int surface_id;
+    int surfaces_dest[3];
+
+    uint32_t process_commands_generation;
+};
+
 #define STREAM_STATS
 #ifdef STREAM_STATS
 typedef struct StreamStats {
@@ -228,6 +264,30 @@ struct DisplayChannelClient {
     uint64_t streams_max_bit_rate;
 };
 
+#define DCC_TO_WORKER(dcc)                                              \
+    (SPICE_CONTAINEROF((dcc)->common.base.channel, CommonChannel, base)->worker)
+#define DCC_TO_DC(dcc) SPICE_CONTAINEROF((dcc)->common.base.channel,    \
+                                         DisplayChannel, common.base)
+#define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)
+
+
+enum {
+    PIPE_ITEM_TYPE_DRAW = PIPE_ITEM_TYPE_COMMON_LAST,
+    PIPE_ITEM_TYPE_IMAGE,
+    PIPE_ITEM_TYPE_STREAM_CREATE,
+    PIPE_ITEM_TYPE_STREAM_CLIP,
+    PIPE_ITEM_TYPE_STREAM_DESTROY,
+    PIPE_ITEM_TYPE_UPGRADE,
+    PIPE_ITEM_TYPE_MIGRATE_DATA,
+    PIPE_ITEM_TYPE_PIXMAP_SYNC,
+    PIPE_ITEM_TYPE_PIXMAP_RESET,
+    PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE,
+    PIPE_ITEM_TYPE_CREATE_SURFACE,
+    PIPE_ITEM_TYPE_DESTROY_SURFACE,
+    PIPE_ITEM_TYPE_MONITORS_CONFIG,
+    PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT,
+};
+
 DisplayChannelClient*      dcc_new                                   (DisplayChannel *display,
                                                                       RedClient *client,
                                                                       RedsStream *stream,
@@ -236,6 +296,19 @@ DisplayChannelClient*      dcc_new                                   (DisplayCha
                                                                       int num_common_caps,
                                                                       uint32_t *caps,
                                                                       int num_caps);
+
+typedef struct DrawablePipeItem {
+    RingItem base;  /* link for a list of pipe items held by Drawable */
+    PipeItem dpi_pipe_item; /* link for the client's pipe itself */
+    Drawable *drawable;
+    DisplayChannelClient *dcc;
+    uint8_t refs;
+} DrawablePipeItem;
+
+DrawablePipeItem*          drawable_pipe_item_new                    (DisplayChannelClient *dcc,
+                                                                      Drawable *drawable);
+void                       drawable_pipe_item_unref                  (DrawablePipeItem *dpi);
+DrawablePipeItem*          drawable_pipe_item_ref                    (DrawablePipeItem *dpi);
 
 typedef struct MonitorsConfig {
     int refs;

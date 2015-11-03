@@ -229,23 +229,6 @@ struct SpiceWatch {
     void *watch_func_opaque;
 };
 
-enum {
-    PIPE_ITEM_TYPE_DRAW = PIPE_ITEM_TYPE_COMMON_LAST,
-    PIPE_ITEM_TYPE_IMAGE,
-    PIPE_ITEM_TYPE_STREAM_CREATE,
-    PIPE_ITEM_TYPE_STREAM_CLIP,
-    PIPE_ITEM_TYPE_STREAM_DESTROY,
-    PIPE_ITEM_TYPE_UPGRADE,
-    PIPE_ITEM_TYPE_MIGRATE_DATA,
-    PIPE_ITEM_TYPE_PIXMAP_SYNC,
-    PIPE_ITEM_TYPE_PIXMAP_RESET,
-    PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE,
-    PIPE_ITEM_TYPE_CREATE_SURFACE,
-    PIPE_ITEM_TYPE_DESTROY_SURFACE,
-    PIPE_ITEM_TYPE_MONITORS_CONFIG,
-    PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT,
-};
-
 #define MAX_LZ_ENCODERS MAX_CACHE_CLIENTS
 
 typedef struct SurfaceCreateItem {
@@ -391,14 +374,6 @@ struct DisplayChannel {
     stat_info_t lz4_stat;
 #endif
 };
-
-typedef struct DrawablePipeItem {
-    RingItem base;  /* link for a list of pipe items held by Drawable */
-    PipeItem dpi_pipe_item; /* link for the client's pipe itself */
-    Drawable *drawable;
-    DisplayChannelClient *dcc;
-    uint8_t refs;
-} DrawablePipeItem;
 
 typedef struct _Drawable _Drawable;
 struct _Drawable {
@@ -577,7 +552,7 @@ static void red_draw_drawable(RedWorker *worker, Drawable *item);
 static void red_update_area(RedWorker *worker, const SpiceRect *area, int surface_id);
 static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int surface_id,
                                  Drawable *last);
-static inline void release_drawable(RedWorker *worker, Drawable *item);
+static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable);
 static void red_display_release_stream(RedWorker *worker, StreamAgent *agent);
 static inline void red_detach_stream(RedWorker *worker, Stream *stream, int detach_sized);
 static void red_stop_stream(RedWorker *worker, Stream *stream);
@@ -627,20 +602,48 @@ static void dcc_push_monitors_config(DisplayChannelClient *dcc);
     SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
 
 
-#define DCC_TO_WORKER(dcc) \
-    (SPICE_CONTAINEROF((dcc)->common.base.channel, CommonChannel, base)->worker)
-
 // TODO: replace with DCC_FOREACH when it is introduced
 #define WORKER_TO_DCC(worker) \
     (worker->display_channel ? SPICE_CONTAINEROF(worker->display_channel->common.base.rcc,\
                        DisplayChannelClient, common.base) : NULL)
 
-#define DCC_TO_DC(dcc) SPICE_CONTAINEROF((dcc)->common.base.channel,\
-                                         DisplayChannel, common.base)
 
-#define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)
-#define RCC_TO_CCC(rcc) SPICE_CONTAINEROF((rcc), CursorChannelClient, common.base)
+/* fixme: move to display channel */
+DrawablePipeItem *drawable_pipe_item_new(DisplayChannelClient *dcc,
+                                         Drawable *drawable)
+{
+    DrawablePipeItem *dpi;
 
+    dpi = spice_malloc0(sizeof(*dpi));
+    dpi->drawable = drawable;
+    dpi->dcc = dcc;
+    ring_item_init(&dpi->base);
+    ring_add(&drawable->pipes, &dpi->base);
+    red_channel_pipe_item_init(dcc->common.base.channel, &dpi->dpi_pipe_item, PIPE_ITEM_TYPE_DRAW);
+    dpi->refs++;
+    drawable->refs++;
+    return dpi;
+}
+
+DrawablePipeItem *drawable_pipe_item_ref(DrawablePipeItem *dpi)
+{
+    dpi->refs++;
+    return dpi;
+}
+
+void drawable_pipe_item_unref(DrawablePipeItem *dpi)
+{
+    RedWorker *worker = DCC_TO_WORKER(dpi->dcc);
+
+    if (--dpi->refs != 0) {
+        return;
+    }
+
+    spice_warn_if_fail(!ring_item_is_linked(&dpi->dpi_pipe_item.link));
+    spice_warn_if_fail(!ring_item_is_linked(&dpi->base));
+    red_worker_drawable_unref(worker, dpi->drawable);
+    free(dpi);
+}
 
 
 #ifdef COMPRESS_STAT
@@ -832,49 +835,12 @@ static int cursor_is_connected(RedWorker *worker)
         red_channel_is_connected(RED_CHANNEL(worker->cursor_channel));
 }
 
-static void put_drawable_pipe_item(DrawablePipeItem *dpi)
-{
-    RedWorker *worker = DCC_TO_WORKER(dpi->dcc);
-
-    if (--dpi->refs) {
-        return;
-    }
-
-    spice_assert(!ring_item_is_linked(&dpi->dpi_pipe_item.link));
-    spice_assert(!ring_item_is_linked(&dpi->base));
-    release_drawable(worker, dpi->drawable);
-    free(dpi);
-}
-
-static inline DrawablePipeItem *get_drawable_pipe_item(DisplayChannelClient *dcc,
-                                                       Drawable *drawable)
-{
-    DrawablePipeItem *dpi;
-
-    dpi = spice_malloc0(sizeof(*dpi));
-    dpi->drawable = drawable;
-    dpi->dcc = dcc;
-    ring_item_init(&dpi->base);
-    ring_add(&drawable->pipes, &dpi->base);
-    red_channel_pipe_item_init(dcc->common.base.channel, &dpi->dpi_pipe_item, PIPE_ITEM_TYPE_DRAW);
-    dpi->refs++;
-    drawable->refs++;
-    return dpi;
-}
-
-static inline DrawablePipeItem *ref_drawable_pipe_item(DrawablePipeItem *dpi)
-{
-    spice_assert(dpi->drawable);
-    dpi->refs++;
-    return dpi;
-}
-
 static inline void red_pipe_add_drawable(DisplayChannelClient *dcc, Drawable *drawable)
 {
     DrawablePipeItem *dpi;
 
     red_handle_drawable_surfaces_client_synced(dcc, drawable);
-    dpi = get_drawable_pipe_item(dcc, drawable);
+    dpi = drawable_pipe_item_new(dcc, drawable);
     red_channel_client_pipe_add(&dcc->common.base, &dpi->dpi_pipe_item);
 }
 
@@ -897,7 +863,7 @@ static inline void red_pipe_add_drawable_to_tail(DisplayChannelClient *dcc, Draw
         return;
     }
     red_handle_drawable_surfaces_client_synced(dcc, drawable);
-    dpi = get_drawable_pipe_item(dcc, drawable);
+    dpi = drawable_pipe_item_new(dcc, drawable);
     red_channel_client_pipe_add_tail(&dcc->common.base, &dpi->dpi_pipe_item);
 }
 
@@ -913,7 +879,7 @@ static inline void red_pipes_add_drawable_after(RedWorker *worker,
         num_other_linked++;
         dcc = dpi_pos_after->dcc;
         red_handle_drawable_surfaces_client_synced(dcc, drawable);
-        dpi = get_drawable_pipe_item(dcc, drawable);
+        dpi = drawable_pipe_item_new(dcc, drawable);
         red_channel_client_pipe_add_after(&dcc->common.base, &dpi->dpi_pipe_item,
                                           &dpi_pos_after->dpi_pipe_item);
     }
@@ -993,7 +959,7 @@ static void release_image_item(ImageItem *item)
 static void release_upgrade_item(RedWorker* worker, UpgradeItem *item)
 {
     if (!--item->refs) {
-        release_drawable(worker, item->drawable);
+        red_worker_drawable_unref(worker, item->drawable);
         free(item->rects);
         free(item);
     }
@@ -1189,7 +1155,7 @@ static void remove_drawable_dependencies(RedWorker *worker, Drawable *drawable)
     }
 }
 
-static inline void release_drawable(RedWorker *worker, Drawable *drawable)
+static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable)
 {
     RingItem *item, *next;
 
@@ -1306,7 +1272,7 @@ static inline void current_remove_drawable(RedWorker *worker, Drawable *item)
     ring_remove(&item->tree_item.base.siblings_link);
     ring_remove(&item->list_link);
     ring_remove(&item->surface_list_link);
-    release_drawable(worker, item);
+    red_worker_drawable_unref(worker, item);
     worker->current_size--;
 }
 
@@ -2730,7 +2696,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
             red_pipes_add_drawable(worker, drawable);
         }
         red_pipes_remove_drawable(other_drawable);
-        release_drawable(worker, other_drawable);
+        red_worker_drawable_unref(worker, other_drawable);
         return TRUE;
     }
 
@@ -2773,7 +2739,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
             /* not sending other_drawable where possible */
             red_pipes_remove_drawable(other_drawable);
 
-            release_drawable(worker, other_drawable);
+            red_worker_drawable_unref(worker, other_drawable);
             return TRUE;
         }
         break;
@@ -3441,7 +3407,7 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
         red_pipes_add_drawable(worker, drawable);
     }
 cleanup:
-    release_drawable(worker, drawable);
+    red_worker_drawable_unref(worker, drawable);
 }
 
 static inline void red_create_surface(RedWorker *worker, uint32_t surface_id,uint32_t width,
@@ -3825,7 +3791,7 @@ static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int s
            that red_update_area is called for, Otherwise, 'now' would have already been rendered.
            See the call for red_handle_depends_on_target_surface in red_process_draw */
         red_draw_drawable(worker, now);
-        release_drawable(worker, now);
+        red_worker_drawable_unref(worker, now);
     } while (now != surface_last);
     validate_area(worker, area, surface_id);
 }
@@ -3878,7 +3844,7 @@ static void red_update_area(RedWorker *worker, const SpiceRect *area, int surfac
         current_remove_drawable(worker, now);
         container_cleanup(worker, container);
         red_draw_drawable(worker, now);
-        release_drawable(worker, now);
+        red_worker_drawable_unref(worker, now);
     } while (now != last);
     validate_area(worker, area, surface_id);
 }
@@ -9081,7 +9047,7 @@ static void display_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item
     spice_assert(item);
     switch (item->type) {
     case PIPE_ITEM_TYPE_DRAW:
-        ref_drawable_pipe_item(SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item));
+        drawable_pipe_item_ref(SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item));
         break;
     case PIPE_ITEM_TYPE_STREAM_CLIP:
         ((StreamClipItem *)item)->refs++;
@@ -9104,7 +9070,7 @@ static void display_channel_client_release_item_after_push(DisplayChannelClient 
 
     switch (item->type) {
     case PIPE_ITEM_TYPE_DRAW:
-        put_drawable_pipe_item(SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item));
+        drawable_pipe_item_unref(SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item));
         break;
     case PIPE_ITEM_TYPE_STREAM_CLIP:
         red_display_release_stream_clip(worker, (StreamClipItem *)item);
@@ -9141,7 +9107,7 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
     case PIPE_ITEM_TYPE_DRAW: {
         DrawablePipeItem *dpi = SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item);
         ring_remove(&dpi->base);
-        put_drawable_pipe_item(dpi);
+        drawable_pipe_item_unref(dpi);
         break;
     }
     case PIPE_ITEM_TYPE_STREAM_CREATE: {
