@@ -57,17 +57,12 @@ AC_FUNC_ALLOCA
 SPICE_LT_VERSION=m4_format("%d:%d:%d", SPICE_CURRENT, SPICE_REVISION, SPICE_AGE)
 AC_SUBST(SPICE_LT_VERSION)
 
-# For autoconf < 2.63
-m4_ifndef([AS_VAR_APPEND],
-          AC_DEFUN([AS_VAR_APPEND], $1=$$1$2))
-
 # Check for the CPU we are using
 case $host_cpu in
   x86_64)
-        arch_warn=""
         ;;
   *)
-        arch_warn="spice-server on non-x86_64 architectures hasn't been extensively tested"
+        SPICE_WARNING([spice-server on non-x86_64 architectures hasn't been extensively tested])
 esac
 
 dnl =========================================================================
@@ -308,8 +303,4 @@ AC_MSG_NOTICE([
 
         Now type 'make' to build $PACKAGE
 ])
-
-if test x"$arch_warn" != x; then
-        AC_MSG_WARN([$arch_warn])
-        echo ""
-fi
+SPICE_PRINT_MESSAGES
