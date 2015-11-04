@@ -3181,14 +3181,14 @@ static inline int red_handle_self_bitmap(RedWorker *worker, Drawable *drawable)
     return TRUE;
 }
 
-static void free_one_drawable(RedWorker *worker, int force_glz_free)
+static bool free_one_drawable(RedWorker *worker, int force_glz_free)
 {
     RingItem *ring_item = ring_get_tail(&worker->current_list);
     Drawable *drawable;
     Container *container;
 
     if (!ring_item) {
-        return;
+        return FALSE;
     }
     drawable = SPICE_CONTAINEROF(ring_item, Drawable, list_link);
     if (force_glz_free) {
@@ -3203,6 +3203,8 @@ static void free_one_drawable(RedWorker *worker, int force_glz_free)
 
     current_remove_drawable(worker, drawable);
     container_cleanup(worker, container);
+
+    return TRUE;
 }
 
 static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *red_drawable,
@@ -3223,7 +3225,8 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
     }
 
     while (!(drawable = alloc_drawable(worker))) {
-        free_one_drawable(worker, FALSE);
+        if (!free_one_drawable(worker, FALSE))
+            return NULL;
     }
     worker->drawable_count++;
     memset(drawable, 0, sizeof(Drawable));
@@ -3326,7 +3329,6 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
     Drawable *drawable = get_drawable(worker, red_drawable->effect, red_drawable, group_id);
 
     if (!drawable) {
-        rendering_incorrect("failed to get_drawable");
         return;
     }
 
