@@ -958,11 +958,12 @@ static void release_image_item(ImageItem *item)
 
 static void release_upgrade_item(RedWorker* worker, UpgradeItem *item)
 {
-    if (!--item->refs) {
-        red_worker_drawable_unref(worker, item->drawable);
-        free(item->rects);
-        free(item);
-    }
+    if (--item->refs != 0)
+        return;
+
+    red_worker_drawable_unref(worker, item->drawable);
+    free(item->rects);
+    free(item);
 }
 
 static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
@@ -1159,27 +1160,28 @@ static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable)
 {
     RingItem *item, *next;
 
-    if (!--drawable->refs) {
-        spice_assert(!drawable->tree_item.shadow);
-        spice_assert(ring_is_empty(&drawable->pipes));
+    if (--drawable->refs != 0)
+        return;
 
-        if (drawable->stream) {
-            red_detach_stream(worker, drawable->stream, TRUE);
-        }
-        region_destroy(&drawable->tree_item.base.rgn);
+    spice_warn_if_fail(!drawable->tree_item.shadow);
+    spice_warn_if_fail(ring_is_empty(&drawable->pipes));
 
-        remove_drawable_dependencies(worker, drawable);
-        red_dec_surfaces_drawable_dependencies(worker, drawable);
-        red_destroy_surface(worker, drawable->surface_id);
-
-        RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
-            SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->drawable = NULL;
-            ring_remove(item);
-        }
-        put_red_drawable(worker, drawable->red_drawable, drawable->group_id);
-        free_drawable(worker, drawable);
-        worker->drawable_count--;
+    if (drawable->stream) {
+        red_detach_stream(worker, drawable->stream, TRUE);
     }
+    region_destroy(&drawable->tree_item.base.rgn);
+
+    remove_drawable_dependencies(worker, drawable);
+    red_dec_surfaces_drawable_dependencies(worker, drawable);
+    red_destroy_surface(worker, drawable->surface_id);
+
+    RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
+        SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->drawable = NULL;
+        ring_remove(item);
+    }
+    put_red_drawable(worker, drawable->red_drawable, drawable->group_id);
+    free_drawable(worker, drawable);
+    worker->drawable_count--;
 }
 
 static inline void remove_shadow(RedWorker *worker, DrawItem *item)
