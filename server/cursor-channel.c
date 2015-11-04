@@ -212,7 +212,8 @@ void cursor_channel_disconnect(CursorChannel *cursor_channel)
 
 static void put_cursor_pipe_item(CursorChannelClient *ccc, CursorPipeItem *pipe_item)
 {
-    spice_assert(pipe_item);
+    spice_return_if_fail(pipe_item);
+    spice_return_if_fail(pipe_item->refs > 0);
 
     if (--pipe_item->refs) {
         return;
@@ -299,7 +300,7 @@ static void cursor_marshall(RedChannelClient *rcc,
     PipeItem *pipe_item = &cursor_pipe_item->base;
     RedCursorCmd *cmd;
 
-    spice_assert(cursor_channel);
+    spice_return_if_fail(cursor_channel);
 
     cmd = item->red_cursor;
     switch (cmd->type) {
@@ -387,7 +388,9 @@ static void cursor_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
 
 static CursorPipeItem *cursor_pipe_item_ref(CursorPipeItem *item)
 {
-    spice_assert(item);
+    spice_return_val_if_fail(item, NULL);
+    spice_return_val_if_fail(item->refs > 0, NULL);
+
     item->refs++;
     return item;
 }
@@ -396,7 +399,9 @@ static CursorPipeItem *cursor_pipe_item_ref(CursorPipeItem *item)
 static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item)
 {
     CursorPipeItem *cursor_pipe_item;
-    spice_assert(item);
+
+    spice_return_if_fail(item);
+
     cursor_pipe_item = SPICE_CONTAINEROF(item, CursorPipeItem, base);
     cursor_pipe_item_ref(cursor_pipe_item);
 }
@@ -454,6 +459,12 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
                                                uint32_t *common_caps, int num_common_caps,
                                                uint32_t *caps, int num_caps)
 {
+    spice_return_val_if_fail(cursor, NULL);
+    spice_return_val_if_fail(client, NULL);
+    spice_return_val_if_fail(stream, NULL);
+    spice_return_val_if_fail(!num_common_caps || common_caps, NULL);
+    spice_return_val_if_fail(!num_caps || caps, NULL);
+
     CursorChannelClient *ccc =
         (CursorChannelClient*)common_channel_new_client(&cursor->common,
                                                         sizeof(CursorChannelClient),
@@ -464,11 +475,11 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
                                                         num_common_caps,
                                                         caps,
                                                         num_caps);
-    if (!ccc) {
-        return NULL;
-    }
+    spice_return_val_if_fail(ccc != NULL, NULL);
+
     ring_init(&ccc->cursor_cache_lru);
     ccc->cursor_cache_available = CLIENT_CURSOR_CACHE_SIZE;
+
     return ccc;
 }
 
@@ -502,7 +513,8 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd,
         cursor->cursor_trail_frequency = cursor_cmd->u.trail.frequency;
         break;
     default:
-        spice_error("invalid cursor command %u", cursor_cmd->type);
+        spice_warning("invalid cursor command %u", cursor_cmd->type);
+        return;
     }
 
     if (red_channel_is_connected(&cursor->common.base) &&

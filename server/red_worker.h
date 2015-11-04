@@ -66,7 +66,6 @@ typedef struct VerbItem {
 
 static inline void red_marshall_verb(RedChannelClient *rcc, VerbItem *item)
 {
-    spice_assert(rcc);
     red_channel_client_init_send_data(rcc, item->verb, NULL);
 }
 

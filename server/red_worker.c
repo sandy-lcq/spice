@@ -3925,7 +3925,7 @@ static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ri
             break;
         }
         default:
-            spice_error("bad command type");
+            spice_warning("bad command type");
         }
         n++;
     }
@@ -9368,19 +9368,15 @@ static void red_connect_cursor(RedWorker *worker, RedClient *client, RedsStream 
     CursorChannel *channel;
     CursorChannelClient *ccc;
 
-    if (worker->cursor_channel == NULL) {
-        spice_warning("cursor channel was not created");
-        return;
-    }
+    spice_return_if_fail(worker->cursor_channel != NULL);
+
     channel = worker->cursor_channel;
     spice_info("add cursor channel client");
     ccc = cursor_channel_client_new(channel, client, stream,
                                     migrate,
                                     common_caps, num_common_caps,
                                     caps, num_caps);
-    if (!ccc) {
-        return;
-    }
+    spice_return_if_fail(ccc != NULL);
 
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
     red_channel_client_ack_zero_messages_window(rcc);
@@ -10048,9 +10044,10 @@ void handle_dev_cursor_channel_create(void *opaque, void *payload)
     RedWorker *worker = opaque;
     RedChannel *red_channel;
 
-    // TODO: handle seemless migration. Temp, setting migrate to FALSE
     if (!worker->cursor_channel) {
         worker->cursor_channel = cursor_channel_new(worker);
+    } else {
+        spice_warning("cursor channel already created");
     }
 
     red_channel = RED_CHANNEL(worker->cursor_channel);
@@ -10079,7 +10076,7 @@ void handle_dev_cursor_disconnect(void *opaque, void *payload)
     RedChannelClient *rcc = msg->rcc;
 
     spice_info("disconnect cursor client");
-    spice_assert(rcc);
+    spice_return_if_fail(rcc);
     red_channel_client_disconnect(rcc);
 }
 
