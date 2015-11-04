@@ -556,7 +556,7 @@ void cursor_channel_init(CursorChannel *cursor, CursorChannelClient *client)
 {
     spice_return_if_fail(cursor);
 
-    if (red_channel_is_connected(&cursor->common.base)
+    if (!red_channel_is_connected(&cursor->common.base)
         || COMMON_CHANNEL(cursor)->during_target_migrate) {
         spice_debug("during_target_migrate: skip init");
         return;
