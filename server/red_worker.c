@@ -569,12 +569,6 @@ static void display_channel_client_release_item_after_push(DisplayChannelClient 
     SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
 
 
-// TODO: replace with DCC_FOREACH when it is introduced
-#define WORKER_TO_DCC(worker) \
-    (worker->display_channel ? SPICE_CONTAINEROF(worker->display_channel->common.base.rcc,\
-                       DisplayChannelClient, common.base) : NULL)
-
-
 /* fixme: move to display channel */
 DrawablePipeItem *drawable_pipe_item_new(DisplayChannelClient *dcc,
                                          Drawable *drawable)
