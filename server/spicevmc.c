@@ -569,6 +569,11 @@ SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, ui
 {
     SpiceVmcState *state;
 
+    if (sin->st == NULL) {
+        spice_warning("no SpiceCharDeviceState attached to instance %p", sin);
+        return;
+    }
+
     state = (SpiceVmcState *)spice_char_device_state_opaque_get(sin->st);
     if (event == SPICE_PORT_EVENT_OPENED) {
         state->port_opened = TRUE;
