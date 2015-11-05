@@ -802,7 +802,7 @@ static int cursor_is_connected(RedWorker *worker)
         red_channel_is_connected(RED_CHANNEL(worker->cursor_channel));
 }
 
-static inline void red_pipe_add_drawable(DisplayChannelClient *dcc, Drawable *drawable)
+static void dcc_add_drawable(DisplayChannelClient *dcc, Drawable *drawable)
 {
     DrawablePipeItem *dpi;
 
@@ -811,18 +811,18 @@ static inline void red_pipe_add_drawable(DisplayChannelClient *dcc, Drawable *dr
     red_channel_client_pipe_add(&dcc->common.base, &dpi->dpi_pipe_item);
 }
 
-static inline void red_pipes_add_drawable(RedWorker *worker, Drawable *drawable)
+static void red_pipes_add_drawable(RedWorker *worker, Drawable *drawable)
 {
     DisplayChannelClient *dcc;
     RingItem *dcc_ring_item, *next;
 
     spice_warn_if(!ring_is_empty(&drawable->pipes));
     WORKER_FOREACH_DCC_SAFE(worker, dcc_ring_item, next, dcc) {
-        red_pipe_add_drawable(dcc, drawable);
+        dcc_add_drawable(dcc, drawable);
     }
 }
 
-static inline void red_pipe_add_drawable_to_tail(DisplayChannelClient *dcc, Drawable *drawable)
+static void dcc_add_drawable_to_tail(DisplayChannelClient *dcc, Drawable *drawable)
 {
     DrawablePipeItem *dpi;
 
@@ -866,7 +866,7 @@ static inline void red_pipes_add_drawable_after(RedWorker *worker,
                 }
             }
             if (!sent) {
-                red_pipe_add_drawable(dcc, drawable);
+                dcc_add_drawable(dcc, drawable);
             }
         }
     }
@@ -2690,7 +2690,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
                                         common.base.channel_link);
                 dpi = SPICE_CONTAINEROF(dpi_ring_item, DrawablePipeItem, base);
                 while (worker_ring_item && (!dpi || dcc != dpi->dcc)) {
-                    red_pipe_add_drawable(dcc, drawable);
+                    dcc_add_drawable(dcc, drawable);
                     worker_ring_item = ring_next(&RED_CHANNEL(worker->display_channel)->clients,
                                                  worker_ring_item);
                     dcc = SPICE_CONTAINEROF(worker_ring_item, DisplayChannelClient,
@@ -6061,7 +6061,7 @@ static void red_add_lossless_drawable_dependencies(RedWorker *worker,
 
     if (!sync_rendered) {
         // pushing the pipe item back to the pipe
-        red_pipe_add_drawable_to_tail(dcc, item);
+        dcc_add_drawable_to_tail(dcc, item);
         // the surfaces areas will be sent as DRAW_COPY commands, that
         // will be executed before the current drawable
         for (i = 0; i < num_deps; i++) {
