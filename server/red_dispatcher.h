@@ -45,38 +45,6 @@ void red_dispatcher_client_monitors_config(VDAgentMonitorsConfig *monitors_confi
 
 typedef uint32_t RedWorkerMessage;
 
-static inline void send_data(int fd, void *in_buf, int n)
-{
-    uint8_t *buf = in_buf;
-    do {
-        int now;
-        if ((now = write(fd, buf, n)) == -1) {
-            if (errno == EINTR) {
-                continue;
-            }
-            spice_error("%s", strerror(errno));
-        }
-        buf += now;
-        n -= now;
-    } while (n);
-}
-
-static inline void receive_data(int fd, void *in_buf, int n)
-{
-    uint8_t *buf = in_buf;
-    do {
-        int now;
-        if ((now = read(fd, buf, n)) == -1) {
-            if (errno == EINTR) {
-                continue;
-            }
-            spice_error("%s", strerror(errno));
-        }
-        buf += now;
-        n -= now;
-    } while (n);
-}
-
 /* Keep message order, only append new messages!
  * Replay code store enum values into save files.
  */
