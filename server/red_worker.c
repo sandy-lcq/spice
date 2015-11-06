@@ -424,10 +424,7 @@ typedef struct RedWorker {
     uint32_t drawable_count;
     uint32_t red_drawable_count;
     uint32_t glz_drawable_count;
-    uint32_t transparent_count;
 
-    uint32_t shadows_count;
-    uint32_t containers_count;
     uint32_t stream_count;
 
     uint32_t bits_unique;
@@ -1066,13 +1063,11 @@ static inline void remove_shadow(RedWorker *worker, DrawItem *item)
     region_destroy(&shadow->base.rgn);
     region_destroy(&shadow->on_hold);
     free(shadow);
-    worker->shadows_count--;
 }
 
 static inline void current_remove_container(RedWorker *worker, Container *container)
 {
     spice_assert(ring_is_empty(&container->items));
-    worker->containers_count--;
     ring_remove(&container->base.siblings_link);
     region_destroy(&container->base.rgn);
     free(container);
@@ -1133,9 +1128,6 @@ static void red_flush_source_surfaces(RedWorker *worker, Drawable *drawable)
 
 static inline void current_remove_drawable(RedWorker *worker, Drawable *item)
 {
-    if (item->tree_item.effect != QXL_EFFECT_OPAQUE) {
-        worker->transparent_count--;
-    }
     if (!item->stream) {
         red_add_item_trace(worker, item);
     }
@@ -2770,7 +2762,6 @@ static inline int red_current_add(RedWorker *worker, Ring *ring, Drawable *drawa
                         region_destroy(&exclude_rgn);
                         return FALSE;
                     }
-                    worker->containers_count++;
                     item->base.container = container;
                     ring = &container->items;
                 }
@@ -2835,7 +2826,6 @@ static inline int red_current_add_with_shadow(RedWorker *worker, Ring *ring, Dra
         stat_add(&worker->add_stat, start_time);
         return FALSE;
     }
-    worker->shadows_count++;
     // item and his shadow must initially be placed in the same container.
     // for now putting them on root.
 
@@ -3245,9 +3235,6 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
     }
 
     if (red_add_drawable(worker, drawable)) {
-        if (drawable->tree_item.effect != QXL_EFFECT_OPAQUE) {
-            worker->transparent_count++;
-        }
         red_pipes_add_drawable(worker, drawable);
     }
 cleanup:
