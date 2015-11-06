@@ -25,7 +25,6 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/socket.h>
-#include <signal.h>
 #include <inttypes.h>
 
 #include <spice/qxl_dev.h>
