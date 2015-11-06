@@ -404,8 +404,6 @@ typedef struct RedWorker {
     clockid_t clockid;
     QXLInstance *qxl;
     RedDispatcher *red_dispatcher;
-
-    int channel;
     int running;
     struct pollfd poll_fds[MAX_EVENT_SOURCES];
     struct SpiceWatch watches[MAX_EVENT_SOURCES];
@@ -9703,23 +9701,6 @@ void handle_dev_create_primary_surface_async(void *opaque, void *payload)
     dev_create_primary_surface(worker, msg->surface_id, msg->surface);
 }
 
-/* exception for Dispatcher, data going from red_worker to main thread,
- * TODO: use a different dispatcher?
- * TODO: leave direct usage of channel(fd)? It's only used right after the
- * pthread is created, since the channel duration is the lifetime of the spice
- * server. */
-
-void handle_dev_display_channel_create(void *opaque, void *payload)
-{
-    RedWorker *worker = opaque;
-
-    RedChannel *red_channel;
-    // TODO: handle seemless migration. Temp, setting migrate to FALSE
-    display_channel_create(worker, FALSE);
-    red_channel = &worker->display_channel->common.base;
-    send_data(worker->channel, &red_channel, sizeof(RedChannel *));
-}
-
 void handle_dev_display_connect(void *opaque, void *payload)
 {
     RedWorkerMessageDisplayConnect *msg = payload;
@@ -9811,21 +9792,6 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
 }
 
 /* TODO: special, perhaps use another dispatcher? */
-void handle_dev_cursor_channel_create(void *opaque, void *payload)
-{
-    RedWorker *worker = opaque;
-    RedChannel *red_channel;
-
-    if (!worker->cursor_channel) {
-        worker->cursor_channel = cursor_channel_new(worker);
-    } else {
-        spice_warning("cursor channel already created");
-    }
-
-    red_channel = RED_CHANNEL(worker->cursor_channel);
-    send_data(worker->channel, &red_channel, sizeof(RedChannel *));
-}
-
 void handle_dev_cursor_connect(void *opaque, void *payload)
 {
     RedWorkerMessageCursorConnect *msg = payload;
@@ -10162,16 +10128,6 @@ static void register_callbacks(Dispatcher *dispatcher)
                                 sizeof(RedWorkerMessageSetMouseMode),
                                 DISPATCHER_NONE);
     dispatcher_register_handler(dispatcher,
-                                RED_WORKER_MESSAGE_DISPLAY_CHANNEL_CREATE,
-                                handle_dev_display_channel_create,
-                                sizeof(RedWorkerMessageDisplayChannelCreate),
-                                DISPATCHER_NONE);
-    dispatcher_register_handler(dispatcher,
-                                RED_WORKER_MESSAGE_CURSOR_CHANNEL_CREATE,
-                                handle_dev_cursor_channel_create,
-                                sizeof(RedWorkerMessageCursorChannelCreate),
-                                DISPATCHER_NONE);
-    dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT,
                                 handle_dev_destroy_surface_wait,
                                 sizeof(RedWorkerMessageDestroySurfaceWait),
@@ -10236,7 +10192,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 
     worker->red_dispatcher = red_dispatcher;
     worker->qxl = qxl;
-    worker->channel = dispatcher_get_recv_fd(dispatcher);
     register_callbacks(dispatcher);
     if (worker->record_fd) {
         dispatcher_register_universal_handler(dispatcher, worker_dispatcher_record);
@@ -10265,7 +10220,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
         worker->poll_fds[i].fd = -1;
     }
 
-    worker->poll_fds[0].fd = worker->channel;
+    worker->poll_fds[0].fd = dispatcher_get_recv_fd(dispatcher);
     worker->poll_fds[0].events = POLLIN;
     worker->watches[0].worker = worker;
     worker->watches[0].watch_func = handle_dev_input;
@@ -10289,6 +10244,10 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 #endif
     red_init_zlib(worker);
     worker->event_timeout = INF_EVENT_WAIT;
+
+    worker->cursor_channel = cursor_channel_new(worker);
+    // TODO: handle seemless migration. Temp, setting migrate to FALSE
+    display_channel_create(worker, FALSE);
 
     return worker;
 }
@@ -10315,6 +10274,9 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
     if (pthread_getcpuclockid(pthread_self(), &worker->clockid)) {
         spice_warning("getcpuclockid failed");
     }
+
+    RED_CHANNEL(worker->cursor_channel)->thread_id = pthread_self();
+    RED_CHANNEL(worker->display_channel)->thread_id = pthread_self();
 
     for (;;) {
         int i, num_events;
@@ -10399,4 +10361,18 @@ bool red_worker_run(RedWorker *worker)
     pthread_sigmask(SIG_SETMASK, &curr_sig_mask, NULL);
 
     return r == 0;
+}
+
+RedChannel* red_worker_get_cursor_channel(RedWorker *worker)
+{
+    spice_return_val_if_fail(worker, NULL);
+
+    return RED_CHANNEL(worker->cursor_channel);
+}
+
+RedChannel* red_worker_get_display_channel(RedWorker *worker)
+{
+    spice_return_val_if_fail(worker, NULL);
+
+    return RED_CHANNEL(worker->display_channel);
 }
