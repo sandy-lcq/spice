@@ -1050,7 +1050,7 @@ static void red_worker_drawable_unref(RedWorker *worker, Drawable *drawable)
     worker->drawable_count--;
 }
 
-static inline void remove_shadow(RedWorker *worker, DrawItem *item)
+static inline void remove_shadow(DrawItem *item)
 {
     Shadow *shadow;
 
@@ -1131,7 +1131,7 @@ static inline void current_remove_drawable(RedWorker *worker, Drawable *item)
     if (!item->stream) {
         red_add_item_trace(worker, item);
     }
-    remove_shadow(worker, &item->tree_item);
+    remove_shadow(&item->tree_item);
     ring_remove(&item->tree_item.base.siblings_link);
     ring_remove(&item->list_link);
     ring_remove(&item->surface_list_link);
