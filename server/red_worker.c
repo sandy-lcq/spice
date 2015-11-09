@@ -9525,13 +9525,6 @@ static void dev_flush_surfaces(RedWorker *worker)
     flush_all_surfaces(worker);
 }
 
-void handle_dev_flush_surfaces(void *opaque, void *payload)
-{
-    RedWorker *worker = opaque;
-
-    dev_flush_surfaces(worker);
-}
-
 void handle_dev_flush_surfaces_async(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
