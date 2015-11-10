@@ -1480,12 +1480,6 @@ static void exclude_region(RedWorker *worker, Ring *ring, RingItem *ring_item, Q
     }
 }
 
-static inline int is_opaque_item(TreeItem *item)
-{
-    return item->type == TREE_ITEM_TYPE_CONTAINER ||
-           (IS_DRAW_ITEM(item) && ((DrawItem *)item)->effect == QXL_EFFECT_OPAQUE);
-}
-
 static inline void __current_add_drawable(RedWorker *worker, Drawable *drawable, RingItem *pos)
 {
     DisplayChannel *display = worker->display_channel;
