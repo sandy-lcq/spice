@@ -526,6 +526,138 @@ static void display_channel_client_release_item_after_push(DisplayChannelClient 
     SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
 
 
+static inline int get_stream_id(RedWorker *worker, Stream *stream)
+{
+    return (int)(stream - worker->streams_buf);
+}
+
+static inline void red_free_stream(RedWorker *worker, Stream *stream)
+{
+    stream->next = worker->free_streams;
+    worker->free_streams = stream;
+}
+
+static void red_release_stream(RedWorker *worker, Stream *stream)
+{
+    if (!--stream->refs) {
+        spice_assert(!ring_item_is_linked(&stream->link));
+        red_free_stream(worker, stream);
+        worker->stream_count--;
+    }
+}
+
+static void red_display_release_stream(RedWorker *worker, StreamAgent *agent)
+{
+    spice_assert(agent->stream);
+    red_release_stream(worker, agent->stream);
+}
+
+static void red_display_release_stream_clip(RedWorker *worker, StreamClipItem *item)
+{
+    if (!--item->refs) {
+        red_display_release_stream(worker, item->stream_agent);
+        free(item->rects);
+        free(item);
+    }
+}
+
+static void dcc_push_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
+{
+    StreamClipItem *item = stream_clip_item_new(dcc, agent);
+    int n_rects;
+
+    if (!item) {
+        spice_critical("alloc failed");
+    }
+    item->clip_type = SPICE_CLIP_TYPE_RECTS;
+
+    n_rects = pixman_region32_n_rects(&agent->clip);
+
+    item->rects = spice_malloc_n_m(n_rects, sizeof(SpiceRect), sizeof(SpiceClipRects));
+    item->rects->num_rects = n_rects;
+    region_ret_rects(&agent->clip, item->rects->rects, n_rects);
+    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), (PipeItem *)item);
+}
+
+
+static void red_attach_stream(RedWorker *worker, Drawable *drawable, Stream *stream)
+{
+    DisplayChannelClient *dcc;
+    RingItem *item, *next;
+
+    spice_assert(!drawable->stream && !stream->current);
+    spice_assert(drawable && stream);
+    stream->current = drawable;
+    drawable->stream = stream;
+    stream->last_time = drawable->creation_time;
+
+    uint64_t duration = drawable->creation_time - stream->input_fps_start_time;
+    if (duration >= RED_STREAM_INPUT_FPS_TIMEOUT) {
+        /* Round to the nearest integer, for instance 24 for 23.976 */
+        stream->input_fps = ((uint64_t)stream->num_input_frames * 1000 * 1000 * 1000 + duration / 2) / duration;
+        spice_debug("input-fps=%u", stream->input_fps);
+        stream->num_input_frames = 0;
+        stream->input_fps_start_time = drawable->creation_time;
+    } else {
+        stream->num_input_frames++;
+    }
+
+    FOREACH_DCC(worker->display_channel, item, next, dcc) {
+        StreamAgent *agent;
+        QRegion clip_in_draw_dest;
+
+        agent = &dcc->stream_agents[get_stream_id(worker, stream)];
+        region_or(&agent->vis_region, &drawable->tree_item.base.rgn);
+
+        region_init(&clip_in_draw_dest);
+        region_add(&clip_in_draw_dest, &drawable->red_drawable->bbox);
+        region_and(&clip_in_draw_dest, &agent->clip);
+
+        if (!region_is_equal(&clip_in_draw_dest, &drawable->tree_item.base.rgn)) {
+            region_remove(&agent->clip, &drawable->red_drawable->bbox);
+            region_or(&agent->clip, &drawable->tree_item.base.rgn);
+            dcc_push_stream_agent_clip(dcc, agent);
+        }
+#ifdef STREAM_STATS
+        agent->stats.num_input_frames++;
+#endif
+    }
+}
+
+static void red_stop_stream(RedWorker *worker, Stream *stream)
+{
+    DisplayChannelClient *dcc;
+    RingItem *item, *next;
+
+    spice_assert(ring_item_is_linked(&stream->link));
+    spice_assert(!stream->current);
+    spice_debug("stream %d", get_stream_id(worker, stream));
+    FOREACH_DCC(worker->display_channel, item, next, dcc) {
+        StreamAgent *stream_agent;
+
+        stream_agent = &dcc->stream_agents[get_stream_id(worker, stream)];
+        region_clear(&stream_agent->vis_region);
+        region_clear(&stream_agent->clip);
+        spice_assert(!pipe_item_is_linked(&stream_agent->destroy_item));
+        if (stream_agent->mjpeg_encoder && dcc->use_mjpeg_encoder_rate_control) {
+            uint64_t stream_bit_rate = mjpeg_encoder_get_bit_rate(stream_agent->mjpeg_encoder);
+
+            if (stream_bit_rate > dcc->streams_max_bit_rate) {
+                spice_debug("old max-bit-rate=%.2f new=%.2f",
+                dcc->streams_max_bit_rate / 8.0 / 1024.0 / 1024.0,
+                stream_bit_rate / 8.0 / 1024.0 / 1024.0);
+                dcc->streams_max_bit_rate = stream_bit_rate;
+            }
+        }
+        stream->refs++;
+        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &stream_agent->destroy_item);
+        stream_agent_stats_print(stream_agent);
+    }
+    worker->streams_size_total -= stream->width * stream->height;
+    ring_remove(&stream->link);
+    red_release_stream(worker, stream);
+}
+
 /* fixme: move to display channel */
 DrawablePipeItem *drawable_pipe_item_new(DisplayChannelClient *dcc,
                                          Drawable *drawable)
@@ -888,6 +1020,25 @@ static inline void red_destroy_surface_item(RedWorker *worker,
     channel = RED_CHANNEL(worker->display_channel);
     destroy = get_surface_destroy_item(channel, surface_id);
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &destroy->pipe_item);
+}
+
+static void red_reset_stream_trace(RedWorker *worker)
+{
+    Ring *ring = &worker->streams;
+    RingItem *item = ring_get_head(ring);
+
+    while (item) {
+        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
+        item = ring_next(ring, item);
+        if (!stream->current) {
+            red_stop_stream(worker, stream);
+        } else {
+            spice_info("attached stream");
+        }
+    }
+
+    worker->next_item_trace = 0;
+    memset(worker->items_trace, 0, sizeof(worker->items_trace));
 }
 
 static void red_surface_unref(RedWorker *worker, uint32_t surface_id)
@@ -1514,21 +1665,6 @@ static int is_same_drawable(RedWorker *worker, Drawable *d1, Drawable *d2)
     }
 }
 
-static inline void red_free_stream(RedWorker *worker, Stream *stream)
-{
-    stream->next = worker->free_streams;
-    worker->free_streams = stream;
-}
-
-static void red_release_stream(RedWorker *worker, Stream *stream)
-{
-    if (!--stream->refs) {
-        spice_assert(!ring_item_is_linked(&stream->link));
-        red_free_stream(worker, stream);
-        worker->stream_count--;
-    }
-}
-
 static inline void red_detach_stream(RedWorker *worker, Stream *stream, int detach_sized)
 {
     spice_assert(stream->current && stream->current->stream);
@@ -1538,116 +1674,6 @@ static inline void red_detach_stream(RedWorker *worker, Stream *stream, int deta
         stream->current->sized_stream = NULL;
     }
     stream->current = NULL;
-}
-
-static void dcc_push_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
-{
-    StreamClipItem *item = stream_clip_item_new(dcc, agent);
-    int n_rects;
-
-    if (!item) {
-        spice_critical("alloc failed");
-    }
-    item->clip_type = SPICE_CLIP_TYPE_RECTS;
-
-    n_rects = pixman_region32_n_rects(&agent->clip);
-
-    item->rects = spice_malloc_n_m(n_rects, sizeof(SpiceRect), sizeof(SpiceClipRects));
-    item->rects->num_rects = n_rects;
-    region_ret_rects(&agent->clip, item->rects->rects, n_rects);
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), (PipeItem *)item);
-}
-
-static void red_display_release_stream_clip(RedWorker *worker, StreamClipItem *item)
-{
-    if (!--item->refs) {
-        red_display_release_stream(worker, item->stream_agent);
-        free(item->rects);
-        free(item);
-    }
-}
-
-static inline int get_stream_id(RedWorker *worker, Stream *stream)
-{
-    return (int)(stream - worker->streams_buf);
-}
-
-static void red_attach_stream(RedWorker *worker, Drawable *drawable, Stream *stream)
-{
-    DisplayChannelClient *dcc;
-    RingItem *item, *next;
-
-    spice_assert(!drawable->stream && !stream->current);
-    spice_assert(drawable && stream);
-    stream->current = drawable;
-    drawable->stream = stream;
-    stream->last_time = drawable->creation_time;
-
-    uint64_t duration = drawable->creation_time - stream->input_fps_start_time;
-    if (duration >= RED_STREAM_INPUT_FPS_TIMEOUT) {
-        /* Round to the nearest integer, for instance 24 for 23.976 */
-        stream->input_fps = ((uint64_t)stream->num_input_frames * 1000 * 1000 * 1000 + duration / 2) / duration;
-        spice_debug("input-fps=%u", stream->input_fps);
-        stream->num_input_frames = 0;
-        stream->input_fps_start_time = drawable->creation_time;
-    } else {
-        stream->num_input_frames++;
-    }
-
-    FOREACH_DCC(worker->display_channel, item, next, dcc) {
-        StreamAgent *agent;
-        QRegion clip_in_draw_dest;
-
-        agent = &dcc->stream_agents[get_stream_id(worker, stream)];
-        region_or(&agent->vis_region, &drawable->tree_item.base.rgn);
-
-        region_init(&clip_in_draw_dest);
-        region_add(&clip_in_draw_dest, &drawable->red_drawable->bbox);
-        region_and(&clip_in_draw_dest, &agent->clip);
-
-        if (!region_is_equal(&clip_in_draw_dest, &drawable->tree_item.base.rgn)) {
-            region_remove(&agent->clip, &drawable->red_drawable->bbox);
-            region_or(&agent->clip, &drawable->tree_item.base.rgn);
-            dcc_push_stream_agent_clip(dcc, agent);
-        }
-#ifdef STREAM_STATS
-        agent->stats.num_input_frames++;
-#endif
-    }
-}
-
-static void red_stop_stream(RedWorker *worker, Stream *stream)
-{
-    DisplayChannelClient *dcc;
-    RingItem *item, *next;
-
-    spice_assert(ring_item_is_linked(&stream->link));
-    spice_assert(!stream->current);
-    spice_debug("stream %d", get_stream_id(worker, stream));
-    FOREACH_DCC(worker->display_channel, item, next, dcc) {
-        StreamAgent *stream_agent;
-
-        stream_agent = &dcc->stream_agents[get_stream_id(worker, stream)];
-        region_clear(&stream_agent->vis_region);
-        region_clear(&stream_agent->clip);
-        spice_assert(!pipe_item_is_linked(&stream_agent->destroy_item));
-        if (stream_agent->mjpeg_encoder && dcc->use_mjpeg_encoder_rate_control) {
-            uint64_t stream_bit_rate = mjpeg_encoder_get_bit_rate(stream_agent->mjpeg_encoder);
-
-            if (stream_bit_rate > dcc->streams_max_bit_rate) {
-                spice_debug("old max-bit-rate=%.2f new=%.2f",
-                dcc->streams_max_bit_rate / 8.0 / 1024.0 / 1024.0,
-                stream_bit_rate / 8.0 / 1024.0 / 1024.0);
-                dcc->streams_max_bit_rate = stream_bit_rate;
-            }
-        }
-        stream->refs++;
-        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &stream_agent->destroy_item);
-        stream_agent_stats_print(stream_agent);
-    }
-    worker->streams_size_total -= stream->width * stream->height;
-    ring_remove(&stream->link);
-    red_release_stream(worker, stream);
 }
 
 static int red_display_drawable_is_in_pipe(DisplayChannelClient *dcc, Drawable *drawable)
@@ -1868,12 +1894,6 @@ static inline void red_handle_streams_timout(RedWorker *worker)
             red_stop_stream(worker, stream);
         }
     }
-}
-
-static void red_display_release_stream(RedWorker *worker, StreamAgent *agent)
-{
-    spice_assert(agent->stream);
-    red_release_stream(worker, agent->stream);
 }
 
 static inline Stream *red_alloc_stream(RedWorker *worker)
@@ -2143,19 +2163,6 @@ static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
             mjpeg_encoder_destroy(agent->mjpeg_encoder);
             agent->mjpeg_encoder = NULL;
         }
-    }
-}
-
-static void red_init_streams(RedWorker *worker)
-{
-    int i;
-
-    ring_init(&worker->streams);
-    worker->free_streams = NULL;
-    for (i = 0; i < NUM_STREAMS; i++) {
-        Stream *stream = &worker->streams_buf[i];
-        ring_item_init(&stream->link);
-        red_free_stream(worker, stream);
     }
 }
 
@@ -2577,25 +2584,6 @@ static inline void red_use_stream_trace(RedWorker *worker, Drawable *drawable)
             }
         }
     }
-}
-
-static void red_reset_stream_trace(RedWorker *worker)
-{
-    Ring *ring = &worker->streams;
-    RingItem *item = ring_get_head(ring);
-
-    while (item) {
-        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
-        item = ring_next(ring, item);
-        if (!stream->current) {
-            red_stop_stream(worker, stream);
-        } else {
-            spice_info("attached stream");
-        }
-    }
-
-    worker->next_item_trace = 0;
-    memset(worker->items_trace, 0, sizeof(worker->items_trace));
 }
 
 static inline int red_current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
@@ -8865,6 +8853,19 @@ static void display_channel_release_item(RedChannelClient *rcc, PipeItem *item, 
     } else {
         spice_debug("not pushed (%d)", item->type);
         display_channel_client_release_item_before_push(dcc, item);
+    }
+}
+
+static void red_init_streams(RedWorker *worker)
+{
+    int i;
+
+    ring_init(&worker->streams);
+    worker->free_streams = NULL;
+    for (i = 0; i < NUM_STREAMS; i++) {
+        Stream *stream = &worker->streams_buf[i];
+        ring_item_init(&stream->link);
+        red_free_stream(worker, stream);
     }
 }
 
