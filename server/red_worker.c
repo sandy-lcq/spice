@@ -58,6 +58,7 @@
 #include "common/generated_server_marshallers.h"
 
 #include "display-channel.h"
+#include "stream.h"
 
 #include "spice.h"
 #include "red_worker.h"
@@ -79,21 +80,6 @@
 #define DISPLAY_CLIENT_RETRY_INTERVAL 10000 //micro
 
 #define DISPLAY_FREE_LIST_DEFAULT_SIZE 128
-
-#define RED_STREAM_DETACTION_MAX_DELTA ((1000 * 1000 * 1000) / 5) // 1/5 sec
-#define RED_STREAM_CONTINUS_MAX_DELTA (1000 * 1000 * 1000)
-#define RED_STREAM_TIMEOUT (1000 * 1000 * 1000)
-#define RED_STREAM_FRAMES_START_CONDITION 20
-#define RED_STREAM_GRADUAL_FRAMES_START_CONDITION 0.2
-#define RED_STREAM_FRAMES_RESET_CONDITION 100
-#define RED_STREAM_MIN_SIZE (96 * 96)
-#define RED_STREAM_INPUT_FPS_TIMEOUT ((uint64_t)5 * 1000 * 1000 * 1000) // 5 sec
-#define RED_STREAM_CHANNEL_CAPACITY 0.8
-/* the client's stream report frequency is the minimum of the 2 values below */
-#define RED_STREAM_CLIENT_REPORT_WINDOW 5 // #frames
-#define RED_STREAM_CLIENT_REPORT_TIMEOUT 1000 // milliseconds
-#define RED_STREAM_DEFAULT_HIGH_START_BIT_RATE (10 * 1024 * 1024) // 10Mbps
-#define RED_STREAM_DEFAULT_LOW_START_BIT_RATE (2.5 * 1024 * 1024) // 2.5Mbps
 
 #define FPS_TEST_INTERVAL 1
 #define MAX_FPS 30
@@ -241,11 +227,6 @@ typedef struct SurfaceDestroyItem {
     PipeItem pipe_item;
 } SurfaceDestroyItem;
 
-typedef struct StreamActivateReportItem {
-    PipeItem pipe_item;
-    uint32_t stream_id;
-} StreamActivateReportItem;
-
 #define MAX_PIPE_SIZE 50
 
 #define WIDE_CLIENT_ACK_WINDOW 40
@@ -265,20 +246,6 @@ typedef struct ImageItem {
     int can_lossy;
     uint8_t data[0];
 } ImageItem;
-
-enum {
-    STREAM_FRAME_NONE,
-    STREAM_FRAME_NATIVE,
-    STREAM_FRAME_CONTAINER,
-};
-
-typedef struct StreamClipItem {
-    PipeItem base;
-    int refs;
-    StreamAgent *stream_agent;
-    int clip_type;
-    SpiceClipRects *rects;
-} StreamClipItem;
 
 typedef struct {
     QuicUsrContext usr;

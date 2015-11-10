@@ -54,6 +54,7 @@
 #include "spice_image_cache.h"
 #include "utils.h"
 #include "tree.h"
+#include "stream.h"
 
 typedef struct DisplayChannel DisplayChannel;
 typedef struct DisplayChannelClient DisplayChannelClient;
@@ -128,23 +129,6 @@ typedef struct {
     EncoderData data;
 } GlzData;
 
-typedef struct Stream Stream;
-struct Stream {
-    uint8_t refs;
-    Drawable *current;
-    red_time_t last_time;
-    int width;
-    int height;
-    SpiceRect dest_area;
-    int top_down;
-    Stream *next;
-    RingItem link;
-
-    uint32_t num_input_frames;
-    uint64_t input_fps_start_time;
-    uint32_t input_fps;
-};
-
 typedef struct DependItem {
     Drawable *drawable;
     RingItem ring_item;
@@ -178,48 +162,6 @@ struct Drawable {
 
     uint32_t process_commands_generation;
 };
-
-#define STREAM_STATS
-#ifdef STREAM_STATS
-typedef struct StreamStats {
-   uint64_t num_drops_pipe;
-   uint64_t num_drops_fps;
-   uint64_t num_frames_sent;
-   uint64_t num_input_frames;
-   uint64_t size_sent;
-
-   uint64_t start;
-   uint64_t end;
-} StreamStats;
-#endif
-
-typedef struct StreamAgent {
-    QRegion vis_region; /* the part of the surface area that is currently occupied by video
-                           fragments */
-    QRegion clip;       /* the current video clipping. It can be different from vis_region:
-                           for example, let c1 be the clip area at time t1, and c2
-                           be the clip area at time t2, where t1 < t2. If c1 contains c2, and
-                           at least part of c1/c2, hasn't been covered by a non-video images,
-                           vis_region will contain c2 and also the part of c1/c2 that still
-                           displays fragments of the video */
-
-    PipeItem create_item;
-    PipeItem destroy_item;
-    Stream *stream;
-    uint64_t last_send_time;
-    MJpegEncoder *mjpeg_encoder;
-    DisplayChannelClient *dcc;
-
-    int frames;
-    int drops;
-    int fps;
-
-    uint32_t report_id;
-    uint32_t client_required_latency;
-#ifdef STREAM_STATS
-    StreamStats stats;
-#endif
-} StreamAgent;
 
 struct DisplayChannelClient {
     CommonChannelClient common;

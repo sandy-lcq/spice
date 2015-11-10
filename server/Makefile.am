@@ -136,6 +136,7 @@ libspice_server_la_SOURCES =			\
 	spice-bitmap-utils.h			\
 	spice-bitmap-utils.c			\
 	utils.h					\
+	stream.h					\
 	$(NULL)
 
 if HAVE_GL
