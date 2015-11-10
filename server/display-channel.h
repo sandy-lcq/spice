@@ -57,9 +57,6 @@
 #include "stream.h"
 
 typedef struct DisplayChannel DisplayChannel;
-typedef struct DisplayChannelClient DisplayChannelClient;
-
-typedef struct Drawable Drawable;
 
 #define PALETTE_CACHE_HASH_SHIFT 8
 #define PALETTE_CACHE_HASH_SIZE (1 << PALETTE_CACHE_HASH_SHIFT)
@@ -270,6 +267,10 @@ MonitorsConfig*            monitors_config_new                       (QXLHead *h
 MonitorsConfig *           monitors_config_ref                       (MonitorsConfig *config);
 void                       monitors_config_unref                     (MonitorsConfig *config);
 
+#define TRACE_ITEMS_SHIFT 3
+#define NUM_TRACE_ITEMS (1 << TRACE_ITEMS_SHIFT)
+#define ITEMS_TRACE_MASK (NUM_TRACE_ITEMS - 1)
+
 struct DisplayChannel {
     CommonChannel common; // Must be the first thing
 
@@ -285,6 +286,15 @@ struct DisplayChannel {
     int zlib_level;
 
     RedCompressBuf *free_compress_bufs;
+
+    int stream_video;
+    uint32_t stream_count;
+    Stream streams_buf[NUM_STREAMS];
+    Stream *free_streams;
+    Ring streams;
+    ItemTrace items_trace[NUM_TRACE_ITEMS];
+    uint32_t next_item_trace;
+    uint64_t streams_size_total;
 
     ImageCache image_cache;
 
@@ -304,6 +314,12 @@ struct DisplayChannel {
 #endif
 };
 
+void                       display_channel_set_stream_video          (DisplayChannel *display,
+                                                                      int stream_video);
+void                       display_channel_attach_stream             (DisplayChannel *display,
+                                                                      Drawable *drawable,
+                                                                      Stream *stream);
+int                        display_channel_get_streams_timeout       (DisplayChannel *display);
 void                       display_channel_compress_stats_print      (const DisplayChannel *display);
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
 

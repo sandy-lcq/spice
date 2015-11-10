@@ -225,3 +225,47 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
     red_monitors_config_item_add(dcc);
     red_channel_client_push(&dcc->common.base);
 }
+
+int display_channel_get_streams_timeout(DisplayChannel *display)
+{
+    int timeout = INT_MAX;
+    Ring *ring = &display->streams;
+    RingItem *item = ring;
+
+    red_time_t now = red_get_monotonic_time();
+    while ((item = ring_next(ring, item))) {
+        Stream *stream;
+
+        stream = SPICE_CONTAINEROF(item, Stream, link);
+        red_time_t delta = (stream->last_time + RED_STREAM_TIMEOUT) - now;
+
+        if (delta < 1000 * 1000) {
+            return 0;
+        }
+        timeout = MIN(timeout, (unsigned int)(delta / (1000 * 1000)));
+    }
+    return timeout;
+}
+
+void display_channel_set_stream_video(DisplayChannel *display, int stream_video)
+{
+    spice_return_if_fail(display);
+    spice_return_if_fail(stream_video != SPICE_STREAM_VIDEO_INVALID);
+
+    switch (stream_video) {
+    case SPICE_STREAM_VIDEO_ALL:
+        spice_info("sv all");
+        break;
+    case SPICE_STREAM_VIDEO_FILTER:
+        spice_info("sv filter");
+        break;
+    case SPICE_STREAM_VIDEO_OFF:
+        spice_info("sv off");
+        break;
+    default:
+        spice_warn_if_reached();
+        return;
+    }
+
+    display->stream_video = stream_video;
+}

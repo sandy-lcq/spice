@@ -106,6 +106,16 @@ typedef struct StreamClipItem {
 StreamClipItem *stream_clip_item_new(DisplayChannelClient* dcc,
                                      StreamAgent *agent);
 
+typedef struct ItemTrace {
+    red_time_t time;
+    int frames_count;
+    int gradual_frames_count;
+    int last_gradual_frame;
+    int width;
+    int height;
+    SpiceRect dest_area;
+} ItemTrace;
+
 struct Stream {
     uint8_t refs;
     Drawable *current;

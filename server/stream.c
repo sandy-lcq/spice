@@ -32,8 +32,8 @@ void stream_agent_stats_print(StreamAgent *agent)
         mjpeg_encoder_get_stats(agent->mjpeg_encoder, &encoder_stats);
     }
 
-    spice_debug("stream=%p dim=(%dx%d) #in-frames=%"PRIu64" #in-avg-fps=%.2f #out-frames=%"PRIu64" "
-                "out/in=%.2f #drops=%"PRIu64" (#pipe=%"PRIu64" #fps=%"PRIu64") out-avg-fps=%.2f "
+    spice_debug("stream=%p dim=(%dx%d) #in-frames=%lu #in-avg-fps=%.2f #out-frames=%lu "
+                "out/in=%.2f #drops=%lu (#pipe=%lu #fps=%lu) out-avg-fps=%.2f "
                 "passed-mm-time(sec)=%.2f size-total(MB)=%.2f size-per-sec(Mbps)=%.2f "
                 "size-per-frame(KBpf)=%.2f avg-quality=%.2f "
                 "start-bit-rate(Mbps)=%.2f end-bit-rate(Mbps)=%.2f",
