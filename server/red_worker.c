@@ -82,7 +82,7 @@
 
 #define RED_STREAM_DETACTION_MAX_DELTA ((1000 * 1000 * 1000) / 5) // 1/5 sec
 #define RED_STREAM_CONTINUS_MAX_DELTA (1000 * 1000 * 1000)
-#define RED_STREAM_TIMOUT (1000 * 1000 * 1000)
+#define RED_STREAM_TIMEOUT (1000 * 1000 * 1000)
 #define RED_STREAM_FRAMES_START_CONDITION 20
 #define RED_STREAM_GRADUAL_FRAMES_START_CONDITION 0.2
 #define RED_STREAM_FRAMES_RESET_CONDITION 100
@@ -1924,7 +1924,7 @@ static inline unsigned int red_get_streams_timout(RedWorker *worker)
         Stream *stream;
 
         stream = SPICE_CONTAINEROF(item, Stream, link);
-        red_time_t delta = (stream->last_time + RED_STREAM_TIMOUT) - now;
+        red_time_t delta = (stream->last_time + RED_STREAM_TIMEOUT) - now;
 
         if (delta < 1000 * 1000) {
             return 0;
@@ -1944,7 +1944,7 @@ static inline void red_handle_streams_timout(RedWorker *worker)
     while (item) {
         Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
         item = ring_next(ring, item);
-        if (now >= (stream->last_time + RED_STREAM_TIMOUT)) {
+        if (now >= (stream->last_time + RED_STREAM_TIMEOUT)) {
             red_detach_stream_gracefully(worker, stream, NULL);
             red_stop_stream(worker, stream);
         }
