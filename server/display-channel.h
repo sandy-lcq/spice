@@ -20,6 +20,7 @@
 
 #include <setjmp.h>
 
+#include "common/rect.h"
 #include "red_worker.h"
 #include "reds_stream.h"
 #include "cache-item.h"
@@ -350,6 +351,94 @@ void                       display_channel_compress_stats_print      (const Disp
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
 void                       display_channel_drawable_unref            (DisplayChannel *display, Drawable *drawable);
 
+static inline int is_equal_path(SpicePath *path1, SpicePath *path2)
+{
+    SpicePathSeg *seg1, *seg2;
+    int i, j;
+
+    if (path1->num_segments != path2->num_segments)
+        return FALSE;
+
+    for (i = 0; i < path1->num_segments; i++) {
+        seg1 = path1->segments[i];
+        seg2 = path2->segments[i];
+
+        if (seg1->flags != seg2->flags ||
+            seg1->count != seg2->count) {
+            return FALSE;
+        }
+        for (j = 0; j < seg1->count; j++) {
+            if (seg1->points[j].x != seg2->points[j].x ||
+                seg1->points[j].y != seg2->points[j].y) {
+                return FALSE;
+            }
+        }
+    }
+
+    return TRUE;
+}
+
+// partial imp
+static inline int is_equal_brush(SpiceBrush *b1, SpiceBrush *b2)
+{
+    return b1->type == b2->type &&
+           b1->type == SPICE_BRUSH_TYPE_SOLID &&
+           b1->u.color == b2->u.color;
+}
+
+// partial imp
+static inline int is_equal_line_attr(SpiceLineAttr *a1, SpiceLineAttr *a2)
+{
+    return a1->flags == a2->flags &&
+           a1->style_nseg == a2->style_nseg &&
+           a1->style_nseg == 0;
+}
+
+// partial imp
+static inline int is_same_geometry(Drawable *d1, Drawable *d2)
+{
+    if (d1->red_drawable->type != d2->red_drawable->type) {
+        return FALSE;
+    }
+
+    switch (d1->red_drawable->type) {
+    case QXL_DRAW_STROKE:
+        return is_equal_line_attr(&d1->red_drawable->u.stroke.attr,
+                                  &d2->red_drawable->u.stroke.attr) &&
+               is_equal_path(d1->red_drawable->u.stroke.path,
+                             d2->red_drawable->u.stroke.path);
+    case QXL_DRAW_FILL:
+        return rect_is_equal(&d1->red_drawable->bbox, &d2->red_drawable->bbox);
+    default:
+        return FALSE;
+    }
+}
+
+static inline int is_same_drawable(Drawable *d1, Drawable *d2)
+{
+    if (!is_same_geometry(d1, d2)) {
+        return FALSE;
+    }
+
+    switch (d1->red_drawable->type) {
+    case QXL_DRAW_STROKE:
+        return is_equal_brush(&d1->red_drawable->u.stroke.brush,
+                              &d2->red_drawable->u.stroke.brush);
+    case QXL_DRAW_FILL:
+        return is_equal_brush(&d1->red_drawable->u.fill.brush,
+                              &d2->red_drawable->u.fill.brush);
+    default:
+        return FALSE;
+    }
+}
+
+static inline int is_primary_surface(DisplayChannel *display, uint32_t surface_id)
+{
+    if (surface_id == 0) {
+        return TRUE;
+    }
+    return FALSE;
+}
 
 
 #endif /* DISPLAY_CHANNEL_H_ */
