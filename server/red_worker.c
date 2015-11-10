@@ -1540,21 +1540,9 @@ static inline void red_detach_stream(RedWorker *worker, Stream *stream, int deta
     stream->current = NULL;
 }
 
-static StreamClipItem *__new_stream_clip(DisplayChannelClient* dcc, StreamAgent *agent)
-{
-    StreamClipItem *item = spice_new(StreamClipItem, 1);
-    red_channel_pipe_item_init(RED_CHANNEL_CLIENT(dcc)->channel,
-                    (PipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP);
-
-    item->stream_agent = agent;
-    agent->stream->refs++;
-    item->refs = 1;
-    return item;
-}
-
 static void push_stream_clip(DisplayChannelClient* dcc, StreamAgent *agent)
 {
-    StreamClipItem *item = __new_stream_clip(dcc, agent);
+    StreamClipItem *item = stream_clip_item_new(dcc, agent);
     int n_rects;
 
     if (!item) {
@@ -1628,42 +1616,6 @@ static void red_attach_stream(RedWorker *worker, Drawable *drawable, Stream *str
     }
 }
 
-static void red_print_stream_stats(DisplayChannelClient *dcc, StreamAgent *agent)
-{
-#ifdef STREAM_STATS
-    StreamStats *stats = &agent->stats;
-    double passed_mm_time = (stats->end - stats->start) / 1000.0;
-    MJpegEncoderStats encoder_stats = {0};
-
-    if (agent->mjpeg_encoder) {
-        mjpeg_encoder_get_stats(agent->mjpeg_encoder, &encoder_stats);
-    }
-
-    spice_debug("stream=%"PRIdPTR" dim=(%dx%d) #in-frames=%"PRIu64" #in-avg-fps=%.2f #out-frames=%"PRIu64" "
-                "out/in=%.2f #drops=%"PRIu64" (#pipe=%"PRIu64" #fps=%"PRIu64") out-avg-fps=%.2f "
-                "passed-mm-time(sec)=%.2f size-total(MB)=%.2f size-per-sec(Mbps)=%.2f "
-                "size-per-frame(KBpf)=%.2f avg-quality=%.2f "
-                "start-bit-rate(Mbps)=%.2f end-bit-rate(Mbps)=%.2f",
-                agent - dcc->stream_agents, agent->stream->width, agent->stream->height,
-                stats->num_input_frames,
-                stats->num_input_frames / passed_mm_time,
-                stats->num_frames_sent,
-                (stats->num_frames_sent + 0.0) / stats->num_input_frames,
-                stats->num_drops_pipe +
-                stats->num_drops_fps,
-                stats->num_drops_pipe,
-                stats->num_drops_fps,
-                stats->num_frames_sent / passed_mm_time,
-                passed_mm_time,
-                stats->size_sent / 1024.0 / 1024.0,
-                ((stats->size_sent * 8.0) / (1024.0 * 1024)) / passed_mm_time,
-                stats->size_sent / 1000.0 / stats->num_frames_sent,
-                encoder_stats.avg_quality,
-                encoder_stats.starting_bit_rate / (1024.0 * 1024),
-                encoder_stats.cur_bit_rate / (1024.0 * 1024));
-#endif
-}
-
 static void red_stop_stream(RedWorker *worker, Stream *stream)
 {
     DisplayChannelClient *dcc;
@@ -1691,7 +1643,7 @@ static void red_stop_stream(RedWorker *worker, Stream *stream)
         }
         stream->refs++;
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &stream_agent->destroy_item);
-        red_print_stream_stats(dcc, stream_agent);
+        stream_agent_stats_print(stream_agent);
     }
     worker->streams_size_total -= stream->width * stream->height;
     ring_remove(&stream->link);

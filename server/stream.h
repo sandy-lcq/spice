@@ -103,6 +103,9 @@ typedef struct StreamClipItem {
     SpiceClipRects *rects;
 } StreamClipItem;
 
+StreamClipItem *stream_clip_item_new(DisplayChannelClient* dcc,
+                                     StreamAgent *agent);
+
 struct Stream {
     uint8_t refs;
     Drawable *current;
@@ -118,5 +121,7 @@ struct Stream {
     uint64_t input_fps_start_time;
     uint32_t input_fps;
 };
+
+void stream_agent_stats_print(StreamAgent *agent);
 
 #endif /* STREAM_H */
