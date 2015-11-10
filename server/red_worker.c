@@ -330,22 +330,6 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
 static void display_channel_client_release_item_after_push(DisplayChannelClient *dcc,
                                                            PipeItem *item);
 
-/*
- * Macros to make iterating over stuff easier
- * The two collections we iterate over:
- *  given a channel, iterate over it's clients
- */
-
-#define LINK_TO_DCC(ptr) SPICE_CONTAINEROF(ptr, DisplayChannelClient,  \
-                                      common.base.channel_link)
-#define DCC_FOREACH_SAFE(link, next, dcc, channel)                       \
-    SAFE_FOREACH(link, next, channel,  &(channel)->clients, dcc, LINK_TO_DCC(link))
-
-
-#define FOREACH_DCC(display_channel, link, next, dcc)      \
-    DCC_FOREACH_SAFE(link, next, dcc, RED_CHANNEL(display_channel))
-
-
 #define LINK_TO_DPI(ptr) SPICE_CONTAINEROF((ptr), DrawablePipeItem, base)
 #define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)          \
     SAFE_FOREACH(link, next, drawable,  &(drawable)->pipes, dpi, LINK_TO_DPI(link))
@@ -357,38 +341,12 @@ static void display_channel_client_release_item_after_push(DisplayChannelClient 
     SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
 
 
-static int get_stream_id(DisplayChannel *display, Stream *stream)
-{
-    return (int)(stream - display->streams_buf);
-}
-
-static void display_stream_free(DisplayChannel *display, Stream *stream)
-{
-    stream->next = display->free_streams;
-    display->free_streams = stream;
-}
-
-static void display_stream_unref(DisplayChannel *display, Stream *stream)
-{
-    if (--stream->refs != 0)
-        return;
-
-    spice_warn_if_fail(!ring_item_is_linked(&stream->link));
-    display_stream_free(display, stream);
-    display->stream_count--;
-}
-
-static void display_stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
-{
-    display_stream_unref(display, agent->stream);
-}
-
 static void display_stream_clip_unref(DisplayChannel *display, StreamClipItem *item)
 {
     if (--item->refs != 0)
         return;
 
-    display_stream_agent_unref(display, item->stream_agent);
+    stream_agent_unref(display, item->stream_agent);
     free(item->rects);
     free(item);
 }
@@ -435,40 +393,6 @@ void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream)
         agent->stats.num_input_frames++;
 #endif
     }
-}
-
-static void stop_stream(DisplayChannel *display, Stream *stream)
-{
-    DisplayChannelClient *dcc;
-    RingItem *item, *next;
-
-    spice_assert(ring_item_is_linked(&stream->link));
-    spice_assert(!stream->current);
-    spice_debug("stream %d", get_stream_id(display, stream));
-    FOREACH_DCC(display, item, next, dcc) {
-        StreamAgent *stream_agent;
-
-        stream_agent = &dcc->stream_agents[get_stream_id(display, stream)];
-        region_clear(&stream_agent->vis_region);
-        region_clear(&stream_agent->clip);
-        spice_assert(!pipe_item_is_linked(&stream_agent->destroy_item));
-        if (stream_agent->mjpeg_encoder && dcc->use_mjpeg_encoder_rate_control) {
-            uint64_t stream_bit_rate = mjpeg_encoder_get_bit_rate(stream_agent->mjpeg_encoder);
-
-            if (stream_bit_rate > dcc->streams_max_bit_rate) {
-                spice_debug("old max-bit-rate=%.2f new=%.2f",
-                dcc->streams_max_bit_rate / 8.0 / 1024.0 / 1024.0,
-                stream_bit_rate / 8.0 / 1024.0 / 1024.0);
-                dcc->streams_max_bit_rate = stream_bit_rate;
-            }
-        }
-        stream->refs++;
-        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &stream_agent->destroy_item);
-        stream_agent_stats_print(stream_agent);
-    }
-    display->streams_size_total -= stream->width * stream->height;
-    ring_remove(&stream->link);
-    display_stream_unref(display, stream);
 }
 
 /* fixme: move to display channel */
@@ -806,7 +730,7 @@ static void stop_streams(DisplayChannel *display)
         Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
         item = ring_next(ring, item);
         if (!stream->current) {
-            stop_stream(display, stream);
+            stream_stop(display, stream);
         } else {
             spice_info("attached stream");
         }
@@ -1491,7 +1415,7 @@ static void display_channel_streams_timeout(DisplayChannel *display)
         item = ring_next(ring, item);
         if (now >= (stream->last_time + RED_STREAM_TIMEOUT)) {
             detach_stream_gracefully(display, stream, NULL);
-            stop_stream(display, stream);
+            stream_stop(display, stream);
         }
     }
 }
@@ -7310,7 +7234,7 @@ static void detach_and_stop_streams(DisplayChannel *display)
         Stream *stream = SPICE_CONTAINEROF(stream_item, Stream, link);
 
         detach_stream_gracefully(display, stream, NULL);
-        stop_stream(display, stream);
+        stream_stop(display, stream);
     }
 }
 
@@ -8373,7 +8297,7 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
     }
     case PIPE_ITEM_TYPE_STREAM_CREATE: {
         StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, create_item);
-        display_stream_agent_unref(display, agent);
+        stream_agent_unref(display, agent);
         break;
     }
     case PIPE_ITEM_TYPE_STREAM_CLIP:
@@ -8381,7 +8305,7 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
         break;
     case PIPE_ITEM_TYPE_STREAM_DESTROY: {
         StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, destroy_item);
-        display_stream_agent_unref(display, agent);
+        stream_agent_unref(display, agent);
         break;
     }
     case PIPE_ITEM_TYPE_UPGRADE:
@@ -8436,19 +8360,6 @@ static void display_channel_release_item(RedChannelClient *rcc, PipeItem *item, 
     }
 }
 
-static void init_streams(DisplayChannel *display)
-{
-    int i;
-
-    ring_init(&display->streams);
-    display->free_streams = NULL;
-    for (i = 0; i < NUM_STREAMS; i++) {
-        Stream *stream = &display->streams_buf[i];
-        ring_item_init(&stream->link);
-        display_stream_free(display, stream);
-    }
-}
-
 static void display_channel_create(RedWorker *worker, int migrate, int stream_video)
 {
     DisplayChannel *display_channel;
@@ -8497,11 +8408,11 @@ static void display_channel_create(RedWorker *worker, int migrate, int stream_vi
     display_channel->num_renderers = num_renderers;
     memcpy(display_channel->renderers, renderers, sizeof(display_channel->renderers));
     display_channel->renderer = RED_RENDERER_INVALID;
-    display_channel->stream_video = stream_video;
-    init_streams(display_channel);
     image_cache_init(&display_channel->image_cache);
     ring_init(&display_channel->current_list);
     drawables_init(display_channel);
+    display_channel->stream_video = stream_video;
+    display_channel_init_streams(display_channel);
 }
 
 static void guest_set_client_capabilities(RedWorker *worker)

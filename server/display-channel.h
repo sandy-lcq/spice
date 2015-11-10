@@ -57,8 +57,6 @@
 #include "tree.h"
 #include "stream.h"
 
-typedef struct DisplayChannel DisplayChannel;
-
 #define PALETTE_CACHE_HASH_SHIFT 8
 #define PALETTE_CACHE_HASH_SIZE (1 << PALETTE_CACHE_HASH_SHIFT)
 #define PALETTE_CACHE_HASH_MASK (PALETTE_CACHE_HASH_SIZE - 1)
@@ -347,6 +345,21 @@ struct DisplayChannel {
     stat_info_t lz4_stat;
 #endif
 };
+
+#define LINK_TO_DCC(ptr) SPICE_CONTAINEROF(ptr, DisplayChannelClient,   \
+                                           common.base.channel_link)
+#define DCC_FOREACH_SAFE(link, next, dcc, channel)                      \
+    SAFE_FOREACH(link, next, channel,  &(channel)->clients, dcc, LINK_TO_DCC(link))
+
+
+#define FOREACH_DCC(display_channel, link, next, dcc)                   \
+    DCC_FOREACH_SAFE(link, next, dcc, RED_CHANNEL(display_channel))
+
+static inline int get_stream_id(DisplayChannel *display, Stream *stream)
+{
+    return (int)(stream - display->streams_buf);
+}
+
 typedef struct SurfaceDestroyItem {
     SpiceMsgSurfaceDestroy surface_destroy;
     PipeItem pipe_item;
