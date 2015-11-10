@@ -1540,7 +1540,7 @@ static inline void red_detach_stream(RedWorker *worker, Stream *stream, int deta
     stream->current = NULL;
 }
 
-static void push_stream_clip(DisplayChannelClient* dcc, StreamAgent *agent)
+static void dcc_push_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
 {
     StreamClipItem *item = stream_clip_item_new(dcc, agent);
     int n_rects;
@@ -1608,7 +1608,7 @@ static void red_attach_stream(RedWorker *worker, Drawable *drawable, Stream *str
         if (!region_is_equal(&clip_in_draw_dest, &drawable->tree_item.base.rgn)) {
             region_remove(&agent->clip, &drawable->red_drawable->bbox);
             region_or(&agent->clip, &drawable->tree_item.base.rgn);
-            push_stream_clip(dcc, agent);
+            dcc_push_stream_agent_clip(dcc, agent);
         }
 #ifdef STREAM_STATS
         agent->stats.num_input_frames++;
@@ -1665,10 +1665,10 @@ static int red_display_drawable_is_in_pipe(DisplayChannelClient *dcc, Drawable *
 }
 
 /*
- * after red_display_detach_stream_gracefully is called for all the display channel clients,
+ * after dcc_detach_stream_gracefully is called for all the display channel clients,
  * red_detach_stream should be called. See comment (1).
  */
-static inline void red_display_detach_stream_gracefully(DisplayChannelClient *dcc,
+static inline void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
                                                         Stream *stream,
                                                         Drawable *update_area_limit)
 {
@@ -1677,7 +1677,7 @@ static inline void red_display_detach_stream_gracefully(DisplayChannelClient *dc
 
     /* stopping the client from playing older frames at once*/
     region_clear(&agent->clip);
-    push_stream_clip(dcc, agent);
+    dcc_push_stream_agent_clip(dcc, agent);
 
     if (region_is_empty(&agent->vis_region)) {
         spice_debug("stream %d: vis region empty", stream_id);
@@ -1742,7 +1742,7 @@ static inline void red_detach_stream_gracefully(RedWorker *worker, Stream *strea
     DisplayChannelClient *dcc;
 
     FOREACH_DCC(worker->display_channel, item, next, dcc) {
-        red_display_detach_stream_gracefully(dcc, stream, update_area_limit);
+        dcc_detach_stream_gracefully(dcc, stream, update_area_limit);
     }
     if (stream->current) {
         red_detach_stream(worker, stream, TRUE);
@@ -1757,7 +1757,7 @@ static inline void red_detach_stream_gracefully(RedWorker *worker, Stream *strea
  *           of the "current tree", the drawable parameter should be set with
  *           this drawable, otherwise, it should be NULL. Then, if detaching the stream
  *           involves sending an upgrade image to the client, this drawable won't be rendered
- *           (see red_display_detach_stream_gracefully).
+ *           (see dcc_detach_stream_gracefully).
  */
 static void red_detach_streams_behind(RedWorker *worker, QRegion *region, Drawable *drawable)
 {
@@ -1776,7 +1776,7 @@ static void red_detach_streams_behind(RedWorker *worker, QRegion *region, Drawab
             StreamAgent *agent = &dcc->stream_agents[get_stream_id(worker, stream)];
 
             if (region_intersects(&agent->vis_region, region)) {
-                red_display_detach_stream_gracefully(dcc, stream, drawable);
+                dcc_detach_stream_gracefully(dcc, stream, drawable);
                 detach_stream = 1;
                 spice_debug("stream %d", get_stream_id(worker, stream));
             }
@@ -1826,7 +1826,7 @@ static void red_streams_update_visible_region(RedWorker *worker, Drawable *drawa
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
                 region_exclude(&agent->vis_region, &drawable->tree_item.base.rgn);
                 region_exclude(&agent->clip, &drawable->tree_item.base.rgn);
-                push_stream_clip(dcc, agent);
+                dcc_push_stream_agent_clip(dcc, agent);
             }
         }
     }
@@ -2013,7 +2013,7 @@ static void red_stream_update_client_playback_latency(void *opaque, uint32_t del
     main_dispatcher_set_mm_time_latency(RED_CHANNEL_CLIENT(agent->dcc)->client, agent->dcc->streams_max_latency);
 }
 
-static void red_display_create_stream(DisplayChannelClient *dcc, Stream *stream)
+static void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
 {
     StreamAgent *agent = &dcc->stream_agents[get_stream_id(DCC_TO_WORKER(dcc), stream)];
 
@@ -2094,7 +2094,7 @@ static void red_create_stream(RedWorker *worker, Drawable *drawable)
     worker->streams_size_total += stream->width * stream->height;
     worker->stream_count++;
     FOREACH_DCC(worker->display_channel, dcc_ring_item, next, dcc) {
-        red_display_create_stream(dcc, stream);
+        dcc_create_stream(dcc, stream);
     }
     spice_debug("stream %d %dx%d (%d, %d) (%d, %d)", (int)(stream - worker->streams_buf), stream->width,
                 stream->height, stream->dest_area.left, stream->dest_area.top,
@@ -2102,18 +2102,18 @@ static void red_create_stream(RedWorker *worker, Drawable *drawable)
     return;
 }
 
-static void red_disply_start_streams(DisplayChannelClient *dcc)
+static void dcc_create_all_streams(DisplayChannelClient *dcc)
 {
     Ring *ring = &DCC_TO_WORKER(dcc)->streams;
     RingItem *item = ring;
 
     while ((item = ring_next(ring, item))) {
         Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
-        red_display_create_stream(dcc, stream);
+        dcc_create_stream(dcc, stream);
     }
 }
 
-static void red_display_client_init_streams(DisplayChannelClient *dcc)
+static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 {
     int i;
     RedWorker *worker = DCC_TO_WORKER(dcc);
@@ -2131,7 +2131,7 @@ static void red_display_client_init_streams(DisplayChannelClient *dcc)
         red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT);
 }
 
-static void red_display_destroy_streams_agents(DisplayChannelClient *dcc)
+static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
 {
     int i;
 
@@ -7711,7 +7711,7 @@ static void display_channel_client_on_disconnect(RedChannelClient *rcc)
     free(dcc->send_data.stream_outbuf);
     red_display_reset_compress_buf(dcc);
     free(dcc->send_data.free_list.res);
-    red_display_destroy_streams_agents(dcc);
+    dcc_destroy_stream_agents(dcc);
 
     // this was the last channel client
     if (!red_channel_is_connected(rcc->channel)) {
@@ -8139,7 +8139,7 @@ static void on_new_display_channel_client(DisplayChannelClient *dcc)
         red_push_surface_image(dcc, 0);
         dcc_push_monitors_config(dcc);
         red_pipe_add_verb(rcc, SPICE_MSG_DISPLAY_MARK);
-        red_disply_start_streams(dcc);
+        dcc_create_all_streams(dcc);
     }
 }
 
@@ -9018,7 +9018,7 @@ static void handle_new_display_channel(RedWorker *worker, RedClient *client, Red
 
     // todo: tune level according to bandwidth
     display_channel->zlib_level = ZLIB_DEFAULT_COMPRESSION_LEVEL;
-    red_display_client_init_streams(dcc);
+    dcc_init_stream_agents(dcc);
     on_new_display_channel_client(dcc);
 }
 
