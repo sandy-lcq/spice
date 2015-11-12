@@ -20,18 +20,18 @@
 
 #include "display-channel.h"
 
-void display_channel_compress_stats_reset(DisplayChannel *display_channel)
+void display_channel_compress_stats_reset(DisplayChannel *display)
 {
-    spice_return_if_fail(display_channel);
+    spice_return_if_fail(display);
 
 #ifdef COMPRESS_STAT
-    stat_reset(&worker->display_channel->quic_stat);
-    stat_reset(&worker->display_channel->lz_stat);
-    stat_reset(&worker->display_channel->glz_stat);
-    stat_reset(&worker->display_channel->jpeg_stat);
-    stat_reset(&worker->display_channel->zlib_glz_stat);
-    stat_reset(&worker->display_channel->jpeg_alpha_stat);
-    stat_reset(&worker->display_channel->lz4_stat);
+    stat_reset(&display->quic_stat);
+    stat_reset(&display->lz_stat);
+    stat_reset(&display->glz_stat);
+    stat_reset(&display->jpeg_stat);
+    stat_reset(&display->zlib_glz_stat);
+    stat_reset(&display->jpeg_alpha_stat);
+    stat_reset(&display->lz4_stat);
 #endif
 }
 
@@ -46,7 +46,7 @@ void display_channel_compress_stats_print(const DisplayChannel *display_channel)
                        display_channel->zlib_glz_stat.comp_size :
                        display_channel->glz_stat.comp_size;
 
-    spice_info("==> Compression stats for display %u", display_channel->common.id);
+    spice_info("==> Compression stats for display %u", display_channel->common.base.id);
     spice_info("Method   \t  count  \torig_size(MB)\tenc_size(MB)\tenc_time(s)");
     spice_info("QUIC     \t%8d\t%13.2f\t%12.2f\t%12.2f",
                display_channel->quic_stat.count,

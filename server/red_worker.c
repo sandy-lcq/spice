@@ -4180,7 +4180,7 @@ static inline int red_glz_compress_image(DisplayChannelClient *dcc,
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     RedWorker *worker = display_channel->common.worker;
 #ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(worker->clockid);
+    stat_time_t start_time = stat_now(display_channel->zlib_glz_stat.clock);
 #endif
     spice_assert(bitmap_fmt_is_rgb(src->format));
     GlzData *glz_data = &dcc->glz_data;
@@ -4223,7 +4223,7 @@ static inline int red_glz_compress_image(DisplayChannelClient *dcc,
         goto glz;
     }
 #ifdef COMPRESS_STAT
-    start_time = stat_now(worker->clockid);
+    start_time = stat_now(display_channel->zlib_glz_stat.clock);
 #endif
     zlib_data = &worker->zlib_data;
 
@@ -4286,7 +4286,7 @@ static inline int red_lz_compress_image(DisplayChannelClient *dcc,
     int size;            // size of the compressed data
 
 #ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(worker->clockid);
+    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->lz_stat.clock);
 #endif
 
     lz_data->data.bufs_tail = red_display_alloc_compress_buf(dcc);
@@ -4347,7 +4347,7 @@ static inline int red_lz_compress_image(DisplayChannelClient *dcc,
         o_comp_data->lzplt_palette = dest->u.lz_plt.palette;
     }
 
-    stat_compress_add(&display_channel->lz_stat, start_time, src->stride * src->y,
+    stat_compress_add(&DCC_TO_DC(dcc)->lz_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
@@ -4372,7 +4372,7 @@ static int red_jpeg_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
     uint8_t *lz_out_start_byte;
 
 #ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(worker->clockid);
+    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->jpeg_alpha_stat.clock);
 #endif
     switch (src->format) {
     case SPICE_BITMAP_FMT_16BIT:
@@ -4446,7 +4446,7 @@ static int red_jpeg_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
         o_comp_data->comp_buf_size = jpeg_size;
         o_comp_data->is_lossy = TRUE;
 
-        stat_compress_add(&display_channel->jpeg_stat, start_time, src->stride * src->y,
+        stat_compress_add(&DCC_TO_DC(dcc)->jpeg_stat, start_time, src->stride * src->y,
                           o_comp_data->comp_buf_size);
         return TRUE;
     }
@@ -4489,7 +4489,7 @@ static int red_jpeg_compress_image(DisplayChannelClient *dcc, SpiceImage *dest,
     o_comp_data->comp_buf = jpeg_data->data.bufs_head;
     o_comp_data->comp_buf_size = jpeg_size + alpha_lz_size;
     o_comp_data->is_lossy = TRUE;
-    stat_compress_add(&display_channel->jpeg_alpha_stat, start_time, src->stride * src->y,
+    stat_compress_add(&DCC_TO_DC(dcc)->jpeg_alpha_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
@@ -4572,7 +4572,7 @@ static inline int red_quic_compress_image(DisplayChannelClient *dcc, SpiceImage 
     int size, stride;
 
 #ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(worker->clockid);
+    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->quic_stat.clock);
 #endif
 
     switch (src->format) {
@@ -4642,7 +4642,7 @@ static inline int red_quic_compress_image(DisplayChannelClient *dcc, SpiceImage 
     o_comp_data->comp_buf = quic_data->data.bufs_head;
     o_comp_data->comp_buf_size = size << 2;
 
-    stat_compress_add(&display_channel->quic_stat, start_time, src->stride * src->y,
+    stat_compress_add(&DCC_TO_DC(dcc)->quic_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }

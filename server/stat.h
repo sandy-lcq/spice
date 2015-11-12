@@ -87,13 +87,13 @@ static inline void stat_compress_init(stat_info_t *info, const char *name)
     stat_reset(info);
 }
 
-static inline void stat_compress_add(RedWorker *worker, stat_info_t *info,
+static inline void stat_compress_add(stat_info_t *info,
                                      stat_time_t start, int orig_size,
                                      int comp_size)
 {
     stat_time_t time;
     ++info->count;
-    time = stat_now(worker) - start;
+    time = stat_now(info->clock) - start;
     info->total += time;
     info->max = MAX(info->max, time);
     info->min = MIN(info->min, time);
@@ -101,7 +101,7 @@ static inline void stat_compress_add(RedWorker *worker, stat_info_t *info,
     info->comp_size += comp_size;
 }
 
-double inline stat_byte_to_mega(uint64_t size)
+static inline double stat_byte_to_mega(uint64_t size)
 {
     return (double)size / (1000 * 1000);
 }
