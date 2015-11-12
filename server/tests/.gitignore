@@ -9,3 +9,8 @@ spice-server-replay
 test_display_width_stride
 test_two_servers
 test_vdagent
+stat_test
+libstat_test1.a
+libstat_test2.a
+libstat_test3.a
+libstat_test4.a

@@ -44,6 +44,20 @@ noinst_PROGRAMS =				\
 	test_vdagent				\
 	test_display_width_stride		\
 	spice-server-replay			\
+	stat_test \
+	$(NULL)
+
+TESTS =	\
+	stat_test				\
+	$(NULL)
+
+check_PROGRAMS = $(TESTS)
+
+noinst_LIBRARIES = \
+	libstat_test1.a \
+	libstat_test2.a \
+	libstat_test3.a \
+	libstat_test4.a \
 	$(NULL)
 
 test_vdagent_SOURCES =		\
@@ -113,3 +127,24 @@ spice_server_replay_SOURCES = 			\
 	basic_event_loop.h			\
 	test_util.h				\
 	$(NULL)
+
+stat_test_SOURCES = stat-main.c
+stat_test_LDADD = \
+	$(LDADD) \
+	libstat_test1.a \
+	libstat_test2.a \
+	libstat_test3.a \
+	libstat_test4.a \
+	$(NULL)
+
+libstat_test1_a_SOURCES = stat-test.c
+libstat_test1_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=0 -DTEST_RED_WORKER_STAT=0 -DTEST_NAME=stat_test1
+
+libstat_test2_a_SOURCES = stat-test.c
+libstat_test2_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=0 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test2
+
+libstat_test3_a_SOURCES = stat-test.c
+libstat_test3_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=0 -DTEST_NAME=stat_test3
+
+libstat_test4_a_SOURCES = stat-test.c
+libstat_test4_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test4
