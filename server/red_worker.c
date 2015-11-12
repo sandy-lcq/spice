@@ -1975,13 +1975,12 @@ static void before_reattach_stream(DisplayChannel *display,
     }
 }
 
-static void update_copy_graduality(Drawable *drawable)
+static void update_copy_graduality(DisplayChannel *display, Drawable *drawable)
 {
     SpiceBitmap *bitmap;
     spice_return_if_fail(drawable->red_drawable->type == QXL_DRAW_COPY);
 
-    /* TODO: global property -> per dc/dcc */
-    if (streaming_video != SPICE_STREAM_VIDEO_FILTER) {
+    if (display->stream_video != SPICE_STREAM_VIDEO_FILTER) {
         drawable->copy_bitmap_graduality = BITMAP_GRADUAL_INVALID;
         return;
     }
@@ -2014,7 +2013,7 @@ static int display_channel_stream_add_frame(DisplayChannel *display,
                                             int gradual_frames_count,
                                             int last_gradual_frame)
 {
-    update_copy_graduality(frame_drawable);
+    update_copy_graduality(display, frame_drawable);
     frame_drawable->frames_count = frames_count + 1;
     frame_drawable->gradual_frames_count  = gradual_frames_count;
 
@@ -8537,7 +8536,7 @@ static void init_streams(DisplayChannel *display)
     }
 }
 
-static void display_channel_create(RedWorker *worker, int migrate)
+static void display_channel_create(RedWorker *worker, int migrate, int stream_video)
 {
     DisplayChannel *display_channel;
     ChannelCbs cbs = {
@@ -8585,6 +8584,7 @@ static void display_channel_create(RedWorker *worker, int migrate)
     display_channel->num_renderers = num_renderers;
     memcpy(display_channel->renderers, renderers, sizeof(display_channel->renderers));
     display_channel->renderer = RED_RENDERER_INVALID;
+    display_channel->stream_video = stream_video;
     init_streams(display_channel);
     image_cache_init(&display_channel->image_cache);
     ring_init(&display_channel->current_list);
@@ -9752,7 +9752,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 
     worker->cursor_channel = cursor_channel_new(worker);
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
-    display_channel_create(worker, FALSE);
+    display_channel_create(worker, FALSE, streaming_video);
 
     return worker;
 }
