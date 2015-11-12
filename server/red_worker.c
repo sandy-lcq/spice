@@ -6846,27 +6846,23 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
         comp_succeeded = red_jpeg_compress_image(dcc, &red_image,
                                                  &bitmap, &comp_send_data,
                                                  worker->mem_slots.internal_groupslot_id);
-    } else {
-        if (quic_comp) {
-            comp_succeeded = red_quic_compress_image(dcc, &red_image, &bitmap,
-                                                     &comp_send_data,
-                                                     worker->mem_slots.internal_groupslot_id);
-        } else {
+    } else if (quic_comp) {
+        comp_succeeded = red_quic_compress_image(dcc, &red_image, &bitmap,
+                                                 &comp_send_data,
+                                                 worker->mem_slots.internal_groupslot_id);
 #ifdef USE_LZ4
-            if (comp_mode == SPICE_IMAGE_COMPRESSION_LZ4 &&
-                bitmap_fmt_is_rgb(bitmap.format) &&
-                red_channel_client_test_remote_cap(&dcc->common.base,
-                        SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-                comp_succeeded = red_lz4_compress_image(dcc, &red_image, &bitmap,
-                                                        &comp_send_data,
-                                                        worker->mem_slots.internal_groupslot_id);
-            } else
+    } else if (comp_mode == SPICE_IMAGE_COMPRESSION_LZ4 &&
+               bitmap_fmt_is_rgb(bitmap.format) &&
+               red_channel_client_test_remote_cap(&dcc->common.base,
+                                                  SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
+        comp_succeeded = red_lz4_compress_image(dcc, &red_image, &bitmap,
+                                                &comp_send_data,
+                                                worker->mem_slots.internal_groupslot_id);
 #endif
-            if (comp_mode != SPICE_IMAGE_COMPRESSION_OFF)
-                comp_succeeded = red_lz_compress_image(dcc, &red_image, &bitmap,
-                                                       &comp_send_data,
-                                                       worker->mem_slots.internal_groupslot_id);
-        }
+    } else if (comp_mode != SPICE_IMAGE_COMPRESSION_OFF) {
+        comp_succeeded = red_lz_compress_image(dcc, &red_image, &bitmap,
+                                               &comp_send_data,
+                                               worker->mem_slots.internal_groupslot_id);
     }
 
     surface_lossy_region = &dcc->surface_client_lossy_region[item->surface_id];
