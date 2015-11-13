@@ -1050,7 +1050,7 @@ static inline void current_remove(RedWorker *worker, TreeItem *item)
     }
 }
 
-static void red_current_clear(RedWorker *worker, int surface_id)
+static void current_remove_all(RedWorker *worker, int surface_id)
 {
     RingItem *ring_item;
 
@@ -2844,10 +2844,10 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
         }
         set_surface_release_info(&red_surface->destroy, surface->release_info, group_id);
         red_handle_depends_on_target_surface(worker, surface_id);
-        /* note that red_handle_depends_on_target_surface must be called before red_current_clear.
+        /* note that red_handle_depends_on_target_surface must be called before current_remove_all.
            otherwise "current" will hold items that other drawables may depend on, and then
-           red_current_clear will remove them from the pipe. */
-        red_current_clear(worker, surface_id);
+           current_remove_all will remove them from the pipe. */
+        current_remove_all(worker, surface_id);
         red_clear_surface_drawables_from_pipes(worker, surface_id, FALSE);
         red_surface_unref(worker, surface_id);
         break;
@@ -3393,7 +3393,7 @@ static void red_current_flush(RedWorker *worker, int surface_id)
     while (!ring_is_empty(&worker->surfaces[surface_id].current_list)) {
         free_one_drawable(worker, FALSE);
     }
-    red_current_clear(worker, surface_id);
+    current_remove_all(worker, surface_id);
 }
 
 // adding the pipe item after pos. If pos == NULL, adding to head.
@@ -8819,10 +8819,10 @@ static inline void destroy_surface_wait(RedWorker *worker, int surface_id)
     }
 
     red_handle_depends_on_target_surface(worker, surface_id);
-    /* note that red_handle_depends_on_target_surface must be called before red_current_clear.
+    /* note that red_handle_depends_on_target_surface must be called before current_remove_all.
        otherwise "current" will hold items that other drawables may depend on, and then
-       red_current_clear will remove them from the pipe. */
-    red_current_clear(worker, surface_id);
+       current_remove_all will remove them from the pipe. */
+    current_remove_all(worker, surface_id);
     red_clear_surface_drawables_from_pipes(worker, surface_id, TRUE);
 }
 
