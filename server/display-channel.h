@@ -172,6 +172,9 @@ struct Drawable {
 
 struct DisplayChannelClient {
     CommonChannelClient common;
+    SpiceImageCompression image_compression;
+    spice_wan_compression_t jpeg_state;
+    spice_wan_compression_t zlib_glz_state;
 
     int expect_init;
 
@@ -242,7 +245,10 @@ DisplayChannelClient*      dcc_new                                   (DisplayCha
                                                                       uint32_t *common_caps,
                                                                       int num_common_caps,
                                                                       uint32_t *caps,
-                                                                      int num_caps);
+                                                                      int num_caps,
+                                                                      SpiceImageCompression image_compression,
+                                                                      spice_wan_compression_t jpeg_state,
+                                                                      spice_wan_compression_t zlib_glz_state);
 void                       dcc_push_monitors_config                  (DisplayChannelClient *dcc);
 void                       dcc_push_destroy_surface                  (DisplayChannelClient *dcc,
                                                                       uint32_t surface_id);
