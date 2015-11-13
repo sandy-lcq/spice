@@ -419,6 +419,8 @@ void                       display_channel_surface_unref             (DisplayCha
                                                                       uint32_t surface_id);
 bool                       display_channel_surface_has_canvas        (DisplayChannel *display,
                                                                       uint32_t surface_id);
+int                        display_channel_add_drawable              (DisplayChannel *display,
+                                                                      Drawable *drawable);
 
 static inline int is_equal_path(SpicePath *path1, SpicePath *path2)
 {
@@ -534,5 +536,14 @@ static inline void region_add_clip_rects(QRegion *rgn, SpiceClipRects *data)
         region_add(rgn, data->rects + i);
     }
 }
+
+void red_pipes_add_drawable(DisplayChannel *display, Drawable *drawable);
+void current_remove_drawable(DisplayChannel *display, Drawable *item);
+void red_pipes_add_drawable_after(DisplayChannel *display,
+                                  Drawable *drawable, Drawable *pos_after);
+void red_pipes_remove_drawable(Drawable *drawable);
+void dcc_add_drawable(DisplayChannelClient *dcc, Drawable *drawable);
+void current_remove(DisplayChannel *display, TreeItem *item);
+void detach_streams_behind(DisplayChannel *display, QRegion *region, Drawable *drawable);
 
 #endif /* DISPLAY_CHANNEL_H_ */
