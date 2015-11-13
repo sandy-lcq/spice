@@ -39,6 +39,7 @@
 #define RED_STREAM_CLIENT_REPORT_TIMEOUT 1000 // milliseconds
 #define RED_STREAM_DEFAULT_HIGH_START_BIT_RATE (10 * 1024 * 1024) // 10Mbps
 #define RED_STREAM_DEFAULT_LOW_START_BIT_RATE (2.5 * 1024 * 1024) // 2.5Mbps
+#define MAX_FPS 30
 
 /* move back to display_channel once struct private */
 typedef struct DisplayChannel DisplayChannel;
@@ -143,5 +144,7 @@ void                  stream_unref                                  (DisplayChan
 void                  stream_agent_unref                            (DisplayChannel *display,
                                                                      StreamAgent *agent);
 void                  stream_agent_stats_print                      (StreamAgent *agent);
+void                  stream_agent_stop                             (DisplayChannelClient *dcc,
+                                                                     StreamAgent *agent);
 
 #endif /* STREAM_H */

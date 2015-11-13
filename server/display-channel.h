@@ -246,6 +246,8 @@ void                       dcc_push_destroy_surface                  (DisplayCha
                                                                       uint32_t surface_id);
 void                       dcc_add_stream_agent_clip                 (DisplayChannelClient* dcc,
                                                                       StreamAgent *agent);
+void                       dcc_create_stream                         (DisplayChannelClient *dcc,
+                                                                      Stream *stream);
 
 typedef struct DrawablePipeItem {
     RingItem base;  /* link for a list of pipe items held by Drawable */
