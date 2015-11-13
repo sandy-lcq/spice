@@ -79,8 +79,6 @@
 
 #define DISPLAY_FREE_LIST_DEFAULT_SIZE 128
 
-#define FPS_TEST_INTERVAL 1
-
 #define ZLIB_DEFAULT_COMPRESSION_LEVEL 3
 #define MIN_GLZ_SIZE_FOR_ZLIB 100
 
@@ -313,8 +311,6 @@ static void red_draw_drawable(RedWorker *worker, Drawable *item);
 static void red_update_area(RedWorker *worker, const SpiceRect *area, int surface_id);
 static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int surface_id,
                                  Drawable *last);
-static void detach_stream(DisplayChannel *display, Stream *stream, int detach_sized);
-static inline void display_channel_stream_maintenance(DisplayChannel *display, Drawable *candidate, Drawable *sect);
 static inline void display_begin_send_message(RedChannelClient *rcc);
 static void red_release_glz(DisplayChannelClient *dcc);
 static void red_freeze_glz(DisplayChannelClient *dcc);
@@ -328,10 +324,6 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
                                                             PipeItem *item);
 static void display_channel_client_release_item_after_push(DisplayChannelClient *dcc,
                                                            PipeItem *item);
-
-#define LINK_TO_DPI(ptr) SPICE_CONTAINEROF((ptr), DrawablePipeItem, base)
-#define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)          \
-    SAFE_FOREACH(link, next, drawable,  &(drawable)->pipes, dpi, LINK_TO_DPI(link))
 
 
 #define LINK_TO_GLZ(ptr) SPICE_CONTAINEROF((ptr), RedGlzDrawable, \
@@ -1103,7 +1095,7 @@ static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *ite
             } else {
                 if (frame_candidate) {
                     Drawable *drawable = SPICE_CONTAINEROF(draw, Drawable, tree_item);
-                    display_channel_stream_maintenance(worker->display_channel, frame_candidate, drawable);
+                    stream_maintenance(worker->display_channel, frame_candidate, drawable);
                 }
                 region_exclude(&draw->base.rgn, &and_rgn);
             }
@@ -1207,8 +1199,8 @@ static inline void current_add_drawable(RedWorker *worker, Drawable *drawable, R
     drawable->refs++;
 }
 
-static void detach_stream(DisplayChannel *display, Stream *stream,
-                          int detach_sized)
+void detach_stream(DisplayChannel *display, Stream *stream,
+                   int detach_sized)
 {
     spice_assert(stream->current && stream->current->stream);
     spice_assert(stream->current->stream == stream);
@@ -1419,58 +1411,6 @@ static void display_channel_streams_timeout(DisplayChannel *display)
     }
 }
 
-static Stream *display_channel_stream_try_new(DisplayChannel *display)
-{
-    Stream *stream;
-    if (!display->free_streams) {
-        return NULL;
-    }
-    stream = display->free_streams;
-    display->free_streams = display->free_streams->next;
-    return stream;
-}
-
-static void display_channel_create_stream(DisplayChannel *display, Drawable *drawable)
-{
-    DisplayChannelClient *dcc;
-    RingItem *dcc_ring_item, *next;
-    Stream *stream;
-    SpiceRect* src_rect;
-
-    spice_assert(!drawable->stream);
-
-    if (!(stream = display_channel_stream_try_new(display))) {
-        return;
-    }
-
-    spice_assert(drawable->red_drawable->type == QXL_DRAW_COPY);
-    src_rect = &drawable->red_drawable->u.copy.src_area;
-
-    ring_add(&display->streams, &stream->link);
-    stream->current = drawable;
-    stream->last_time = drawable->creation_time;
-    stream->width = src_rect->right - src_rect->left;
-    stream->height = src_rect->bottom - src_rect->top;
-    stream->dest_area = drawable->red_drawable->bbox;
-    stream->refs = 1;
-    SpiceBitmap *bitmap = &drawable->red_drawable->u.copy.src_bitmap->u.bitmap;
-    stream->top_down = !!(bitmap->flags & SPICE_BITMAP_FLAGS_TOP_DOWN);
-    drawable->stream = stream;
-    stream->input_fps = MAX_FPS;
-    stream->num_input_frames = 0;
-    stream->input_fps_start_time = drawable->creation_time;
-    display->streams_size_total += stream->width * stream->height;
-    display->stream_count++;
-    FOREACH_DCC(display, dcc_ring_item, next, dcc) {
-        dcc_create_stream(dcc, stream);
-    }
-    spice_debug("stream %d %dx%d (%d, %d) (%d, %d)",
-                (int)(stream - display->streams_buf), stream->width,
-                stream->height, stream->dest_area.left, stream->dest_area.top,
-                stream->dest_area.right, stream->dest_area.bottom);
-    return;
-}
-
 static void dcc_create_all_streams(DisplayChannelClient *dcc)
 {
     Ring *ring = &DCC_TO_DC(dcc)->streams;
@@ -1515,256 +1455,6 @@ static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
     }
 }
 
-static int is_next_stream_frame(DisplayChannel *display,
-                                const Drawable *candidate,
-                                const int other_src_width,
-                                const int other_src_height,
-                                const SpiceRect *other_dest,
-                                const red_time_t other_time,
-                                const Stream *stream,
-                                int container_candidate_allowed)
-{
-    RedDrawable *red_drawable;
-    int is_frame_container = FALSE;
-
-    if (!candidate->streamable) {
-        return STREAM_FRAME_NONE;
-    }
-
-    if (candidate->creation_time - other_time >
-            (stream ? RED_STREAM_CONTINUS_MAX_DELTA : RED_STREAM_DETACTION_MAX_DELTA)) {
-        return STREAM_FRAME_NONE;
-    }
-
-    red_drawable = candidate->red_drawable;
-    if (!container_candidate_allowed) {
-        SpiceRect* candidate_src;
-
-        if (!rect_is_equal(&red_drawable->bbox, other_dest)) {
-            return STREAM_FRAME_NONE;
-        }
-
-        candidate_src = &red_drawable->u.copy.src_area;
-        if (candidate_src->right - candidate_src->left != other_src_width ||
-            candidate_src->bottom - candidate_src->top != other_src_height) {
-            return STREAM_FRAME_NONE;
-        }
-    } else {
-        if (rect_contains(&red_drawable->bbox, other_dest)) {
-            int candidate_area = rect_get_area(&red_drawable->bbox);
-            int other_area = rect_get_area(other_dest);
-            /* do not stream drawables that are significantly
-             * bigger than the original frame */
-            if (candidate_area > 2 * other_area) {
-                spice_debug("too big candidate:");
-                spice_debug("prev box ==>");
-                rect_debug(other_dest);
-                spice_debug("new box ==>");
-                rect_debug(&red_drawable->bbox);
-                return STREAM_FRAME_NONE;
-            }
-
-            if (candidate_area > other_area) {
-                is_frame_container = TRUE;
-            }
-        } else {
-            return STREAM_FRAME_NONE;
-        }
-    }
-
-    if (stream) {
-        SpiceBitmap *bitmap = &red_drawable->u.copy.src_bitmap->u.bitmap;
-        if (stream->top_down != !!(bitmap->flags & SPICE_BITMAP_FLAGS_TOP_DOWN)) {
-            return STREAM_FRAME_NONE;
-        }
-    }
-    if (is_frame_container) {
-        return STREAM_FRAME_CONTAINER;
-    } else {
-        return STREAM_FRAME_NATIVE;
-    }
-}
-
-static void before_reattach_stream(DisplayChannel *display,
-                                   Stream *stream, Drawable *new_frame)
-{
-    DrawablePipeItem *dpi;
-    DisplayChannelClient *dcc;
-    int index;
-    StreamAgent *agent;
-    RingItem *ring_item, *next;
-
-    spice_return_if_fail(stream->current);
-
-    if (!red_channel_is_connected(RED_CHANNEL(display))) {
-        return;
-    }
-
-    if (new_frame->process_commands_generation == stream->current->process_commands_generation) {
-        spice_debug("ignoring drop, same process_commands_generation as previous frame");
-        return;
-    }
-
-    index = get_stream_id(display, stream);
-    DRAWABLE_FOREACH_DPI_SAFE(stream->current, ring_item, next, dpi) {
-        dcc = dpi->dcc;
-        agent = &dcc->stream_agents[index];
-
-        if (!dcc->use_mjpeg_encoder_rate_control &&
-            !dcc->common.is_low_bandwidth) {
-            continue;
-        }
-
-        if (pipe_item_is_linked(&dpi->dpi_pipe_item)) {
-#ifdef STREAM_STATS
-            agent->stats.num_drops_pipe++;
-#endif
-            if (dcc->use_mjpeg_encoder_rate_control) {
-                mjpeg_encoder_notify_server_frame_drop(agent->mjpeg_encoder);
-            } else {
-                ++agent->drops;
-            }
-        }
-    }
-
-
-    FOREACH_DCC(display, ring_item, next, dcc) {
-        double drop_factor;
-
-        agent = &dcc->stream_agents[index];
-
-        if (dcc->use_mjpeg_encoder_rate_control) {
-            continue;
-        }
-        if (agent->frames / agent->fps < FPS_TEST_INTERVAL) {
-            agent->frames++;
-            continue;
-        }
-        drop_factor = ((double)agent->frames - (double)agent->drops) /
-            (double)agent->frames;
-        spice_debug("stream %d: #frames %u #drops %u", index, agent->frames, agent->drops);
-        if (drop_factor == 1) {
-            if (agent->fps < MAX_FPS) {
-                agent->fps++;
-                spice_debug("stream %d: fps++ %u", index, agent->fps);
-            }
-        } else if (drop_factor < 0.9) {
-            if (agent->fps > 1) {
-                agent->fps--;
-                spice_debug("stream %d: fps--%u", index, agent->fps);
-            }
-        }
-        agent->frames = 1;
-        agent->drops = 0;
-    }
-}
-
-static void update_copy_graduality(DisplayChannel *display, Drawable *drawable)
-{
-    SpiceBitmap *bitmap;
-    spice_return_if_fail(drawable->red_drawable->type == QXL_DRAW_COPY);
-
-    if (display->stream_video != SPICE_STREAM_VIDEO_FILTER) {
-        drawable->copy_bitmap_graduality = BITMAP_GRADUAL_INVALID;
-        return;
-    }
-
-    if (drawable->copy_bitmap_graduality != BITMAP_GRADUAL_INVALID) {
-        return; // already set
-    }
-
-    bitmap = &drawable->red_drawable->u.copy.src_bitmap->u.bitmap;
-
-    if (!bitmap_fmt_has_graduality(bitmap->format) || bitmap_has_extra_stride(bitmap) ||
-        (bitmap->data->flags & SPICE_CHUNKS_FLAGS_UNSTABLE)) {
-        drawable->copy_bitmap_graduality = BITMAP_GRADUAL_NOT_AVAIL;
-    } else  {
-        drawable->copy_bitmap_graduality = bitmap_get_graduality_level(bitmap);
-    }
-}
-
-static int is_stream_start(Drawable *drawable)
-{
-    return ((drawable->frames_count >= RED_STREAM_FRAMES_START_CONDITION) &&
-            (drawable->gradual_frames_count >=
-            (RED_STREAM_GRADUAL_FRAMES_START_CONDITION * drawable->frames_count)));
-}
-
-// returns whether a stream was created
-static int display_channel_stream_add_frame(DisplayChannel *display,
-                                            Drawable *frame_drawable,
-                                            int frames_count,
-                                            int gradual_frames_count,
-                                            int last_gradual_frame)
-{
-    update_copy_graduality(display, frame_drawable);
-    frame_drawable->frames_count = frames_count + 1;
-    frame_drawable->gradual_frames_count  = gradual_frames_count;
-
-    if (frame_drawable->copy_bitmap_graduality != BITMAP_GRADUAL_LOW) {
-        if ((frame_drawable->frames_count - last_gradual_frame) >
-            RED_STREAM_FRAMES_RESET_CONDITION) {
-            frame_drawable->frames_count = 1;
-            frame_drawable->gradual_frames_count = 1;
-        } else {
-            frame_drawable->gradual_frames_count++;
-        }
-
-        frame_drawable->last_gradual_frame = frame_drawable->frames_count;
-    } else {
-        frame_drawable->last_gradual_frame = last_gradual_frame;
-    }
-
-    if (is_stream_start(frame_drawable)) {
-        display_channel_create_stream(display, frame_drawable);
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static void display_channel_stream_maintenance(DisplayChannel *display,
-                                               Drawable *candidate, Drawable *prev)
-{
-    int is_next_frame;
-
-    if (candidate->stream) {
-        return;
-    }
-
-    if (prev->stream) {
-        Stream *stream = prev->stream;
-
-        is_next_frame = is_next_stream_frame(display, candidate,
-                                             stream->width, stream->height,
-                                             &stream->dest_area, stream->last_time,
-                                             stream, TRUE);
-        if (is_next_frame != STREAM_FRAME_NONE) {
-            before_reattach_stream(display, stream, candidate);
-            detach_stream(display, stream, FALSE);
-            prev->streamable = FALSE; //prevent item trace
-            attach_stream(display, candidate, stream);
-            if (is_next_frame == STREAM_FRAME_CONTAINER) {
-                candidate->sized_stream = stream;
-            }
-        }
-    } else if (candidate->streamable) {
-        SpiceRect* prev_src = &prev->red_drawable->u.copy.src_area;
-
-        is_next_frame =
-            is_next_stream_frame(display, candidate, prev_src->right - prev_src->left,
-                                 prev_src->bottom - prev_src->top,
-                                 &prev->red_drawable->bbox, prev->creation_time,
-                                 prev->stream,
-                                 FALSE);
-        if (is_next_frame != STREAM_FRAME_NONE) {
-            display_channel_stream_add_frame(display, candidate,
-                                             prev->frames_count,
-                                             prev->gradual_frames_count,
-                                             prev->last_gradual_frame);
-        }
-    }
-}
-
 static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeItem *other)
 {
     DisplayChannel *display  = worker->display_channel;
@@ -1787,7 +1477,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
     if (item->effect == QXL_EFFECT_OPAQUE) {
         int add_after = !!other_drawable->stream &&
                         is_drawable_independent_from_surfaces(drawable);
-        display_channel_stream_maintenance(worker->display_channel, drawable, other_drawable);
+        stream_maintenance(worker->display_channel, drawable, other_drawable);
         current_add_drawable(worker, drawable, &other->siblings_link);
         other_drawable->refs++;
         current_remove_drawable(worker, other_drawable);
@@ -1859,61 +1549,6 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
         break;
     }
     return FALSE;
-}
-
-#define FOREACH_STREAMS(display, item)                  \
-    for (item = ring_get_head(&(display)->streams);     \
-         item != NULL;                                  \
-         item = ring_next(&(display)->streams, item))
-
-static void red_use_stream_trace(DisplayChannel *display, Drawable *drawable)
-{
-    ItemTrace *trace;
-    ItemTrace *trace_end;
-    RingItem *item;
-
-    if (drawable->stream || !drawable->streamable || drawable->frames_count) {
-        return;
-    }
-
-    FOREACH_STREAMS(display, item) {
-        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
-        int is_next_frame = is_next_stream_frame(display,
-                                                 drawable,
-                                                 stream->width,
-                                                 stream->height,
-                                                 &stream->dest_area,
-                                                 stream->last_time,
-                                                 stream,
-                                                 TRUE);
-        if (is_next_frame != STREAM_FRAME_NONE) {
-            if (stream->current) {
-                stream->current->streamable = FALSE; //prevent item trace
-                before_reattach_stream(display, stream, drawable);
-                detach_stream(display, stream, FALSE);
-            }
-            attach_stream(display, drawable, stream);
-            if (is_next_frame == STREAM_FRAME_CONTAINER) {
-                drawable->sized_stream = stream;
-            }
-            return;
-        }
-    }
-
-    trace = display->items_trace;
-    trace_end = trace + NUM_TRACE_ITEMS;
-    for (; trace < trace_end; trace++) {
-        if (is_next_stream_frame(display, drawable, trace->width, trace->height,
-                                       &trace->dest_area, trace->time, NULL, FALSE) !=
-                                       STREAM_FRAME_NONE) {
-            if (display_channel_stream_add_frame(display, drawable,
-                                                 trace->frames_count,
-                                                 trace->gradual_frames_count,
-                                                 trace->last_gradual_frame)) {
-                return;
-            }
-        }
-    }
 }
 
 static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
@@ -2011,7 +1646,7 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
     if (item->effect == QXL_EFFECT_OPAQUE) {
         region_or(&exclude_rgn, &item->base.rgn);
         exclude_region(worker, ring, exclude_base, &exclude_rgn, NULL, drawable);
-        red_use_stream_trace(worker->display_channel, drawable);
+        stream_trace_update(worker->display_channel, drawable);
         streams_update_visible_region(worker->display_channel, drawable);
         /*
          * Performing the insertion after exclude_region for

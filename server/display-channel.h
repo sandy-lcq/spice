@@ -166,6 +166,11 @@ struct Drawable {
     uint32_t process_commands_generation;
 };
 
+#define LINK_TO_DPI(ptr) SPICE_CONTAINEROF((ptr), DrawablePipeItem, base)
+#define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)            \
+    SAFE_FOREACH(link, next, drawable,  &(drawable)->pipes, dpi, LINK_TO_DPI(link))
+
+
 struct DisplayChannelClient {
     CommonChannelClient common;
 

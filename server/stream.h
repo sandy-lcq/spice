@@ -141,10 +141,19 @@ void                  stream_stop                                   (DisplayChan
                                                                      Stream *stream);
 void                  stream_unref                                  (DisplayChannel *display,
                                                                      Stream *stream);
+void                  stream_trace_update                           (DisplayChannel *display,
+                                                                     Drawable *drawable);
+void                  stream_maintenance                            (DisplayChannel *display,
+                                                                     Drawable *candidate,
+                                                                     Drawable *prev);
+
 void                  stream_agent_unref                            (DisplayChannel *display,
                                                                      StreamAgent *agent);
 void                  stream_agent_stats_print                      (StreamAgent *agent);
 void                  stream_agent_stop                             (DisplayChannelClient *dcc,
                                                                      StreamAgent *agent);
+
+void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream);
+void detach_stream(DisplayChannel *display, Stream *stream, int detach_sized);
 
 #endif /* STREAM_H */
