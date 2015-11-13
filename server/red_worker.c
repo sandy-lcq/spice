@@ -2065,18 +2065,6 @@ static void display_channel_stream_maintenance(DisplayChannel *display,
     }
 }
 
-static inline int is_drawable_independent_from_surfaces(Drawable *drawable)
-{
-    int x;
-
-    for (x = 0; x < 3; ++x) {
-        if (drawable->surface_deps[x] != -1) {
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
-
 static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeItem *other)
 {
     DisplayChannel *display  = worker->display_channel;
@@ -2347,15 +2335,6 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
     return TRUE;
 }
 
-static void add_clip_rects(QRegion *rgn, SpiceClipRects *data)
-{
-    int i;
-
-    for (i = 0; i < data->num_rects; i++) {
-        region_add(rgn, data->rects + i);
-    }
-}
-
 static inline int current_add_with_shadow(RedWorker *worker, Ring *ring, Drawable *item)
 {
     DisplayChannel *display = worker->display_channel;
@@ -2398,11 +2377,6 @@ static inline int current_add_with_shadow(RedWorker *worker, Ring *ring, Drawabl
     }
     stat_add(&display->add_stat, start_time);
     return TRUE;
-}
-
-static inline int has_shadow(RedDrawable *drawable)
-{
-    return drawable->type == QXL_COPY_BITS;
 }
 
 static void drawable_update_streamable(DisplayChannel *display, Drawable *drawable)
@@ -2762,7 +2736,7 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
         QRegion rgn;
 
         region_init(&rgn);
-        add_clip_rects(&rgn, red_drawable->clip.rects);
+        region_add_clip_rects(&rgn, red_drawable->clip.rects);
         region_and(&drawable->tree_item.base.rgn, &rgn);
         region_destroy(&rgn);
     }
@@ -5201,7 +5175,7 @@ static void surface_lossy_region_update(RedWorker *worker, DisplayChannelClient 
         region_init(&clip_rgn);
         region_init(&draw_region);
         region_add(&draw_region, &drawable->bbox);
-        add_clip_rects(&clip_rgn, drawable->clip.rects);
+        region_add_clip_rects(&clip_rgn, drawable->clip.rects);
         region_and(&draw_region, &clip_rgn);
         if (lossy) {
             region_or(surface_lossy_region, &draw_region);

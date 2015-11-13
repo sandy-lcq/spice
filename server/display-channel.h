@@ -446,12 +446,38 @@ static inline int is_same_drawable(Drawable *d1, Drawable *d2)
     }
 }
 
+static inline int is_drawable_independent_from_surfaces(Drawable *drawable)
+{
+    int x;
+
+    for (x = 0; x < 3; ++x) {
+        if (drawable->surface_deps[x] != -1) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static inline int has_shadow(RedDrawable *drawable)
+{
+    return drawable->type == QXL_COPY_BITS;
+}
+
 static inline int is_primary_surface(DisplayChannel *display, uint32_t surface_id)
 {
     if (surface_id == 0) {
         return TRUE;
     }
     return FALSE;
+}
+
+static inline void region_add_clip_rects(QRegion *rgn, SpiceClipRects *data)
+{
+    int i;
+
+    for (i = 0; i < data->num_rects; i++) {
+        region_add(rgn, data->rects + i);
+    }
 }
 
 #endif /* DISPLAY_CHANNEL_H_ */
