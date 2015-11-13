@@ -78,6 +78,7 @@ if test "x$enable_gstreamer" != "xno"; then
         [enable_gstreamer="yes"
          SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gst-plugins-base 1.0], [appsrc videoconvert appsink])
          SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gstreamer-libav 1.0], [avenc_mjpeg])
+         SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gst-plugins-good 1.0], [vp8enc])
          ],
          [if test "x$enable_gstreamer" = "xyes"; then
               AC_MSG_ERROR([GStreamer 1.0 support requested but not found. You may set GSTREAMER_1_0_CFLAGS and GSTREAMER_1_0_LIBS to avoid the need to call pkg-config.])

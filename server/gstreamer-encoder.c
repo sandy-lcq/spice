@@ -191,11 +191,44 @@ static void set_appsrc_caps(SpiceGstEncoder *encoder)
 
 static gboolean create_pipeline(SpiceGstEncoder *encoder)
 {
+    gchar *gstenc;
+    switch (encoder->base.codec_type)
+    {
+    case SPICE_VIDEO_CODEC_TYPE_MJPEG:
+        /* Set max-threads to ensure zero-frame latency */
+        gstenc = g_strdup("avenc_mjpeg max-threads=1");
+        break;
+    case SPICE_VIDEO_CODEC_TYPE_VP8: {
+        /* See http://www.webmproject.org/docs/encoder-parameters/
+         * - Set end-usage to get a constant bitrate to help with streaming.
+         * - min-quantizer ensures the bitrate does not get needlessly high.
+         * - resize-allowed would be useful for low bitrate situations but
+         *   the decoder does not return a frame of the expected size so
+         *   avoid it.
+         * - error-resilient minimises artifacts in case the client drops a
+         *   frame.
+         * - Set lag-in-frames, deadline and cpu-used to match
+         *   "Profile Realtime". lag-in-frames ensures zero-frame latency,
+         *   deadline turns on realtime behavior, and cpu-used targets a 75%
+         *   CPU usage.
+         * - deadline is supposed to be set in microseconds but in practice
+         *   it behaves like a boolean.
+         */
+        gstenc = g_strdup_printf("vp8enc end-usage=cbr min-quantizer=10 error-resilient=default lag-in-frames=0 deadline=1 cpu-used=4");
+        break;
+        }
+    default:
+        /* gstreamer_encoder_new() should have rejected this codec type */
+        spice_warning("unsupported codec type %d", encoder->base.codec_type);
+        return FALSE;
+    }
+
     GError *err = NULL;
-    /* Set max-threads to ensure zero-frame latency */
-    const gchar *desc = "appsrc is-live=true format=time do-timestamp=true name=src ! videoconvert ! avenc_mjpeg max-threads=1 name=encoder ! appsink name=sink";
+    gchar *desc = g_strdup_printf("appsrc is-live=true format=time do-timestamp=true name=src ! videoconvert ! %s name=encoder ! appsink name=sink", gstenc);
     spice_debug("GStreamer pipeline: %s", desc);
     encoder->pipeline = gst_parse_launch_full(desc, NULL, GST_PARSE_FLAG_FATAL_ERRORS, &err);
+    g_free(gstenc);
+    g_free(desc);
     if (!encoder->pipeline || err) {
         spice_warning("GStreamer error: %s", err->message);
         g_clear_error(&err);
@@ -209,9 +242,11 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
     encoder->gstenc = gst_bin_get_by_name(GST_BIN(encoder->pipeline), "encoder");
     encoder->appsink = GST_APP_SINK(gst_bin_get_by_name(GST_BIN(encoder->pipeline), "sink"));
 
-    /* See https://bugzilla.gnome.org/show_bug.cgi?id=753257 */
-    spice_debug("removing the pipeline clock");
-    gst_pipeline_use_clock(GST_PIPELINE(encoder->pipeline), NULL);
+    if (encoder->base.codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG) {
+        /* See https://bugzilla.gnome.org/show_bug.cgi?id=753257 */
+        spice_debug("removing the pipeline clock");
+        gst_pipeline_use_clock(GST_PIPELINE(encoder->pipeline), NULL);
+    }
 
     set_pipeline_changes(encoder, SPICE_GST_VIDEO_PIPELINE_STATE |
                                   SPICE_GST_VIDEO_PIPELINE_BITRATE |
@@ -224,8 +259,23 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
 static void set_gstenc_bitrate(SpiceGstEncoder *encoder)
 {
     adjust_bit_rate(encoder);
-    g_object_set(G_OBJECT(encoder->gstenc),
-                 "bitrate", (gint)encoder->bit_rate, NULL);
+    switch (encoder->base.codec_type)
+    {
+    case SPICE_VIDEO_CODEC_TYPE_MJPEG:
+        g_object_set(G_OBJECT(encoder->gstenc),
+                     "bitrate", (gint)encoder->bit_rate,
+                     NULL);
+        break;
+    case SPICE_VIDEO_CODEC_TYPE_VP8:
+        g_object_set(G_OBJECT(encoder->gstenc),
+                     "target-bitrate", (gint)encoder->bit_rate,
+                     NULL);
+        break;
+    default:
+        /* gstreamer_encoder_new() should have rejected this codec type */
+        spice_warning("unsupported codec type %d", encoder->base.codec_type);
+        free_pipeline(encoder);
+    }
 }
 
 /* A helper for spice_gst_encoder_encode_frame() */
@@ -528,7 +578,8 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
                                     uint64_t starting_bit_rate,
                                     VideoEncoderRateControlCbs *cbs)
 {
-    spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG, NULL);
+    spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG ||
+                             codec_type == SPICE_VIDEO_CODEC_TYPE_VP8, NULL);
 
     GError *err = NULL;
     if (!gst_init_check(NULL, NULL, &err)) {
