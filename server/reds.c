@@ -1370,7 +1370,10 @@ static int reds_send_link_ack(RedLinkInfo *link)
     channel = reds_find_channel(link->link_mess->channel_type,
                                 link->link_mess->channel_id);
     if (!channel) {
-        spice_assert(link->link_mess->channel_type == SPICE_CHANNEL_MAIN);
+        if (link->link_mess->channel_type != SPICE_CHANNEL_MAIN) {
+            spice_warning("Received wrong header: channel_type != SPICE_CHANNEL_MAIN");
+            return FALSE;
+        }
         spice_assert(reds->main_channel);
         channel = &reds->main_channel->base;
     }
