@@ -943,21 +943,6 @@ void display_channel_drawable_unref(DisplayChannel *display, Drawable *drawable)
     display->drawable_count--;
 }
 
-static inline void remove_shadow(DrawItem *item)
-{
-    Shadow *shadow;
-
-    if (!item->shadow) {
-        return;
-    }
-    shadow = item->shadow;
-    item->shadow = NULL;
-    ring_remove(&shadow->base.siblings_link);
-    region_destroy(&shadow->base.rgn);
-    region_destroy(&shadow->on_hold);
-    free(shadow);
-}
-
 static void display_stream_trace_add_drawable(DisplayChannel *display, Drawable *item)
 {
     ItemTrace *trace;
@@ -1001,7 +986,7 @@ static inline void current_remove_drawable(RedWorker *worker, Drawable *item)
     DisplayChannel *display = worker->display_channel;
 
     display_stream_trace_add_drawable(display, item);
-    remove_shadow(&item->tree_item);
+    draw_item_remove_shadow(&item->tree_item);
     ring_remove(&item->tree_item.base.siblings_link);
     ring_remove(&item->list_link);
     ring_remove(&item->surface_list_link);
@@ -1155,39 +1140,6 @@ static void red_clear_surface_drawables_from_pipes(RedWorker *worker,
     }
 }
 
-static inline Shadow *__find_shadow(TreeItem *item)
-{
-    while (item->type == TREE_ITEM_TYPE_CONTAINER) {
-        if (!(item = (TreeItem *)ring_get_tail(&((Container *)item)->items))) {
-            return NULL;
-        }
-    }
-
-    if (item->type != TREE_ITEM_TYPE_DRAWABLE) {
-        return NULL;
-    }
-
-    return ((DrawItem *)item)->shadow;
-}
-
-static inline Ring *ring_of(Ring *ring, TreeItem *item)
-{
-    return (item->container) ? &item->container->items : ring;
-}
-
-static inline int __contained_by(TreeItem *item, Ring *ring)
-{
-    spice_assert(item && ring);
-    do {
-        Ring *now = ring_of(ring, item);
-        if (now == ring) {
-            return TRUE;
-        }
-    } while ((item = (TreeItem *)item->container));
-
-    return FALSE;
-}
-
 static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *item, QRegion *rgn,
                                     Ring **top_ring, Drawable *frame_candidate)
 {
@@ -1221,8 +1173,8 @@ static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *ite
                     region_exclude(&shadow->on_hold, &and_rgn);
                     region_or(rgn, &and_rgn);
                     // in flat representation of current, shadow is always his owner next
-                    if (!__contained_by((TreeItem*)shadow, *top_ring)) {
-                        *top_ring = ring_of(ring, (TreeItem*)shadow);
+                    if (!tree_item_contained_by((TreeItem*)shadow, *top_ring)) {
+                        *top_ring = tree_item_container_items((TreeItem*)shadow, ring);
                     }
                 }
             } else {
@@ -1239,10 +1191,10 @@ static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *ite
                 Shadow *shadow;
 
                 region_exclude(rgn, &and_rgn);
-                if ((shadow = __find_shadow(item))) {
+                if ((shadow = tree_item_find_shadow(item))) {
                     region_or(rgn, &shadow->on_hold);
-                    if (!__contained_by((TreeItem*)shadow, *top_ring)) {
-                        *top_ring = ring_of(ring, (TreeItem*)shadow);
+                    if (!tree_item_contained_by((TreeItem*)shadow, *top_ring)) {
+                        *top_ring = tree_item_container_items((TreeItem*)shadow, ring);
                     }
                 }
             }
@@ -2254,7 +2206,7 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
                 Shadow *shadow;
                 int skip = now == exclude_base;
 
-                if ((shadow = __find_shadow(sibling))) {
+                if ((shadow = tree_item_find_shadow(sibling))) {
                     if (exclude_base) {
                         TreeItem *next = sibling;
                         exclude_region(worker, ring, exclude_base, &exclude_rgn, &next, NULL);
