@@ -559,6 +559,7 @@ void spicevmc_device_disconnect(SpiceCharDeviceInstance *sin)
     }
     spice_char_device_state_destroy(sin->st);
     state->chardev_st = NULL;
+    sin->st = NULL;
 
     reds_unregister_channel(&state->channel);
     free(state->pipe_item);
