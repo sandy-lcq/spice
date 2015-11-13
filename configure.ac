@@ -289,7 +289,7 @@ docs/manual/Makefile
 ])
 
 dnl ==========================================================================
-echo "
+AC_MSG_NOTICE([
 
         Spice $VERSION
         ==============
@@ -300,23 +300,16 @@ echo "
         python:                   ${PYTHON}
 
         OpenGL:                   ${enable_opengl}
-
         LZ4 support:              ${enable_lz4}
-
         Smartcard:                ${have_smartcard}
-
         SASL support:             ${enable_sasl}
-
         Automated tests:          ${enable_automated_tests}
-
         Manual:                   ${have_asciidoc}
-"
+
+        Now type 'make' to build $PACKAGE
+])
 
 if test x"$arch_warn" != x; then
         AC_MSG_WARN([$arch_warn])
         echo ""
 fi
-
-echo \
-"        Now type 'make' to build $PACKAGE
-"
