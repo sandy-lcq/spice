@@ -742,11 +742,13 @@ void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
     reds_on_char_device_state_destroy(char_dev);
     if (char_dev->write_to_dev_timer) {
         core->timer_remove(char_dev->write_to_dev_timer);
+        char_dev->write_to_dev_timer = NULL;
     }
     write_buffers_queue_free(&char_dev->write_queue);
     write_buffers_queue_free(&char_dev->write_bufs_pool);
     char_dev->cur_pool_size = 0;
     spice_char_device_write_buffer_free(char_dev->cur_write_buf);
+    char_dev->cur_write_buf = NULL;
 
     while (!ring_is_empty(&char_dev->clients)) {
         RingItem *item = ring_get_tail(&char_dev->clients);
