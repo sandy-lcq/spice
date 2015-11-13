@@ -393,22 +393,6 @@ static void display_stream_clip_unref(DisplayChannel *display, StreamClipItem *i
     free(item);
 }
 
-static void dcc_push_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
-{
-    StreamClipItem *item = stream_clip_item_new(dcc, agent);
-    int n_rects;
-
-    item->clip_type = SPICE_CLIP_TYPE_RECTS;
-
-    n_rects = pixman_region32_n_rects(&agent->clip);
-    item->rects = spice_malloc_n_m(n_rects, sizeof(SpiceRect), sizeof(SpiceClipRects));
-    item->rects->num_rects = n_rects;
-    region_ret_rects(&agent->clip, item->rects->rects, n_rects);
-
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), (PipeItem *)item);
-}
-
-
 void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream)
 {
     DisplayChannelClient *dcc;
@@ -445,7 +429,7 @@ void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream)
         if (!region_is_equal(&clip_in_draw_dest, &drawable->tree_item.base.rgn)) {
             region_remove(&agent->clip, &drawable->red_drawable->bbox);
             region_or(&agent->clip, &drawable->tree_item.base.rgn);
-            dcc_push_stream_agent_clip(dcc, agent);
+            dcc_add_stream_agent_clip(dcc, agent);
         }
 #ifdef STREAM_STATS
         agent->stats.num_input_frames++;
@@ -1388,7 +1372,7 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
 
     /* stopping the client from playing older frames at once*/
     region_clear(&agent->clip);
-    dcc_push_stream_agent_clip(dcc, agent);
+    dcc_add_stream_agent_clip(dcc, agent);
 
     if (region_is_empty(&agent->vis_region)) {
         spice_debug("stream %d: vis region empty", stream_id);
@@ -1537,7 +1521,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
                 region_exclude(&agent->vis_region, &drawable->tree_item.base.rgn);
                 region_exclude(&agent->clip, &drawable->tree_item.base.rgn);
-                dcc_push_stream_agent_clip(dcc, agent);
+                dcc_add_stream_agent_clip(dcc, agent);
             }
         }
     }
