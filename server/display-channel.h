@@ -358,9 +358,6 @@ typedef struct SurfaceCreateItem {
 
 void                       display_channel_set_stream_video          (DisplayChannel *display,
                                                                       int stream_video);
-void                       display_channel_attach_stream             (DisplayChannel *display,
-                                                                      Drawable *drawable,
-                                                                      Stream *stream);
 int                        display_channel_get_streams_timeout       (DisplayChannel *display);
 void                       display_channel_compress_stats_print      (const DisplayChannel *display);
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
