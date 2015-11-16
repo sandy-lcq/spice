@@ -233,7 +233,7 @@ typedef struct RedSurface {
     QXLReleaseInfoExt create, destroy;
 } RedSurface;
 
-typedef struct RedWorker {
+struct RedWorker {
     pthread_t thread;
     clockid_t clockid;
     QXLInstance *qxl;
@@ -290,7 +290,7 @@ typedef struct RedWorker {
     int driver_cap_monitors_config;
 
     FILE *record_fd;
-} RedWorker;
+};
 
 typedef enum {
     BITMAP_DATA_TYPE_INVALID,

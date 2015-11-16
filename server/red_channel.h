@@ -128,7 +128,6 @@ typedef struct OutgoingHandler {
 
 /* Red Channel interface */
 
-typedef struct RedsStream RedsStream;
 typedef struct RedChannel RedChannel;
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;

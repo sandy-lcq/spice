@@ -23,7 +23,6 @@
 #include "red_channel.h"
 
 typedef struct RedDispatcher RedDispatcher;
-typedef struct RedChannelClient RedChannelClient;
 
 typedef struct AsyncCommand AsyncCommand;
 
