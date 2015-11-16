@@ -19,6 +19,7 @@
 # define UTILS_H_
 
 #include <time.h>
+#include <stdint.h>
 
 typedef int64_t red_time_t;
 
