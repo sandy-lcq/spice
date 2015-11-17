@@ -289,7 +289,7 @@ static void red_freeze_glz(DisplayChannelClient *dcc);
 static void display_channel_push_release(DisplayChannelClient *dcc, uint8_t type, uint64_t id,
                                          uint64_t* sync_data);
 static int red_display_free_some_independent_glz_drawables(DisplayChannelClient *dcc);
-static void red_display_free_glz_drawable(DisplayChannelClient *dcc, RedGlzDrawable *drawable);
+static void dcc_free_glz_drawable(DisplayChannelClient *dcc, RedGlzDrawable *drawable);
 static ImageItem *red_add_surface_area_image(DisplayChannelClient *dcc, int surface_id,
                                              SpiceRect *area, PipeItem *pos, int can_lossy);
 static void display_channel_client_release_item_before_push(DisplayChannelClient *dcc,
@@ -1840,7 +1840,7 @@ static bool free_one_drawable(DisplayChannel *display, int force_glz_free)
         RingItem *glz_item, *next_item;
         RedGlzDrawable *glz;
         DRAWABLE_FOREACH_GLZ_SAFE(drawable, glz_item, next_item, glz) {
-            red_display_free_glz_drawable(glz->dcc, glz);
+            dcc_free_glz_drawable(glz->dcc, glz);
         }
     }
     red_draw_drawable(display, drawable);
@@ -2828,8 +2828,8 @@ static GlzDrawableInstanceItem *red_display_add_glz_drawable_instance(RedGlzDraw
    it is not used by Drawable).
    NOTE - 1) can be called only by the display channel that created the drawable
           2) it is assumed that the instance was already removed from the dictionary*/
-static void red_display_free_glz_drawable_instance(DisplayChannelClient *dcc,
-                                                   GlzDrawableInstanceItem *glz_drawable_instance)
+void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
+                                    GlzDrawableInstanceItem *glz_drawable_instance)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     RedWorker *worker = display_channel->common.worker;
@@ -2881,7 +2881,7 @@ static void red_display_handle_glz_drawables_to_free(DisplayChannelClient* dcc)
         GlzDrawableInstanceItem *drawable_instance = SPICE_CONTAINEROF(ring_link,
                                                                  GlzDrawableInstanceItem,
                                                                  free_link);
-        red_display_free_glz_drawable_instance(dcc, drawable_instance);
+        dcc_free_glz_drawable_instance(dcc, drawable_instance);
     }
     pthread_mutex_unlock(&dcc->glz_drawables_inst_to_free_lock);
 }
@@ -2892,14 +2892,14 @@ static void red_display_handle_glz_drawables_to_free(DisplayChannelClient* dcc)
  * if possible.
  * NOTE - the caller should prevent encoding using the dictionary during this operation
  */
-static void red_display_free_glz_drawable(DisplayChannelClient *dcc, RedGlzDrawable *drawable)
+static void dcc_free_glz_drawable(DisplayChannelClient *dcc, RedGlzDrawable *drawable)
 {
     RingItem *head_instance = ring_get_head(&drawable->instances);
     int cont = (head_instance != NULL);
 
     while (cont) {
         if (drawable->instances_count == 1) {
-            /* Last instance: red_display_free_glz_drawable_instance will free the drawable */
+            /* Last instance: dcc_free_glz_drawable_instance will free the drawable */
             cont = FALSE;
         }
         GlzDrawableInstanceItem *instance = SPICE_CONTAINEROF(head_instance,
@@ -2911,7 +2911,7 @@ static void red_display_free_glz_drawable(DisplayChannelClient *dcc, RedGlzDrawa
                                             instance->glz_instance,
                                             &dcc->glz_data.usr);
         }
-        red_display_free_glz_drawable_instance(dcc, instance);
+        dcc_free_glz_drawable_instance(dcc, instance);
 
         if (cont) {
             head_instance = ring_get_head(&drawable->instances);
@@ -2936,7 +2936,7 @@ static void red_display_client_clear_glz_drawables(DisplayChannelClient *dcc)
         RedGlzDrawable *drawable = SPICE_CONTAINEROF(ring_link, RedGlzDrawable, link);
         // no need to lock the to_free list, since we assured no other thread is encoding and
         // thus not other thread access the to_free list of the channel
-        red_display_free_glz_drawable(dcc, drawable);
+        dcc_free_glz_drawable(dcc, drawable);
     }
     pthread_rwlock_unlock(&glz_dict->encode_lock);
 }
@@ -2972,7 +2972,7 @@ static int red_display_free_some_independent_glz_drawables(DisplayChannelClient 
         RedGlzDrawable *glz_drawable = SPICE_CONTAINEROF(ring_link, RedGlzDrawable, link);
         ring_link = ring_next(&dcc->glz_drawables, ring_link);
         if (!glz_drawable->drawable) {
-            red_display_free_glz_drawable(dcc, glz_drawable);
+            dcc_free_glz_drawable(dcc, glz_drawable);
             n++;
         }
     }
@@ -3229,7 +3229,7 @@ static void glz_usr_free_image(GlzEncoderUsrContext *usr, GlzUsrImageContext *im
     DisplayChannelClient *drawable_cc = glz_drawable_instance->red_glz_drawable->dcc;
     DisplayChannelClient *this_cc = SPICE_CONTAINEROF(lz_data, DisplayChannelClient, glz_data);
     if (this_cc == drawable_cc) {
-        red_display_free_glz_drawable_instance(drawable_cc, glz_drawable_instance);
+        dcc_free_glz_drawable_instance(drawable_cc, glz_drawable_instance);
     } else {
         /* The glz dictionary is shared between all DisplayChannelClient
          * instances that belong to the same client, and glz_usr_free_image
