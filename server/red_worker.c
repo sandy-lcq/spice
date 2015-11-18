@@ -206,30 +206,6 @@ typedef struct UpgradeItem {
     SpiceClipRects *rects;
 } UpgradeItem;
 
-typedef struct DrawContext {
-    SpiceCanvas *canvas;
-    int canvas_draws_on_surface;
-    int top_down;
-    uint32_t width;
-    uint32_t height;
-    int32_t stride;
-    uint32_t format;
-    void *line_0;
-} DrawContext;
-
-typedef struct RedSurface {
-    uint32_t refs;
-    Ring current;
-    Ring current_list;
-    DrawContext context;
-
-    Ring depend_on_me;
-    QRegion draw_dirty_region;
-
-    //fix me - better handling here
-    QXLReleaseInfoExt create, destroy;
-} RedSurface;
-
 struct RedWorker {
     pthread_t thread;
     clockid_t clockid;
@@ -245,10 +221,6 @@ struct RedWorker {
 
     CursorChannel *cursor_channel;
     uint32_t cursor_poll_tries;
-
-    RedSurface surfaces[NUM_SURFACES];
-    uint32_t n_surfaces;
-    SpiceImageSurfaces image_surfaces;
 
     uint32_t red_drawable_count;
     uint32_t glz_drawable_count;
@@ -303,13 +275,13 @@ typedef struct BitmapData {
     SpiceRect lossy_rect;
 } BitmapData;
 
-static inline int validate_surface(RedWorker *worker, uint32_t surface_id);
+static inline int validate_surface(DisplayChannel *display, uint32_t surface_id);
 
-static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable);
-static void red_current_flush(RedWorker *worker, int surface_id);
-static void red_draw_drawable(RedWorker *worker, Drawable *item);
-static void red_update_area(RedWorker *worker, const SpiceRect *area, int surface_id);
-static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int surface_id,
+static void red_draw_qxl_drawable(DisplayChannel *display, Drawable *drawable);
+static void red_current_flush(DisplayChannel *display, int surface_id);
+static void red_draw_drawable(DisplayChannel *display, Drawable *item);
+static void red_update_area(DisplayChannel *display, const SpiceRect *area, int surface_id);
+static void red_update_area_till(DisplayChannel *display, const SpiceRect *area, int surface_id,
                                  Drawable *last);
 static inline void display_begin_send_message(RedChannelClient *rcc);
 static void red_release_glz(DisplayChannelClient *dcc);
@@ -324,6 +296,9 @@ static void display_channel_client_release_item_before_push(DisplayChannelClient
                                                             PipeItem *item);
 static void display_channel_client_release_item_after_push(DisplayChannelClient *dcc,
                                                            PipeItem *item);
+static void red_create_surface(DisplayChannel *display, uint32_t surface_id, uint32_t width,
+                               uint32_t height, int32_t stride, uint32_t format,
+                               void *line_0, int data_is_valid, int send_client);
 
 
 #define LINK_TO_GLZ(ptr) SPICE_CONTAINEROF((ptr), RedGlzDrawable, \
@@ -439,8 +414,8 @@ static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
         /* surface_id must be validated before calling into
          * validate_drawable_bbox
          */
-        VALIDATE_SURFACE_RETVAL(worker, surface_id, FALSE);
-        context = &worker->surfaces[surface_id].context;
+        VALIDATE_SURFACE_RETVAL(worker->display_channel, surface_id, FALSE);
+        context = &worker->display_channel->surfaces[surface_id].context;
 
         if (drawable->bbox.top < 0)
                 return FALSE;
@@ -458,15 +433,15 @@ static int validate_drawable_bbox(RedWorker *worker, RedDrawable *drawable)
         return TRUE;
 }
 
-static inline int validate_surface(RedWorker *worker, uint32_t surface_id)
+static inline int validate_surface(DisplayChannel *display, uint32_t surface_id)
 {
-    if SPICE_UNLIKELY(surface_id >= worker->n_surfaces) {
+    if SPICE_UNLIKELY(surface_id >= display->n_surfaces) {
         spice_warning("invalid surface_id %u", surface_id);
         return 0;
     }
-    if (!worker->surfaces[surface_id].context.canvas) {
+    if (!display->surfaces[surface_id].context.canvas) {
         spice_warning("canvas address is %p for %d (and is NULL)\n",
-                   &(worker->surfaces[surface_id].context.canvas), surface_id);
+                   &(display->surfaces[surface_id].context.canvas), surface_id);
         spice_warning("failed on %d", surface_id);
         return 0;
     }
@@ -479,7 +454,7 @@ static void red_push_surface_image(DisplayChannelClient *dcc, int surface_id);
 static inline void red_handle_drawable_surfaces_client_synced(
                         DisplayChannelClient *dcc, Drawable *drawable)
 {
-    RedWorker *worker = DCC_TO_WORKER(dcc);
+    DisplayChannel *display = DCC_TO_DC(dcc);
     int x;
 
     for (x = 0; x < 3; ++x) {
@@ -491,7 +466,7 @@ static inline void red_handle_drawable_surfaces_client_synced(
                 continue;
             }
             red_create_surface_item(dcc, surface_id);
-            red_current_flush(worker, surface_id);
+            red_current_flush(display, surface_id);
             red_push_surface_image(dcc, surface_id);
         }
     }
@@ -501,7 +476,7 @@ static inline void red_handle_drawable_surfaces_client_synced(
     }
 
     red_create_surface_item(dcc, drawable->surface_id);
-    red_current_flush(worker, drawable->surface_id);
+    red_current_flush(display, drawable->surface_id);
     red_push_surface_image(dcc, drawable->surface_id);
 }
 
@@ -526,13 +501,13 @@ static void dcc_add_drawable(DisplayChannelClient *dcc, Drawable *drawable)
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item);
 }
 
-static void red_pipes_add_drawable(RedWorker *worker, Drawable *drawable)
+static void red_pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
     DisplayChannelClient *dcc;
     RingItem *dcc_ring_item, *next;
 
     spice_warn_if(!ring_is_empty(&drawable->pipes));
-    FOREACH_DCC(worker->display_channel, dcc_ring_item, next, dcc) {
+    FOREACH_DCC(display, dcc_ring_item, next, dcc) {
         dcc_add_drawable(dcc, drawable);
     }
 }
@@ -549,7 +524,7 @@ static void dcc_add_drawable_to_tail(DisplayChannelClient *dcc, Drawable *drawab
     red_channel_client_pipe_add_tail(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item);
 }
 
-static inline void red_pipes_add_drawable_after(RedWorker *worker,
+static inline void red_pipes_add_drawable_after(DisplayChannel *display,
                                                 Drawable *drawable, Drawable *pos_after)
 {
     DrawablePipeItem *dpi, *dpi_pos_after;
@@ -566,13 +541,13 @@ static inline void red_pipes_add_drawable_after(RedWorker *worker,
                                           &dpi_pos_after->dpi_pipe_item);
     }
     if (num_other_linked == 0) {
-        red_pipes_add_drawable(worker, drawable);
+        red_pipes_add_drawable(display, drawable);
         return;
     }
-    if (num_other_linked != worker->display_channel->common.base.clients_num) {
-        RingItem *worker_item, *next;
+    if (num_other_linked != display->common.base.clients_num) {
+        RingItem *item, *next;
         spice_debug("TODO: not O(n^2)");
-        FOREACH_DCC(worker->display_channel, worker_item, next, dcc) {
+        FOREACH_DCC(display, item, next, dcc) {
             int sent = 0;
             DRAWABLE_FOREACH_DPI_SAFE(pos_after, dpi_link, dpi_next, dpi_pos_after) {
                 if (dpi_pos_after->dcc == dcc) {
@@ -595,8 +570,6 @@ static inline PipeItem *red_pipe_get_tail(DisplayChannelClient *dcc)
 
     return (PipeItem*)ring_get_tail(&RED_CHANNEL_CLIENT(dcc)->pipe);
 }
-
-static void red_surface_unref(RedWorker *worker, uint32_t surface_id);
 
 static inline void red_pipes_remove_drawable(Drawable *drawable)
 {
@@ -712,59 +685,6 @@ static void drawables_init(DisplayChannel *display)
 }
 
 
-static void stop_streams(DisplayChannel *display)
-{
-    Ring *ring = &display->streams;
-    RingItem *item = ring_get_head(ring);
-
-    while (item) {
-        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
-        item = ring_next(ring, item);
-        if (!stream->current) {
-            stream_stop(display, stream);
-        } else {
-            spice_info("attached stream");
-        }
-    }
-
-    display->next_item_trace = 0;
-    memset(display->items_trace, 0, sizeof(display->items_trace));
-}
-
-static void red_surface_unref(RedWorker *worker, uint32_t surface_id)
-{
-    DisplayChannel *display = worker->display_channel;
-    RedSurface *surface = &worker->surfaces[surface_id];
-    DisplayChannelClient *dcc;
-    RingItem *link, *next;
-
-    if (--surface->refs != 0) {
-        return;
-    }
-
-    // only primary surface streams are supported
-    if (is_primary_surface(worker->display_channel, surface_id)) {
-        stop_streams(display);
-    }
-    spice_assert(surface->context.canvas);
-
-    surface->context.canvas->ops->destroy(surface->context.canvas);
-    if (surface->create.info) {
-        worker->qxl->st->qif->release_resource(worker->qxl, surface->create);
-    }
-    if (surface->destroy.info) {
-        worker->qxl->st->qif->release_resource(worker->qxl, surface->destroy);
-    }
-
-    region_destroy(&surface->draw_dirty_region);
-    surface->context.canvas = NULL;
-    FOREACH_DCC(worker->display_channel, link, next, dcc) {
-        dcc_push_destroy_surface(dcc, surface_id);
-    }
-
-    spice_warn_if(!ring_is_empty(&surface->depend_on_me));
-}
-
 static inline void set_surface_release_info(QXLReleaseInfoExt *release_info_ext,
                                             QXLReleaseInfo *release_info, uint32_t group_id)
 {
@@ -813,7 +733,7 @@ static void drawable_unref_surface_deps(DisplayChannel *display, Drawable *drawa
         if (surface_id == -1) {
             continue;
         }
-        red_surface_unref(COMMON_CHANNEL(display)->worker, surface_id);
+        display_channel_surface_unref(display, surface_id);
     }
 }
 
@@ -847,7 +767,7 @@ void display_channel_drawable_unref(DisplayChannel *display, Drawable *drawable)
 
     drawable_remove_dependencies(display, drawable);
     drawable_unref_surface_deps(display, drawable);
-    red_surface_unref(COMMON_CHANNEL(display)->worker, drawable->surface_id);
+    display_channel_surface_unref(display, drawable->surface_id);
 
     RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
         SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->drawable = NULL;
@@ -877,12 +797,12 @@ static void display_stream_trace_add_drawable(DisplayChannel *display, Drawable 
     trace->dest_area = item->red_drawable->bbox;
 }
 
-static void surface_flush(RedWorker *worker, int surface_id, SpiceRect *rect)
+static void surface_flush(DisplayChannel *display, int surface_id, SpiceRect *rect)
 {
-    red_update_area(worker, rect, surface_id);
+    red_update_area(display, rect, surface_id);
 }
 
-static void red_flush_source_surfaces(RedWorker *worker, Drawable *drawable)
+static void red_flush_source_surfaces(DisplayChannel *display, Drawable *drawable)
 {
     int x;
     int surface_id;
@@ -891,15 +811,13 @@ static void red_flush_source_surfaces(RedWorker *worker, Drawable *drawable)
         surface_id = drawable->surface_deps[x];
         if (surface_id != -1 && drawable->depend_items[x].drawable) {
             remove_depended_item(&drawable->depend_items[x]);
-            surface_flush(worker, surface_id, &drawable->red_drawable->surfaces_rects[x]);
+            surface_flush(display, surface_id, &drawable->red_drawable->surfaces_rects[x]);
         }
     }
 }
 
-static inline void current_remove_drawable(RedWorker *worker, Drawable *item)
+static inline void current_remove_drawable(DisplayChannel *display, Drawable *item)
 {
-    DisplayChannel *display = worker->display_channel;
-
     display_stream_trace_add_drawable(display, item);
     draw_item_remove_shadow(&item->tree_item);
     ring_remove(&item->tree_item.base.siblings_link);
@@ -909,23 +827,24 @@ static inline void current_remove_drawable(RedWorker *worker, Drawable *item)
     display->current_size--;
 }
 
-static void remove_drawable(RedWorker *worker, Drawable *drawable)
+static void remove_drawable(DisplayChannel *display, Drawable *drawable)
 {
     red_pipes_remove_drawable(drawable);
-    current_remove_drawable(worker, drawable);
+    current_remove_drawable(display, drawable);
 }
 
-static inline void current_remove(RedWorker *worker, TreeItem *item)
+static inline void current_remove(DisplayChannel *display, TreeItem *item)
 {
     TreeItem *now = item;
 
+    /* depth-first tree traversal, TODO: do a to tree_foreach()? */
     for (;;) {
         Container *container = now->container;
         RingItem *ring_item;
 
         if (now->type == TREE_ITEM_TYPE_DRAWABLE) {
             ring_item = now->siblings_link.prev;
-            remove_drawable(worker, SPICE_CONTAINEROF(now, Drawable, tree_item));
+            remove_drawable(display, SPICE_CONTAINEROF(now, Drawable, tree_item));
         } else {
             Container *container = (Container *)now;
 
@@ -950,13 +869,14 @@ static inline void current_remove(RedWorker *worker, TreeItem *item)
     }
 }
 
-static void current_remove_all(RedWorker *worker, int surface_id)
+static void current_remove_all(DisplayChannel *display, int surface_id)
 {
+    Ring *ring = &display->surfaces[surface_id].current;
     RingItem *ring_item;
 
-    while ((ring_item = ring_get_head(&worker->surfaces[surface_id].current))) {
+    while ((ring_item = ring_get_head(ring))) {
         TreeItem *now = SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link);
-        current_remove(worker, now);
+        current_remove(display, now);
     }
 }
 
@@ -1041,25 +961,26 @@ static int red_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int 
     return TRUE;
 }
 
-static void red_clear_surface_drawables_from_pipes(RedWorker *worker,
+static void red_clear_surface_drawables_from_pipes(DisplayChannel *display,
                                                    int surface_id,
                                                    int wait_if_used)
 {
     RingItem *item, *next;
     DisplayChannelClient *dcc;
 
-    FOREACH_DCC(worker->display_channel, item, next, dcc) {
+    FOREACH_DCC(display, item, next, dcc) {
         if (!red_clear_surface_drawables_from_pipe(dcc, surface_id, wait_if_used)) {
             red_channel_client_disconnect(RED_CHANNEL_CLIENT(dcc));
         }
     }
 }
 
-static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *item, QRegion *rgn,
-                                    Ring **top_ring, Drawable *frame_candidate)
+static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item, QRegion *rgn,
+                             Ring **top_ring, Drawable *frame_candidate)
 {
     QRegion and_rgn;
 #ifdef RED_WORKER_STAT
+    RedWorker *worker = COMMON_CHANNEL(display)->worker;
     stat_time_t start_time = stat_now(worker->clockid);
 #endif
 
@@ -1095,7 +1016,7 @@ static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *ite
             } else {
                 if (frame_candidate) {
                     Drawable *drawable = SPICE_CONTAINEROF(draw, Drawable, tree_item);
-                    stream_maintenance(worker->display_channel, frame_candidate, drawable);
+                    stream_maintenance(display, frame_candidate, drawable);
                 }
                 region_exclude(&draw->base.rgn, &and_rgn);
             }
@@ -1123,13 +1044,14 @@ static inline void __exclude_region(RedWorker *worker, Ring *ring, TreeItem *ite
         }
     }
     region_destroy(&and_rgn);
-    stat_add(&worker->display_channel->__exclude_stat, start_time);
+    stat_add(&display->__exclude_stat, start_time);
 }
 
-static void exclude_region(RedWorker *worker, Ring *ring, RingItem *ring_item, QRegion *rgn,
-                           TreeItem **last, Drawable *frame_candidate)
+static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_item,
+                           QRegion *rgn, TreeItem **last, Drawable *frame_candidate)
 {
 #ifdef RED_WORKER_STAT
+    RedWorker *worker = COMMON_CHANNEL(display)->worker;
     stat_time_t start_time = stat_now(worker->clockid);
 #endif
     Ring *top_ring;
@@ -1147,12 +1069,12 @@ static void exclude_region(RedWorker *worker, Ring *ring, RingItem *ring_item, Q
         spice_assert(!region_is_empty(&now->rgn));
 
         if (region_intersects(rgn, &now->rgn)) {
-            __exclude_region(worker, ring, now, rgn, &top_ring, frame_candidate);
+            __exclude_region(display, ring, now, rgn, &top_ring, frame_candidate);
 
             if (region_is_empty(&now->rgn)) {
                 spice_assert(now->type != TREE_ITEM_TYPE_SHADOW);
                 ring_item = now->siblings_link.prev;
-                current_remove(worker, now);
+                current_remove(display, now);
                 if (last && *last == now) {
                     *last = (TreeItem *)ring_next(ring, ring_item);
                 }
@@ -1167,7 +1089,7 @@ static void exclude_region(RedWorker *worker, Ring *ring, RingItem *ring_item, Q
             }
 
             if (region_is_empty(rgn)) {
-                stat_add(&worker->display_channel->exclude_stat, start_time);
+                stat_add(&display->exclude_stat, start_time);
                 return;
             }
         }
@@ -1175,7 +1097,7 @@ static void exclude_region(RedWorker *worker, Ring *ring, RingItem *ring_item, Q
         while ((last && *last == (TreeItem *)ring_item) ||
                !(ring_item = ring_next(ring, ring_item))) {
             if (ring == top_ring) {
-                stat_add(&worker->display_channel->exclude_stat, start_time);
+                stat_add(&display->exclude_stat, start_time);
                 return;
             }
             ring_item = &container->base.siblings_link;
@@ -1185,13 +1107,13 @@ static void exclude_region(RedWorker *worker, Ring *ring, RingItem *ring_item, Q
     }
 }
 
-static inline void current_add_drawable(RedWorker *worker, Drawable *drawable, RingItem *pos)
+static void current_add_drawable(DisplayChannel *display,
+                                 Drawable *drawable, RingItem *pos)
 {
-    DisplayChannel *display = worker->display_channel;
     RedSurface *surface;
     uint32_t surface_id = drawable->surface_id;
 
-    surface = &worker->surfaces[surface_id];
+    surface = &display->surfaces[surface_id];
     ring_add_after(&drawable->tree_item.base.siblings_link, pos);
     ring_add(&display->current_list, &drawable->list_link);
     ring_add(&surface->current_list, &drawable->surface_list_link);
@@ -1287,9 +1209,9 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
                     stream_id, stream->current != NULL);
         rect_debug(&upgrade_area);
         if (update_area_limit) {
-            red_update_area_till(DCC_TO_WORKER(dcc), &upgrade_area, 0, update_area_limit);
+            red_update_area_till(DCC_TO_DC(dcc), &upgrade_area, 0, update_area_limit);
         } else {
-            red_update_area(DCC_TO_WORKER(dcc), &upgrade_area, 0);
+            red_update_area(DCC_TO_DC(dcc), &upgrade_area, 0);
         }
         red_add_surface_area_image(dcc, 0, &upgrade_area, NULL, FALSE);
     }
@@ -1455,9 +1377,8 @@ static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
     }
 }
 
-static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeItem *other)
+static inline int red_current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *other)
 {
-    DisplayChannel *display  = worker->display_channel;
     DrawItem *other_draw_item;
     Drawable *drawable;
     Drawable *other_drawable;
@@ -1477,14 +1398,14 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
     if (item->effect == QXL_EFFECT_OPAQUE) {
         int add_after = !!other_drawable->stream &&
                         is_drawable_independent_from_surfaces(drawable);
-        stream_maintenance(worker->display_channel, drawable, other_drawable);
-        current_add_drawable(worker, drawable, &other->siblings_link);
+        stream_maintenance(display, drawable, other_drawable);
+        current_add_drawable(display, drawable, &other->siblings_link);
         other_drawable->refs++;
-        current_remove_drawable(worker, other_drawable);
+        current_remove_drawable(display, other_drawable);
         if (add_after) {
-            red_pipes_add_drawable_after(worker, drawable, other_drawable);
+            red_pipes_add_drawable_after(display, drawable, other_drawable);
         } else {
-            red_pipes_add_drawable(worker, drawable);
+            red_pipes_add_drawable(display, drawable);
         }
         red_pipes_remove_drawable(other_drawable);
         display_channel_drawable_unref(display, other_drawable);
@@ -1500,11 +1421,11 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
             RingItem *worker_ring_item, *dpi_ring_item;
 
             other_drawable->refs++;
-            current_remove_drawable(worker, other_drawable);
+            current_remove_drawable(display, other_drawable);
 
             /* sending the drawable to clients that already received
              * (or will receive) other_drawable */
-            worker_ring_item = ring_get_head(&RED_CHANNEL(worker->display_channel)->clients);
+            worker_ring_item = ring_get_head(&RED_CHANNEL(display)->clients);
             dpi_ring_item = ring_get_head(&other_drawable->pipes);
             /* dpi contains a sublist of dcc's, ordered the same */
             while (worker_ring_item) {
@@ -1513,7 +1434,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
                 dpi = SPICE_CONTAINEROF(dpi_ring_item, DrawablePipeItem, base);
                 while (worker_ring_item && (!dpi || dcc != dpi->dcc)) {
                     dcc_add_drawable(dcc, drawable);
-                    worker_ring_item = ring_next(&RED_CHANNEL(worker->display_channel)->clients,
+                    worker_ring_item = ring_next(&RED_CHANNEL(display)->clients,
                                                  worker_ring_item);
                     dcc = SPICE_CONTAINEROF(worker_ring_item, DisplayChannelClient,
                                             common.base.channel_link);
@@ -1523,7 +1444,7 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
                     dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
                 }
                 if (worker_ring_item) {
-                    worker_ring_item = ring_next(&RED_CHANNEL(worker->display_channel)->clients,
+                    worker_ring_item = ring_next(&RED_CHANNEL(display)->clients,
                                                  worker_ring_item);
                 }
             }
@@ -1536,9 +1457,9 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
         break;
     case QXL_EFFECT_OPAQUE_BRUSH:
         if (is_same_geometry(drawable, other_drawable)) {
-            current_add_drawable(worker, drawable, &other->siblings_link);
-            remove_drawable(worker, other_drawable);
-            red_pipes_add_drawable(worker, drawable);
+            current_add_drawable(display, drawable, &other->siblings_link);
+            remove_drawable(display, other_drawable);
+            red_pipes_add_drawable(display, drawable);
             return TRUE;
         }
         break;
@@ -1551,10 +1472,11 @@ static inline int red_current_add_equal(RedWorker *worker, DrawItem *item, TreeI
     return FALSE;
 }
 
-static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
+static int current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
 {
     DrawItem *item = &drawable->tree_item;
 #ifdef RED_WORKER_STAT
+    RedWorker *worker = COMMON_CHANNEL(display)->worker;
     stat_time_t start_time = stat_now(worker->clockid);
 #endif
     RingItem *now;
@@ -1580,8 +1502,8 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
         } else if (sibling->type != TREE_ITEM_TYPE_SHADOW) {
             if (!(test_res & REGION_TEST_RIGHT_EXCLUSIVE) &&
                                                    !(test_res & REGION_TEST_LEFT_EXCLUSIVE) &&
-                                                   red_current_add_equal(worker, item, sibling)) {
-                stat_add(&worker->display_channel->add_stat, start_time);
+                                                   red_current_add_equal(display, item, sibling)) {
+                stat_add(&display->add_stat, start_time);
                 return FALSE;
             }
 
@@ -1592,7 +1514,7 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
                 if ((shadow = tree_item_find_shadow(sibling))) {
                     if (exclude_base) {
                         TreeItem *next = sibling;
-                        exclude_region(worker, ring, exclude_base, &exclude_rgn, &next, NULL);
+                        exclude_region(display, ring, exclude_base, &exclude_rgn, &next, NULL);
                         if (next != sibling) {
                             now = next ? &next->siblings_link : NULL;
                             exclude_base = NULL;
@@ -1602,7 +1524,7 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
                     region_or(&exclude_rgn, &shadow->on_hold);
                 }
                 now = now->prev;
-                current_remove(worker, sibling);
+                current_remove(display, sibling);
                 now = ring_next(ring, now);
                 if (shadow || skip) {
                     exclude_base = now;
@@ -1614,7 +1536,7 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
                 Container *container;
 
                 if (exclude_base) {
-                    exclude_region(worker, ring, exclude_base, &exclude_rgn, NULL, NULL);
+                    exclude_region(display, ring, exclude_base, &exclude_rgn, NULL, NULL);
                     region_clear(&exclude_rgn);
                     exclude_base = NULL;
                 }
@@ -1645,35 +1567,35 @@ static inline int current_add(RedWorker *worker, Ring *ring, Drawable *drawable)
     }
     if (item->effect == QXL_EFFECT_OPAQUE) {
         region_or(&exclude_rgn, &item->base.rgn);
-        exclude_region(worker, ring, exclude_base, &exclude_rgn, NULL, drawable);
-        stream_trace_update(worker->display_channel, drawable);
-        streams_update_visible_region(worker->display_channel, drawable);
+        exclude_region(display, ring, exclude_base, &exclude_rgn, NULL, drawable);
+        stream_trace_update(display, drawable);
+        streams_update_visible_region(display, drawable);
         /*
          * Performing the insertion after exclude_region for
          * safety (todo: Not sure if exclude_region can affect the drawable
          * if it is added to the tree before calling exclude_region).
          */
-        current_add_drawable(worker, drawable, ring);
+        current_add_drawable(display, drawable, ring);
     } else {
         /*
          * red_detach_streams_behind can affect the current tree since it may
          * trigger calls to update_area. Thus, the drawable should be added to the tree
          * before calling red_detach_streams_behind
          */
-        current_add_drawable(worker, drawable, ring);
-        if (is_primary_surface(worker->display_channel, drawable->surface_id)) {
-            detach_streams_behind(worker->display_channel, &drawable->tree_item.base.rgn, drawable);
+        current_add_drawable(display, drawable, ring);
+        if (is_primary_surface(display, drawable->surface_id)) {
+            detach_streams_behind(display, &drawable->tree_item.base.rgn, drawable);
         }
     }
     region_destroy(&exclude_rgn);
-    stat_add(&worker->display_channel->add_stat, start_time);
+    stat_add(&display->add_stat, start_time);
     return TRUE;
 }
 
-static inline int current_add_with_shadow(RedWorker *worker, Ring *ring, Drawable *item)
+static int current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawable *item)
 {
-    DisplayChannel *display = worker->display_channel;
 #ifdef RED_WORKER_STAT
+    RedWorker *worker = COMMON_CHANNEL(display)->worker;
     stat_time_t start_time = stat_now(worker->clockid);
     ++display->add_with_shadow_count;
 #endif
@@ -1698,11 +1620,11 @@ static inline int current_add_with_shadow(RedWorker *worker, Ring *ring, Drawabl
     }
 
     ring_add(ring, &shadow->base.siblings_link);
-    current_add_drawable(worker, item, ring);
+    current_add_drawable(display, item, ring);
     if (item->tree_item.effect == QXL_EFFECT_OPAQUE) {
         QRegion exclude_rgn;
         region_clone(&exclude_rgn, &item->tree_item.base.rgn);
-        exclude_region(worker, ring, &shadow->base.siblings_link, &exclude_rgn, NULL, NULL);
+        exclude_region(display, ring, &shadow->base.siblings_link, &exclude_rgn, NULL, NULL);
         region_destroy(&exclude_rgn);
         streams_update_visible_region(display, item);
     } else {
@@ -1779,18 +1701,17 @@ void print_stats(DisplayChannel *display)
 #endif
 }
 
-static int red_add_drawable(RedWorker *worker, Drawable *drawable)
+ static int red_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
-    DisplayChannel *display = worker->display_channel;
     int ret = FALSE, surface_id = drawable->surface_id;
     RedDrawable *red_drawable = drawable->red_drawable;
-    Ring *ring = &worker->surfaces[surface_id].current;
+    Ring *ring = &display->surfaces[surface_id].current;
 
     if (has_shadow(red_drawable)) {
-        ret = current_add_with_shadow(worker, ring, drawable);
+        ret = current_add_with_shadow(display, ring, drawable);
     } else {
         drawable_update_streamable(display, drawable);
-        ret = current_add(worker, ring, drawable);
+        ret = current_add(display, ring, drawable);
     }
 
 #ifdef RED_WORKER_STAT
@@ -1800,15 +1721,15 @@ static int red_add_drawable(RedWorker *worker, Drawable *drawable)
     return ret;
 }
 
-static void red_get_area(RedWorker *worker, int surface_id, const SpiceRect *area, uint8_t *dest,
-                         int dest_stride, int update)
+static void red_get_area(DisplayChannel *display, int surface_id, const SpiceRect *area,
+                         uint8_t *dest, int dest_stride, int update)
 {
     SpiceCanvas *canvas;
     RedSurface *surface;
 
-    surface = &worker->surfaces[surface_id];
+    surface = &display->surfaces[surface_id];
     if (update) {
-        red_update_area(worker, area, surface_id);
+        red_update_area(display, area, surface_id);
     }
 
     canvas = surface->context.canvas;
@@ -1860,7 +1781,7 @@ static inline int red_handle_self_bitmap(RedWorker *worker, Drawable *drawable)
         return TRUE;
     }
 
-    surface = &worker->surfaces[drawable->surface_id];
+    surface = &display->surfaces[drawable->surface_id];
 
     bpp = SPICE_SURFACE_FMT_DEPTH(surface->context.format) / 8;
 
@@ -1886,7 +1807,7 @@ static inline int red_handle_self_bitmap(RedWorker *worker, Drawable *drawable)
     image->u.bitmap.data = spice_chunks_new_linear(dest, height * dest_stride);
     image->u.bitmap.data->flags |= SPICE_CHUNKS_FLAGS_FREE;
 
-    red_get_area(worker, drawable->surface_id,
+    red_get_area(display, drawable->surface_id,
                  &red_drawable->self_bitmap_area, dest, dest_stride, TRUE);
 
     /* For 32bit non-primary surfaces we need to keep any non-zero
@@ -1905,9 +1826,8 @@ static inline int red_handle_self_bitmap(RedWorker *worker, Drawable *drawable)
     return TRUE;
 }
 
-static bool free_one_drawable(RedWorker *worker, int force_glz_free)
+static bool free_one_drawable(DisplayChannel *display, int force_glz_free)
 {
-    DisplayChannel *display = worker->display_channel;
     RingItem *ring_item = ring_get_tail(&display->current_list);
     Drawable *drawable;
     Container *container;
@@ -1923,12 +1843,11 @@ static bool free_one_drawable(RedWorker *worker, int force_glz_free)
             red_display_free_glz_drawable(glz->dcc, glz);
         }
     }
-    red_draw_drawable(worker, drawable);
+    red_draw_drawable(display, drawable);
     container = drawable->tree_item.base.container;
 
-    current_remove_drawable(worker, drawable);
+    current_remove_drawable(display, drawable);
     container_cleanup(container);
-
     return TRUE;
 }
 
@@ -1939,19 +1858,19 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
     Drawable *drawable;
     int x;
 
-    VALIDATE_SURFACE_RETVAL(worker, red_drawable->surface_id, NULL)
+    VALIDATE_SURFACE_RETVAL(display, red_drawable->surface_id, NULL)
     if (!validate_drawable_bbox(worker, red_drawable)) {
         rendering_incorrect(__func__);
         return NULL;
     }
     for (x = 0; x < 3; ++x) {
         if (red_drawable->surface_deps[x] != -1) {
-            VALIDATE_SURFACE_RETVAL(worker, red_drawable->surface_deps[x], NULL)
+            VALIDATE_SURFACE_RETVAL(display, red_drawable->surface_deps[x], NULL)
         }
     }
 
     while (!(drawable = drawable_try_new(display))) {
-        if (!free_one_drawable(COMMON_CHANNEL(display)->worker, FALSE))
+        if (!free_one_drawable(display, FALSE))
             return NULL;
     }
 
@@ -1976,24 +1895,24 @@ static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *re
     return drawable;
 }
 
-static inline int red_handle_depends_on_target_surface(RedWorker *worker, uint32_t surface_id)
+static inline int red_handle_depends_on_target_surface(DisplayChannel *display, uint32_t surface_id)
 {
     RedSurface *surface;
     RingItem *ring_item;
 
-    surface = &worker->surfaces[surface_id];
+    surface = &display->surfaces[surface_id];
 
     while ((ring_item = ring_get_tail(&surface->depend_on_me))) {
         Drawable *drawable;
         DependItem *depended_item = SPICE_CONTAINEROF(ring_item, DependItem, ring_item);
         drawable = depended_item->drawable;
-        surface_flush(worker, drawable->surface_id, &drawable->red_drawable->bbox);
+        surface_flush(display, drawable->surface_id, &drawable->red_drawable->bbox);
     }
 
     return TRUE;
 }
 
-static inline void add_to_surface_dependency(RedWorker *worker, int depend_on_surface_id,
+static inline void add_to_surface_dependency(DisplayChannel *display, int depend_on_surface_id,
                                              DependItem *depend_item, Drawable *drawable)
 {
     RedSurface *surface;
@@ -2003,22 +1922,21 @@ static inline void add_to_surface_dependency(RedWorker *worker, int depend_on_su
         return;
     }
 
-    surface = &worker->surfaces[depend_on_surface_id];
+    surface = &display->surfaces[depend_on_surface_id];
 
     depend_item->drawable = drawable;
     ring_add(&surface->depend_on_me, &depend_item->ring_item);
 }
 
-static inline int red_handle_surfaces_dependencies(RedWorker *worker, Drawable *drawable)
+static inline int red_handle_surfaces_dependencies(DisplayChannel *display, Drawable *drawable)
 {
-    DisplayChannel *display = worker->display_channel;
     int x;
 
     for (x = 0; x < 3; ++x) {
         // surface self dependency is handled by shadows in "current", or by
         // handle_self_bitmap
         if (drawable->surface_deps[x] != drawable->surface_id) {
-            add_to_surface_dependency(worker, drawable->surface_deps[x],
+            add_to_surface_dependency(display, drawable->surface_deps[x],
                                       &drawable->depend_items[x], drawable);
 
             if (drawable->surface_deps[x] == 0) {
@@ -2033,7 +1951,7 @@ static inline int red_handle_surfaces_dependencies(RedWorker *worker, Drawable *
     return TRUE;
 }
 
-static inline void red_inc_surfaces_drawable_dependencies(RedWorker *worker, Drawable *drawable)
+static inline void red_inc_surfaces_drawable_dependencies(DisplayChannel *display, Drawable *drawable)
 {
     int x;
     int surface_id;
@@ -2044,7 +1962,7 @@ static inline void red_inc_surfaces_drawable_dependencies(RedWorker *worker, Dra
         if (surface_id == -1) {
             continue;
         }
-        surface = &worker->surfaces[surface_id];
+        surface = &display->surfaces[surface_id];
         surface->refs++;
     }
 }
@@ -2063,7 +1981,7 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
     red_drawable->mm_time = reds_get_mm_time();
     surface_id = drawable->surface_id;
 
-    worker->surfaces[surface_id].refs++;
+    display->surfaces[surface_id].refs++;
 
     region_add(&drawable->tree_item.base.rgn, &red_drawable->bbox);
 
@@ -2075,13 +1993,14 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
         region_and(&drawable->tree_item.base.rgn, &rgn);
         region_destroy(&rgn);
     }
+
     /*
         surface->refs is affected by a drawable (that is
         dependent on the surface) as long as the drawable is alive.
         However, surface->depend_on_me is affected by a drawable only
         as long as it is in the current tree (hasn't been rendered yet).
     */
-    red_inc_surfaces_drawable_dependencies(worker, drawable);
+    red_inc_surfaces_drawable_dependencies(worker->display_channel, drawable);
 
     if (region_is_empty(&drawable->tree_item.base.rgn)) {
         goto cleanup;
@@ -2091,38 +2010,36 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
         goto cleanup;
     }
 
-    if (!red_handle_depends_on_target_surface(worker, surface_id)) {
+    if (!red_handle_depends_on_target_surface(worker->display_channel, surface_id)) {
         goto cleanup;
     }
 
-    if (!red_handle_surfaces_dependencies(worker, drawable)) {
+    if (!red_handle_surfaces_dependencies(worker->display_channel, drawable)) {
         goto cleanup;
     }
 
-    if (red_add_drawable(worker, drawable)) {
-        red_pipes_add_drawable(worker, drawable);
+    if (red_add_drawable(worker->display_channel, drawable)) {
+        red_pipes_add_drawable(worker->display_channel, drawable);
     }
 cleanup:
     display_channel_drawable_unref(display, drawable);
 }
 
-static inline void red_create_surface(RedWorker *worker, uint32_t surface_id,uint32_t width,
-                                      uint32_t height, int32_t stride, uint32_t format,
-                                      void *line_0, int data_is_valid, int send_client);
 
 static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface,
                                        uint32_t group_id, int loadvm)
 {
+    DisplayChannel *display = worker->display_channel;
     uint32_t surface_id;
     RedSurface *red_surface;
     uint8_t *data;
 
     surface_id = surface->surface_id;
-    if SPICE_UNLIKELY(surface_id >= worker->n_surfaces) {
+    if SPICE_UNLIKELY(surface_id >= display->n_surfaces) {
         goto exit;
     }
 
-    red_surface = &worker->surfaces[surface_id];
+    red_surface = &display->surfaces[surface_id];
 
     switch (surface->type) {
     case QXL_SURFACE_CMD_CREATE: {
@@ -2138,7 +2055,7 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
         if (stride < 0) {
             data -= (int32_t)(stride * (height - 1));
         }
-        red_create_surface(worker, surface_id, surface->u.surface_create.width,
+        red_create_surface(worker->display_channel, surface_id, surface->u.surface_create.width,
                            height, stride, surface->u.surface_create.format, data,
                            reloaded_surface,
                            // reloaded surfaces will be sent on demand
@@ -2152,13 +2069,13 @@ static inline void red_process_surface(RedWorker *worker, RedSurfaceCmd *surface
             break;
         }
         set_surface_release_info(&red_surface->destroy, surface->release_info, group_id);
-        red_handle_depends_on_target_surface(worker, surface_id);
+        red_handle_depends_on_target_surface(display, surface_id);
         /* note that red_handle_depends_on_target_surface must be called before current_remove_all.
            otherwise "current" will hold items that other drawables may depend on, and then
            current_remove_all will remove them from the pipe. */
-        current_remove_all(worker, surface_id);
-        red_clear_surface_drawables_from_pipes(worker, surface_id, FALSE);
-        red_surface_unref(worker, surface_id);
+        current_remove_all(display, surface_id);
+        red_clear_surface_drawables_from_pipes(display, surface_id, FALSE);
+        display_channel_surface_unref(display, surface_id);
         break;
     default:
             spice_error("unknown surface command");
@@ -2171,31 +2088,30 @@ exit:
 static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces,
                                        uint32_t surface_id)
 {
-    RedWorker *worker;
+    DisplayChannel *display;
 
-    worker = SPICE_CONTAINEROF(surfaces, RedWorker, image_surfaces);
-    VALIDATE_SURFACE_RETVAL(worker, surface_id, NULL);
+    display = SPICE_CONTAINEROF(surfaces, DisplayChannel, image_surfaces);
+    VALIDATE_SURFACE_RETVAL(display, surface_id, NULL);
 
-    return worker->surfaces[surface_id].context.canvas;
+    return display->surfaces[surface_id].context.canvas;
 }
 
-static void image_surface_init(RedWorker *worker)
+static void image_surface_init(DisplayChannel *display)
 {
     static SpiceImageSurfacesOps image_surfaces_ops = {
         image_surfaces_get,
     };
 
-    worker->image_surfaces.ops = &image_surfaces_ops;
+    display->image_surfaces.ops = &image_surfaces_ops;
 }
 
-static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
+static void red_draw_qxl_drawable(DisplayChannel *display, Drawable *drawable)
 {
-    DisplayChannel *display = worker->display_channel;
     RedSurface *surface;
     SpiceCanvas *canvas;
     SpiceClip clip = drawable->red_drawable->clip;
 
-    surface = &worker->surfaces[drawable->surface_id];
+    surface = &display->surfaces[drawable->surface_id];
     canvas = surface->context.canvas;
 
     image_cache_aging(&display->image_cache);
@@ -2326,17 +2242,17 @@ static void red_draw_qxl_drawable(RedWorker *worker, Drawable *drawable)
     }
 }
 
-static void red_draw_drawable(RedWorker *worker, Drawable *drawable)
+static void red_draw_drawable(DisplayChannel *display, Drawable *drawable)
 {
-    red_flush_source_surfaces(worker, drawable);
-    red_draw_qxl_drawable(worker, drawable);
+    red_flush_source_surfaces(display, drawable);
+    red_draw_qxl_drawable(display, drawable);
 }
 
-static void validate_area(RedWorker *worker, const SpiceRect *area, uint32_t surface_id)
+static void validate_area(DisplayChannel *display, const SpiceRect *area, uint32_t surface_id)
 {
     RedSurface *surface;
 
-    surface = &worker->surfaces[surface_id];
+    surface = &display->surfaces[surface_id];
     if (!surface->context.canvas_draws_on_surface) {
         SpiceCanvas *canvas = surface->context.canvas;
         int h;
@@ -2358,10 +2274,9 @@ static void validate_area(RedWorker *worker, const SpiceRect *area, uint32_t sur
     Renders drawables for updating the requested area, but only drawables that are older
     than 'last' (exclusive).
 */
-static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int surface_id,
+static void red_update_area_till(DisplayChannel *display, const SpiceRect *area, int surface_id,
                                  Drawable *last)
 {
-    DisplayChannel *display = worker->display_channel;
     RedSurface *surface;
     Drawable *surface_last = NULL;
     Ring *ring;
@@ -2372,7 +2287,7 @@ static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int s
     spice_assert(last);
     spice_assert(ring_item_is_linked(&last->list_link));
 
-    surface = &worker->surfaces[surface_id];
+    surface = &display->surfaces[surface_id];
 
     if (surface_id != last->surface_id) {
         // find the nearest older drawable from the appropriate surface
@@ -2424,22 +2339,21 @@ static void red_update_area_till(RedWorker *worker, const SpiceRect *area, int s
         now = SPICE_CONTAINEROF(ring_item, Drawable, surface_list_link);
         now->refs++;
         container = now->tree_item.base.container;
-        current_remove_drawable(worker, now);
+        current_remove_drawable(display, now);
         container_cleanup(container);
         /* red_draw_drawable may call red_update_area for the surfaces 'now' depends on. Notice,
            that it is valid to call red_update_area in this case and not red_update_area_till:
            It is impossible that there was newer item then 'last' in one of the surfaces
            that red_update_area is called for, Otherwise, 'now' would have already been rendered.
            See the call for red_handle_depends_on_target_surface in red_process_draw */
-        red_draw_drawable(worker, now);
+        red_draw_drawable(display, now);
         display_channel_drawable_unref(display, now);
     } while (now != surface_last);
-    validate_area(worker, area, surface_id);
+    validate_area(display, area, surface_id);
 }
 
-static void red_update_area(RedWorker *worker, const SpiceRect *area, int surface_id)
+static void red_update_area(DisplayChannel *display, const SpiceRect *area, int surface_id)
 {
-    DisplayChannel *display = worker->display_channel;
     RedSurface *surface;
     Ring *ring;
     RingItem *ring_item;
@@ -2454,7 +2368,7 @@ static void red_update_area(RedWorker *worker, const SpiceRect *area, int surfac
     spice_return_if_fail(area->left >= 0 && area->top >= 0 &&
                          area->left < area->right && area->top < area->bottom);
 
-    surface = &worker->surfaces[surface_id];
+    surface = &display->surfaces[surface_id];
 
     last = NULL;
     ring = &surface->current_list;
@@ -2472,7 +2386,7 @@ static void red_update_area(RedWorker *worker, const SpiceRect *area, int surfac
     region_destroy(&rgn);
 
     if (!last) {
-        validate_area(worker, area, surface_id);
+        validate_area(display, area, surface_id);
         return;
     }
 
@@ -2483,12 +2397,12 @@ static void red_update_area(RedWorker *worker, const SpiceRect *area, int surfac
         now = SPICE_CONTAINEROF(ring_item, Drawable, surface_list_link);
         now->refs++;
         container = now->tree_item.base.container;
-        current_remove_drawable(worker, now);
+        current_remove_drawable(display, now);
         container_cleanup(container);
-        red_draw_drawable(worker, now);
+        red_draw_drawable(display, now);
         display_channel_drawable_unref(display, now);
     } while (now != last);
-    validate_area(worker, area, surface_id);
+    validate_area(display, area, surface_id);
 }
 
 static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
@@ -2607,11 +2521,11 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
                                    &update, ext_cmd.cmd.data)) {
                 break;
             }
-            if (!validate_surface(worker, update.surface_id)) {
+            if (!validate_surface(worker->display_channel, update.surface_id)) {
                 rendering_incorrect("QXL_CMD_UPDATE");
                 break;
             }
-            red_update_area(worker, &update.area, update.surface_id);
+            red_update_area(worker->display_channel, &update.area, update.surface_id);
             worker->qxl->st->qif->notify_update(worker->qxl, update.update_id);
             release_info_ext.group_id = ext_cmd.group_id;
             release_info_ext.info = update.release_info;
@@ -2685,7 +2599,7 @@ static void red_free_some(RedWorker *worker)
     }
 
     while (!ring_is_empty(&display->current_list) && n++ < RED_RELEASE_BUNCH_SIZE) {
-        free_one_drawable(worker, TRUE);
+        free_one_drawable(display, TRUE);
     }
 
     FOREACH_DCC(worker->display_channel, item, next, dcc) {
@@ -2697,12 +2611,12 @@ static void red_free_some(RedWorker *worker)
     }
 }
 
-static void red_current_flush(RedWorker *worker, int surface_id)
+static void red_current_flush(DisplayChannel *display, int surface_id)
 {
-    while (!ring_is_empty(&worker->surfaces[surface_id].current_list)) {
-        free_one_drawable(worker, FALSE);
+    while (!ring_is_empty(&display->surfaces[surface_id].current_list)) {
+        free_one_drawable(display, FALSE);
     }
-    current_remove_all(worker, surface_id);
+    current_remove_all(display, surface_id);
 }
 
 // adding the pipe item after pos. If pos == NULL, adding to head.
@@ -2711,8 +2625,7 @@ static ImageItem *red_add_surface_area_image(DisplayChannelClient *dcc, int surf
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
     RedChannel *channel = RED_CHANNEL(display);
-    RedWorker *worker = DCC_TO_WORKER(dcc);
-    RedSurface *surface = &worker->surfaces[surface_id];
+    RedSurface *surface = &display->surfaces[surface_id];
     SpiceCanvas *canvas = surface->context.canvas;
     ImageItem *item;
     int stride;
@@ -2772,15 +2685,16 @@ static ImageItem *red_add_surface_area_image(DisplayChannelClient *dcc, int surf
 
 static void red_push_surface_image(DisplayChannelClient *dcc, int surface_id)
 {
+    DisplayChannel *display;
     SpiceRect area;
     RedSurface *surface;
-    RedWorker *worker;
 
     if (!dcc) {
         return;
     }
-    worker = DCC_TO_WORKER(dcc);
-    surface = &worker->surfaces[surface_id];
+
+    display = DCC_TO_DC(dcc);
+    surface = &display->surfaces[surface_id];
     if (!surface->context.canvas) {
         return;
     }
@@ -4210,8 +4124,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                               SpiceImage *simage, Drawable *drawable, int can_lossy)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
-    DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
-    RedWorker *worker = DCC_TO_WORKER(dcc);
+    DisplayChannel *display = DCC_TO_DC(dcc);
     SpiceImage image;
     compress_send_data_t comp_send_data = {0};
     SpiceMarshaller *bitmap_palette_out, *lzplt_palette_out;
@@ -4234,7 +4147,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
             dcc->send_data.pixmap_cache_items[dcc->send_data.num_pixmap_cache_items++] =
                                                                                image.descriptor.id;
             if (can_lossy || !lossy_cache_item) {
-                if (!display_channel->enable_jpeg || lossy_cache_item) {
+                if (!display->enable_jpeg || lossy_cache_item) {
                     image.descriptor.type = SPICE_IMAGE_TYPE_FROM_CACHE;
                 } else {
                     // making sure, in multiple monitor scenario, that lossy items that
@@ -4246,7 +4159,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                                      &bitmap_palette_out, &lzplt_palette_out);
                 spice_assert(bitmap_palette_out == NULL);
                 spice_assert(lzplt_palette_out == NULL);
-                stat_inc_counter(display_channel->cache_hits_counter, 1);
+                stat_inc_counter(display->cache_hits_counter, 1);
                 pthread_mutex_unlock(&dcc->pixmap_cache->lock);
                 return FILL_BITS_TYPE_CACHE;
             } else {
@@ -4263,13 +4176,13 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         RedSurface *surface;
 
         surface_id = simage->u.surface.surface_id;
-        if (!validate_surface(worker, surface_id)) {
+        if (!validate_surface(display, surface_id)) {
             rendering_incorrect("SPICE_IMAGE_TYPE_SURFACE");
             pthread_mutex_unlock(&dcc->pixmap_cache->lock);
             return FILL_BITS_TYPE_SURFACE;
         }
 
-        surface = &worker->surfaces[surface_id];
+        surface = &display->surfaces[surface_id];
         image.descriptor.type = SPICE_IMAGE_TYPE_SURFACE;
         image.descriptor.flags = 0;
         image.descriptor.width = surface->context.width;
@@ -4356,16 +4269,16 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
 static void fill_mask(RedChannelClient *rcc, SpiceMarshaller *m,
                       SpiceImage *mask_bitmap, Drawable *drawable)
 {
-    DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    DisplayChannel *display = DCC_TO_DC(dcc);
 
     if (mask_bitmap && m) {
-        if (display_channel->common.worker->image_compression != SPICE_IMAGE_COMPRESSION_OFF) {
+        if (display->common.worker->image_compression != SPICE_IMAGE_COMPRESSION_OFF) {
             SpiceImageCompression save_img_comp =
-                display_channel->common.worker->image_compression;
-            display_channel->common.worker->image_compression = SPICE_IMAGE_COMPRESSION_OFF;
+                display->common.worker->image_compression;
+            display->common.worker->image_compression = SPICE_IMAGE_COMPRESSION_OFF;
             fill_bits(dcc, m, mask_bitmap, drawable, FALSE);
-            display_channel->common.worker->image_compression = save_img_comp;
+            display->common.worker->image_compression = save_img_comp;
         } else {
             fill_bits(dcc, m, mask_bitmap, drawable, FALSE);
         }
@@ -4398,10 +4311,10 @@ static int is_surface_area_lossy(DisplayChannelClient *dcc, uint32_t surface_id,
     RedSurface *surface;
     QRegion *surface_lossy_region;
     QRegion lossy_region;
-    RedWorker *worker = DCC_TO_WORKER(dcc);
+    DisplayChannel *display = DCC_TO_DC(dcc);
 
-    VALIDATE_SURFACE_RETVAL(worker, surface_id, FALSE);
-    surface = &worker->surfaces[surface_id];
+    VALIDATE_SURFACE_RETVAL(display, surface_id, FALSE);
+    surface = &display->surfaces[surface_id];
     surface_lossy_region = &dcc->surface_client_lossy_region[surface_id];
 
     if (!area) {
@@ -4491,7 +4404,7 @@ static int is_brush_lossy(RedChannelClient *rcc, SpiceBrush *brush,
     }
 }
 
-static void surface_lossy_region_update(RedWorker *worker, DisplayChannelClient *dcc,
+static void surface_lossy_region_update(DisplayChannelClient *dcc,
                                         Drawable *item, int has_mask, int lossy)
 {
     QRegion *surface_lossy_region;
@@ -4602,8 +4515,7 @@ static inline int drawable_depends_on_areas(Drawable *drawable,
 }
 
 
-static int pipe_rendered_drawables_intersect_with_areas(RedWorker *worker,
-                                                        DisplayChannelClient *dcc,
+static int pipe_rendered_drawables_intersect_with_areas(DisplayChannelClient *dcc,
                                                         int surface_ids[],
                                                         SpiceRect *surface_areas[],
                                                         int num_surfaces)
@@ -4635,8 +4547,7 @@ static int pipe_rendered_drawables_intersect_with_areas(RedWorker *worker,
     return FALSE;
 }
 
-static void red_pipe_replace_rendered_drawables_with_images(RedWorker *worker,
-                                                            DisplayChannelClient *dcc,
+static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient *dcc,
                                                             int first_surface_id,
                                                             SpiceRect *first_area)
 {
@@ -4691,15 +4602,15 @@ static void red_pipe_replace_rendered_drawables_with_images(RedWorker *worker,
     }
 }
 
-static void red_add_lossless_drawable_dependencies(RedWorker *worker,
-                                                   RedChannelClient *rcc,
+static void red_add_lossless_drawable_dependencies(RedChannelClient *rcc,
                                                    Drawable *item,
                                                    int deps_surfaces_ids[],
                                                    SpiceRect *deps_areas[],
                                                    int num_deps)
 {
-    RedDrawable *drawable = item->red_drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    DisplayChannel *display = DCC_TO_DC(dcc);
+    RedDrawable *drawable = item->red_drawable;
     int sync_rendered = FALSE;
     int i;
 
@@ -4712,7 +4623,7 @@ static void red_add_lossless_drawable_dependencies(RedWorker *worker,
         // that were rendered, affected the areas that need to be resent
         if (!drawable_intersects_with_areas(item, deps_surfaces_ids,
                                             deps_areas, num_deps)) {
-            if (pipe_rendered_drawables_intersect_with_areas(worker, dcc,
+            if (pipe_rendered_drawables_intersect_with_areas(dcc,
                                                              deps_surfaces_ids,
                                                              deps_areas,
                                                              num_deps)) {
@@ -4724,7 +4635,7 @@ static void red_add_lossless_drawable_dependencies(RedWorker *worker,
     } else {
         sync_rendered = FALSE;
         for (i = 0; i < num_deps; i++) {
-            red_update_area_till(worker, deps_areas[i],
+            red_update_area_till(display, deps_areas[i],
                                  deps_surfaces_ids[i], item);
         }
     }
@@ -4747,11 +4658,11 @@ static void red_add_lossless_drawable_dependencies(RedWorker *worker,
         drawable_bbox[0] = &drawable->bbox;
 
         // check if the other rendered images in the pipe have updated the drawable bbox
-        if (pipe_rendered_drawables_intersect_with_areas(worker, dcc,
+        if (pipe_rendered_drawables_intersect_with_areas(dcc,
                                                          drawable_surface_id,
                                                          drawable_bbox,
                                                          1)) {
-            red_pipe_replace_rendered_drawables_with_images(worker, dcc,
+            red_pipe_replace_rendered_drawables_with_images(dcc,
                                                             drawable->surface_id,
                                                             &drawable->bbox);
         }
@@ -4761,10 +4672,9 @@ static void red_add_lossless_drawable_dependencies(RedWorker *worker,
     }
 }
 
-static void red_marshall_qxl_draw_fill(RedWorker *worker,
-                                   RedChannelClient *rcc,
-                                   SpiceMarshaller *base_marshaller,
-                                   DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_fill(RedChannelClient *rcc,
+                                       SpiceMarshaller *base_marshaller,
+                                       DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -4789,13 +4699,12 @@ static void red_marshall_qxl_draw_fill(RedWorker *worker,
 }
 
 
-static void red_lossy_marshall_qxl_draw_fill(RedWorker *worker,
-                                         RedChannelClient *rcc,
-                                         SpiceMarshaller *m,
-                                         DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_fill(RedChannelClient *rcc,
+                                             SpiceMarshaller *m,
+                                             DrawablePipeItem *dpi)
 {
-    Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
 
     int dest_allowed_lossy = FALSE;
@@ -4822,9 +4731,9 @@ static void red_lossy_marshall_qxl_draw_fill(RedWorker *worker,
         !(brush_is_lossy && (brush_bitmap_data.type == BITMAP_DATA_TYPE_SURFACE))) {
         int has_mask = !!drawable->u.fill.mask.bitmap;
 
-        red_marshall_qxl_draw_fill(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_fill(rcc, m, dpi);
         // either the brush operation is opaque, or the dest is not lossy
-        surface_lossy_region_update(worker, dcc, item, has_mask, FALSE);
+        surface_lossy_region_update(dcc, item, has_mask, FALSE);
     } else {
         int resend_surface_ids[2];
         SpiceRect *resend_areas[2];
@@ -4842,18 +4751,17 @@ static void red_lossy_marshall_qxl_draw_fill(RedWorker *worker,
             num_resend++;
         }
 
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, num_resend);
     }
 }
 
-static FillBitsType red_marshall_qxl_draw_opaque(RedWorker *worker,
-                                             RedChannelClient *rcc,
-                                             SpiceMarshaller *base_marshaller,
-                                             DrawablePipeItem *dpi, int src_allowed_lossy)
+static FillBitsType red_marshall_qxl_draw_opaque(RedChannelClient *rcc,
+                                                 SpiceMarshaller *base_marshaller,
+                                                 DrawablePipeItem *dpi, int src_allowed_lossy)
 {
-    Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
     SpiceMarshaller *brush_pat_out;
     SpiceMarshaller *src_bitmap_out;
@@ -4881,13 +4789,12 @@ static FillBitsType red_marshall_qxl_draw_opaque(RedWorker *worker,
     return src_send_type;
 }
 
-static void red_lossy_marshall_qxl_draw_opaque(RedWorker *worker,
-                                           RedChannelClient *rcc,
-                                           SpiceMarshaller *m,
-                                           DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_opaque(RedChannelClient *rcc,
+                                               SpiceMarshaller *m,
+                                               DrawablePipeItem *dpi)
 {
-    Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
 
     int src_allowed_lossy;
@@ -4917,14 +4824,14 @@ static void red_lossy_marshall_qxl_draw_opaque(RedWorker *worker,
         FillBitsType src_send_type;
         int has_mask = !!drawable->u.opaque.mask.bitmap;
 
-        src_send_type = red_marshall_qxl_draw_opaque(worker, rcc, m, dpi, src_allowed_lossy);
+        src_send_type = red_marshall_qxl_draw_opaque(rcc, m, dpi, src_allowed_lossy);
         if (src_send_type == FILL_BITS_TYPE_COMPRESS_LOSSY) {
             src_is_lossy = TRUE;
         } else if (src_send_type == FILL_BITS_TYPE_COMPRESS_LOSSLESS) {
             src_is_lossy = FALSE;
         }
 
-        surface_lossy_region_update(worker, dcc, item, has_mask, src_is_lossy);
+        surface_lossy_region_update(dcc, item, has_mask, src_is_lossy);
     } else {
         int resend_surface_ids[2];
         SpiceRect *resend_areas[2];
@@ -4942,19 +4849,18 @@ static void red_lossy_marshall_qxl_draw_opaque(RedWorker *worker,
             num_resend++;
         }
 
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, num_resend);
     }
 }
 
-static FillBitsType red_marshall_qxl_draw_copy(RedWorker *worker,
-                                           RedChannelClient *rcc,
-                                           SpiceMarshaller *base_marshaller,
-                                           DrawablePipeItem *dpi, int src_allowed_lossy)
+static FillBitsType red_marshall_qxl_draw_copy(RedChannelClient *rcc,
+                                               SpiceMarshaller *base_marshaller,
+                                               DrawablePipeItem *dpi, int src_allowed_lossy)
 {
+    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
-    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     SpiceMarshaller *src_bitmap_out;
     SpiceMarshaller *mask_bitmap_out;
     SpiceCopy copy;
@@ -4974,13 +4880,12 @@ static FillBitsType red_marshall_qxl_draw_copy(RedWorker *worker,
     return src_send_type;
 }
 
-static void red_lossy_marshall_qxl_draw_copy(RedWorker *worker,
-                                         RedChannelClient *rcc,
-                                         SpiceMarshaller *base_marshaller,
-                                         DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_copy(RedChannelClient *rcc,
+                                             SpiceMarshaller *base_marshaller,
+                                             DrawablePipeItem *dpi)
 {
-    Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
     int has_mask = !!drawable->u.copy.mask.bitmap;
     int src_is_lossy;
@@ -4990,23 +4895,22 @@ static void red_lossy_marshall_qxl_draw_copy(RedWorker *worker,
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.copy.src_bitmap,
                                    &drawable->u.copy.src_area, item, &src_bitmap_data);
 
-    src_send_type = red_marshall_qxl_draw_copy(worker, rcc, base_marshaller, dpi, TRUE);
+    src_send_type = red_marshall_qxl_draw_copy(rcc, base_marshaller, dpi, TRUE);
     if (src_send_type == FILL_BITS_TYPE_COMPRESS_LOSSY) {
         src_is_lossy = TRUE;
     } else if (src_send_type == FILL_BITS_TYPE_COMPRESS_LOSSLESS) {
         src_is_lossy = FALSE;
     }
-    surface_lossy_region_update(worker, dcc, item, has_mask,
+    surface_lossy_region_update(dcc, item, has_mask,
                                 src_is_lossy);
 }
 
-static void red_marshall_qxl_draw_transparent(RedWorker *worker,
-                                          RedChannelClient *rcc,
-                                          SpiceMarshaller *base_marshaller,
-                                          DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_transparent(RedChannelClient *rcc,
+                                              SpiceMarshaller *base_marshaller,
+                                              DrawablePipeItem *dpi)
 {
-    Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
     SpiceMarshaller *src_bitmap_out;
     SpiceTransparent transparent;
@@ -5021,10 +4925,9 @@ static void red_marshall_qxl_draw_transparent(RedWorker *worker,
     fill_bits(dcc, src_bitmap_out, transparent.src_bitmap, item, FALSE);
 }
 
-static void red_lossy_marshall_qxl_draw_transparent(RedWorker *worker,
-                                                RedChannelClient *rcc,
-                                                SpiceMarshaller *base_marshaller,
-                                                DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_transparent(RedChannelClient *rcc,
+                                                    SpiceMarshaller *base_marshaller,
+                                                    DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -5035,7 +4938,7 @@ static void red_lossy_marshall_qxl_draw_transparent(RedWorker *worker,
                                    &drawable->u.transparent.src_area, item, &src_bitmap_data);
 
     if (!src_is_lossy || (src_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE)) {
-        red_marshall_qxl_draw_transparent(worker, rcc, base_marshaller, dpi);
+        red_marshall_qxl_draw_transparent(rcc, base_marshaller, dpi);
         // don't update surface lossy region since transperent areas might be lossy
     } else {
         int resend_surface_ids[1];
@@ -5044,16 +4947,15 @@ static void red_lossy_marshall_qxl_draw_transparent(RedWorker *worker,
         resend_surface_ids[0] = src_bitmap_data.id;
         resend_areas[0] = &src_bitmap_data.lossy_rect;
 
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, 1);
     }
 }
 
-static FillBitsType red_marshall_qxl_draw_alpha_blend(RedWorker *worker,
-                                                  RedChannelClient *rcc,
-                                                  SpiceMarshaller *base_marshaller,
-                                                  DrawablePipeItem *dpi,
-                                                  int src_allowed_lossy)
+static FillBitsType red_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
+                                                      SpiceMarshaller *base_marshaller,
+                                                      DrawablePipeItem *dpi,
+                                                      int src_allowed_lossy)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5075,10 +4977,9 @@ static FillBitsType red_marshall_qxl_draw_alpha_blend(RedWorker *worker,
     return src_send_type;
 }
 
-static void red_lossy_marshall_qxl_draw_alpha_blend(RedWorker *worker,
-                                                RedChannelClient *rcc,
-                                                SpiceMarshaller *base_marshaller,
-                                                DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
+                                                    SpiceMarshaller *base_marshaller,
+                                                    DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5090,7 +4991,7 @@ static void red_lossy_marshall_qxl_draw_alpha_blend(RedWorker *worker,
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.alpha_blend.src_bitmap,
                                    &drawable->u.alpha_blend.src_area, item, &src_bitmap_data);
 
-    src_send_type = red_marshall_qxl_draw_alpha_blend(worker, rcc, base_marshaller, dpi, TRUE);
+    src_send_type = red_marshall_qxl_draw_alpha_blend(rcc, base_marshaller, dpi, TRUE);
 
     if (src_send_type == FILL_BITS_TYPE_COMPRESS_LOSSY) {
         src_is_lossy = TRUE;
@@ -5099,14 +5000,13 @@ static void red_lossy_marshall_qxl_draw_alpha_blend(RedWorker *worker,
     }
 
     if (src_is_lossy) {
-        surface_lossy_region_update(worker, dcc, item, FALSE, src_is_lossy);
+        surface_lossy_region_update(dcc, item, FALSE, src_is_lossy);
     } // else, the area stays lossy/lossless as the destination
 }
 
-static void red_marshall_qxl_copy_bits(RedWorker *worker,
-                                   RedChannelClient *rcc,
-                                   SpiceMarshaller *base_marshaller,
-                                   DrawablePipeItem *dpi)
+static void red_marshall_qxl_copy_bits(RedChannelClient *rcc,
+                                       SpiceMarshaller *base_marshaller,
+                                       DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -5119,10 +5019,9 @@ static void red_marshall_qxl_copy_bits(RedWorker *worker,
                          &copy_bits);
 }
 
-static void red_lossy_marshall_qxl_copy_bits(RedWorker *worker,
-                                         RedChannelClient *rcc,
-                                         SpiceMarshaller *base_marshaller,
-                                         DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_copy_bits(RedChannelClient *rcc,
+                                             SpiceMarshaller *base_marshaller,
+                                             DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5133,7 +5032,7 @@ static void red_lossy_marshall_qxl_copy_bits(RedWorker *worker,
     int src_is_lossy;
     SpiceRect src_lossy_area;
 
-    red_marshall_qxl_copy_bits(worker, rcc, base_marshaller, dpi);
+    red_marshall_qxl_copy_bits(rcc, base_marshaller, dpi);
 
     horz_offset = drawable->u.copy_bits.src_pos.x - drawable->bbox.left;
     vert_offset = drawable->u.copy_bits.src_pos.y - drawable->bbox.top;
@@ -5146,14 +5045,12 @@ static void red_lossy_marshall_qxl_copy_bits(RedWorker *worker,
     src_is_lossy = is_surface_area_lossy(dcc, item->surface_id,
                                          &src_rect, &src_lossy_area);
 
-    surface_lossy_region_update(worker, dcc, item, FALSE,
-                                src_is_lossy);
+    surface_lossy_region_update(dcc, item, FALSE, src_is_lossy);
 }
 
-static void red_marshall_qxl_draw_blend(RedWorker *worker,
-                                    RedChannelClient *rcc,
-                                    SpiceMarshaller *base_marshaller,
-                                    DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_blend(RedChannelClient *rcc,
+                                        SpiceMarshaller *base_marshaller,
+                                        DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5175,10 +5072,9 @@ static void red_marshall_qxl_draw_blend(RedWorker *worker,
     fill_mask(rcc, mask_bitmap_out, blend.mask.bitmap, item);
 }
 
-static void red_lossy_marshall_qxl_draw_blend(RedWorker *worker,
-                                          RedChannelClient *rcc,
-                                          SpiceMarshaller *base_marshaller,
-                                          DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_blend(RedChannelClient *rcc,
+                                              SpiceMarshaller *base_marshaller,
+                                              DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5195,7 +5091,7 @@ static void red_lossy_marshall_qxl_draw_blend(RedWorker *worker,
 
     if (!dest_is_lossy &&
         (!src_is_lossy || (src_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE))) {
-        red_marshall_qxl_draw_blend(worker, rcc, base_marshaller, dpi);
+        red_marshall_qxl_draw_blend(rcc, base_marshaller, dpi);
     } else {
         int resend_surface_ids[2];
         SpiceRect *resend_areas[2];
@@ -5213,15 +5109,14 @@ static void red_lossy_marshall_qxl_draw_blend(RedWorker *worker,
             num_resend++;
         }
 
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, num_resend);
     }
 }
 
-static void red_marshall_qxl_draw_blackness(RedWorker *worker,
-                                        RedChannelClient *rcc,
-                                        SpiceMarshaller *base_marshaller,
-                                        DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_blackness(RedChannelClient *rcc,
+                                            SpiceMarshaller *base_marshaller,
+                                            DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -5239,25 +5134,23 @@ static void red_marshall_qxl_draw_blackness(RedWorker *worker,
     fill_mask(rcc, mask_bitmap_out, blackness.mask.bitmap, item);
 }
 
-static void red_lossy_marshall_qxl_draw_blackness(RedWorker *worker,
-                                              RedChannelClient *rcc,
-                                              SpiceMarshaller *base_marshaller,
-                                              DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_blackness(RedChannelClient *rcc,
+                                                  SpiceMarshaller *base_marshaller,
+                                                  DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     RedDrawable *drawable = item->red_drawable;
     int has_mask = !!drawable->u.blackness.mask.bitmap;
 
-    red_marshall_qxl_draw_blackness(worker, rcc, base_marshaller, dpi);
+    red_marshall_qxl_draw_blackness(rcc, base_marshaller, dpi);
 
-    surface_lossy_region_update(worker, dcc, item, has_mask, FALSE);
+    surface_lossy_region_update(dcc, item, has_mask, FALSE);
 }
 
-static void red_marshall_qxl_draw_whiteness(RedWorker *worker,
-                                        RedChannelClient *rcc,
-                                        SpiceMarshaller *base_marshaller,
-                                        DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_whiteness(RedChannelClient *rcc,
+                                            SpiceMarshaller *base_marshaller,
+                                            DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -5275,25 +5168,23 @@ static void red_marshall_qxl_draw_whiteness(RedWorker *worker,
     fill_mask(rcc, mask_bitmap_out, whiteness.mask.bitmap, item);
 }
 
-static void red_lossy_marshall_qxl_draw_whiteness(RedWorker *worker,
-                                              RedChannelClient *rcc,
-                                              SpiceMarshaller *base_marshaller,
-                                              DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_whiteness(RedChannelClient *rcc,
+                                                  SpiceMarshaller *base_marshaller,
+                                                  DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     RedDrawable *drawable = item->red_drawable;
     int has_mask = !!drawable->u.whiteness.mask.bitmap;
 
-    red_marshall_qxl_draw_whiteness(worker, rcc, base_marshaller, dpi);
+    red_marshall_qxl_draw_whiteness(rcc, base_marshaller, dpi);
 
-    surface_lossy_region_update(worker, dcc, item, has_mask, FALSE);
+    surface_lossy_region_update(dcc, item, has_mask, FALSE);
 }
 
-static void red_marshall_qxl_draw_inverse(RedWorker *worker,
-                                        RedChannelClient *rcc,
-                                        SpiceMarshaller *base_marshaller,
-                                        Drawable *item)
+static void red_marshall_qxl_draw_inverse(RedChannelClient *rcc,
+                                          SpiceMarshaller *base_marshaller,
+                                          Drawable *item)
 {
     RedDrawable *drawable = item->red_drawable;
     SpiceMarshaller *mask_bitmap_out;
@@ -5310,18 +5201,16 @@ static void red_marshall_qxl_draw_inverse(RedWorker *worker,
     fill_mask(rcc, mask_bitmap_out, inverse.mask.bitmap, item);
 }
 
-static void red_lossy_marshall_qxl_draw_inverse(RedWorker *worker,
-                                            RedChannelClient *rcc,
-                                            SpiceMarshaller *base_marshaller,
-                                            Drawable *item)
+static void red_lossy_marshall_qxl_draw_inverse(RedChannelClient *rcc,
+                                                SpiceMarshaller *base_marshaller,
+                                                Drawable *item)
 {
-    red_marshall_qxl_draw_inverse(worker, rcc, base_marshaller, item);
+    red_marshall_qxl_draw_inverse(rcc, base_marshaller, item);
 }
 
-static void red_marshall_qxl_draw_rop3(RedWorker *worker,
-                                   RedChannelClient *rcc,
-                                   SpiceMarshaller *base_marshaller,
-                                   DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_rop3(RedChannelClient *rcc,
+                                       SpiceMarshaller *base_marshaller,
+                                       DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5348,10 +5237,9 @@ static void red_marshall_qxl_draw_rop3(RedWorker *worker,
     fill_mask(rcc, mask_bitmap_out, rop3.mask.bitmap, item);
 }
 
-static void red_lossy_marshall_qxl_draw_rop3(RedWorker *worker,
-                                         RedChannelClient *rcc,
-                                         SpiceMarshaller *base_marshaller,
-                                         DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_rop3(RedChannelClient *rcc,
+                                             SpiceMarshaller *base_marshaller,
+                                             DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5374,8 +5262,8 @@ static void red_lossy_marshall_qxl_draw_rop3(RedWorker *worker,
         (!brush_is_lossy || (brush_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE)) &&
         !dest_is_lossy) {
         int has_mask = !!drawable->u.rop3.mask.bitmap;
-        red_marshall_qxl_draw_rop3(worker, rcc, base_marshaller, dpi);
-        surface_lossy_region_update(worker, dcc, item, has_mask, FALSE);
+        red_marshall_qxl_draw_rop3(rcc, base_marshaller, dpi);
+        surface_lossy_region_update(dcc, item, has_mask, FALSE);
     } else {
         int resend_surface_ids[3];
         SpiceRect *resend_areas[3];
@@ -5399,15 +5287,14 @@ static void red_lossy_marshall_qxl_draw_rop3(RedWorker *worker,
             num_resend++;
         }
 
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, num_resend);
     }
 }
 
-static void red_marshall_qxl_draw_composite(RedWorker *worker,
-                                     RedChannelClient *rcc,
-                                     SpiceMarshaller *base_marshaller,
-                                     DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_composite(RedChannelClient *rcc,
+                                            SpiceMarshaller *base_marshaller,
+                                            DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5430,8 +5317,7 @@ static void red_marshall_qxl_draw_composite(RedWorker *worker,
     }
 }
 
-static void red_lossy_marshall_qxl_draw_composite(RedWorker *worker,
-                                                  RedChannelClient *rcc,
+static void red_lossy_marshall_qxl_draw_composite(RedChannelClient *rcc,
                                                   SpiceMarshaller *base_marshaller,
                                                   DrawablePipeItem *dpi)
 {
@@ -5456,8 +5342,8 @@ static void red_lossy_marshall_qxl_draw_composite(RedWorker *worker,
     if ((!src_is_lossy || (src_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE))   &&
         (!mask_is_lossy || (mask_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE)) &&
         !dest_is_lossy) {
-        red_marshall_qxl_draw_composite(worker, rcc, base_marshaller, dpi);
-        surface_lossy_region_update(worker, dcc, item, FALSE, FALSE);
+        red_marshall_qxl_draw_composite(rcc, base_marshaller, dpi);
+        surface_lossy_region_update(dcc, item, FALSE, FALSE);
     }
     else {
         int resend_surface_ids[3];
@@ -5482,15 +5368,14 @@ static void red_lossy_marshall_qxl_draw_composite(RedWorker *worker,
             num_resend++;
         }
 
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, num_resend);
     }
 }
 
-static void red_marshall_qxl_draw_stroke(RedWorker *worker,
-                                     RedChannelClient *rcc,
-                                     SpiceMarshaller *base_marshaller,
-                                     DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_stroke(RedChannelClient *rcc,
+                                         SpiceMarshaller *base_marshaller,
+                                         DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5513,10 +5398,9 @@ static void red_marshall_qxl_draw_stroke(RedWorker *worker,
     }
 }
 
-static void red_lossy_marshall_qxl_draw_stroke(RedWorker *worker,
-                                           RedChannelClient *rcc,
-                                           SpiceMarshaller *base_marshaller,
-                                           DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_stroke(RedChannelClient *rcc,
+                                               SpiceMarshaller *base_marshaller,
+                                               DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5545,7 +5429,7 @@ static void red_lossy_marshall_qxl_draw_stroke(RedWorker *worker,
     if (!dest_is_lossy &&
         (!brush_is_lossy || (brush_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE)))
     {
-        red_marshall_qxl_draw_stroke(worker, rcc, base_marshaller, dpi);
+        red_marshall_qxl_draw_stroke(rcc, base_marshaller, dpi);
     } else {
         int resend_surface_ids[2];
         SpiceRect *resend_areas[2];
@@ -5564,15 +5448,14 @@ static void red_lossy_marshall_qxl_draw_stroke(RedWorker *worker,
             num_resend++;
         }
 
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, num_resend);
     }
 }
 
-static void red_marshall_qxl_draw_text(RedWorker *worker,
-                                   RedChannelClient *rcc,
-                                   SpiceMarshaller *base_marshaller,
-                                   DrawablePipeItem *dpi)
+static void red_marshall_qxl_draw_text(RedChannelClient *rcc,
+                                       SpiceMarshaller *base_marshaller,
+                                       DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5597,10 +5480,9 @@ static void red_marshall_qxl_draw_text(RedWorker *worker,
     }
 }
 
-static void red_lossy_marshall_qxl_draw_text(RedWorker *worker,
-                                         RedChannelClient *rcc,
-                                         SpiceMarshaller *base_marshaller,
-                                         DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_draw_text(RedChannelClient *rcc,
+                                             SpiceMarshaller *base_marshaller,
+                                             DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -5637,7 +5519,7 @@ static void red_lossy_marshall_qxl_draw_text(RedWorker *worker,
     if (!dest_is_lossy &&
         (!fg_is_lossy || (fg_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE)) &&
         (!bg_is_lossy || (bg_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE))) {
-        red_marshall_qxl_draw_text(worker, rcc, base_marshaller, dpi);
+        red_marshall_qxl_draw_text(rcc, base_marshaller, dpi);
     } else {
         int resend_surface_ids[3];
         SpiceRect *resend_areas[3];
@@ -5660,111 +5542,112 @@ static void red_lossy_marshall_qxl_draw_text(RedWorker *worker,
             resend_areas[num_resend] = &dest_lossy_area;
             num_resend++;
         }
-        red_add_lossless_drawable_dependencies(worker, rcc, item,
+        red_add_lossless_drawable_dependencies(rcc, item,
                                                resend_surface_ids, resend_areas, num_resend);
     }
 }
 
-static void red_lossy_marshall_qxl_drawable(RedWorker *worker, RedChannelClient *rcc,
-                                        SpiceMarshaller *base_marshaller, DrawablePipeItem *dpi)
+static void red_lossy_marshall_qxl_drawable(RedChannelClient *rcc,
+                                            SpiceMarshaller *base_marshaller,
+                                            DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     switch (item->red_drawable->type) {
     case QXL_DRAW_FILL:
-        red_lossy_marshall_qxl_draw_fill(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_fill(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_OPAQUE:
-        red_lossy_marshall_qxl_draw_opaque(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_opaque(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_COPY:
-        red_lossy_marshall_qxl_draw_copy(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_copy(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_TRANSPARENT:
-        red_lossy_marshall_qxl_draw_transparent(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_transparent(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_ALPHA_BLEND:
-        red_lossy_marshall_qxl_draw_alpha_blend(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_alpha_blend(rcc, base_marshaller, dpi);
         break;
     case QXL_COPY_BITS:
-        red_lossy_marshall_qxl_copy_bits(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_copy_bits(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_BLEND:
-        red_lossy_marshall_qxl_draw_blend(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_blend(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_BLACKNESS:
-        red_lossy_marshall_qxl_draw_blackness(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_blackness(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_WHITENESS:
-        red_lossy_marshall_qxl_draw_whiteness(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_whiteness(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_INVERS:
-        red_lossy_marshall_qxl_draw_inverse(worker, rcc, base_marshaller, item);
+        red_lossy_marshall_qxl_draw_inverse(rcc, base_marshaller, item);
         break;
     case QXL_DRAW_ROP3:
-        red_lossy_marshall_qxl_draw_rop3(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_rop3(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_COMPOSITE:
-        red_lossy_marshall_qxl_draw_composite(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_composite(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_STROKE:
-        red_lossy_marshall_qxl_draw_stroke(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_stroke(rcc, base_marshaller, dpi);
         break;
     case QXL_DRAW_TEXT:
-        red_lossy_marshall_qxl_draw_text(worker, rcc, base_marshaller, dpi);
+        red_lossy_marshall_qxl_draw_text(rcc, base_marshaller, dpi);
         break;
     default:
         spice_error("invalid type");
     }
 }
 
-static inline void red_marshall_qxl_drawable(RedWorker *worker, RedChannelClient *rcc,
-                                SpiceMarshaller *m, DrawablePipeItem *dpi)
+static inline void red_marshall_qxl_drawable(RedChannelClient *rcc,
+                                             SpiceMarshaller *m, DrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
 
     switch (drawable->type) {
     case QXL_DRAW_FILL:
-        red_marshall_qxl_draw_fill(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_fill(rcc, m, dpi);
         break;
     case QXL_DRAW_OPAQUE:
-        red_marshall_qxl_draw_opaque(worker, rcc, m, dpi, FALSE);
+        red_marshall_qxl_draw_opaque(rcc, m, dpi, FALSE);
         break;
     case QXL_DRAW_COPY:
-        red_marshall_qxl_draw_copy(worker, rcc, m, dpi, FALSE);
+        red_marshall_qxl_draw_copy(rcc, m, dpi, FALSE);
         break;
     case QXL_DRAW_TRANSPARENT:
-        red_marshall_qxl_draw_transparent(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_transparent(rcc, m, dpi);
         break;
     case QXL_DRAW_ALPHA_BLEND:
-        red_marshall_qxl_draw_alpha_blend(worker, rcc, m, dpi, FALSE);
+        red_marshall_qxl_draw_alpha_blend(rcc, m, dpi, FALSE);
         break;
     case QXL_COPY_BITS:
-        red_marshall_qxl_copy_bits(worker, rcc, m, dpi);
+        red_marshall_qxl_copy_bits(rcc, m, dpi);
         break;
     case QXL_DRAW_BLEND:
-        red_marshall_qxl_draw_blend(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_blend(rcc, m, dpi);
         break;
     case QXL_DRAW_BLACKNESS:
-        red_marshall_qxl_draw_blackness(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_blackness(rcc, m, dpi);
         break;
     case QXL_DRAW_WHITENESS:
-        red_marshall_qxl_draw_whiteness(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_whiteness(rcc, m, dpi);
         break;
     case QXL_DRAW_INVERS:
-        red_marshall_qxl_draw_inverse(worker, rcc, m, item);
+        red_marshall_qxl_draw_inverse(rcc, m, item);
         break;
     case QXL_DRAW_ROP3:
-        red_marshall_qxl_draw_rop3(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_rop3(rcc, m, dpi);
         break;
     case QXL_DRAW_STROKE:
-        red_marshall_qxl_draw_stroke(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_stroke(rcc, m, dpi);
         break;
     case QXL_DRAW_COMPOSITE:
-        red_marshall_qxl_draw_composite(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_composite(rcc, m, dpi);
         break;
     case QXL_DRAW_TEXT:
-        red_marshall_qxl_draw_text(worker, rcc, m, dpi);
+        red_marshall_qxl_draw_text(rcc, m, dpi);
         break;
     default:
         spice_error("invalid type");
@@ -6063,9 +5946,9 @@ static inline void marshall_qxl_drawable(RedChannelClient *rcc,
         return;
     }
     if (!display_channel->enable_jpeg)
-        red_marshall_qxl_drawable(display_channel->common.worker, rcc, m, dpi);
+        red_marshall_qxl_drawable(rcc, m, dpi);
     else
-        red_lossy_marshall_qxl_drawable(display_channel->common.worker, rcc, m, dpi);
+        red_lossy_marshall_qxl_drawable(rcc, m, dpi);
 }
 
 static inline void red_marshall_inval_palette(RedChannelClient *rcc,
@@ -6694,15 +6577,15 @@ static void red_migrate_display(DisplayChannel *display, RedChannelClient *rcc)
 }
 
 #ifdef USE_OPENGL
-static SpiceCanvas *create_ogl_context_common(RedWorker *worker, OGLCtx *ctx, uint32_t width,
-                                              uint32_t height, int32_t stride, uint8_t depth)
+static SpiceCanvas *create_ogl_context_common(DisplayChannel *display, OGLCtx *ctx,
+                                              uint32_t width, uint32_t height,
+                                              int32_t stride, uint8_t depth)
 {
-    DisplayChannel *display = worker->display_channel;
     SpiceCanvas *canvas;
 
     oglctx_make_current(ctx);
     if (!(canvas = gl_canvas_create(width, height, depth, &display->image_cache.base,
-                                    &worker->image_surfaces, NULL, NULL, NULL))) {
+                                    &display->image_surfaces, NULL, NULL, NULL))) {
         return NULL;
     }
 
@@ -6713,8 +6596,8 @@ static SpiceCanvas *create_ogl_context_common(RedWorker *worker, OGLCtx *ctx, ui
     return canvas;
 }
 
-static SpiceCanvas *create_ogl_pbuf_context(RedWorker *worker, uint32_t width, uint32_t height,
-                                         int32_t stride, uint8_t depth)
+static SpiceCanvas *create_ogl_pbuf_context(DisplayChannel *display, uint32_t width,
+                                            uint32_t height, int32_t stride, uint8_t depth)
 {
     OGLCtx *ctx;
     SpiceCanvas *canvas;
@@ -6723,7 +6606,7 @@ static SpiceCanvas *create_ogl_pbuf_context(RedWorker *worker, uint32_t width, u
         return NULL;
     }
 
-    if (!(canvas = create_ogl_context_common(worker, ctx, width, height, stride, depth))) {
+    if (!(canvas = create_ogl_context_common(display, ctx, width, height, stride, depth))) {
         oglctx_destroy(ctx);
         return NULL;
     }
@@ -6731,8 +6614,9 @@ static SpiceCanvas *create_ogl_pbuf_context(RedWorker *worker, uint32_t width, u
     return canvas;
 }
 
-static SpiceCanvas *create_ogl_pixmap_context(RedWorker *worker, uint32_t width, uint32_t height,
-                                              int32_t stride, uint8_t depth) {
+static SpiceCanvas *create_ogl_pixmap_context(DisplayChannel *display, uint32_t width,
+                                              uint32_t height, int32_t stride, uint8_t depth)
+{
     OGLCtx *ctx;
     SpiceCanvas *canvas;
 
@@ -6740,7 +6624,7 @@ static SpiceCanvas *create_ogl_pixmap_context(RedWorker *worker, uint32_t width,
         return NULL;
     }
 
-    if (!(canvas = create_ogl_context_common(worker, ctx, width, height, stride, depth))) {
+    if (!(canvas = create_ogl_context_common(display, ctx, width, height, stride, depth))) {
         oglctx_destroy(ctx);
         return NULL;
     }
@@ -6749,11 +6633,10 @@ static SpiceCanvas *create_ogl_pixmap_context(RedWorker *worker, uint32_t width,
 }
 #endif
 
-static inline void *create_canvas_for_surface(RedWorker *worker, RedSurface *surface,
+static inline void *create_canvas_for_surface(DisplayChannel *display, RedSurface *surface,
                                               uint32_t renderer, uint32_t width, uint32_t height,
                                               int32_t stride, uint32_t format, void *line_0)
 {
-    DisplayChannel *display = worker->display_channel;
     SpiceCanvas *canvas;
 
     switch (renderer) {
@@ -6761,18 +6644,18 @@ static inline void *create_canvas_for_surface(RedWorker *worker, RedSurface *sur
         canvas = canvas_create_for_data(width, height, format,
                                         line_0, stride,
                                         &display->image_cache.base,
-                                        &worker->image_surfaces, NULL, NULL, NULL);
+                                        &display->image_surfaces, NULL, NULL, NULL);
         surface->context.top_down = TRUE;
         surface->context.canvas_draws_on_surface = TRUE;
         return canvas;
 #ifdef USE_OPENGL
     case RED_RENDERER_OGL_PBUF:
-        canvas = create_ogl_pbuf_context(worker, width, height, stride,
+        canvas = create_ogl_pbuf_context(display, width, height, stride,
                                          SPICE_SURFACE_FMT_DEPTH(format));
         surface->context.top_down = FALSE;
         return canvas;
     case RED_RENDERER_OGL_PIXMAP:
-        canvas = create_ogl_pixmap_context(worker, width, height, stride,
+        canvas = create_ogl_pixmap_context(display, width, height, stride,
                                            SPICE_SURFACE_FMT_DEPTH(format));
         surface->context.top_down = FALSE;
         return canvas;
@@ -6806,17 +6689,24 @@ static SurfaceCreateItem *get_surface_create_item(
 
 static inline void red_create_surface_item(DisplayChannelClient *dcc, int surface_id)
 {
+    DisplayChannel *display;
     RedSurface *surface;
     SurfaceCreateItem *create;
-    RedWorker *worker = dcc ? DCC_TO_WORKER(dcc) : NULL;
-    uint32_t flags = is_primary_surface(DCC_TO_DC(dcc), surface_id) ? SPICE_SURFACE_FLAGS_PRIMARY : 0;
+    uint32_t flags;
+
+    if (!dcc) {
+        return;
+    }
+
+    display = DCC_TO_DC(dcc);
+    flags = is_primary_surface(DCC_TO_DC(dcc), surface_id) ? SPICE_SURFACE_FLAGS_PRIMARY : 0;
 
     /* don't send redundant create surface commands to client */
-    if (!dcc || worker->display_channel->common.during_target_migrate ||
+    if (display->common.during_target_migrate ||
         dcc->surface_client_created[surface_id]) {
         return;
     }
-    surface = &worker->surfaces[surface_id];
+    surface = &display->surfaces[surface_id];
     create = get_surface_create_item(RED_CHANNEL_CLIENT(dcc)->channel,
             surface_id, surface->context.width, surface->context.height,
                                      surface->context.format, flags);
@@ -6824,33 +6714,32 @@ static inline void red_create_surface_item(DisplayChannelClient *dcc, int surfac
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &create->pipe_item);
 }
 
-static void red_worker_create_surface_item(RedWorker *worker, int surface_id)
+static void red_worker_create_surface_item(DisplayChannel *display, int surface_id)
 {
     DisplayChannelClient *dcc;
     RingItem *item, *next;
 
-    FOREACH_DCC(worker->display_channel, item, next, dcc) {
+    FOREACH_DCC(display, item, next, dcc) {
         red_create_surface_item(dcc, surface_id);
     }
 }
 
 
-static void red_worker_push_surface_image(RedWorker *worker, int surface_id)
+static void red_worker_push_surface_image(DisplayChannel *display, int surface_id)
 {
     DisplayChannelClient *dcc;
     RingItem *item, *next;
 
-    FOREACH_DCC(worker->display_channel, item, next, dcc) {
+    FOREACH_DCC(display, item, next, dcc) {
         red_push_surface_image(dcc, surface_id);
     }
 }
 
-static inline void red_create_surface(RedWorker *worker, uint32_t surface_id, uint32_t width,
-                                      uint32_t height, int32_t stride, uint32_t format,
-                                      void *line_0, int data_is_valid, int send_client)
+static void red_create_surface(DisplayChannel *display, uint32_t surface_id, uint32_t width,
+                               uint32_t height, int32_t stride, uint32_t format,
+                               void *line_0, int data_is_valid, int send_client)
 {
-    RedSurface *surface = &worker->surfaces[surface_id];
-    DisplayChannel*display = worker->display_channel;
+    RedSurface *surface = &display->surfaces[surface_id];
     uint32_t i;
 
     spice_warn_if(surface->context.canvas);
@@ -6876,7 +6765,7 @@ static inline void red_create_surface(RedWorker *worker, uint32_t surface_id, ui
     region_init(&surface->draw_dirty_region);
     surface->refs = 1;
     if (display->renderer != RED_RENDERER_INVALID) {
-        surface->context.canvas = create_canvas_for_surface(worker, surface, display->renderer,
+        surface->context.canvas = create_canvas_for_surface(display, surface, display->renderer,
                                                             width, height, stride,
                                                             surface->context.format, line_0);
         if (!surface->context.canvas) {
@@ -6884,24 +6773,24 @@ static inline void red_create_surface(RedWorker *worker, uint32_t surface_id, ui
         }
 
         if (send_client) {
-            red_worker_create_surface_item(worker, surface_id);
+            red_worker_create_surface_item(display, surface_id);
             if (data_is_valid) {
-                red_worker_push_surface_image(worker, surface_id);
+                red_worker_push_surface_image(display, surface_id);
             }
         }
         return;
     }
 
     for (i = 0; i < display->num_renderers; i++) {
-        surface->context.canvas = create_canvas_for_surface(worker, surface, display->renderers[i],
+        surface->context.canvas = create_canvas_for_surface(display, surface, display->renderers[i],
                                                             width, height, stride,
                                                             surface->context.format, line_0);
         if (surface->context.canvas) { //no need canvas check
             display->renderer = display->renderers[i];
             if (send_client) {
-                red_worker_create_surface_item(worker, surface_id);
+                red_worker_create_surface_item(display, surface_id);
                 if (data_is_valid) {
-                    red_worker_push_surface_image(worker, surface_id);
+                    red_worker_push_surface_image(display, surface_id);
                 }
             }
             return;
@@ -7048,8 +6937,7 @@ static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
 
 static void on_new_display_channel_client(DisplayChannelClient *dcc)
 {
-    DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    RedWorker *worker = display_channel->common.worker;
+    DisplayChannel *display = DCC_TO_DC(dcc);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
 
     red_channel_client_push_set_ack(RED_CHANNEL_CLIENT(dcc));
@@ -7062,8 +6950,8 @@ static void on_new_display_channel_client(DisplayChannelClient *dcc)
         return;
     }
     red_channel_client_ack_zero_messages_window(RED_CHANNEL_CLIENT(dcc));
-    if (worker->surfaces[0].context.canvas) {
-        red_current_flush(worker, 0);
+    if (display->surfaces[0].context.canvas) {
+        red_current_flush(display, 0);
         push_new_primary_surface(dcc);
         red_push_surface_image(dcc, 0);
         dcc_push_monitors_config(dcc);
@@ -7797,7 +7685,8 @@ static void display_channel_release_item(RedChannelClient *rcc, PipeItem *item, 
     }
 }
 
-static void display_channel_create(RedWorker *worker, int migrate, int stream_video)
+static void display_channel_create(RedWorker *worker, int migrate, int stream_video,
+                                   uint32_t n_surfaces)
 {
     DisplayChannel *display_channel;
     ChannelCbs cbs = {
@@ -7842,12 +7731,15 @@ static void display_channel_create(RedWorker *worker, int migrate, int stream_vi
     stat_compress_init(&display_channel->jpeg_alpha_stat, "jpeg_alpha");
     stat_compress_init(&display_channel->lz4_stat, "lz4");
 
+    display_channel->n_surfaces = n_surfaces;
     display_channel->num_renderers = num_renderers;
     memcpy(display_channel->renderers, renderers, sizeof(display_channel->renderers));
     display_channel->renderer = RED_RENDERER_INVALID;
-    image_cache_init(&display_channel->image_cache);
+
     ring_init(&display_channel->current_list);
+    image_surface_init(display_channel);
     drawables_init(display_channel);
+    image_cache_init(&display_channel->image_cache);
     display_channel->stream_video = stream_video;
     display_channel_init_streams(display_channel);
 }
@@ -7982,14 +7874,13 @@ static void red_connect_cursor(RedWorker *worker, RedClient *client, RedsStream 
 
     // TODO: why do we check for context.canvas? defer this to after display cc is connected
     // and test it's canvas? this is just a test to see if there is an active renderer?
-    if (worker->surfaces[0].context.canvas)
+    if (display_channel_surface_has_canvas(worker->display_channel, 0))
         cursor_channel_init(channel, ccc);
 }
 
 static void surface_dirty_region_to_rects(RedSurface *surface,
                                           QXLRect *qxl_dirty_rects,
-                                          uint32_t num_dirty_rects,
-                                          int clear_dirty_region)
+                                          uint32_t num_dirty_rects)
 {
     QRegion *surface_dirty_region;
     SpiceRect *dirty_rects;
@@ -7998,9 +7889,6 @@ static void surface_dirty_region_to_rects(RedSurface *surface,
     surface_dirty_region = &surface->draw_dirty_region;
     dirty_rects = spice_new0(SpiceRect, num_dirty_rects);
     region_ret_rects(surface_dirty_region, dirty_rects, num_dirty_rects);
-    if (clear_dirty_region) {
-        region_clear(surface_dirty_region);
-    }
     for (i = 0; i < num_dirty_rects; i++) {
         qxl_dirty_rects[i].top    = dirty_rects[i].top;
         qxl_dirty_rects[i].left   = dirty_rects[i].left;
@@ -8010,38 +7898,46 @@ static void surface_dirty_region_to_rects(RedSurface *surface,
     free(dirty_rects);
 }
 
+void display_channel_update(DisplayChannel *display,
+                            uint32_t surface_id, const QXLRect *area, uint32_t clear_dirty,
+                            QXLRect **qxl_dirty_rects, uint32_t *num_dirty_rects)
+{
+    SpiceRect rect;
+    RedSurface *surface;
+
+    spice_return_if_fail(validate_surface(display, surface_id));
+
+    red_get_rect_ptr(&rect, area);
+    red_update_area(display, &rect, surface_id);
+
+    surface = &display->surfaces[surface_id];
+    if (!*qxl_dirty_rects) {
+        *num_dirty_rects = pixman_region32_n_rects(&surface->draw_dirty_region);
+        *qxl_dirty_rects = spice_new0(QXLRect, *num_dirty_rects);
+    }
+
+    surface_dirty_region_to_rects(surface, *qxl_dirty_rects, *num_dirty_rects);
+    if (clear_dirty)
+        region_clear(&surface->draw_dirty_region);
+}
+
 static void handle_dev_update_async(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
     RedWorkerMessageUpdateAsync *msg = payload;
-    SpiceRect rect;
-    QXLRect *qxl_dirty_rects;
-    uint32_t num_dirty_rects;
-    RedSurface *surface;
-    uint32_t surface_id = msg->surface_id;
-    QXLRect qxl_area = msg->qxl_area;
-    uint32_t clear_dirty_region = msg->clear_dirty_region;
+    QXLRect *qxl_dirty_rects = NULL;
+    uint32_t num_dirty_rects = 0;
 
-    red_get_rect_ptr(&rect, &qxl_area);
+    spice_return_if_fail(worker->running);
+    spice_return_if_fail(worker->qxl->st->qif->update_area_complete);
+
     flush_display_commands(worker);
+    display_channel_update(worker->display_channel,
+                           msg->surface_id, &msg->qxl_area, msg->clear_dirty_region,
+                           &qxl_dirty_rects, &num_dirty_rects);
 
-    spice_assert(worker->running);
-
-    VALIDATE_SURFACE_RET(worker, surface_id);
-    red_update_area(worker, &rect, surface_id);
-    if (!worker->qxl->st->qif->update_area_complete) {
-        return;
-    }
-    surface = &worker->surfaces[surface_id];
-    num_dirty_rects = pixman_region32_n_rects(&surface->draw_dirty_region);
-    if (num_dirty_rects == 0) {
-        return;
-    }
-    qxl_dirty_rects = spice_new0(QXLRect, num_dirty_rects);
-    surface_dirty_region_to_rects(surface, qxl_dirty_rects, num_dirty_rects,
-                                  clear_dirty_region);
-    worker->qxl->st->qif->update_area_complete(worker->qxl, surface_id,
-                                          qxl_dirty_rects, num_dirty_rects);
+    worker->qxl->st->qif->update_area_complete(worker->qxl, msg->surface_id,
+                                                qxl_dirty_rects, num_dirty_rects);
     free(qxl_dirty_rects);
 }
 
@@ -8049,28 +7945,13 @@ static void handle_dev_update(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
     RedWorkerMessageUpdate *msg = payload;
-    SpiceRect *rect;
-    RedSurface *surface;
-    uint32_t surface_id = msg->surface_id;
-    const QXLRect *qxl_area = msg->qxl_area;
-    uint32_t num_dirty_rects = msg->num_dirty_rects;
-    QXLRect *qxl_dirty_rects = msg->qxl_dirty_rects;
-    uint32_t clear_dirty_region = msg->clear_dirty_region;
 
-    VALIDATE_SURFACE_RET(worker, surface_id);
+    spice_return_if_fail(worker->running);
 
-    rect = spice_new0(SpiceRect, 1);
-    surface = &worker->surfaces[surface_id];
-    red_get_rect_ptr(rect, qxl_area);
     flush_display_commands(worker);
-
-    spice_assert(worker->running);
-
-    red_update_area(worker, rect, surface_id);
-    free(rect);
-
-    surface_dirty_region_to_rects(surface, qxl_dirty_rects, num_dirty_rects,
-                                  clear_dirty_region);
+    display_channel_update(worker->display_channel,
+                           msg->surface_id, msg->qxl_area, msg->clear_dirty_region,
+                           &msg->qxl_dirty_rects, &msg->num_dirty_rects);
 }
 
 static void handle_dev_del_memslot(void *opaque, void *payload)
@@ -8083,32 +7964,18 @@ static void handle_dev_del_memslot(void *opaque, void *payload)
     red_memslot_info_del_slot(&worker->mem_slots, slot_group_id, slot_id);
 }
 
-/* TODO: destroy_surface_wait, dev_destroy_surface_wait - confusing. one asserts
- * surface_id == 0, maybe move the assert upward and merge the two functions? */
-static inline void destroy_surface_wait(RedWorker *worker, int surface_id)
+void display_channel_destroy_surface_wait(DisplayChannel *display, int surface_id)
 {
-    VALIDATE_SURFACE_RET(worker, surface_id);
-    if (!worker->surfaces[surface_id].context.canvas) {
+    VALIDATE_SURFACE_RET(display, surface_id);
+    if (!display->surfaces[surface_id].context.canvas)
         return;
-    }
 
-    red_handle_depends_on_target_surface(worker, surface_id);
+    red_handle_depends_on_target_surface(display, surface_id);
     /* note that red_handle_depends_on_target_surface must be called before current_remove_all.
        otherwise "current" will hold items that other drawables may depend on, and then
        current_remove_all will remove them from the pipe. */
-    current_remove_all(worker, surface_id);
-    red_clear_surface_drawables_from_pipes(worker, surface_id, TRUE);
-}
-
-static void dev_destroy_surface_wait(RedWorker *worker, uint32_t surface_id)
-{
-    spice_assert(surface_id == 0);
-
-    flush_all_qxl_commands(worker);
-
-    if (worker->surfaces[0].context.canvas) {
-        destroy_surface_wait(worker, 0);
-    }
+    current_remove_all(display, surface_id);
+    red_clear_surface_drawables_from_pipes(display, surface_id, TRUE);
 }
 
 static void handle_dev_destroy_surface_wait(void *opaque, void *payload)
@@ -8116,48 +7983,47 @@ static void handle_dev_destroy_surface_wait(void *opaque, void *payload)
     RedWorkerMessageDestroySurfaceWait *msg = payload;
     RedWorker *worker = opaque;
 
-    dev_destroy_surface_wait(worker, msg->surface_id);
+    spice_return_if_fail(msg->surface_id == 0);
+
+    flush_all_qxl_commands(worker);
+    display_channel_destroy_surface_wait(worker->display_channel, msg->surface_id);
 }
 
 /* called upon device reset */
 
 /* TODO: split me*/
-static inline void dev_destroy_surfaces(RedWorker *worker)
+void display_channel_destroy_surfaces(DisplayChannel *display)
 {
-    DisplayChannel *display = worker->display_channel;
     int i;
 
     spice_debug(NULL);
-    flush_all_qxl_commands(worker);
     //to handle better
     for (i = 0; i < NUM_SURFACES; ++i) {
-        if (worker->surfaces[i].context.canvas) {
-            destroy_surface_wait(worker, i);
-            if (worker->surfaces[i].context.canvas) {
-                red_surface_unref(worker, i);
+        if (display->surfaces[i].context.canvas) {
+            display_channel_destroy_surface_wait(display, i);
+            if (display->surfaces[i].context.canvas) {
+                display_channel_surface_unref(display, i);
             }
-            spice_assert(!worker->surfaces[i].context.canvas);
+            spice_assert(!display->surfaces[i].context.canvas);
         }
     }
-    spice_assert(ring_is_empty(&display->streams));
+    spice_warn_if_fail(ring_is_empty(&display->streams));
 
-    if (display_is_connected(worker)) {
-        red_channel_pipes_add_type(RED_CHANNEL(worker->display_channel),
-                                   PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
-        red_pipes_add_verb(RED_CHANNEL(worker->display_channel),
-                           SPICE_MSG_DISPLAY_STREAM_DESTROY_ALL);
+    if (red_channel_is_connected(RED_CHANNEL(display))) {
+        red_channel_pipes_add_type(RED_CHANNEL(display), PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
+        red_pipes_add_verb(RED_CHANNEL(display), SPICE_MSG_DISPLAY_STREAM_DESTROY_ALL);
     }
 
-    red_display_clear_glz_drawables(worker->display_channel);
-
-    cursor_channel_reset(worker->cursor_channel);
+    red_display_clear_glz_drawables(display);
 }
 
 static void handle_dev_destroy_surfaces(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
 
-    dev_destroy_surfaces(worker);
+    flush_all_qxl_commands(worker);
+    display_channel_destroy_surfaces(worker->display_channel);
+    cursor_channel_reset(worker->cursor_channel);
 }
 
 static void display_update_monitors_config(DisplayChannel *display,
@@ -8182,13 +8048,12 @@ static void red_worker_push_monitors_config(RedWorker *worker)
     }
 }
 
-static void set_monitors_config_to_primary(RedWorker *worker)
+static void set_monitors_config_to_primary(DisplayChannel *display)
 {
-    DrawContext *context = &worker->surfaces[0].context;
-    DisplayChannel *display = worker->display_channel;
+    DrawContext *context = &display->surfaces[0].context;
     QXLHead head = { 0, };
 
-    spice_return_if_fail(worker->surfaces[0].context.canvas);
+    spice_return_if_fail(display->surfaces[0].context.canvas);
 
     if (display->monitors_config)
         monitors_config_unref(display->monitors_config);
@@ -8201,6 +8066,7 @@ static void set_monitors_config_to_primary(RedWorker *worker)
 static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
                                        QXLDevSurfaceCreate surface)
 {
+    DisplayChannel *display = worker->display_channel;
     uint8_t *line_0;
     int error;
 
@@ -8225,9 +8091,9 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
         line_0 -= (int32_t)(surface.stride * (surface.height -1));
     }
 
-    red_create_surface(worker, 0, surface.width, surface.height, surface.stride, surface.format,
+    red_create_surface(display, 0, surface.width, surface.height, surface.stride, surface.format,
                        line_0, surface.flags & QXL_SURF_FLAG_KEEP_DATA, TRUE);
-    set_monitors_config_to_primary(worker);
+    set_monitors_config_to_primary(display);
 
     if (display_is_connected(worker) && !worker->display_channel->common.during_target_migrate) {
         /* guest created primary, so it will (hopefully) send a monitors_config
@@ -8251,25 +8117,25 @@ static void handle_dev_create_primary_surface(void *opaque, void *payload)
     dev_create_primary_surface(worker, msg->surface_id, msg->surface);
 }
 
-static void dev_destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
+static void destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
 {
     DisplayChannel *display = worker->display_channel;
 
-    VALIDATE_SURFACE_RET(worker, surface_id);
+    VALIDATE_SURFACE_RET(display, surface_id);
     spice_warn_if(surface_id != 0);
 
     spice_debug(NULL);
-    if (!worker->surfaces[surface_id].context.canvas) {
+    if (!display->surfaces[surface_id].context.canvas) {
         spice_warning("double destroy of primary surface");
         return;
     }
 
     flush_all_qxl_commands(worker);
-    dev_destroy_surface_wait(worker, 0);
-    red_surface_unref(worker, 0);
-    spice_warn_if_fail(ring_is_empty(&display->streams));
+    display_channel_destroy_surface_wait(display, 0);
+    display_channel_surface_unref(display, 0);
 
-    spice_assert(!worker->surfaces[surface_id].context.canvas);
+    spice_warn_if_fail(ring_is_empty(&display->streams));
+    spice_warn_if_fail(!display->surfaces[surface_id].context.canvas);
 
     cursor_channel_reset(worker->cursor_channel);
 }
@@ -8280,7 +8146,7 @@ static void handle_dev_destroy_primary_surface(void *opaque, void *payload)
     RedWorker *worker = opaque;
     uint32_t surface_id = msg->surface_id;
 
-    dev_destroy_primary_surface(worker, surface_id);
+    destroy_primary_surface(worker, surface_id);
 }
 
 static void handle_dev_destroy_primary_surface_async(void *opaque, void *payload)
@@ -8289,16 +8155,16 @@ static void handle_dev_destroy_primary_surface_async(void *opaque, void *payload
     RedWorker *worker = opaque;
     uint32_t surface_id = msg->surface_id;
 
-    dev_destroy_primary_surface(worker, surface_id);
+    destroy_primary_surface(worker, surface_id);
 }
 
-static void flush_all_surfaces(RedWorker *worker)
+static void flush_all_surfaces(DisplayChannel *display)
 {
     int x;
 
     for (x = 0; x < NUM_SURFACES; ++x) {
-        if (worker->surfaces[x].context.canvas) {
-            red_current_flush(worker, x);
+        if (display->surfaces[x].context.canvas) {
+            red_current_flush(display, x);
         }
     }
 }
@@ -8306,7 +8172,7 @@ static void flush_all_surfaces(RedWorker *worker)
 static void dev_flush_surfaces(RedWorker *worker)
 {
     flush_all_qxl_commands(worker);
-    flush_all_surfaces(worker);
+    flush_all_surfaces(worker->display_channel);
 }
 
 static void handle_dev_flush_surfaces_async(void *opaque, void *payload)
@@ -8324,7 +8190,7 @@ static void handle_dev_stop(void *opaque, void *payload)
     spice_assert(worker->running);
     worker->running = FALSE;
     red_display_clear_glz_drawables(worker->display_channel);
-    flush_all_surfaces(worker);
+    flush_all_surfaces(worker->display_channel);
     /* todo: when the waiting is expected to take long (slow connection and
      * overloaded pipe), don't wait, and in case of migration,
      * purge the pipe, send destroy_all_surfaces
@@ -8453,14 +8319,16 @@ static void handle_dev_destroy_surface_wait_async(void *opaque, void *payload)
     RedWorkerMessageDestroySurfaceWaitAsync *msg = payload;
     RedWorker *worker = opaque;
 
-    dev_destroy_surface_wait(worker, msg->surface_id);
+    display_channel_destroy_surface_wait(worker->display_channel, msg->surface_id);
 }
 
 static void handle_dev_destroy_surfaces_async(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
 
-    dev_destroy_surfaces(worker);
+    flush_all_qxl_commands(worker);
+    display_channel_destroy_surfaces(worker->display_channel);
+    cursor_channel_reset(worker->cursor_channel);
 }
 
 static void handle_dev_create_primary_surface_async(void *opaque, void *payload)
@@ -8974,7 +8842,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     worker->jpeg_state = jpeg_state;
     worker->zlib_glz_state = zlib_glz_state;
     worker->driver_cap_monitors_config = 0;
-    image_surface_init(worker);
 #ifdef RED_STATISTICS
     char worker_str[20];
     sprintf(worker_str, "display[%d]", worker->qxl->id);
@@ -9000,7 +8867,6 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
                           init_info.internal_groupslot_id);
 
     spice_warn_if(init_info.n_surfaces > NUM_SURFACES);
-    worker->n_surfaces = init_info.n_surfaces;
 
     red_init_quic(worker);
     red_init_lz(worker);
@@ -9013,7 +8879,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 
     worker->cursor_channel = cursor_channel_new(worker);
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
-    display_channel_create(worker, FALSE, streaming_video);
+    display_channel_create(worker, FALSE, streaming_video, init_info.n_surfaces);
 
     return worker;
 }

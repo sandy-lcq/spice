@@ -288,6 +288,30 @@ void                       monitors_config_unref                     (MonitorsCo
 #define NUM_TRACE_ITEMS (1 << TRACE_ITEMS_SHIFT)
 #define ITEMS_TRACE_MASK (NUM_TRACE_ITEMS - 1)
 
+typedef struct DrawContext {
+    SpiceCanvas *canvas;
+    int canvas_draws_on_surface;
+    int top_down;
+    uint32_t width;
+    uint32_t height;
+    int32_t stride;
+    uint32_t format;
+    void *line_0;
+} DrawContext;
+
+typedef struct RedSurface {
+    uint32_t refs;
+    Ring current;
+    Ring current_list;
+    DrawContext context;
+
+    Ring depend_on_me;
+    QRegion draw_dirty_region;
+
+    //fix me - better handling here
+    QXLReleaseInfoExt create, destroy;
+} RedSurface;
+
 #define NUM_DRAWABLES 1000
 typedef struct _Drawable _Drawable;
 struct _Drawable {
@@ -325,6 +349,10 @@ struct DisplayChannel {
     ItemTrace items_trace[NUM_TRACE_ITEMS];
     uint32_t next_item_trace;
     uint64_t streams_size_total;
+
+    RedSurface surfaces[NUM_SURFACES];
+    uint32_t n_surfaces;
+    SpiceImageSurfaces image_surfaces;
 
     ImageCache image_cache;
     RedCompressBuf *free_compress_bufs;
@@ -384,6 +412,10 @@ int                        display_channel_get_streams_timeout       (DisplayCha
 void                       display_channel_compress_stats_print      (const DisplayChannel *display);
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
 void                       display_channel_drawable_unref            (DisplayChannel *display, Drawable *drawable);
+void                       display_channel_surface_unref             (DisplayChannel *display,
+                                                                      uint32_t surface_id);
+bool                       display_channel_surface_has_canvas        (DisplayChannel *display,
+                                                                      uint32_t surface_id);
 
 static inline int is_equal_path(SpicePath *path1, SpicePath *path2)
 {

@@ -320,3 +320,64 @@ void display_channel_set_stream_video(DisplayChannel *display, int stream_video)
 
     display->stream_video = stream_video;
 }
+
+static void stop_streams(DisplayChannel *display)
+{
+    Ring *ring = &display->streams;
+    RingItem *item = ring_get_head(ring);
+
+    while (item) {
+        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
+        item = ring_next(ring, item);
+        if (!stream->current) {
+            stream_stop(display, stream);
+        } else {
+            spice_info("attached stream");
+        }
+    }
+
+    display->next_item_trace = 0;
+    memset(display->items_trace, 0, sizeof(display->items_trace));
+}
+
+void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
+{
+    RedSurface *surface = &display->surfaces[surface_id];
+    RedWorker *worker = COMMON_CHANNEL(display)->worker;
+    QXLInstance *qxl = red_worker_get_qxl(worker);
+    DisplayChannelClient *dcc;
+    RingItem *link, *next;
+
+    if (--surface->refs != 0) {
+        return;
+    }
+
+    // only primary surface streams are supported
+    if (is_primary_surface(display, surface_id)) {
+        stop_streams(display);
+    }
+    spice_assert(surface->context.canvas);
+
+    surface->context.canvas->ops->destroy(surface->context.canvas);
+    if (surface->create.info) {
+        qxl->st->qif->release_resource(qxl, surface->create);
+    }
+    if (surface->destroy.info) {
+        qxl->st->qif->release_resource(qxl, surface->destroy);
+    }
+
+    region_destroy(&surface->draw_dirty_region);
+    surface->context.canvas = NULL;
+    FOREACH_DCC(display, link, next, dcc) {
+        dcc_push_destroy_surface(dcc, surface_id);
+    }
+
+    spice_warn_if(!ring_is_empty(&surface->depend_on_me));
+}
+
+/* TODO: perhaps rename to "ready" or "realized" ? */
+bool display_channel_surface_has_canvas(DisplayChannel *display,
+                                        uint32_t surface_id)
+{
+    return display->surfaces[surface_id].context.canvas != NULL;
+}
