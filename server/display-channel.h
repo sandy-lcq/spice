@@ -30,20 +30,13 @@
 #include "reds_gl_canvas.h"
 #endif /* USE_OPENGL */
 #include "reds_sw_canvas.h"
-#include "glz_encoder_dictionary.h"
-#include "glz_encoder.h"
 #include "stat.h"
 #include "reds.h"
 #include "mjpeg_encoder.h"
 #include "red_memslots.h"
 #include "red_parse_qxl.h"
 #include "red_record_qxl.h"
-#include "jpeg_encoder.h"
-#ifdef USE_LZ4
-#include "lz4_encoder.h"
-#endif
 #include "demarshallers.h"
-#include "zlib_encoder.h"
 #include "red_channel.h"
 #include "red_dispatcher.h"
 #include "dispatcher.h"
@@ -56,6 +49,7 @@
 #include "utils.h"
 #include "tree.h"
 #include "stream.h"
+#include "dcc-encoders.h"
 
 #define PALETTE_CACHE_HASH_SHIFT 8
 #define PALETTE_CACHE_HASH_SIZE (1 << PALETTE_CACHE_HASH_SHIFT)
@@ -70,20 +64,6 @@
 #define NUM_STREAMS 50
 #define NUM_SURFACES 10000
 
-#define RED_COMPRESS_BUF_SIZE (1024 * 64)
-typedef struct RedCompressBuf RedCompressBuf;
-struct RedCompressBuf {
-    /* This buffer provide space for compression algorithms.
-     * Some algorithms access the buffer as an array of 32 bit words
-     * so is defined to make sure is always aligned that way.
-     */
-    union {
-        uint8_t  bytes[RED_COMPRESS_BUF_SIZE];
-        uint32_t words[RED_COMPRESS_BUF_SIZE / 4];
-    } buf;
-    RedCompressBuf *send_next;
-};
-
 typedef struct WaitForChannels {
     SpiceMsgWaitForChannels header;
     SpiceWaitForChannel buf[MAX_CACHE_CLIENTS];
@@ -95,41 +75,6 @@ typedef struct FreeList {
     uint64_t sync[MAX_CACHE_CLIENTS];
     WaitForChannels wait;
 } FreeList;
-
-typedef struct GlzSharedDictionary {
-    RingItem base;
-    GlzEncDictContext *dict;
-    uint32_t refs;
-    uint8_t id;
-    pthread_rwlock_t encode_lock;
-    int migrate_freeze;
-    RedClient *client; // channel clients of the same client share the dict
-} GlzSharedDictionary;
-
-typedef struct  {
-    DisplayChannelClient *dcc;
-    RedCompressBuf *bufs_head;
-    RedCompressBuf *bufs_tail;
-    jmp_buf jmp_env;
-    union {
-        struct {
-            SpiceChunks *chunks;
-            int next;
-            int stride;
-            int reverse;
-        } lines_data;
-        struct {
-            RedCompressBuf* next;
-            int size_left;
-        } compressed_data; // for encoding data that was already compressed by another method
-    } u;
-    char message_buf[512];
-} EncoderData;
-
-typedef struct {
-    GlzEncoderUsrContext usr;
-    EncoderData data;
-} GlzData;
 
 typedef struct DependItem {
     Drawable *drawable;
@@ -175,6 +120,21 @@ struct DisplayChannelClient {
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
+    int jpeg_quality;
+    int zlib_level;
+
+    QuicData quic_data;
+    QuicContext *quic;
+    LzData lz_data;
+    LzContext  *lz;
+    JpegData jpeg_data;
+    JpegEncoderContext *jpeg;
+#ifdef USE_LZ4
+    Lz4Data lz4_data;
+    Lz4EncoderContext *lz4;
+#endif
+    ZlibData zlib_data;
+    ZlibEncoder *zlib;
 
     int expect_init;
 
@@ -333,9 +293,7 @@ struct DisplayChannel {
     uint32_t renderers[RED_RENDERER_LAST];
     uint32_t renderer;
     int enable_jpeg;
-    int jpeg_quality;
     int enable_zlib_glz_wrap;
-    int zlib_level;
 
     Ring current_list; // of TreeItem
     uint32_t current_size;
