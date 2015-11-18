@@ -7158,24 +7158,6 @@ static inline void red_push(RedWorker *worker)
     }
 }
 
-void red_show_tree(RedWorker *worker)
-{
-    int x;
-
-    for (x = 0; x < NUM_SURFACES; ++x) {
-        if (!worker->surfaces[x].context.canvas)
-            continue;
-
-        RingItem *it;
-        Ring *ring = &worker->surfaces[x].current;
-        RING_FOREACH(it, ring) {
-            TreeItem *now = SPICE_CONTAINEROF(it, TreeItem, siblings_link);
-            tree_item_dump(now);
-        }
-
-    }
-}
-
 static void display_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     DisplayChannel *display;
