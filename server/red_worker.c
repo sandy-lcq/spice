@@ -146,7 +146,6 @@ struct RedWorker {
     uint32_t cursor_poll_tries;
 
     uint32_t red_drawable_count;
-    uint32_t glz_drawable_count;
     uint32_t bits_unique;
 
     RedMemSlotInfo mem_slots;
@@ -1925,7 +1924,7 @@ static void red_free_some(RedWorker *worker)
     RingItem *item, *next;
 
     spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d", display->drawable_count,
-                worker->red_drawable_count, worker->glz_drawable_count);
+                worker->red_drawable_count, display->glz_drawable_count);
     FOREACH_DCC(worker->display_channel, item, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
 
@@ -2084,7 +2083,7 @@ static RedGlzDrawable *red_display_get_glz_drawable(DisplayChannelClient *dcc, D
     ring_item_init(&ret->drawable_link);
     ring_add_before(&ret->link, &dcc->glz_drawables);
     ring_add(&drawable->glz_ring, &ret->drawable_link);
-    DCC_TO_WORKER(dcc)->glz_drawable_count++;
+    DCC_TO_DC(dcc)->glz_drawable_count++;
     return ret;
 }
 
@@ -2144,7 +2143,7 @@ void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
         }
         red_drawable_unref(worker, glz_drawable->red_drawable,
                            glz_drawable->group_id);
-        worker->glz_drawable_count--;
+        display_channel->glz_drawable_count--;
         if (ring_item_is_linked(&glz_drawable->link)) {
             ring_remove(&glz_drawable->link);
         }
@@ -5364,7 +5363,7 @@ static void display_channel_client_on_disconnect(RedChannelClient *rcc)
     // this was the last channel client
     spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d",
                 display->drawable_count, worker->red_drawable_count,
-                worker->glz_drawable_count);
+                display->glz_drawable_count);
 }
 
 void red_disconnect_all_display_TODO_remove_me(RedChannel *channel)
@@ -6950,7 +6949,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     spice_debug("OOM1 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
                 worker->red_drawable_count,
-                worker->glz_drawable_count,
+                display->glz_drawable_count,
                 display->current_size,
                 worker->display_channel ?
                 red_channel_sum_pipes_size(display_red_channel) : 0);
@@ -6964,7 +6963,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     spice_debug("OOM2 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
                 worker->red_drawable_count,
-                worker->glz_drawable_count,
+                display->glz_drawable_count,
                 display->current_size,
                 worker->display_channel ?
                 red_channel_sum_pipes_size(display_red_channel) : 0);
