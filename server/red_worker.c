@@ -139,7 +139,6 @@ struct RedWorker {
     CursorChannel *cursor_channel;
     uint32_t cursor_poll_tries;
 
-    uint32_t red_drawable_count;
     uint32_t bits_unique;
 
     RedMemSlotInfo mem_slots;
@@ -564,7 +563,7 @@ void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
     if (--red_drawable->refs) {
         return;
     }
-    worker->red_drawable_count--;
+    worker->display_channel->red_drawable_count--;
     release_info_ext.group_id = group_id;
     release_info_ext.info = red_drawable->release_info;
     worker->qxl->st->qif->release_resource(worker->qxl, release_info_ext);
@@ -1751,7 +1750,7 @@ static RedDrawable *red_drawable_new(RedWorker *worker)
     RedDrawable * red = spice_new0(RedDrawable, 1);
 
     red->refs = 1;
-    worker->red_drawable_count++;
+    worker->display_channel->red_drawable_count++;
 
     return red;
 }
@@ -1878,7 +1877,7 @@ static void red_free_some(RedWorker *worker)
     RingItem *item, *next;
 
     spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d", display->drawable_count,
-                worker->red_drawable_count, display->glz_drawable_count);
+                display->red_drawable_count, display->glz_drawable_count);
     FOREACH_DCC(worker->display_channel, item, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
 
@@ -4465,7 +4464,7 @@ static void display_channel_client_on_disconnect(RedChannelClient *rcc)
 
     // this was the last channel client
     spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d",
-                display->drawable_count, worker->red_drawable_count,
+                display->drawable_count, display->red_drawable_count,
                 display->glz_drawable_count);
 }
 
@@ -5960,7 +5959,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     // streams? but without streams also leak
     spice_debug("OOM1 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
-                worker->red_drawable_count,
+                display->red_drawable_count,
                 display->glz_drawable_count,
                 display->current_size,
                 worker->display_channel ?
@@ -5974,7 +5973,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     }
     spice_debug("OOM2 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
-                worker->red_drawable_count,
+                display->red_drawable_count,
                 display->glz_drawable_count,
                 display->current_size,
                 worker->display_channel ?
