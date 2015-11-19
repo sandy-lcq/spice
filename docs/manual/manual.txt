@@ -1134,7 +1134,7 @@ The corresponding libvirt XML is:
 -------------------------------------------------
 
 (don't forget to add the
-xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0' attribute to the
+`xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'` attribute to the
 toplevel `<domain>` node)
 
 
@@ -1142,7 +1142,7 @@ You can go up to 12 (or more, look for DEBUG_PRINT in the driver), you get reall
 
   * 3 - will give you all the highlevel commands (DrvCopyBits, DrvBitBlt, etc.)
   * 6 - will also show QXLGetBitMap
-  * 11 - will show caching of images (this is a driver cache, not to be confused with the server<->client shared cache).
+  * 11 - will show caching of images (this is a driver cache, not to be confused with the cache shared between server and client).
 
 
 .qxl.cmdlog QEMU parameter
