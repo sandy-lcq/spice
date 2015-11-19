@@ -163,5 +163,36 @@ ImageItem *                dcc_add_surface_area_image                (DisplayCha
                                                                       SpiceRect *area,
                                                                       PipeItem *pos,
                                                                       int can_lossy);
+void                       dcc_palette_cache_reset                   (DisplayChannelClient *dcc);
+void                       dcc_palette_cache_palette                 (DisplayChannelClient *dcc,
+                                                                      SpicePalette *palette,
+                                                                      uint8_t *flags);
+
+typedef struct compress_send_data_t {
+    void*    comp_buf;
+    uint32_t comp_buf_size;
+    SpicePalette *lzplt_palette;
+    int is_lossy;
+} compress_send_data_t;
+
+int                        dcc_compress_image                        (DisplayChannelClient *dcc,
+                                                                      SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
+                                                                      int can_lossy,
+                                                                      compress_send_data_t* o_comp_data);
+int                        dcc_compress_image_glz                    (DisplayChannelClient *dcc,
+                                                                      SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
+                                                                      compress_send_data_t* o_comp_data);
+int                        dcc_compress_image_lz                     (DisplayChannelClient *dcc,
+                                                                      SpiceImage *dest, SpiceBitmap *src,
+                                                                      compress_send_data_t* o_comp_data, uint32_t group_id);
+int                        dcc_compress_image_jpeg                   (DisplayChannelClient *dcc, SpiceImage *dest,
+                                                                      SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                                                      uint32_t group_id);
+int                        dcc_compress_image_quic                   (DisplayChannelClient *dcc, SpiceImage *dest,
+                                                                      SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                                                      uint32_t group_id);
+int                        dcc_compress_image_lz4                    (DisplayChannelClient *dcc, SpiceImage *dest,
+                                                                      SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                                                      uint32_t group_id);
 
 #endif /* DCC_H_ */
