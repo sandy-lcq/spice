@@ -1159,6 +1159,10 @@ Agent
 On Linux, `journalctl -t spice-vdagentd -t spice-vdagent` will display the agent log messages.
 spice-vdagent can also be restarted by hand with the `-d` argument in order to display more logs.
 
+On Windows, the agent logs can be found in `C:\WINDOWS\TEMP\VDAGENT.LOG` and
+`C:\WINDOWS\TEMP\VDSERVICE.LOG`
+
+
 Recording/replaying SPICE server traffic
 ----------------------------------------
 
