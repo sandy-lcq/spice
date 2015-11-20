@@ -535,8 +535,7 @@ static void dcc_update_streams_max_latency(DisplayChannelClient *dcc, StreamAgen
     dcc->streams_max_latency = new_max_latency;
 }
 
-static uint64_t red_stream_get_initial_bit_rate(DisplayChannelClient *dcc,
-                                                Stream *stream)
+static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, Stream *stream)
 {
     char *env_bit_rate_str;
     uint64_t bit_rate = 0;
@@ -651,7 +650,7 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
         mjpeg_cbs.get_source_fps = red_stream_mjpeg_encoder_get_source_fps;
         mjpeg_cbs.update_client_playback_delay = red_stream_update_client_playback_latency;
 
-        initial_bit_rate = red_stream_get_initial_bit_rate(dcc, stream);
+        initial_bit_rate = get_initial_bit_rate(dcc, stream);
         agent->mjpeg_encoder = mjpeg_encoder_new(initial_bit_rate, &mjpeg_cbs, agent);
     } else {
         agent->mjpeg_encoder = mjpeg_encoder_new(0, NULL, NULL);
