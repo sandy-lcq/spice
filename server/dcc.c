@@ -654,13 +654,12 @@ int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
                            SpiceBitmap *src, compress_send_data_t* o_comp_data,
                            uint32_t group_id)
 {
-    DisplayChannel *display_channel = DCC_TO_DC(dcc);
     Lz4Data *lz4_data = &dcc->lz4_data;
     Lz4EncoderContext *lz4 = dcc->lz4;
     int lz4_size = 0;
 
 #ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(display_channel->lz4_stat.clock);
+    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->lz4_stat.clock);
 #endif
 
     lz4_data->data.bufs_tail = compress_buf_new();
@@ -707,7 +706,7 @@ int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
     o_comp_data->comp_buf = lz4_data->data.bufs_head;
     o_comp_data->comp_buf_size = lz4_size;
 
-    stat_compress_add(&display_channel->lz4_stat, start_time, src->stride * src->y,
+    stat_compress_add(&DCC_TO_DC(dcc)->lz4_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
