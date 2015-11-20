@@ -4729,7 +4729,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     RedWorker *worker = opaque;
     DisplayChannel *display = worker->display_channel;
 
-    RedChannel *display_red_channel = &worker->display_channel->common.base;
+    RedChannel *display_red_channel = &display->common.base;
     int ring_is_empty;
 
     spice_return_if_fail(worker->running);
@@ -4739,10 +4739,9 @@ static void handle_dev_oom(void *opaque, void *payload)
                 display->red_drawable_count,
                 display->glz_drawable_count,
                 display->current_size,
-                worker->display_channel ?
-                red_channel_sum_pipes_size(display_red_channel) : 0);
+                red_channel_sum_pipes_size(display_red_channel));
     while (red_process_commands(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
-        red_channel_push(&worker->display_channel->common.base);
+        red_channel_push(display_red_channel);
     }
     if (worker->qxl->st->qif->flush_resources(worker->qxl) == 0) {
         display_channel_free_some(worker->display_channel);
@@ -4753,8 +4752,7 @@ static void handle_dev_oom(void *opaque, void *payload)
                 display->red_drawable_count,
                 display->glz_drawable_count,
                 display->current_size,
-                worker->display_channel ?
-                red_channel_sum_pipes_size(display_red_channel) : 0);
+                red_channel_sum_pipes_size(display_red_channel));
     red_dispatcher_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_OOM);
 }
 
