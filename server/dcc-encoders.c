@@ -406,6 +406,17 @@ void dcc_encoders_init(DisplayChannelClient *dcc)
     dcc->zlib_level = ZLIB_DEFAULT_COMPRESSION_LEVEL;
 }
 
+void dcc_encoders_free(DisplayChannelClient *dcc)
+{
+    quic_destroy(dcc->quic);
+    lz_destroy(dcc->lz);
+    jpeg_encoder_destroy(dcc->jpeg);
+#ifdef USE_LZ4
+    lz4_encoder_destroy(dcc->lz4);
+#endif
+    zlib_encoder_destroy(dcc->zlib);
+}
+
 static void marshaller_compress_buf_free(uint8_t *data, void *opaque)
 {
     compress_buf_free((RedCompressBuf *) opaque);

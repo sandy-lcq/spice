@@ -4530,6 +4530,7 @@ static void display_channel_client_on_disconnect(RedChannelClient *rcc)
     free(dcc->send_data.stream_outbuf);
     free(dcc->send_data.free_list.res);
     dcc_destroy_stream_agents(dcc);
+    dcc_encoders_free(dcc);
 
     // this was the last channel client
     spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d",
