@@ -675,8 +675,10 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
 #endif
 }
 
-void stream_agent_stop(DisplayChannelClient *dcc, StreamAgent *agent)
+void stream_agent_stop(StreamAgent *agent)
 {
+    DisplayChannelClient *dcc = agent->dcc;
+
     dcc_update_streams_max_latency(dcc, agent);
     if (agent->mjpeg_encoder) {
         mjpeg_encoder_destroy(agent->mjpeg_encoder);
