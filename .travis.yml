@@ -1,0 +1,31 @@
+notifications:
+  email:
+    - spice-devel@lists.freedesktop.org
+  irc:
+    channels:
+      - "irc.gimp.net#spice"
+    on_success: change
+    on_failure: always
+sudo: required
+dist: trusty
+language: c
+compiler:
+  - clang
+  - gcc
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y automake autoconf pkg-config libglib2.0-dev libspice-protocol-dev libopus-dev libpixman-1-dev libasound2-dev libssl-dev libsasl2-dev libjpeg-dev libglib2.0-dev libnss3-dev asciidoc spice-client-gtk
+install:
+  - pip install --user six pyparsing
+  - which python && python -c 'import six'
+  - wget http://www.spice-space.org/download/libcacard/libcacard-LATEST.tar.xz
+  - tar xf libcacard-LATEST.tar.xz
+  - cd libcacard-* && ./configure --prefix=/usr && make && sudo make install && cd -
+  - wget http://downloads.us.xiph.org/releases/celt/celt-0.5.1.3.tar.gz
+  - tar xf celt-0.5.1.3.tar.gz
+  - cd celt-0.5.1.3 && ./configure --prefix=/usr && make && sudo make install && cd -
+  - wget http://www.spice-space.org/download/releases/spice-protocol-0.12.10.tar.bz2
+  - tar xf spice-protocol-0.12.10.tar.bz2
+  - cd spice-protocol-0.12.10 && ./configure --prefix=/usr && make && sudo make install && cd -
+script:
+  - ./autogen.sh --prefix=/usr && make all && make distcheck
