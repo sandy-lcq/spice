@@ -409,12 +409,17 @@ void dcc_encoders_init(DisplayChannelClient *dcc)
 void dcc_encoders_free(DisplayChannelClient *dcc)
 {
     quic_destroy(dcc->quic);
+    dcc->quic = NULL;
     lz_destroy(dcc->lz);
+    dcc->lz = NULL;
     jpeg_encoder_destroy(dcc->jpeg);
+    dcc->jpeg = NULL;
 #ifdef USE_LZ4
     lz4_encoder_destroy(dcc->lz4);
+    dcc->lz4 = NULL;
 #endif
     zlib_encoder_destroy(dcc->zlib);
+    dcc->zlib = NULL;
 }
 
 static void marshaller_compress_buf_free(uint8_t *data, void *opaque)
