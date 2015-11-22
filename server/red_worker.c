@@ -1492,7 +1492,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         spice_error("invalid image type %u", image.descriptor.type);
     }
     pthread_mutex_unlock(&dcc->pixmap_cache->lock);
-    return 0;
+    return FILL_BITS_TYPE_INVALID;
 }
 
 static void fill_mask(RedChannelClient *rcc, SpiceMarshaller *m,
