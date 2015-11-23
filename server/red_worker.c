@@ -3847,7 +3847,7 @@ static void red_marshall_stream_activate_report(RedChannelClient *rcc,
     spice_marshall_msg_display_stream_activate_report(base_marshaller, &msg);
 }
 
-static void display_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
+static void send_item(RedChannelClient *rcc, PipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -3946,7 +3946,7 @@ static inline void red_push(RedWorker *worker)
     }
 }
 
-static void display_channel_client_on_disconnect(RedChannelClient *rcc)
+static void on_disconnect(RedChannelClient *rcc)
 {
     DisplayChannel *display;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -4223,7 +4223,7 @@ static inline void flush_all_qxl_commands(RedWorker *worker)
     flush_cursor_commands(worker);
 }
 
-static int display_channel_handle_migrate_mark(RedChannelClient *rcc)
+static int handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
     RedChannel *channel = RED_CHANNEL(display_channel);
@@ -4428,7 +4428,7 @@ RedChannel *red_worker_new_channel(RedWorker *worker, int size,
     return channel;
 }
 
-static void display_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item)
+static void hold_item(RedChannelClient *rcc, PipeItem *item)
 {
     spice_assert(item);
     switch (item->type) {
@@ -4449,7 +4449,7 @@ static void display_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item
     }
 }
 
-static void display_channel_release_item(RedChannelClient *rcc, PipeItem *item, int item_pushed)
+static void release_item(RedChannelClient *rcc, PipeItem *item, int item_pushed)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
 
@@ -4462,11 +4462,11 @@ static void display_channel_create(RedWorker *worker, int migrate, int stream_vi
 {
     DisplayChannel *display_channel;
     ChannelCbs cbs = {
-        .on_disconnect = display_channel_client_on_disconnect,
-        .send_item = display_channel_send_item,
-        .hold_item = display_channel_hold_pipe_item,
-        .release_item = display_channel_release_item,
-        .handle_migrate_flush_mark = display_channel_handle_migrate_mark,
+        .on_disconnect = on_disconnect,
+        .send_item = send_item,
+        .hold_item = hold_item,
+        .release_item = release_item,
+        .handle_migrate_flush_mark = handle_migrate_flush_mark,
         .handle_migrate_data = handle_migrate_data,
         .handle_migrate_data_get_serial = handle_migrate_data_get_serial
     };
