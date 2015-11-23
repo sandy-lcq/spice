@@ -560,7 +560,6 @@ uint32_t red_channel_sum_pipes_size(RedChannel *channel);
 typedef void (*channel_client_callback)(RedChannelClient *rcc);
 typedef void (*channel_client_callback_data)(RedChannelClient *rcc, void *data);
 void red_channel_apply_clients(RedChannel *channel, channel_client_callback v);
-void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback_data v, void *data);
 
 struct RedClient {
     RingItem link;
