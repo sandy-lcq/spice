@@ -938,21 +938,22 @@ static void image_surface_init(DisplayChannel *display)
 
 static void surface_update_dest(RedSurface *surface, const SpiceRect *area)
 {
-    if (!surface->context.canvas_draws_on_surface) {
-        SpiceCanvas *canvas = surface->context.canvas;
-        int h;
-        int stride = surface->context.stride;
-        uint8_t *line_0 = surface->context.line_0;
+    SpiceCanvas *canvas = surface->context.canvas;
+    int stride = surface->context.stride;
+    uint8_t *line_0 = surface->context.line_0;
 
-        if (!(h = area->bottom - area->top)) {
-            return;
-        }
+    if (surface->context.canvas_draws_on_surface)
+        return;
 
-        spice_assert(stride < 0);
-        uint8_t *dest = line_0 + (area->top * stride) + area->left * sizeof(uint32_t);
-        dest += (h - 1) * stride;
-        canvas->ops->read_bits(canvas, dest, -stride, area);
-    }
+    int h = area->bottom - area->top;
+    if (h == 0)
+        return;
+
+    spice_return_if_fail(stride < 0);
+
+    uint8_t *dest = line_0 + (area->top * stride) + area->left * sizeof(uint32_t);
+    dest += (h - 1) * stride;
+    canvas->ops->read_bits(canvas, dest, -stride, area);
 }
 
 /*
