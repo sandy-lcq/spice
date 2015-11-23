@@ -513,8 +513,6 @@ int red_channel_client_send_message_pending(RedChannelClient *rcc);
 int red_channel_no_item_being_sent(RedChannel *channel);
 int red_channel_client_no_item_being_sent(RedChannelClient *rcc);
 
-void red_channel_pipes_remove(RedChannel *channel, PipeItem *item);
-
 // TODO: unstaticed for display/cursor channels. they do some specific pushes not through
 // adding elements or on events. but not sure if this is actually required (only result
 // should be that they ""try"" a little harder, but if the event system is correct it
