@@ -1079,11 +1079,6 @@ static void ping_timer_cb(void *opaque)
 }
 #endif /* RED_STATISTICS */
 
-uint32_t main_channel_client_get_link_id(MainChannelClient *mcc)
-{
-    return mcc->connection_id;
-}
-
 static MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient *client,
                                                      RedsStream *stream, uint32_t connection_id,
                                                      int num_common_caps, uint32_t *common_caps,

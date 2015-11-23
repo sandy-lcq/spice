@@ -71,7 +71,6 @@ void main_channel_client_push_notify(MainChannelClient *mcc, const char *msg);
 void main_channel_push_multi_media_time(MainChannel *main_chan, int time);
 int main_channel_getsockname(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen);
 int main_channel_getpeername(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen);
-uint32_t main_channel_client_get_link_id(MainChannelClient *mcc);
 
 /*
  * return TRUE if network test had been completed successfully.
