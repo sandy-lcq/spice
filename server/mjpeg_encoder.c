@@ -327,6 +327,11 @@ spice_jpeg_mem_dest(j_compress_ptr cinfo,
 }
 /* end of code from libjpeg */
 
+static inline uint32_t mjpeg_encoder_get_source_fps(MJpegEncoder *encoder)
+{
+    return encoder->cbs.get_source_fps(encoder->cbs_opaque);
+}
+
 static inline uint32_t mjpeg_encoder_get_latency(MJpegEncoder *encoder)
 {
     return encoder->cbs.get_roundtrip_ms ?
@@ -426,7 +431,7 @@ static inline void mjpeg_encoder_eval_quality(MJpegEncoder *encoder)
         return;
     }
 
-    src_fps = encoder->cbs.get_source_fps(encoder->cbs_opaque);
+    src_fps = mjpeg_encoder_get_source_fps(encoder);
 
     fps = get_max_fps(enc_size, rate_control->byte_rate);
     spice_debug("mjpeg %p: jpeg %d: %.2f (KB) fps %d src-fps %u",
@@ -617,7 +622,7 @@ static void mjpeg_encoder_adjust_params_to_bit_rate(MJpegEncoder *encoder)
                     ((double)new_avg_enc_size) / rate_control->base_enc_size :
                     1);
 
-     src_fps = encoder->cbs.get_source_fps(encoder->cbs_opaque);
+     src_fps = mjpeg_encoder_get_source_fps(encoder);
 
     /*
      * The ratio between the new_fps and the current fps reflects the changes
@@ -676,7 +681,7 @@ static void mjpeg_encoder_adjust_fps(MJpegEncoder *encoder, uint64_t now)
         spice_debug("defined=%u old-adjusted=%.2f", rate_control->fps, rate_control->adjusted_fps);
         fps_ratio = avg_fps / rate_control->fps;
         if (avg_fps + 0.5 < rate_control->fps &&
-            encoder->cbs.get_source_fps(encoder->cbs_opaque) > avg_fps) {
+            mjpeg_encoder_get_source_fps(encoder) > avg_fps) {
             double new_adjusted_fps = avg_fps ?
                                                (rate_control->adjusted_fps/fps_ratio) :
                                                rate_control->adjusted_fps * 2;
@@ -1134,7 +1139,7 @@ static void mjpeg_encoder_handle_positive_client_stream_report(MJpegEncoder *enc
     }
 
     if ((rate_control->fps > MJPEG_IMPROVE_QUALITY_FPS_STRICT_TH ||
-         rate_control->fps >= encoder->cbs.get_source_fps(encoder->cbs_opaque)) &&
+         rate_control->fps >= mjpeg_encoder_get_source_fps(encoder)) &&
          rate_control->quality_id > MJPEG_QUALITY_SAMPLE_NUM / 2) {
         timeout = MJPEG_CLIENT_POSITIVE_REPORT_STRICT_TIMEOUT;
     } else {
@@ -1218,7 +1223,7 @@ void mjpeg_encoder_client_stream_report(MJpegEncoder *encoder,
     spice_debug("min-delay %u client-delay %d", min_playback_delay, end_frame_delay);
 
     if (min_playback_delay > end_frame_delay) {
-        uint32_t src_fps = encoder->cbs.get_source_fps(encoder->cbs_opaque);
+        uint32_t src_fps = mjpeg_encoder_get_source_fps(encoder);
         /*
         * if the stream is at its highest rate, we can't estimate the "real"
         * network bit rate and the min_playback_delay
@@ -1302,7 +1307,7 @@ static void mjpeg_encoder_process_server_drops(MJpegEncoder *encoder)
     double drop_factor;
     uint32_t fps;
 
-    fps = MIN(encoder->rate_control.fps, encoder->cbs.get_source_fps(encoder->cbs_opaque));
+    fps = MIN(encoder->rate_control.fps, mjpeg_encoder_get_source_fps(encoder));
     if (server_state->num_frames_encoded < fps * MJPEG_SERVER_STATUS_EVAL_FPS_INTERVAL) {
         return;
     }
@@ -1314,7 +1319,7 @@ static void mjpeg_encoder_process_server_drops(MJpegEncoder *encoder)
                 server_state->num_frames_dropped,
                 num_frames_total,
                 encoder->rate_control.fps,
-                encoder->cbs.get_source_fps(encoder->cbs_opaque));
+                mjpeg_encoder_get_source_fps(encoder));
 
     if (drop_factor > MJPEG_SERVER_STATUS_DOWNGRADE_DROP_FACTOR_TH) {
         mjpeg_encoder_decrease_bit_rate(encoder);
