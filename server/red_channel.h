@@ -496,7 +496,6 @@ void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type);
 void red_channel_client_ack_zero_messages_window(RedChannelClient *rcc);
 void red_channel_client_ack_set_client_window(RedChannelClient *rcc, int client_window);
 void red_channel_client_push_set_ack(RedChannelClient *rcc);
-void red_channel_push_set_ack(RedChannel *channel);
 
 int red_channel_get_first_socket(RedChannel *channel);
 

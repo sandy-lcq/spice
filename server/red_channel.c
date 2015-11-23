@@ -483,11 +483,6 @@ void red_channel_client_push_set_ack(RedChannelClient *rcc)
     red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_SET_ACK);
 }
 
-void red_channel_push_set_ack(RedChannel *channel)
-{
-    red_channel_pipes_add_type(channel, PIPE_ITEM_TYPE_SET_ACK);
-}
-
 static void red_channel_client_send_set_ack(RedChannelClient *rcc)
 {
     SpiceMsgSetAck ack;
