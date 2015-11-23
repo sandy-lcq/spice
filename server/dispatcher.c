@@ -200,19 +200,6 @@ unlock:
     pthread_mutex_unlock(&dispatcher->lock);
 }
 
-uint32_t dispatcher_read_message(Dispatcher *dispatcher)
-{
-    uint32_t message = 0;
-
-    spice_return_val_if_fail(dispatcher, 0);
-    spice_return_val_if_fail(dispatcher->send_fd != -1, 0);
-
-    if (read_safe(dispatcher->send_fd, (uint8_t*)&message, sizeof(message), 1) == -1)
-        spice_warn_if_reached();
-
-    return message;
-}
-
 void dispatcher_register_async_done_callback(
                                         Dispatcher *dispatcher,
                                         dispatcher_handle_async_done handler)
