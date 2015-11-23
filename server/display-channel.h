@@ -243,6 +243,13 @@ typedef struct SurfaceDestroyItem {
     PipeItem pipe_item;
 } SurfaceDestroyItem;
 
+typedef struct UpgradeItem {
+    PipeItem base;
+    int refs;
+    Drawable *drawable;
+    SpiceClipRects *rects;
+} UpgradeItem;
+
 
 void                       display_channel_free_some                 (DisplayChannel *display);
 void                       display_channel_set_stream_video          (DisplayChannel *display,

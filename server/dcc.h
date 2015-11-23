@@ -195,6 +195,9 @@ void                       dcc_append_drawable                       (DisplayCha
 void                       dcc_add_drawable_after                    (DisplayChannelClient *dcc,
                                                                       Drawable *drawable,
                                                                       PipeItem *pos);
+void                       dcc_release_item                          (DisplayChannelClient *dcc,
+                                                                      PipeItem *item,
+                                                                      int item_pushed);
 
 typedef struct compress_send_data_t {
     void*    comp_buf;
