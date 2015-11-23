@@ -1662,7 +1662,7 @@ static void release_item(RedChannelClient *rcc, PipeItem *item, int item_pushed)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
 
-    spice_assert(item != NULL);
+    spice_return_if_fail(item != NULL);
     dcc_release_item(dcc, item, item_pushed);
 }
 
