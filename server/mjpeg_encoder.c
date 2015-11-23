@@ -329,7 +329,8 @@ spice_jpeg_mem_dest(j_compress_ptr cinfo,
 
 static inline uint32_t mjpeg_encoder_get_source_fps(MJpegEncoder *encoder)
 {
-    return encoder->cbs.get_source_fps(encoder->cbs_opaque);
+    return encoder->cbs.get_source_fps ?
+        encoder->cbs.get_source_fps(encoder->cbs_opaque) : MJPEG_MAX_FPS;
 }
 
 static inline uint32_t mjpeg_encoder_get_latency(MJpegEncoder *encoder)
@@ -1346,8 +1347,6 @@ MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
                                 void *cbs_opaque)
 {
     MJpegEncoder *encoder = spice_new0(MJpegEncoder, 1);
-
-    spice_assert(!cbs || (cbs && cbs->get_roundtrip_ms && cbs->get_source_fps));
 
     encoder->first_frame = TRUE;
     encoder->rate_control.byte_rate = starting_bit_rate / 8;
