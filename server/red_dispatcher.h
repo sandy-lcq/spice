@@ -28,7 +28,6 @@ typedef struct AsyncCommand AsyncCommand;
 
 void red_dispatcher_init(QXLInstance *qxl);
 
-void red_dispatcher_set_mm_time(uint32_t);
 void red_dispatcher_on_ic_change(void);
 void red_dispatcher_on_sv_change(void);
 void red_dispatcher_set_mouse_mode(uint32_t mode);
