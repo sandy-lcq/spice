@@ -936,11 +936,8 @@ static void image_surface_init(DisplayChannel *display)
     display->image_surfaces.ops = &image_surfaces_ops;
 }
 
-static void validate_area(DisplayChannel *display, const SpiceRect *area, uint32_t surface_id)
+static void surface_update_dest(RedSurface *surface, const SpiceRect *area)
 {
-    RedSurface *surface;
-
-    surface = &display->surfaces[surface_id];
     if (!surface->context.canvas_draws_on_surface) {
         SpiceCanvas *canvas = surface->context.canvas;
         int h;
@@ -1037,7 +1034,7 @@ void display_channel_draw_till(DisplayChannel *display, const SpiceRect *area, i
         drawable_draw(display, now);
         display_channel_drawable_unref(display, now);
     } while (now != surface_last);
-    validate_area(display, area, surface_id);
+    surface_update_dest(surface, area);
 }
 
 void display_channel_draw(DisplayChannel *display, const SpiceRect *area, int surface_id)
@@ -1074,7 +1071,7 @@ void display_channel_draw(DisplayChannel *display, const SpiceRect *area, int su
     region_destroy(&rgn);
 
     if (!last) {
-        validate_area(display, area, surface_id);
+        surface_update_dest(surface, area);
         return;
     }
 
@@ -1090,7 +1087,7 @@ void display_channel_draw(DisplayChannel *display, const SpiceRect *area, int su
         drawable_draw(display, now);
         display_channel_drawable_unref(display, now);
     } while (now != last);
-    validate_area(display, area, surface_id);
+    surface_update_dest(surface, area);
 }
 
 static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
