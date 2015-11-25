@@ -1542,7 +1542,6 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
                                     void *line_0, int data_is_valid, int send_client)
 {
     RedSurface *surface = &display->surfaces[surface_id];
-    uint32_t i;
 
     spice_warn_if(surface->context.canvas);
 
@@ -1566,28 +1565,23 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
     ring_init(&surface->depend_on_me);
     region_init(&surface->draw_dirty_region);
     surface->refs = 1;
-    if (display->renderer != RED_RENDERER_INVALID) {
+
+    if (display->renderer == RED_RENDERER_INVALID) {
+        int i;
+        for (i = 0; i < display->num_renderers; i++) {
+            surface->context.canvas = create_canvas_for_surface(display, surface, display->renderers[i]);
+            if (surface->context.canvas) {
+                display->renderer = display->renderers[i];
+                break;
+            }
+        }
+    } else {
         surface->context.canvas = create_canvas_for_surface(display, surface, display->renderer);
-        if (!surface->context.canvas) {
-            spice_critical("drawing canvas creating failed - can`t create same type canvas");
-        }
-
-        if (send_client)
-            send_create_surface(display, surface_id, data_is_valid);
-        return;
     }
 
-    for (i = 0; i < display->num_renderers; i++) {
-        surface->context.canvas = create_canvas_for_surface(display, surface, display->renderers[i]);
-        if (surface->context.canvas) { //no need canvas check
-            display->renderer = display->renderers[i];
-            if (send_client)
-                send_create_surface(display, surface_id, data_is_valid);
-            return;
-        }
-    }
-
-    spice_critical("unable to create drawing canvas");
+    spice_return_if_fail(surface->context.canvas);
+    if (send_client)
+        send_create_surface(display, surface_id, data_is_valid);
 }
 
 static void on_disconnect(RedChannelClient *rcc)
