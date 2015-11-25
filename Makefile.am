@@ -8,7 +8,6 @@ pkgconfig_DATA = spice-server.pc
 
 DISTCHECK_CONFIGURE_FLAGS =			\
 	--enable-automated-tests		\
-	--enable-opengl				\
 	--enable-smartcard			\
 	--with-sasl				\
 	--enable-manual				\
