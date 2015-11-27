@@ -20,7 +20,13 @@
 #endif
 
 #include <arpa/inet.h>
+#ifdef USE_SMARTCARD_012
 #include <vscard_common.h>
+#else
+#ifdef USE_SMARTCARD
+#include <libcacard.h>
+#endif
+#endif
 
 #include "reds.h"
 #include "char_device.h"
