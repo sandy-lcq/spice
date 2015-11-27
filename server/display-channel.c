@@ -916,6 +916,66 @@ void display_channel_print_stats(DisplayChannel *display)
 #endif
 }
 
+static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable)
+{
+        DrawContext *context;
+        uint32_t surface_id = drawable->surface_id;
+
+        /* surface_id must be validated before calling into
+         * validate_drawable_bbox
+         */
+        if (!validate_surface(display, drawable->surface_id)) {
+            return FALSE;
+        }
+        context = &display->surfaces[surface_id].context;
+
+        if (drawable->bbox.top < 0)
+                return FALSE;
+        if (drawable->bbox.left < 0)
+                return FALSE;
+        if (drawable->bbox.bottom < 0)
+                return FALSE;
+        if (drawable->bbox.right < 0)
+                return FALSE;
+        if (drawable->bbox.bottom > context->height)
+                return FALSE;
+        if (drawable->bbox.right > context->width)
+                return FALSE;
+
+        return TRUE;
+}
+
+Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
+                                       RedDrawable *red_drawable, uint32_t group_id,
+                                       uint32_t process_commands_generation)
+{
+    Drawable *drawable;
+    int x;
+
+    if (!validate_drawable_bbox(display, red_drawable)) {
+        return NULL;
+    }
+    for (x = 0; x < 3; ++x) {
+        if (red_drawable->surface_deps[x] != -1
+            && !validate_surface(display, red_drawable->surface_deps[x])) {
+            return NULL;
+        }
+    }
+
+    drawable = display_channel_drawable_try_new(display, group_id, process_commands_generation);
+    if (!drawable) {
+        return NULL;
+    }
+
+    drawable->tree_item.effect = effect;
+    drawable->red_drawable = red_drawable_ref(red_drawable);
+
+    drawable->surface_id = red_drawable->surface_id;
+    memcpy(drawable->surface_deps, red_drawable->surface_deps, sizeof(drawable->surface_deps));
+
+    return drawable;
+}
+
 void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
     int success = FALSE, surface_id = drawable->surface_id;

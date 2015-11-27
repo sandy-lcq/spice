@@ -119,35 +119,6 @@ static int display_is_connected(RedWorker *worker)
         &worker->display_channel->common.base));
 }
 
-static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable)
-{
-        DrawContext *context;
-        uint32_t surface_id = drawable->surface_id;
-
-        /* surface_id must be validated before calling into
-         * validate_drawable_bbox
-         */
-        if (!validate_surface(display, drawable->surface_id)) {
-            return FALSE;
-        }
-        context = &display->surfaces[surface_id].context;
-
-        if (drawable->bbox.top < 0)
-                return FALSE;
-        if (drawable->bbox.left < 0)
-                return FALSE;
-        if (drawable->bbox.bottom < 0)
-                return FALSE;
-        if (drawable->bbox.right < 0)
-                return FALSE;
-        if (drawable->bbox.bottom > context->height)
-                return FALSE;
-        if (drawable->bbox.right > context->width)
-                return FALSE;
-
-        return TRUE;
-}
-
 static int cursor_is_connected(RedWorker *worker)
 {
     return worker->cursor_channel &&
@@ -271,37 +242,6 @@ static inline int red_handle_self_bitmap(RedWorker *worker, Drawable *drawable)
     return TRUE;
 }
 
-static Drawable *get_drawable(RedWorker *worker, uint8_t effect, RedDrawable *red_drawable,
-                              uint32_t group_id)
-{
-    DisplayChannel *display = worker->display_channel;
-    Drawable *drawable;
-    int x;
-
-    if (!validate_drawable_bbox(display, red_drawable)) {
-        return NULL;
-    }
-    for (x = 0; x < 3; ++x) {
-        if (red_drawable->surface_deps[x] != -1
-            && !validate_surface(display, red_drawable->surface_deps[x])) {
-            return NULL;
-        }
-    }
-
-    drawable = display_channel_drawable_try_new(display, group_id, worker->process_commands_generation);
-    if (!drawable) {
-        return NULL;
-    }
-
-    drawable->tree_item.effect = effect;
-    drawable->red_drawable = red_drawable_ref(red_drawable);
-
-    drawable->surface_id = red_drawable->surface_id;
-    memcpy(drawable->surface_deps, red_drawable->surface_deps, sizeof(drawable->surface_deps));
-
-    return drawable;
-}
-
 static inline void add_to_surface_dependency(DisplayChannel *display, int depend_on_surface_id,
                                              DependItem *depend_item, Drawable *drawable)
 {
@@ -362,7 +302,9 @@ static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable
 {
     DisplayChannel *display = worker->display_channel;
     int surface_id;
-    Drawable *drawable = get_drawable(worker, red_drawable->effect, red_drawable, group_id);
+    Drawable *drawable =
+        display_channel_get_drawable(display, red_drawable->effect, red_drawable, group_id,
+                                     worker->process_commands_generation);
 
     if (!drawable) {
         return;
