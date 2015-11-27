@@ -442,19 +442,4 @@ static inline void region_add_clip_rects(QRegion *rgn, SpiceClipRects *data)
     }
 }
 
-static inline void draw_depend_on_me(DisplayChannel *display, uint32_t surface_id)
-{
-    RedSurface *surface;
-    RingItem *ring_item;
-
-    surface = &display->surfaces[surface_id];
-
-    while ((ring_item = ring_get_tail(&surface->depend_on_me))) {
-        Drawable *drawable;
-        DependItem *depended_item = SPICE_CONTAINEROF(ring_item, DependItem, ring_item);
-        drawable = depended_item->drawable;
-        display_channel_draw(display, &drawable->red_drawable->bbox, drawable->surface_id);
-    }
-}
-
 #endif /* DISPLAY_CHANNEL_H_ */
