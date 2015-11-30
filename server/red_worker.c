@@ -165,23 +165,6 @@ void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
     free(red_drawable);
 }
 
-static inline void red_process_draw(RedWorker *worker, RedDrawable *red_drawable,
-                                    uint32_t group_id)
-{
-    DisplayChannel *display = worker->display_channel;
-    Drawable *drawable =
-        display_channel_get_drawable(display, red_drawable->effect, red_drawable, group_id,
-                                     worker->process_display_generation);
-
-    if (!drawable) {
-        return;
-    }
-
-    display_channel_add_drawable(worker->display_channel, drawable);
-
-    display_channel_drawable_unref(display, drawable);
-}
-
 static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
 {
     QXLCommandExt ext_cmd;
@@ -284,7 +267,8 @@ static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *r
 
             if (!red_get_drawable(&worker->mem_slots, ext_cmd.group_id,
                                  red_drawable, ext_cmd.cmd.data, ext_cmd.flags)) {
-                red_process_draw(worker, red_drawable, ext_cmd.group_id);
+                display_channel_process_draw(worker->display_channel, red_drawable, ext_cmd.group_id,
+                                             worker->process_display_generation);
             }
             // release the red_drawable
             red_drawable_unref(worker, red_drawable, ext_cmd.group_id);

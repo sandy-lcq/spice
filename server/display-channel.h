@@ -286,8 +286,6 @@ void                       display_channel_surface_unref             (DisplayCha
                                                                       uint32_t surface_id);
 bool                       display_channel_surface_has_canvas        (DisplayChannel *display,
                                                                       uint32_t surface_id);
-void                       display_channel_add_drawable              (DisplayChannel *display,
-                                                                      Drawable *drawable);
 void                       display_channel_current_flush             (DisplayChannel *display,
                                                                       int surface_id);
 int                        display_channel_wait_for_migrate_data     (DisplayChannel *display);
@@ -300,11 +298,10 @@ void                       display_channel_destroy_surfaces          (DisplayCha
 void                       display_channel_destroy_surface           (DisplayChannel *display,
                                                                       uint32_t surface_id);
 uint32_t                   display_channel_generate_uid              (DisplayChannel *display);
-Drawable *                 display_channel_get_drawable              (DisplayChannel *display,
-                                                                      uint8_t effect,
+void                       display_channel_process_draw              (DisplayChannel *display,
                                                                       RedDrawable *red_drawable,
                                                                       uint32_t group_id,
-                                                                      uint32_t process_commands_generation);
+                                                                      int process_commands_generation);
 void                       display_channel_process_surface_cmd       (DisplayChannel *display,
                                                                       RedSurfaceCmd *surface,
                                                                       uint32_t group_id,

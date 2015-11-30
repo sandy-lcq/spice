@@ -1098,9 +1098,9 @@ static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable
  *
  * @return initialized Drawable or NULL on failure
  */
-Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
-                                       RedDrawable *red_drawable, uint32_t group_id,
-                                       uint32_t process_commands_generation)
+static Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
+                                              RedDrawable *red_drawable, uint32_t group_id,
+                                              uint32_t process_commands_generation)
 {
     Drawable *drawable;
     int x;
@@ -1145,7 +1145,7 @@ Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
  * Add a Drawable to the items to draw.
  * On failure the Drawable is not added.
  */
-void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
+static void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
     int success = FALSE, surface_id = drawable->surface_id;
     RedDrawable *red_drawable = drawable->red_drawable;
@@ -1194,6 +1194,23 @@ void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
         display_channel_print_stats(display);
 #endif
 }
+
+void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_drawable,
+                                  uint32_t group_id, int process_commands_generation)
+{
+    Drawable *drawable =
+        display_channel_get_drawable(display, red_drawable->effect, red_drawable, group_id,
+                                     process_commands_generation);
+
+    if (!drawable) {
+        return;
+    }
+
+    display_channel_add_drawable(display, drawable);
+
+    display_channel_drawable_unref(display, drawable);
+}
+
 
 int display_channel_wait_for_migrate_data(DisplayChannel *display)
 {
