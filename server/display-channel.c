@@ -2078,7 +2078,7 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
 
     surface_id = surface->surface_id;
     if SPICE_UNLIKELY(surface_id >= display->n_surfaces) {
-        goto exit;
+        return;
     }
 
     red_surface = &display->surfaces[surface_id];
@@ -2116,9 +2116,6 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
     default:
         spice_warn_if_reached();
     };
-exit:
-    red_put_surface_cmd(surface);
-    free(surface);
 }
 
 void display_channel_update_compression(DisplayChannel *display, DisplayChannelClient *dcc)

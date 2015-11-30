@@ -329,15 +329,16 @@ static int red_process_commands(RedWorker *worker, uint32_t max_pipe_size, int *
             break;
         }
         case QXL_CMD_SURFACE: {
-            RedSurfaceCmd *surface = spice_new0(RedSurfaceCmd, 1);
+            RedSurfaceCmd surface;
 
             if (red_get_surface_cmd(&worker->mem_slots, ext_cmd.group_id,
-                                    surface, ext_cmd.cmd.data)) {
-                free(surface);
+                                    &surface, ext_cmd.cmd.data)) {
                 break;
             }
-            display_channel_process_surface_cmd(worker->display_channel, surface,
+            display_channel_process_surface_cmd(worker->display_channel, &surface,
                                                 ext_cmd.group_id, FALSE);
+            // do not release resource as is released inside red_process_surface
+            red_put_surface_cmd(&surface);
             break;
         }
         default:
