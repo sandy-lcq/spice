@@ -1091,6 +1091,13 @@ static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable
         return TRUE;
 }
 
+/**
+ * @brief Get a new Drawable
+ *
+ * The Drawable returned is fully initialized.
+ *
+ * @return initialized Drawable or NULL on failure
+ */
 Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
                                        RedDrawable *red_drawable, uint32_t group_id,
                                        uint32_t process_commands_generation)
@@ -1098,6 +1105,9 @@ Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
     Drawable *drawable;
     int x;
 
+    /* Validate all surface ids before updating counters
+     * to avoid invalid updates if we find an invalid id.
+     */
     if (!validate_drawable_bbox(display, red_drawable)) {
         return NULL;
     }
@@ -1117,20 +1127,30 @@ Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
     drawable->red_drawable = red_drawable_ref(red_drawable);
 
     drawable->surface_id = red_drawable->surface_id;
+    display->surfaces[drawable->surface_id].refs++;
+
     memcpy(drawable->surface_deps, red_drawable->surface_deps, sizeof(drawable->surface_deps));
+    /*
+        surface->refs is affected by a drawable (that is
+        dependent on the surface) as long as the drawable is alive.
+        However, surface->depend_on_me is affected by a drawable only
+        as long as it is in the current tree (hasn't been rendered yet).
+    */
+    red_inc_surfaces_drawable_dependencies(display, drawable);
 
     return drawable;
 }
 
+/**
+ * Add a Drawable to the items to draw.
+ * On failure the Drawable is not added.
+ */
 void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
     int success = FALSE, surface_id = drawable->surface_id;
     RedDrawable *red_drawable = drawable->red_drawable;
 
     red_drawable->mm_time = reds_get_mm_time();
-    surface_id = drawable->surface_id;
-
-    display->surfaces[surface_id].refs++;
 
     region_add(&drawable->tree_item.base.rgn, &red_drawable->bbox);
 
@@ -1142,14 +1162,6 @@ void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
         region_and(&drawable->tree_item.base.rgn, &rgn);
         region_destroy(&rgn);
     }
-
-    /*
-        surface->refs is affected by a drawable (that is
-        dependent on the surface) as long as the drawable is alive.
-        However, surface->depend_on_me is affected by a drawable only
-        as long as it is in the current tree (hasn't been rendered yet).
-    */
-    red_inc_surfaces_drawable_dependencies(display, drawable);
 
     if (region_is_empty(&drawable->tree_item.base.rgn)) {
         return;
@@ -1345,6 +1357,11 @@ static void drawables_init(DisplayChannel *display)
     }
 }
 
+/**
+ * Allocate a Drawable
+ *
+ * @return pointer to uninitialized Drawable or NULL on failure
+ */
 Drawable *display_channel_drawable_try_new(DisplayChannel *display,
                                            int group_id, int process_commands_generation)
 {
