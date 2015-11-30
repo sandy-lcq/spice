@@ -835,9 +835,9 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
     int error;
 
     spice_debug(NULL);
-    spice_warn_if(surface_id != 0);
-    spice_warn_if(surface.height == 0);
-    spice_warn_if(((uint64_t)abs(surface.stride) * (uint64_t)surface.height) !=
+    spice_warn_if_fail(surface_id == 0);
+    spice_warn_if_fail(surface.height != 0);
+    spice_warn_if_fail(((uint64_t)abs(surface.stride) * (uint64_t)surface.height) ==
              abs(surface.stride) * surface.height);
 
     line_0 = (uint8_t*)memslot_get_virt(&worker->mem_slots, surface.mem,
@@ -887,7 +887,7 @@ static void destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
 
     if (!validate_surface(display, surface_id))
         return;
-    spice_warn_if(surface_id != 0);
+    spice_warn_if_fail(surface_id == 0);
 
     spice_debug(NULL);
     if (!display->surfaces[surface_id].context.canvas) {
@@ -1593,7 +1593,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
                       init_info.memslot_id_bits,
                       init_info.internal_groupslot_id);
 
-    spice_warn_if(init_info.n_surfaces > NUM_SURFACES);
+    spice_warn_if_fail(init_info.n_surfaces <= NUM_SURFACES);
 
     worker->event_timeout = INF_EVENT_WAIT;
 

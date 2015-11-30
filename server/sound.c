@@ -421,7 +421,7 @@ static void snd_receive(void* data)
     for (;;) {
         ssize_t n;
         n = channel->receive_data.end - channel->receive_data.now;
-        spice_warn_if(n <= 0);
+        spice_warn_if_fail(n > 0);
         n = reds_stream_read(channel->stream, channel->receive_data.now, n);
         if (n <= 0) {
             if (n == 0) {

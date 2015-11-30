@@ -270,7 +270,7 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
         dcc_destroy_surface(dcc, surface_id);
     }
 
-    spice_warn_if(!ring_is_empty(&surface->depend_on_me));
+    spice_warn_if_fail(ring_is_empty(&surface->depend_on_me));
 }
 
 /* TODO: perhaps rename to "ready" or "realized" ? */
@@ -325,7 +325,7 @@ static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
     DisplayChannelClient *dcc;
     RingItem *dcc_ring_item, *next;
 
-    spice_warn_if(!ring_is_empty(&drawable->pipes));
+    spice_warn_if_fail(ring_is_empty(&drawable->pipes));
     FOREACH_DCC(display, dcc_ring_item, next, dcc) {
         dcc_prepend_drawable(dcc, drawable);
     }
@@ -1886,7 +1886,7 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
 {
     RedSurface *surface = &display->surfaces[surface_id];
 
-    spice_warn_if(surface->context.canvas);
+    spice_warn_if_fail(!surface->context.canvas);
 
     surface->context.canvas_draws_on_surface = FALSE;
     surface->context.width = width;
