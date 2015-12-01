@@ -916,7 +916,7 @@ void display_channel_print_stats(DisplayChannel *display)
 #endif
 }
 
-static inline void red_inc_surfaces_drawable_dependencies(DisplayChannel *display, Drawable *drawable)
+static void drawable_ref_surface_deps(DisplayChannel *display, Drawable *drawable)
 {
     int x;
     int surface_id;
@@ -932,23 +932,19 @@ static inline void red_inc_surfaces_drawable_dependencies(DisplayChannel *displa
     }
 }
 
-static void red_get_area(DisplayChannel *display, int surface_id, const SpiceRect *area,
-                         uint8_t *dest, int dest_stride, int update)
+static void surface_read_bits(DisplayChannel *display, int surface_id,
+                              const SpiceRect *area, uint8_t *dest, int dest_stride)
 {
     SpiceCanvas *canvas;
-    RedSurface *surface;
-
-    surface = &display->surfaces[surface_id];
-    if (update) {
-        display_channel_draw(display, area, surface_id);
-    }
+    RedSurface *surface = &display->surfaces[surface_id];
 
     canvas = surface->context.canvas;
     canvas->ops->read_bits(canvas, dest, dest_stride, area);
 }
 
-static int display_channel_handle_self_bitmap(DisplayChannel *display, Drawable *drawable)
+static void handle_self_bitmap(DisplayChannel *display, Drawable *drawable)
 {
+    RedDrawable *red_drawable = drawable->red_drawable;
     SpiceImage *image;
     int32_t width;
     int32_t height;
@@ -957,20 +953,12 @@ static int display_channel_handle_self_bitmap(DisplayChannel *display, Drawable 
     RedSurface *surface;
     int bpp;
     int all_set;
-    RedDrawable *red_drawable = drawable->red_drawable;
-
-    if (!red_drawable->self_bitmap) {
-        return TRUE;
-    }
 
     surface = &display->surfaces[drawable->surface_id];
 
     bpp = SPICE_SURFACE_FMT_DEPTH(surface->context.format) / 8;
-
-    width = red_drawable->self_bitmap_area.right
-            - red_drawable->self_bitmap_area.left;
-    height = red_drawable->self_bitmap_area.bottom
-            - red_drawable->self_bitmap_area.top;
+    width = red_drawable->self_bitmap_area.right - red_drawable->self_bitmap_area.left;
+    height = red_drawable->self_bitmap_area.bottom - red_drawable->self_bitmap_area.top;
     dest_stride = SPICE_ALIGN(width * bpp, 4);
 
     image = spice_new0(SpiceImage, 1);
@@ -989,8 +977,9 @@ static int display_channel_handle_self_bitmap(DisplayChannel *display, Drawable 
     image->u.bitmap.data = spice_chunks_new_linear(dest, height * dest_stride);
     image->u.bitmap.data->flags |= SPICE_CHUNKS_FLAGS_FREE;
 
-    red_get_area(display, drawable->surface_id,
-                 &red_drawable->self_bitmap_area, dest, dest_stride, TRUE);
+    display_channel_draw(display, &red_drawable->self_bitmap_area, drawable->surface_id);
+    surface_read_bits(display, drawable->surface_id,
+        &red_drawable->self_bitmap_area, dest, dest_stride);
 
     /* For 32bit non-primary surfaces we need to keep any non-zero
        high bytes as the surface may be used as source to an alpha_blend */
@@ -1005,26 +994,25 @@ static int display_channel_handle_self_bitmap(DisplayChannel *display, Drawable 
     }
 
     red_drawable->self_bitmap_image = image;
-    return TRUE;
 }
 
-static inline void add_to_surface_dependency(DisplayChannel *display, int depend_on_surface_id,
+static void surface_add_reverse_dependency(DisplayChannel *display, int surface_id,
                                              DependItem *depend_item, Drawable *drawable)
 {
     RedSurface *surface;
 
-    if (depend_on_surface_id == -1) {
+    if (surface_id == -1) {
         depend_item->drawable = NULL;
         return;
     }
 
-    surface = &display->surfaces[depend_on_surface_id];
+    surface = &display->surfaces[surface_id];
 
     depend_item->drawable = drawable;
     ring_add(&surface->depend_on_me, &depend_item->ring_item);
 }
 
-static inline int red_handle_surfaces_dependencies(DisplayChannel *display, Drawable *drawable)
+static int handle_surface_deps(DisplayChannel *display, Drawable *drawable)
 {
     int x;
 
@@ -1032,7 +1020,7 @@ static inline int red_handle_surfaces_dependencies(DisplayChannel *display, Draw
         // surface self dependency is handled by shadows in "current", or by
         // handle_self_bitmap
         if (drawable->surface_deps[x] != drawable->surface_id) {
-            add_to_surface_dependency(display, drawable->surface_deps[x],
+            surface_add_reverse_dependency(display, drawable->surface_deps[x],
                                       &drawable->depend_items[x], drawable);
 
             if (drawable->surface_deps[x] == 0) {
@@ -1136,7 +1124,7 @@ static Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t e
         However, surface->depend_on_me is affected by a drawable only
         as long as it is in the current tree (hasn't been rendered yet).
     */
-    red_inc_surfaces_drawable_dependencies(display, drawable);
+    drawable_ref_surface_deps(display, drawable);
 
     return drawable;
 }
@@ -1147,7 +1135,7 @@ static Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t e
  */
 static void display_channel_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
-    int success = FALSE, surface_id = drawable->surface_id;
+    int surface_id = drawable->surface_id;
     RedDrawable *red_drawable = drawable->red_drawable;
 
     red_drawable->mm_time = reds_get_mm_time();
@@ -1167,26 +1155,26 @@ static void display_channel_add_drawable(DisplayChannel *display, Drawable *draw
         return;
     }
 
-    if (!display_channel_handle_self_bitmap(display, drawable)) {
-        return;
+    if (red_drawable->self_bitmap) {
+        handle_self_bitmap(display, drawable);
     }
 
     draw_depend_on_me(display, surface_id);
 
-    if (!red_handle_surfaces_dependencies(display, drawable)) {
+    if (!handle_surface_deps(display, drawable)) {
         return;
     }
 
     Ring *ring = &display->surfaces[surface_id].current;
-
+    int add_to_pipe;
     if (has_shadow(red_drawable)) {
-        success = current_add_with_shadow(display, ring, drawable);
+        add_to_pipe = current_add_with_shadow(display, ring, drawable);
     } else {
         drawable->streamable = drawable_can_stream(display, drawable);
-        success = current_add(display, ring, drawable);
+        add_to_pipe = current_add(display, ring, drawable);
     }
 
-    if (success)
+    if (add_to_pipe)
         pipes_add_drawable(display, drawable);
 
 #ifdef RED_WORKER_STAT
@@ -1210,7 +1198,6 @@ void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_draw
 
     display_channel_drawable_unref(display, drawable);
 }
-
 
 int display_channel_wait_for_migrate_data(DisplayChannel *display)
 {
