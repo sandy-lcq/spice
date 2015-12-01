@@ -2271,6 +2271,21 @@ static RedLinkInfo *reds_init_client_connection(int socket)
         }
     }
 
+    if (reds->keepalive_timeout > 0) {
+        int keepalive = 1;
+        if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) == -1) {
+            if (errno != ENOTSUP) {
+                spice_printerr("setsockopt for keepalive failed, %s", strerror(errno));
+            }
+        }
+        if (setsockopt(socket, SOL_TCP, TCP_KEEPIDLE,
+                       &reds->keepalive_timeout, sizeof(reds->keepalive_timeout)) == -1) {
+            if (errno != ENOTSUP) {
+                spice_printerr("setsockopt for keepalive timeout failed, %s", strerror(errno));
+            }
+        }
+    }
+
     link = spice_new0(RedLinkInfo, 1);
     link->stream = reds_stream_new(socket);
 
@@ -3907,4 +3922,11 @@ SPICE_GNUC_VISIBLE void spice_server_set_seamless_migration(SpiceServer *s, int 
     /* seamless migration is not supported with multiple clients */
     reds->seamless_migration_enabled = enable && !reds->allow_multiple_clients;
     spice_debug("seamless migration enabled=%d", enable);
+}
+
+SPICE_GNUC_VISIBLE void spice_server_set_keepalive_timeout(SpiceServer *s, int timeout)
+{
+    spice_assert(s == reds);
+    reds->keepalive_timeout = timeout;
+    spice_debug("keepalive timeout=%d", timeout);
 }
