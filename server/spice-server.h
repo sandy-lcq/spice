@@ -111,6 +111,7 @@ int spice_server_set_playback_compression(SpiceServer *s, int enable);
 int spice_server_set_agent_mouse(SpiceServer *s, int enable);
 int spice_server_set_agent_copypaste(SpiceServer *s, int enable);
 int spice_server_set_agent_file_xfer(SpiceServer *s, int enable);
+void spice_server_set_keepalive_timeout(SpiceServer *s, int timeout);
 
 int spice_server_get_sock_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen);
 int spice_server_get_peer_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen);
