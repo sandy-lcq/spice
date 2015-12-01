@@ -49,8 +49,8 @@ static void print_memslots(RedMemSlotInfo *info)
 }
 
 /* return 1 if validation successfull, 0 otherwise */
-int validate_virt(RedMemSlotInfo *info, unsigned long virt, int slot_id,
-                  uint32_t add_size, uint32_t group_id)
+int memslot_validate_virt(RedMemSlotInfo *info, unsigned long virt, int slot_id,
+                          uint32_t add_size, uint32_t group_id)
 {
     MemSlot *slot;
 
@@ -76,8 +76,8 @@ int validate_virt(RedMemSlotInfo *info, unsigned long virt, int slot_id,
  * return virtual address if successful, which may be 0.
  * returns 0 and sets error to 1 if an error condition occurs.
  */
-unsigned long get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size,
-                       int group_id, int *error)
+unsigned long memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size,
+                               int group_id, int *error)
 {
     int slot_id;
     int generation;
@@ -92,7 +92,7 @@ unsigned long get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
         return 0;
     }
 
-    slot_id = get_memslot_id(info, addr);
+    slot_id = memslot_get_id(info, addr);
     if (slot_id > info->num_memslots) {
         print_memslots(info);
         spice_critical("slot_id %d too big, addr=%" PRIx64, slot_id, addr);
@@ -102,7 +102,7 @@ unsigned long get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
 
     slot = &info->mem_slots[group_id][slot_id];
 
-    generation = get_generation(info, addr);
+    generation = memslot_get_generation(info, addr);
     if (generation != slot->generation) {
         print_memslots(info);
         spice_critical("address generation is not valid, group_id %d, slot_id %d, gen %d, slot_gen %d\n",
@@ -114,7 +114,7 @@ unsigned long get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
     h_virt = __get_clean_virt(info, addr);
     h_virt += slot->address_delta;
 
-    if (!validate_virt(info, h_virt, slot_id, add_size, group_id)) {
+    if (!memslot_validate_virt(info, h_virt, slot_id, add_size, group_id)) {
         *error = 1;
         return 0;
     }
@@ -122,11 +122,11 @@ unsigned long get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
     return h_virt;
 }
 
-void red_memslot_info_init(RedMemSlotInfo *info,
-                           uint32_t num_groups, uint32_t num_slots,
-                           uint8_t generation_bits,
-                           uint8_t id_bits,
-                           uint8_t internal_groupslot_id)
+void memslot_info_init(RedMemSlotInfo *info,
+                       uint32_t num_groups, uint32_t num_slots,
+                       uint8_t generation_bits,
+                       uint8_t id_bits,
+                       uint8_t internal_groupslot_id)
 {
     uint32_t i;
 
@@ -153,9 +153,9 @@ void red_memslot_info_init(RedMemSlotInfo *info,
                                        (info->mem_slot_bits + info->generation_bits));
 }
 
-void red_memslot_info_add_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uint32_t slot_id,
-                               uint64_t addr_delta, unsigned long virt_start, unsigned long virt_end,
-                               uint32_t generation)
+void memslot_info_add_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uint32_t slot_id,
+                           uint64_t addr_delta, unsigned long virt_start, unsigned long virt_end,
+                           uint32_t generation)
 {
     spice_assert(info->num_memslots_groups > slot_group_id);
     spice_assert(info->num_memslots > slot_id);
@@ -166,7 +166,7 @@ void red_memslot_info_add_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uin
     info->mem_slots[slot_group_id][slot_id].generation = generation;
 }
 
-void red_memslot_info_del_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uint32_t slot_id)
+void memslot_info_del_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uint32_t slot_id)
 {
     spice_assert(info->num_memslots_groups > slot_group_id);
     spice_assert(info->num_memslots > slot_id);
@@ -175,7 +175,7 @@ void red_memslot_info_del_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uin
     info->mem_slots[slot_group_id][slot_id].virt_end_addr = 0;
 }
 
-void red_memslot_info_reset(RedMemSlotInfo *info)
+void memslot_info_reset(RedMemSlotInfo *info)
 {
         uint32_t i;
         for (i = 0; i < info->num_memslots_groups; ++i) {
