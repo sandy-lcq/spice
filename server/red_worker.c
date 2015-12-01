@@ -638,7 +638,7 @@ CommonChannelClient *common_channel_new_client(CommonChannel *common,
 }
 
 
-RedChannel *red_worker_new_channel(RedWorker *worker, int size,
+CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
                                    const char *name,
                                    uint32_t channel_type, int migration_flags,
                                    ChannelCbs *channel_cbs,
@@ -669,7 +669,7 @@ RedChannel *red_worker_new_channel(RedWorker *worker, int size,
 
     common = (CommonChannel *)channel;
     common->worker = worker;
-    return channel;
+    return common;
 }
 
 static void guest_set_client_capabilities(RedWorker *worker)
