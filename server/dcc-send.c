@@ -2012,14 +2012,10 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
                bitmap_fmt_is_rgb(bitmap.format) &&
                red_channel_client_test_remote_cap(&dcc->common.base,
                                                   SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-        comp_succeeded = dcc_compress_image_lz4(dcc, &red_image, &bitmap,
-                                                &comp_send_data,
-                                                groupid);
+        comp_succeeded = dcc_compress_image_lz4(dcc, &red_image, &bitmap, &comp_send_data, groupid);
 #endif
     } else if (comp_mode != SPICE_IMAGE_COMPRESSION_OFF) {
-        comp_succeeded = dcc_compress_image_lz(dcc, &red_image, &bitmap,
-                                               &comp_send_data,
-                                               groupid);
+        comp_succeeded = dcc_compress_image_lz(dcc, &red_image, &bitmap, &comp_send_data, groupid);
     }
 
     surface_lossy_region = &dcc->surface_client_lossy_region[item->surface_id];
