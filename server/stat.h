@@ -43,14 +43,14 @@ void stat_remove_counter(uint64_t *counter);
 #define stat_inc_counter(c, v)
 #endif /* RED_STATISTICS */
 
-typedef unsigned long stat_time_t;
+typedef uint64_t stat_time_t;
 
 static inline stat_time_t stat_now(clockid_t clock_id)
 {
     struct timespec ts;
 
     clock_gettime(clock_id, &ts);
-    return ts.tv_nsec + ts.tv_sec * 1000 * 1000 * 1000;
+    return ts.tv_nsec + (uint64_t) ts.tv_sec * (1000 * 1000 * 1000);
 }
 
 static inline double stat_cpu_time_to_sec(stat_time_t time)
