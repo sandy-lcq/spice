@@ -29,26 +29,13 @@ uint32_t display_channel_generate_uid(DisplayChannel *display)
     return ++display->bits_unique;
 }
 
-static stat_time_t display_channel_stat_now(DisplayChannel *display)
-{
-#ifdef RED_WORKER_STAT
-    RedWorker *worker = COMMON_CHANNEL(display)->worker;
-
-    return stat_now(red_worker_get_clockid(worker));
-
-#else
-    return 0;
-#endif
-}
-
-#define stat_start(display, var)                                        \
-    G_GNUC_UNUSED stat_time_t var = display_channel_stat_now((display));
+#define stat_start(stat, var)                                        \
+    stat_start_time_t var; stat_start_time_init(&var, stat);
 
 void display_channel_compress_stats_reset(DisplayChannel *display)
 {
     spice_return_if_fail(display);
 
-#ifdef COMPRESS_STAT
     stat_reset(&display->quic_stat);
     stat_reset(&display->lz_stat);
     stat_reset(&display->glz_stat);
@@ -56,7 +43,6 @@ void display_channel_compress_stats_reset(DisplayChannel *display)
     stat_reset(&display->zlib_glz_stat);
     stat_reset(&display->jpeg_alpha_stat);
     stat_reset(&display->lz4_stat);
-#endif
 }
 
 void display_channel_compress_stats_print(const DisplayChannel *display_channel)
@@ -568,7 +554,7 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
                              Ring **top_ring, Drawable *frame_candidate)
 {
     QRegion and_rgn;
-    stat_start(display, start_time);
+    stat_start(&display->__exclude_stat, start_time);
 
     region_clone(&and_rgn, rgn);
     region_and(&and_rgn, &item->rgn);
@@ -637,7 +623,7 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
                            QRegion *rgn, TreeItem **last, Drawable *frame_candidate)
 {
     Ring *top_ring;
-    stat_start(display, start_time);
+    stat_start(&display->exclude_stat, start_time);
 
     if (!ring_item) {
         return;
@@ -692,7 +678,7 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
 
 static int current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawable *item)
 {
-    stat_start(display, start_time);
+    stat_start(&display->add_stat, start_time);
 #ifdef RED_WORKER_STAT
     ++display->add_with_shadow_count;
 #endif
@@ -739,7 +725,7 @@ static int current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
     RingItem *now;
     QRegion exclude_rgn;
     RingItem *exclude_base = NULL;
-    stat_start(display, start_time);
+    stat_start(&display->add_stat, start_time);
 
     spice_assert(!region_is_empty(&item->base.rgn));
     region_init(&exclude_rgn);
@@ -2051,9 +2037,10 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
         &cbs, dcc_handle_message);
     spice_return_val_if_fail(display, NULL);
 
-    stat_init(&display->add_stat, "add", red_worker_get_clockid(worker));
-    stat_init(&display->exclude_stat, "exclude", red_worker_get_clockid(worker));
-    stat_init(&display->__exclude_stat, "__exclude", red_worker_get_clockid(worker));
+    clockid_t stat_clock = red_worker_get_clockid(worker);
+    stat_init(&display->add_stat, "add", stat_clock);
+    stat_init(&display->exclude_stat, "exclude", stat_clock);
+    stat_init(&display->__exclude_stat, "__exclude", stat_clock);
 #ifdef RED_STATISTICS
     RedChannel *channel = RED_CHANNEL(display);
     display->cache_hits_counter = stat_add_counter(channel->stat,
@@ -2063,13 +2050,13 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
     display->non_cache_counter = stat_add_counter(channel->stat,
                                                           "non_cache", TRUE);
 #endif
-    stat_compress_init(&display->lz_stat, "lz", red_worker_get_clockid(worker));
-    stat_compress_init(&display->glz_stat, "glz", red_worker_get_clockid(worker));
-    stat_compress_init(&display->quic_stat, "quic", red_worker_get_clockid(worker));
-    stat_compress_init(&display->jpeg_stat, "jpeg", red_worker_get_clockid(worker));
-    stat_compress_init(&display->zlib_glz_stat, "zlib", red_worker_get_clockid(worker));
-    stat_compress_init(&display->jpeg_alpha_stat, "jpeg_alpha", red_worker_get_clockid(worker));
-    stat_compress_init(&display->lz4_stat, "lz4", red_worker_get_clockid(worker));
+    stat_compress_init(&display->lz_stat, "lz", stat_clock);
+    stat_compress_init(&display->glz_stat, "glz", stat_clock);
+    stat_compress_init(&display->quic_stat, "quic", stat_clock);
+    stat_compress_init(&display->jpeg_stat, "jpeg", stat_clock);
+    stat_compress_init(&display->zlib_glz_stat, "zlib", stat_clock);
+    stat_compress_init(&display->jpeg_alpha_stat, "jpeg_alpha", stat_clock);
+    stat_compress_init(&display->lz4_stat, "lz4", stat_clock);
 
     display->n_surfaces = n_surfaces;
     display->num_renderers = num_renderers;

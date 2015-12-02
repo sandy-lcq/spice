@@ -201,10 +201,10 @@ struct DisplayChannel {
     RedCompressBuf *free_compress_bufs;
 
 /* TODO: some day unify this, make it more runtime.. */
-#ifdef RED_WORKER_STAT
     stat_info_t add_stat;
     stat_info_t exclude_stat;
     stat_info_t __exclude_stat;
+#ifdef RED_WORKER_STAT
     uint32_t add_count;
     uint32_t add_with_shadow_count;
 #endif
@@ -213,7 +213,6 @@ struct DisplayChannel {
     uint64_t *add_to_cache_counter;
     uint64_t *non_cache_counter;
 #endif
-#ifdef COMPRESS_STAT
     stat_info_t lz_stat;
     stat_info_t glz_stat;
     stat_info_t quic_stat;
@@ -221,7 +220,6 @@ struct DisplayChannel {
     stat_info_t zlib_glz_stat;
     stat_info_t jpeg_alpha_stat;
     stat_info_t lz4_stat;
-#endif
 };
 
 #define LINK_TO_DCC(ptr) SPICE_CONTAINEROF(ptr, DisplayChannelClient,   \

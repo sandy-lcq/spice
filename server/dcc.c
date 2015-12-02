@@ -651,9 +651,8 @@ int dcc_compress_image_glz(DisplayChannelClient *dcc,
                            compress_send_data_t* o_comp_data)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
-#ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(display_channel->glz_stat.clock);
-#endif
+    stat_start_time_t start_time;
+    stat_start_time_init(&start_time, &display_channel->zlib_glz_stat);
     spice_assert(bitmap_fmt_is_rgb(src->format));
     GlzData *glz_data = &dcc->glz_data;
     ZlibData *zlib_data;
@@ -687,9 +686,7 @@ int dcc_compress_image_glz(DisplayChannelClient *dcc,
     if (!display_channel->enable_zlib_glz_wrap || (glz_size < MIN_GLZ_SIZE_FOR_ZLIB)) {
         goto glz;
     }
-#ifdef COMPRESS_STAT
-    start_time = stat_now(display_channel->zlib_glz_stat.clock);
-#endif
+    stat_start_time_init(&start_time, &display_channel->zlib_glz_stat);
     zlib_data = &dcc->zlib_data;
 
     zlib_data->data.bufs_tail = compress_buf_new();
@@ -741,9 +738,8 @@ int dcc_compress_image_lz(DisplayChannelClient *dcc,
     LzImageType type = bitmap_fmt_to_lz_image_type[src->format];
     int size;            // size of the compressed data
 
-#ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->lz_stat.clock);
-#endif
+    stat_start_time_t start_time;
+    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz_stat);
 
     lz_data->data.bufs_tail = compress_buf_new();
     lz_data->data.bufs_head = lz_data->data.bufs_tail;
@@ -817,10 +813,9 @@ int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
     int comp_head_left;
     int stride;
     uint8_t *lz_out_start_byte;
+    stat_start_time_t start_time;
+    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->jpeg_alpha_stat);
 
-#ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->jpeg_stat.clock);
-#endif
     switch (src->format) {
     case SPICE_BITMAP_FMT_16BIT:
         jpeg_in_type = JPEG_IMAGE_TYPE_RGB16;
@@ -940,10 +935,8 @@ int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
     Lz4Data *lz4_data = &dcc->lz4_data;
     Lz4EncoderContext *lz4 = dcc->lz4;
     int lz4_size = 0;
-
-#ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->lz4_stat.clock);
-#endif
+    stat_start_time_t start_time;
+    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz4_stat);
 
     lz4_data->data.bufs_tail = compress_buf_new();
     lz4_data->data.bufs_head = lz4_data->data.bufs_tail;
@@ -1003,10 +996,8 @@ int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
     QuicContext *quic = dcc->quic;
     volatile QuicImageType type;
     int size, stride;
-
-#ifdef COMPRESS_STAT
-    stat_time_t start_time = stat_now(DCC_TO_DC(dcc)->quic_stat.clock);
-#endif
+    stat_start_time_t start_time;
+    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->quic_stat);
 
     switch (src->format) {
     case SPICE_BITMAP_FMT_32BIT:

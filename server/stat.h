@@ -19,6 +19,7 @@
 #define _H_STAT
 
 #include <stdint.h>
+#include <glib.h>
 
 typedef uint32_t StatNodeRef;
 #define INVALID_STAT_REF (~(StatNodeRef)0)
@@ -53,12 +54,21 @@ static inline stat_time_t stat_now(clockid_t clock_id)
     return ts.tv_nsec + (uint64_t) ts.tv_sec * (1000 * 1000 * 1000);
 }
 
+typedef struct {
+#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
+    stat_time_t time;
+#endif
+} stat_start_time_t;
+
+#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
 static inline double stat_cpu_time_to_sec(stat_time_t time)
 {
     return (double)time / (1000 * 1000 * 1000);
 }
+#endif
 
-typedef struct stat_info_s {
+typedef struct {
+#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
     const char *name;
     clockid_t clock;
     uint32_t count;
@@ -69,37 +79,54 @@ typedef struct stat_info_s {
     uint64_t orig_size;
     uint64_t comp_size;
 #endif
+#endif
 } stat_info_t;
 
-static inline void stat_reset(stat_info_t *info)
+static inline void stat_start_time_init(G_GNUC_UNUSED stat_start_time_t *tm,
+                                        G_GNUC_UNUSED const stat_info_t *info)
 {
+#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
+    tm->time = stat_now(info->clock);
+#endif
+}
+
+static inline void stat_reset(G_GNUC_UNUSED stat_info_t *info)
+{
+#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
     info->count = info->max = info->total = 0;
     info->min = ~(stat_time_t)0;
 #ifdef COMPRESS_STAT
     info->orig_size = info->comp_size = 0;
 #endif
+#endif
 }
 
-#ifdef COMPRESS_STAT
-static inline void stat_compress_init(stat_info_t *info, const char *name, clockid_t clock)
+static inline void stat_compress_init(G_GNUC_UNUSED stat_info_t *info,
+                                      G_GNUC_UNUSED const char *name,
+                                      G_GNUC_UNUSED clockid_t clock)
 {
+#ifdef COMPRESS_STAT
     info->name = name;
     info->clock = clock;
     stat_reset(info);
+#endif
 }
 
-static inline void stat_compress_add(stat_info_t *info,
-                                     stat_time_t start, int orig_size,
-                                     int comp_size)
+static inline void stat_compress_add(G_GNUC_UNUSED stat_info_t *info,
+                                     G_GNUC_UNUSED stat_start_time_t start,
+                                     G_GNUC_UNUSED int orig_size,
+                                     G_GNUC_UNUSED int comp_size)
 {
+#ifdef COMPRESS_STAT
     stat_time_t time;
     ++info->count;
-    time = stat_now(info->clock) - start;
+    time = stat_now(info->clock) - start.time;
     info->total += time;
     info->max = MAX(info->max, time);
     info->min = MIN(info->min, time);
     info->orig_size += orig_size;
     info->comp_size += comp_size;
+#endif
 }
 
 static inline double stat_byte_to_mega(uint64_t size)
@@ -107,32 +134,28 @@ static inline double stat_byte_to_mega(uint64_t size)
     return (double)size / (1000 * 1000);
 }
 
-#else
-#define stat_compress_init(a, b, c)
-#define stat_compress_add(a, b, c, d)
-#endif
-
-#ifdef RED_WORKER_STAT
-static inline void stat_init(stat_info_t *info, const char *name, clockid_t clock)
+static inline void stat_init(G_GNUC_UNUSED stat_info_t *info,
+                             G_GNUC_UNUSED const char *name,
+                             G_GNUC_UNUSED clockid_t clock)
 {
+#ifdef RED_WORKER_STAT
     info->name = name;
     info->clock = clock;
     stat_reset(info);
+#endif
 }
 
-static inline void stat_add(stat_info_t *info, stat_time_t start)
+static inline void stat_add(G_GNUC_UNUSED stat_info_t *info,
+                            G_GNUC_UNUSED stat_start_time_t start)
 {
+#ifdef RED_WORKER_STAT
     stat_time_t time;
     ++info->count;
-    time = stat_now(info->clock) - start;
+    time = stat_now(info->clock) - start.time;
     info->total += time;
     info->max = MAX(info->max, time);
     info->min = MIN(info->min, time);
+#endif
 }
-
-#else
-#define stat_add(a, b)
-#define stat_init(a, b, c)
-#endif /* RED_WORKER_STAT */
 
 #endif /* _H_STAT */
