@@ -1,6 +1,5 @@
-/* -*- Mode: C; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
-   Copyright (C) 2014 Red Hat, Inc.
+   Copyright (C) 2009 Red Hat, Inc.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -15,25 +14,20 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CACHE_ITEM_H_
-# define CACHE_ITEM_H_
 
-#include "red-channel.h"
-#include "common/ring.h"
+#ifndef SOUND_H_
+#define SOUND_H_
 
-typedef struct CacheItem CacheItem;
+#include "spice.h"
 
-struct CacheItem {
-    union {
-        PipeItem pipe_data;
-        struct {
-            RingItem lru_link;
-            CacheItem *next;
-        } cache_data;
-    } u;
-    uint64_t id;
-    size_t size;
-    uint32_t inval_type;
-};
+void snd_attach_playback(SpicePlaybackInstance *sin);
+void snd_detach_playback(SpicePlaybackInstance *sin);
 
-#endif /* CACHE_ITEM_H_ */
+void snd_attach_record(SpiceRecordInstance *sin);
+void snd_detach_record(SpiceRecordInstance *sin);
+
+void snd_set_playback_compression(int on);
+
+void snd_set_playback_latency(RedClient *client, uint32_t latency);
+
+#endif

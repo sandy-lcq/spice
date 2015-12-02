@@ -66,45 +66,45 @@ libspice_server_la_SOURCES =			\
 	agent-msg-filter.c			\
 	agent-msg-filter.h			\
 	cache-item.h				\
-	char_device.c				\
-	char_device.h				\
+	char-device.c				\
+	char-device.h				\
 	demarshallers.h				\
-	glz_encoder.c				\
-	glz_encoder.h				\
+	glz-encoder.c				\
+	glz-encoder.h				\
 	glz_encoder_config.h			\
-	glz_encoder_dictionary.c		\
-	glz_encoder_dictionary.h		\
-	glz_encoder_dictionary_protected.h	\
-	inputs_channel.c			\
-	inputs_channel.h			\
-	jpeg_encoder.c				\
-	jpeg_encoder.h				\
-	lz4_encoder.c				\
-	lz4_encoder.h				\
-	main_channel.c				\
-	main_channel.h				\
-	mjpeg_encoder.c				\
-	mjpeg_encoder.h				\
-	red_channel.c				\
-	red_channel.h				\
-	red_common.h				\
+	glz-encoder-dict.c		\
+	glz-encoder-dict.h		\
+	glz-encoder-priv.h	\
+	inputs-channel.c			\
+	inputs-channel.h			\
+	jpeg-encoder.c				\
+	jpeg-encoder.h				\
+	lz4-encoder.c				\
+	lz4-encoder.h				\
+	main-channel.c				\
+	main-channel.h				\
+	mjpeg-encoder.c				\
+	mjpeg-encoder.h				\
+	red-channel.c				\
+	red-channel.h				\
+	red-common.h				\
 	dispatcher.c				\
 	dispatcher.h				\
-	red_dispatcher.c			\
-	red_dispatcher.h			\
-	main_dispatcher.c			\
-	main_dispatcher.h			\
-	migration_protocol.h		\
-	red_memslots.c				\
-	red_memslots.h				\
-	red_parse_qxl.c				\
-	red_record_qxl.c			\
-	red_record_qxl.h			\
-	red_replay_qxl.c			\
-	red_replay_qxl.h			\
-	red_parse_qxl.h				\
-	red_worker.c				\
-	red_worker.h				\
+	red-dispatcher.c			\
+	red-dispatcher.h			\
+	main-dispatcher.c			\
+	main-dispatcher.h			\
+	migration-protocol.h		\
+	memslot.c				\
+	memslot.h				\
+	red-parse-qxl.c				\
+	red-record-qxl.c			\
+	red-record-qxl.h			\
+	red-replay-qxl.c			\
+	red-replay-qxl.h			\
+	red-parse-qxl.h				\
+	red-worker.c				\
+	red-worker.h				\
 	display-channel.c			\
 	display-channel.h			\
 	cursor-channel.c			\
@@ -112,22 +112,22 @@ libspice_server_la_SOURCES =			\
 	reds.c					\
 	reds.h					\
 	reds-private.h				\
-	reds_stream.c				\
-	reds_stream.h				\
-	reds_sw_canvas.c			\
-	reds_sw_canvas.h			\
-	snd_worker.c				\
-	snd_worker.h				\
+	reds-stream.c				\
+	reds-stream.h				\
+	sw-canvas.c			\
+	sw-canvas.h			\
+	sound.c				\
+	sound.h				\
 	stat.h					\
 	spicevmc.c				\
 	spice_timer_queue.c			\
 	spice_timer_queue.h			\
-	zlib_encoder.c				\
-	zlib_encoder.h				\
+	zlib-encoder.c				\
+	zlib-encoder.h				\
 	spice_bitmap_utils.h		\
 	spice_bitmap_utils.c		\
-	spice_image_cache.h			\
-	spice_image_cache.c			\
+	image-cache.h			\
+	image-cache.c			\
 	pixmap-cache.h				\
 	pixmap-cache.c				\
 	tree.h				\

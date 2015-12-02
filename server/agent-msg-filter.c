@@ -22,9 +22,9 @@
 #endif
 
 #include <string.h>
-#include "red_common.h"
+#include "red-common.h"
 #include "agent-msg-filter.h"
-#include "red_dispatcher.h"
+#include "red-dispatcher.h"
 
 void agent_msg_filter_init(struct AgentMsgFilter *filter,
                            int copy_paste, int file_xfer, int discard_all)

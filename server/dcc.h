@@ -18,7 +18,7 @@
 #ifndef DCC_H_
 # define DCC_H_
 
-#include "red_worker.h"
+#include "red-worker.h"
 #include "pixmap-cache.h"
 #include "cache-item.h"
 #include "dcc-encoders.h"

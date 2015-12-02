@@ -18,7 +18,7 @@
 #ifndef _PIXMAP_CACHE_H
 # define _PIXMAP_CACHE_H
 
-#include "red_channel.h"
+#include "red-channel.h"
 
 #define MAX_CACHE_CLIENTS 4
 

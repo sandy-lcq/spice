@@ -31,7 +31,7 @@
 #include <spice/qxl_dev.h>
 
 #include "test_display_base.h"
-#include "red_channel.h"
+#include "red-channel.h"
 #include "test_util.h"
 
 #ifndef PATH_MAX

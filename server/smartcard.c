@@ -29,10 +29,10 @@
 #endif
 
 #include "reds.h"
-#include "char_device.h"
-#include "red_channel.h"
+#include "char-device.h"
+#include "red-channel.h"
 #include "smartcard.h"
-#include "migration_protocol.h"
+#include "migration-protocol.h"
 
 /*
  * TODO: the code doesn't really support multiple readers.

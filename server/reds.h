@@ -27,8 +27,8 @@
 #include "common/marshaller.h"
 #include "common/messages.h"
 #include "spice.h"
-#include "red_channel.h"
-#include "migration_protocol.h"
+#include "red-channel.h"
+#include "migration-protocol.h"
 
 struct QXLState {
     QXLInterface          *qif;
@@ -75,7 +75,7 @@ extern SpiceImageCompression image_compression;
 extern spice_wan_compression_t jpeg_state;
 extern spice_wan_compression_t zlib_glz_state;
 
-// Temporary measures to make splitting reds.c to inputs_channel.c easier
+// Temporary measures to make splitting reds.c to inputs-channel.c easier
 
 /* should be called only from main_dispatcher */
 void reds_client_disconnect(RedClient *client);

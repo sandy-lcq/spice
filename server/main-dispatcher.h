@@ -1,6 +1,6 @@
 /* -*- Mode: C; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
-   Copyright (C) 2014 Red Hat, Inc.
+   Copyright (C) 2009-2015 Red Hat, Inc.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -15,25 +15,22 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CACHE_ITEM_H_
-# define CACHE_ITEM_H_
+#ifndef MAIN_DISPATCHER_H
+#define MAIN_DISPATCHER_H
 
+#include <spice.h>
 #include "red-channel.h"
-#include "common/ring.h"
 
-typedef struct CacheItem CacheItem;
+void main_dispatcher_channel_event(int event, SpiceChannelEventInfo *info);
+void main_dispatcher_seamless_migrate_dst_complete(RedClient *client);
+void main_dispatcher_set_mm_time_latency(RedClient *client, uint32_t latency);
+/*
+ * Disconnecting the client is always executed asynchronously,
+ * in order to protect from expired references in the routines
+ * that triggered the client destruction.
+ */
+void main_dispatcher_client_disconnect(RedClient *client);
 
-struct CacheItem {
-    union {
-        PipeItem pipe_data;
-        struct {
-            RingItem lru_link;
-            CacheItem *next;
-        } cache_data;
-    } u;
-    uint64_t id;
-    size_t size;
-    uint32_t inval_type;
-};
+void main_dispatcher_init(SpiceCoreInterface *core);
 
-#endif /* CACHE_ITEM_H_ */
+#endif //MAIN_DISPATCHER_H

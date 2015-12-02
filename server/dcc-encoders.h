@@ -21,16 +21,16 @@
 #include <setjmp.h>
 #include "common/marshaller.h"
 #include "common/quic.h"
-#include "red_channel.h"
-#include "red_parse_qxl.h"
-#include "spice_image_cache.h"
-#include "glz_encoder_dictionary.h"
-#include "glz_encoder.h"
-#include "jpeg_encoder.h"
+#include "red-channel.h"
+#include "red-parse-qxl.h"
+#include "image-cache.h"
+#include "glz-encoder-dict.h"
+#include "glz-encoder.h"
+#include "jpeg-encoder.h"
 #ifdef USE_LZ4
-#include "lz4_encoder.h"
+#include "lz4-encoder.h"
 #endif
-#include "zlib_encoder.h"
+#include "zlib-encoder.h"
 
 typedef struct RedCompressBuf RedCompressBuf;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;

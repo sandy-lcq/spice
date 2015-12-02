@@ -20,8 +20,8 @@
 
 #include "spice.h"
 #include "reds.h"
-#include "red_worker.h"
-#include "red_parse_qxl.h"
+#include "red-worker.h"
+#include "red-parse-qxl.h"
 #include "cache-item.h"
 #include "stat.h"
 

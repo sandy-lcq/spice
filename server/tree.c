@@ -19,7 +19,7 @@
 #endif
 
 #include <spice/qxl_dev.h>
-#include "red_parse_qxl.h"
+#include "red-parse-qxl.h"
 #include "display-channel.h"
 
 #include "tree.h"

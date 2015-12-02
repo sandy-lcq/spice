@@ -17,7 +17,7 @@
 */
 #include <config.h>
 #include <pthread.h>
-#include "red_common.h"
+#include "red-common.h"
 #include "spice_timer_queue.h"
 #include "common/ring.h"
 
