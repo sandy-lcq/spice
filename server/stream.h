@@ -114,6 +114,7 @@ void                  stream_clip_item_unref                        (DisplayChan
 
 typedef struct ItemTrace {
     red_time_t time;
+    red_time_t first_frame_time;
     int frames_count;
     int gradual_frames_count;
     int last_gradual_frame;

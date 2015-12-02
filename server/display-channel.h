@@ -66,6 +66,7 @@ struct Drawable {
     Ring glz_ring;
 
     red_time_t creation_time;
+    red_time_t first_frame_time;
     int frames_count;
     int gradual_frames_count;
     int last_gradual_frame;

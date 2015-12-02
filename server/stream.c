@@ -425,7 +425,16 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
     SpiceBitmap *bitmap = &drawable->red_drawable->u.copy.src_bitmap->u.bitmap;
     stream->top_down = !!(bitmap->flags & SPICE_BITMAP_FLAGS_TOP_DOWN);
     drawable->stream = stream;
-    stream->input_fps = MAX_FPS;
+    /* Provide an fps estimate the video encoder can use when initializing
+     * based on the frames that lead to the creation of the stream. Round to
+     * the nearest integer, for instance 24 for 23.976.
+     */
+    uint64_t duration = drawable->creation_time - drawable->first_frame_time;
+    if (duration > (uint64_t)drawable->frames_count * 1000 * 1000 * 1000 / MAX_FPS) {
+        stream->input_fps = ((uint64_t)drawable->frames_count * 1000 * 1000 * 1000 + duration / 2) / duration;
+    } else {
+        stream->input_fps = MAX_FPS;
+    }
     stream->num_input_frames = 0;
     stream->input_fps_start_time = drawable->creation_time;
     display->streams_size_total += stream->width * stream->height;
@@ -433,21 +442,24 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
     FOREACH_DCC(display, dcc_ring_item, next, dcc) {
         dcc_create_stream(dcc, stream);
     }
-    spice_debug("stream %d %dx%d (%d, %d) (%d, %d)",
+    spice_debug("stream %d %dx%d (%d, %d) (%d, %d) %u fps",
                 (int)(stream - display->streams_buf), stream->width,
                 stream->height, stream->dest_area.left, stream->dest_area.top,
-                stream->dest_area.right, stream->dest_area.bottom);
+                stream->dest_area.right, stream->dest_area.bottom,
+                stream->input_fps);
     return;
 }
 
 // returns whether a stream was created
 static int stream_add_frame(DisplayChannel *display,
                             Drawable *frame_drawable,
+                            red_time_t first_frame_time,
                             int frames_count,
                             int gradual_frames_count,
                             int last_gradual_frame)
 {
     update_copy_graduality(display, frame_drawable);
+    frame_drawable->first_frame_time = first_frame_time;
     frame_drawable->frames_count = frames_count + 1;
     frame_drawable->gradual_frames_count  = gradual_frames_count;
 
@@ -514,6 +526,7 @@ void stream_trace_update(DisplayChannel *display, Drawable *drawable)
                                        &trace->dest_area, trace->time, NULL, FALSE) !=
                                        STREAM_FRAME_NONE) {
             if (stream_add_frame(display, drawable,
+                                 trace->first_frame_time,
                                  trace->frames_count,
                                  trace->gradual_frames_count,
                                  trace->last_gradual_frame)) {
@@ -559,6 +572,7 @@ void stream_maintenance(DisplayChannel *display,
                                  FALSE);
         if (is_next_frame != STREAM_FRAME_NONE) {
             stream_add_frame(display, candidate,
+                             prev->first_frame_time,
                              prev->frames_count,
                              prev->gradual_frames_count,
                              prev->last_gradual_frame);
@@ -910,6 +924,7 @@ void stream_trace_add_drawable(DisplayChannel *display, Drawable *item)
 
     trace = &display->items_trace[display->next_item_trace++ & ITEMS_TRACE_MASK];
     trace->time = item->creation_time;
+    trace->first_frame_time = item->first_frame_time;
     trace->frames_count = item->frames_count;
     trace->gradual_frames_count = item->gradual_frames_count;
     trace->last_gradual_frame = item->last_gradual_frame;

@@ -1371,7 +1371,7 @@ Drawable *display_channel_drawable_try_new(DisplayChannel *display,
 
     bzero(drawable, sizeof(Drawable));
     drawable->refs = 1;
-    drawable->creation_time = red_get_monotonic_time();
+    drawable->creation_time = drawable->first_frame_time = red_get_monotonic_time();
     ring_item_init(&drawable->list_link);
     ring_item_init(&drawable->surface_list_link);
     ring_item_init(&drawable->tree_item.base.siblings_link);
