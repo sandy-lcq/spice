@@ -81,9 +81,10 @@ static inline void stat_reset(stat_info_t *info)
 }
 
 #ifdef COMPRESS_STAT
-static inline void stat_compress_init(stat_info_t *info, const char *name)
+static inline void stat_compress_init(stat_info_t *info, const char *name, clockid_t clock)
 {
     info->name = name;
+    info->clock = clock;
     stat_reset(info);
 }
 
@@ -107,7 +108,7 @@ static inline double stat_byte_to_mega(uint64_t size)
 }
 
 #else
-#define stat_compress_init(a, b)
+#define stat_compress_init(a, b, c)
 #define stat_compress_add(a, b, c, d)
 #endif
 

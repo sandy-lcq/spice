@@ -2039,13 +2039,13 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
     display->non_cache_counter = stat_add_counter(channel->stat,
                                                           "non_cache", TRUE);
 #endif
-    stat_compress_init(&display->lz_stat, "lz");
-    stat_compress_init(&display->glz_stat, "glz");
-    stat_compress_init(&display->quic_stat, "quic");
-    stat_compress_init(&display->jpeg_stat, "jpeg");
-    stat_compress_init(&display->zlib_glz_stat, "zlib");
-    stat_compress_init(&display->jpeg_alpha_stat, "jpeg_alpha");
-    stat_compress_init(&display->lz4_stat, "lz4");
+    stat_compress_init(&display->lz_stat, "lz", red_worker_get_clockid(worker));
+    stat_compress_init(&display->glz_stat, "glz", red_worker_get_clockid(worker));
+    stat_compress_init(&display->quic_stat, "quic", red_worker_get_clockid(worker));
+    stat_compress_init(&display->jpeg_stat, "jpeg", red_worker_get_clockid(worker));
+    stat_compress_init(&display->zlib_glz_stat, "zlib", red_worker_get_clockid(worker));
+    stat_compress_init(&display->jpeg_alpha_stat, "jpeg_alpha", red_worker_get_clockid(worker));
+    stat_compress_init(&display->lz4_stat, "lz4", red_worker_get_clockid(worker));
 
     display->n_surfaces = n_surfaces;
     display->num_renderers = num_renderers;
