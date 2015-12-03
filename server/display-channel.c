@@ -429,7 +429,7 @@ static void current_remove(DisplayChannel *display, TreeItem *item)
         RingItem *ring_item;
 
         if (now->type == TREE_ITEM_TYPE_DRAWABLE) {
-            Drawable *drawable = SPICE_CONTAINEROF(now, Drawable, tree_item);
+            Drawable *drawable = SPICE_CONTAINEROF(now, Drawable, tree_item.base);
             ring_item = now->siblings_link.prev;
             drawable_remove_from_pipes(drawable);
             current_remove_drawable(display, drawable);

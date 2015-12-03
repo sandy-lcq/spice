@@ -129,7 +129,7 @@ static void dump_item(TreeItem *item, void *data)
 
     switch (item->type) {
     case TREE_ITEM_TYPE_DRAWABLE: {
-        Drawable *drawable = SPICE_CONTAINEROF(item, Drawable, tree_item);
+        Drawable *drawable = SPICE_CONTAINEROF(item, Drawable, tree_item.base);
         const int max_indent = 200;
         char indent_str[max_indent + 1];
         int indent_str_len;
