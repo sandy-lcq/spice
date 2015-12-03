@@ -117,6 +117,8 @@ libspice_server_la_SOURCES =			\
 	sw-canvas.h			\
 	sound.c				\
 	sound.h				\
+	spice-experimental.h			\
+	spice.h					\
 	stat.h					\
 	spicevmc.c				\
 	spice_timer_queue.c			\

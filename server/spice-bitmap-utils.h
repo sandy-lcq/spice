@@ -18,7 +18,6 @@
 #ifndef SPICE_BITMAP_UTILS_H_
 #define SPICE_BITMAP_UTILS_H_
 
-#include <glib.h>
 #include "red-common.h"
 
 typedef enum {

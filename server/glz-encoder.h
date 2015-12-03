@@ -20,7 +20,7 @@
 
 /* Manging the lz encoding using a dictionary that is shared among encoders */
 
-#include <stdint.h>
+#include "red-common.h"
 #include "common/lz_common.h"
 #include "glz-encoder-dict.h"
 

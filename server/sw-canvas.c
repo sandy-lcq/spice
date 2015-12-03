@@ -17,9 +17,6 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
-#include "common/spice_common.h"
-
 #include "sw-canvas.h"
 #define SW_CANVAS_IMAGE_CACHE
 #include "common/sw_canvas.c"

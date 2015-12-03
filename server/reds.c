@@ -58,7 +58,6 @@
 #include "agent-msg-filter.h"
 #include "inputs-channel.h"
 #include "main-channel.h"
-#include "red-common.h"
 #include "red-dispatcher.h"
 #include "main-dispatcher.h"
 #include "sound.h"

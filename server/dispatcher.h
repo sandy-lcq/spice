@@ -18,8 +18,7 @@
 #ifndef DISPATCHER_H
 #define DISPATCHER_H
 
-#include <spice.h>
-#include "utils.h"
+#include "red-common.h"
 
 typedef struct Dispatcher Dispatcher;
 

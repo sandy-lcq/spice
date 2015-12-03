@@ -18,16 +18,25 @@
 #ifndef _H_RED_COMMON
 #define _H_RED_COMMON
 
-#include <spice/macros.h>
-#include <string.h>
+#include <glib.h>
 
-#include "common/mem.h"
-#include "common/spice_common.h"
-#include "common/messages.h"
+#include <errno.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <spice/macros.h>
+#include "common/log.h"
 #include "common/lz_common.h"
+#include "common/marshaller.h"
+#include "common/mem.h"
+#include "common/messages.h"
+#include "common/ring.h"
+#include "common/spice_common.h"
+#include "common/draw.h"
 
 #include "spice.h"
-
-#define SPICE_GNUC_VISIBLE __attribute__ ((visibility ("default")))
+#include "utils.h"
 
 #endif

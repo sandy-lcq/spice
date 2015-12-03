@@ -18,6 +18,8 @@
 #ifndef GLZ_ENCODER_PRIV_H_
 #define GLZ_ENCODER_PRIV_H_
 
+#include "red-common.h"
+
 /* Interface for using the dictionary for encoding.
    Data structures are exposed for the encoder for efficiency
    purposes. */

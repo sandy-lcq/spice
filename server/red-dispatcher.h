@@ -18,8 +18,6 @@
 #ifndef _H_RED_DISPATCHER
 #define _H_RED_DISPATCHER
 
-#include <unistd.h>
-#include <errno.h>
 #include "red-channel.h"
 
 typedef struct RedDispatcher RedDispatcher;

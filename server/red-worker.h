@@ -18,9 +18,6 @@
 #ifndef _H_REDWORKER
 #define _H_REDWORKER
 
-#include <unistd.h>
-#include <errno.h>
-#include "utils.h"
 #include "red-common.h"
 #include "red-dispatcher.h"
 #include "red-parse-qxl.h"
