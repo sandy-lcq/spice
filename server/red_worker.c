@@ -1973,7 +1973,7 @@ static inline void current_remove(RedWorker *worker, TreeItem *item)
 
         if (now->type == TREE_ITEM_TYPE_DRAWABLE) {
             ring_item = now->siblings_link.prev;
-            remove_drawable(worker, SPICE_CONTAINEROF(now, Drawable, tree_item));
+            remove_drawable(worker, SPICE_CONTAINEROF(now, Drawable, tree_item.base));
         } else {
             Container *container = (Container *)now;
 
@@ -9338,7 +9338,7 @@ static void __show_tree_call(TreeItem *item, void *data)
 
     switch (item->type) {
     case TREE_ITEM_TYPE_DRAWABLE: {
-        Drawable *drawable = SPICE_CONTAINEROF(item, Drawable, tree_item);
+        Drawable *drawable = SPICE_CONTAINEROF(item, Drawable, tree_item.base);
         const int max_indent = 200;
         char indent_str[max_indent + 1];
         int indent_str_len;

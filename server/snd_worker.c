@@ -1102,7 +1102,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
     PlaybackChannel *playback_channel;
     AudioFrame *frame;
 
-    frame = SPICE_CONTAINEROF(samples, AudioFrame, samples);
+    frame = SPICE_CONTAINEROF(samples, AudioFrame, samples[0]);
     playback_channel = frame->channel;
     spice_assert(playback_channel);
     if (!snd_channel_put(&playback_channel->base) ||
