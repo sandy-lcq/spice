@@ -123,8 +123,6 @@ libspice_server_la_SOURCES =			\
 	spice_timer_queue.h			\
 	zlib-encoder.c				\
 	zlib-encoder.h				\
-	spice_bitmap_utils.h		\
-	spice_bitmap_utils.c		\
 	image-cache.h			\
 	image-cache.c			\
 	pixmap-cache.h				\

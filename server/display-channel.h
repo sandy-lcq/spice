@@ -39,7 +39,7 @@
 #include "main-channel.h"
 #include "migration-protocol.h"
 #include "main-dispatcher.h"
-#include "spice_bitmap_utils.h"
+#include "spice-bitmap-utils.h"
 #include "image-cache.h"
 #include "utils.h"
 #include "tree.h"

@@ -15,13 +15,11 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef RED_BITMAP_UTILS_H_
-# define RED_BITMAP_UTILS_H_
+#ifndef SPICE_BITMAP_UTILS_H_
+#define SPICE_BITMAP_UTILS_H_
 
 #include <glib.h>
-#include <stdint.h>
-#include "common/draw.h"
-#include "common/log.h"
+#include "red-common.h"
 
 typedef enum {
     BITMAP_GRADUAL_INVALID,
@@ -88,4 +86,8 @@ static inline int bitmap_fmt_has_graduality(uint8_t fmt)
 BitmapGradualType bitmap_get_graduality_level     (SpiceBitmap *bitmap);
 int               bitmap_has_extra_stride         (SpiceBitmap *bitmap);
 
-#endif /* RED_BITMAP_UTILS_H_ */
+void dump_bitmap(SpiceBitmap *bitmap);
+
+int spice_bitmap_from_surface_type(uint32_t surface_format);
+
+#endif /* SPICE_BITMAP_UTILS_H_ */
