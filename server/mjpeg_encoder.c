@@ -1353,16 +1353,13 @@ MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
     encoder->starting_bit_rate = starting_bit_rate;
 
     if (cbs) {
-        struct timespec time;
-
-        clock_gettime(CLOCK_MONOTONIC, &time);
         encoder->cbs = *cbs;
         encoder->cbs_opaque = cbs_opaque;
         mjpeg_encoder_reset_quality(encoder, MJPEG_QUALITY_SAMPLE_NUM / 2, 5, 0);
         encoder->rate_control.during_quality_eval = TRUE;
         encoder->rate_control.quality_eval_data.type = MJPEG_QUALITY_EVAL_TYPE_SET;
         encoder->rate_control.quality_eval_data.reason = MJPEG_QUALITY_EVAL_REASON_RATE_CHANGE;
-        encoder->rate_control.warmup_start_time = ((uint64_t) time.tv_sec) * 1000000000 + time.tv_nsec;
+        encoder->rate_control.warmup_start_time = red_get_monotonic_time();
     } else {
         encoder->cbs.get_roundtrip_ms = NULL;
         mjpeg_encoder_reset_quality(encoder, MJPEG_LEGACY_STATIC_QUALITY_ID, MJPEG_MAX_FPS, 0);
