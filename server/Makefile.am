@@ -71,7 +71,6 @@ libspice_server_la_SOURCES =			\
 	demarshallers.h				\
 	glz-encoder.c				\
 	glz-encoder.h				\
-	glz_encoder_config.h			\
 	glz-encoder-dict.c		\
 	glz-encoder-dict.h		\
 	glz-encoder-priv.h	\

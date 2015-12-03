@@ -23,7 +23,25 @@
 #include <stdint.h>
 #include "common/lz_common.h"
 #include "glz-encoder-dict.h"
-#include "glz_encoder_config.h"
+
+struct GlzEncoderUsrContext {
+    SPICE_GNUC_PRINTF(2, 3) void (*error)(GlzEncoderUsrContext *usr, const char *fmt, ...);
+    SPICE_GNUC_PRINTF(2, 3) void (*warn)(GlzEncoderUsrContext *usr, const char *fmt, ...);
+    SPICE_GNUC_PRINTF(2, 3) void (*info)(GlzEncoderUsrContext *usr, const char *fmt, ...);
+    void    *(*malloc)(GlzEncoderUsrContext *usr, int size);
+    void (*free)(GlzEncoderUsrContext *usr, void *ptr);
+
+    // get the next chunk of the image which is entered to the dictionary. If the image is down to
+    // top, return it from the last line to the first one (stride should always be positive)
+    int (*more_lines)(GlzEncoderUsrContext *usr, uint8_t **lines);
+
+    // get the next chunk of the compressed buffer.return number of bytes in the chunk.
+    int (*more_space)(GlzEncoderUsrContext *usr, uint8_t **io_ptr);
+
+    // called when an image is removed from the dictionary, due to the window size limit
+    void (*free_image)(GlzEncoderUsrContext *usr, GlzUsrImageContext *image);
+
+};
 
 typedef void GlzEncoderContext;
 

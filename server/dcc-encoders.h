@@ -24,7 +24,6 @@
 #include "red-channel.h"
 #include "red-parse-qxl.h"
 #include "image-cache.h"
-#include "glz-encoder-dict.h"
 #include "glz-encoder.h"
 #include "jpeg-encoder.h"
 #ifdef USE_LZ4

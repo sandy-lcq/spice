@@ -183,4 +183,16 @@ void glz_dictionary_post_encode(uint32_t encoder_id, GlzEncoderUsrContext *usr,
         (dict)->window.encoders_heads[enc_id]].pixels_so_far <= \
         ref_seg->pixels_so_far)))
 
+#ifdef DEBUG
+
+#define GLZ_ASSERT(usr, x)                                              \
+    if (!(x)) (usr)->error(usr, "%s: ASSERT %s failed\n", __FUNCTION__, #x);
+
+#else
+
+#define GLZ_ASSERT(usr, x)
+
+#endif
+
+
 #endif // GLZ_ENCODER_PRIV_H_

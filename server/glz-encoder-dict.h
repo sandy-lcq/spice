@@ -19,7 +19,6 @@
 #define GLZ_ENCODER_DICT_H_
 
 #include <stdint.h>
-#include "glz_encoder_config.h"
 
 /*
     Interface for maintaining lz dictionary that is shared among several encoders.
@@ -29,6 +28,9 @@
 
 typedef void GlzEncDictContext;
 typedef void GlzEncDictImageContext;
+
+typedef void GlzUsrImageContext;
+typedef struct GlzEncoderUsrContext GlzEncoderUsrContext;
 
 /* NOTE: DISPLAY_MIGRATE_DATA_VERSION should change in case GlzEncDictRestoreData changes*/
 typedef struct GlzEncDictRestoreData {

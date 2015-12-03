@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "glz-encoder.h"
 #include "glz-encoder-dict.h"
 #include "glz-encoder-priv.h"
 
