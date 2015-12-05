@@ -68,7 +68,7 @@ static const int mjpeg_quality_samples[MJPEG_QUALITY_SAMPLE_NUM] = {20, 30, 40, 
  * are not necessarily related to mis-estimation of the bit rate, and we would
  * like to wait till the stream stabilizes.
  */
-#define MJPEG_WARMUP_TIME 3000LL // 3 sec
+#define MJPEG_WARMUP_TIME 3000000000LL // 3 sec
 
 enum {
     MJPEG_QUALITY_EVAL_TYPE_SET,
@@ -996,7 +996,7 @@ static void mjpeg_encoder_decrease_bit_rate(MJpegEncoder *encoder)
         uint64_t now;
 
         now = red_get_monotonic_time();
-        if (now - rate_control->warmup_start_time < MJPEG_WARMUP_TIME*1000*1000) {
+        if (now - rate_control->warmup_start_time < MJPEG_WARMUP_TIME) {
             spice_debug("during warmup. ignoring");
             return;
         } else {
