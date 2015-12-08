@@ -11052,12 +11052,13 @@ void handle_dev_update(void *opaque, void *payload)
     QXLRect *qxl_dirty_rects = msg->qxl_dirty_rects;
     uint32_t clear_dirty_region = msg->clear_dirty_region;
 
+    flush_display_commands(worker);
+
     VALIDATE_SURFACE_RET(worker, surface_id);
 
     rect = spice_new0(SpiceRect, 1);
     surface = &worker->surfaces[surface_id];
     red_get_rect_ptr(rect, qxl_area);
-    flush_display_commands(worker);
 
     spice_assert(worker->running);
 
