@@ -403,11 +403,11 @@ int red_channel_is_connected(RedChannel *channel);
 int red_channel_client_is_connected(RedChannelClient *rcc);
 
 void red_channel_client_default_migrate(RedChannelClient *rcc);
-int red_channel_client_waits_for_migrate_data(RedChannelClient *rcc);
+int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc);
 /* seamless migration is supported for only one client. This routine
  * checks if the only channel client associated with channel is
  * waiting for migration data */
-int red_channel_waits_for_migrate_data(RedChannel *channel);
+int red_channel_is_waiting_for_migrate_data(RedChannel *channel);
 
 /*
  * the disconnect callback is called from the channel's thread,

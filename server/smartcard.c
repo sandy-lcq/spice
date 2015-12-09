@@ -356,7 +356,7 @@ static void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_de
                                                 0, /* send queue size */
                                                 ~0,
                                                 ~0,
-                                                red_channel_client_waits_for_migrate_data(
+                                                red_channel_client_is_waiting_for_migrate_data(
                                                     &scc->base));
     if (!client_added) {
         spice_warning("failed");

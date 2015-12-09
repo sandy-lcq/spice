@@ -589,7 +589,7 @@ static void reds_agent_remove(void)
     vdagent = NULL;
     reds_update_mouse_mode();
     if (reds_main_channel_connected() &&
-        !red_channel_waits_for_migrate_data(&reds->main_channel->base)) {
+        !red_channel_is_waiting_for_migrate_data(&reds->main_channel->base)) {
         main_channel_push_agent_disconnected(reds->main_channel);
     }
 }
@@ -910,7 +910,7 @@ void reds_on_main_agent_start(MainChannelClient *mcc, uint32_t num_tokens)
                                                     REDS_VDI_PORT_NUM_RECEIVE_BUFFS,
                                                     REDS_AGENT_WINDOW_SIZE,
                                                     num_tokens,
-                                                    red_channel_client_waits_for_migrate_data(rcc));
+                                                    red_channel_client_is_waiting_for_migrate_data(rcc));
 
         if (!client_added) {
             spice_warning("failed to add client to agent");
@@ -2939,7 +2939,7 @@ static SpiceCharDeviceState *attach_to_red_agent(SpiceCharDeviceInstance *sin)
     reds->agent_state.plug_generation++;
 
     if (reds->agent_state.mig_data ||
-        red_channel_waits_for_migrate_data(&reds->main_channel->base)) {
+        red_channel_is_waiting_for_migrate_data(&reds->main_channel->base)) {
         /* Migration in progress (code is running on the destination host):
          * 1.  Add the client to spice char device, if it was not already added.
          * 2.a If this (qemu-kvm state load side of migration) happens first

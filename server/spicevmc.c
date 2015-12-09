@@ -488,7 +488,7 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
     }
 
     if (!spice_char_device_client_add(state->chardev_st, client, FALSE, 0, ~0, ~0,
-                                      red_channel_client_waits_for_migrate_data(rcc))) {
+                                      red_channel_client_is_waiting_for_migrate_data(rcc))) {
         spice_warning("failed to add client to spicevmc");
         red_channel_client_disconnect(rcc);
         return;

@@ -960,12 +960,12 @@ static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
     pthread_mutex_unlock(&rcc->client->lock);
 }
 
-int red_channel_client_waits_for_migrate_data(RedChannelClient *rcc)
+int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc)
 {
     return rcc->wait_migrate_data;
 }
 
-int red_channel_waits_for_migrate_data(RedChannel *channel)
+int red_channel_is_waiting_for_migrate_data(RedChannel *channel)
 {
     RedChannelClient *rcc;
 
@@ -978,7 +978,7 @@ int red_channel_waits_for_migrate_data(RedChannel *channel)
     }
     spice_assert(channel->clients_num == 1);
     rcc = SPICE_CONTAINEROF(ring_get_head(&channel->clients), RedChannelClient, channel_link);
-    return red_channel_client_waits_for_migrate_data(rcc);
+    return red_channel_client_is_waiting_for_migrate_data(rcc);
 }
 
 static void red_channel_client_default_connect(RedChannel *channel, RedClient *client,
@@ -1415,7 +1415,7 @@ static void red_channel_handle_migrate_data(RedChannelClient *rcc, uint32_t size
     if (!rcc->channel->channel_cbs.handle_migrate_data) {
         return;
     }
-    if (!red_channel_client_waits_for_migrate_data(rcc)) {
+    if (!red_channel_client_is_waiting_for_migrate_data(rcc)) {
         spice_channel_client_error(rcc, "unexpected");
         return;
     }

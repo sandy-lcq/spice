@@ -1191,7 +1191,7 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
     RedChannel *channel = &display->common.base;
     RedChannelClient *rcc;
 
-    if (!red_channel_waits_for_migrate_data(&display->common.base)) {
+    if (!red_channel_is_waiting_for_migrate_data(&display->common.base)) {
         return FALSE;
     }
 
@@ -1206,7 +1206,7 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
             break;
         }
 
-        if (!red_channel_client_waits_for_migrate_data(rcc)) {
+        if (!red_channel_client_is_waiting_for_migrate_data(rcc)) {
             return TRUE;
         }
         if (red_get_monotonic_time() > end_time) {

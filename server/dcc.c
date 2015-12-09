@@ -448,7 +448,7 @@ void dcc_start(DisplayChannelClient *dcc)
 
     red_channel_client_push_set_ack(RED_CHANNEL_CLIENT(dcc));
 
-    if (red_channel_client_waits_for_migrate_data(rcc))
+    if (red_channel_client_is_waiting_for_migrate_data(rcc))
         return;
 
     if (!display_channel_client_wait_for_init(dcc))
