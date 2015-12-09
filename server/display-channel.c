@@ -1190,6 +1190,7 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
     uint64_t end_time = red_get_monotonic_time() + DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT;
     RedChannel *channel = &display->common.base;
     RedChannelClient *rcc;
+    int ret = FALSE;
 
     if (!red_channel_is_waiting_for_migrate_data(&display->common.base)) {
         return FALSE;
@@ -1200,6 +1201,7 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
 
     rcc = SPICE_CONTAINEROF(ring_get_head(&channel->clients), RedChannelClient, channel_link);
 
+    red_channel_client_ref(rcc);
     for (;;) {
         red_channel_client_receive(rcc);
         if (!red_channel_client_is_connected(rcc)) {
@@ -1207,7 +1209,8 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
         }
 
         if (!red_channel_client_is_waiting_for_migrate_data(rcc)) {
-            return TRUE;
+            ret = TRUE;
+            break;
         }
         if (red_get_monotonic_time() > end_time) {
             spice_warning("timeout");
@@ -1216,7 +1219,8 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
         }
         usleep(DISPLAY_CLIENT_RETRY_INTERVAL);
     }
-    return FALSE;
+    red_channel_client_unref(rcc);
+    return ret;
 }
 
 void display_channel_flush_all_surfaces(DisplayChannel *display)

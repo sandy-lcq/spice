@@ -116,8 +116,6 @@ static inline int red_channel_client_waiting_for_ack(RedChannelClient *rcc);
 */
 static void red_channel_ref(RedChannel *channel);
 static void red_channel_unref(RedChannel *channel);
-static void red_channel_client_ref(RedChannelClient *rcc);
-static void red_channel_client_unref(RedChannelClient *rcc);
 
 static uint32_t full_header_get_msg_size(SpiceDataHeaderOpaque *header)
 {
@@ -1231,12 +1229,12 @@ static void red_channel_unref(RedChannel *channel)
     }
 }
 
-static void red_channel_client_ref(RedChannelClient *rcc)
+void red_channel_client_ref(RedChannelClient *rcc)
 {
     rcc->refs++;
 }
 
-static void red_channel_client_unref(RedChannelClient *rcc)
+void red_channel_client_unref(RedChannelClient *rcc)
 {
     if (!--rcc->refs) {
         spice_debug("destroy rcc=%p", rcc);

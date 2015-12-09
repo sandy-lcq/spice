@@ -418,6 +418,8 @@ int red_channel_is_waiting_for_migrate_data(RedChannel *channel);
 
 void red_channel_client_destroy(RedChannelClient *rcc);
 void red_channel_destroy(RedChannel *channel);
+void red_channel_client_ref(RedChannelClient *rcc);
+void red_channel_client_unref(RedChannelClient *rcc);
 
 int red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t cap);
 int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap);
