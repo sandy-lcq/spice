@@ -43,7 +43,7 @@ if test x"$ac_cv_prog_cc_c99" = xno; then
 fi
 AC_PROG_INSTALL
 AC_CANONICAL_HOST
-AC_PROG_LIBTOOL
+LT_INIT([disable-static])
 AM_PROG_CC_C_O
 AC_C_BIGENDIAN
 AC_PATH_PROGS(PYTHON, python2 python)
