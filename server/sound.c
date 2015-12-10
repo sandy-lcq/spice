@@ -1520,7 +1520,6 @@ void snd_attach_playback(SpicePlaybackInstance *sin)
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
     channel = red_channel_create_dummy(sizeof(RedChannel), SPICE_CHANNEL_PLAYBACK, 0);
 
-    channel->data = playback_worker;
     client_cbs.connect = snd_set_playback_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_playback_migrate_channel_client;
@@ -1551,7 +1550,6 @@ void snd_attach_record(SpiceRecordInstance *sin)
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
     channel = red_channel_create_dummy(sizeof(RedChannel), SPICE_CHANNEL_RECORD, 0);
 
-    channel->data = record_worker;
     client_cbs.connect = snd_set_record_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_record_migrate_channel_client;
