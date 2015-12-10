@@ -29,7 +29,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <limits.h>
-#include <time.h>
 #include <pthread.h>
 #include <sys/mman.h>
 #include <fcntl.h>
