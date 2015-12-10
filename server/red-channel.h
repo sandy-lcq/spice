@@ -363,7 +363,7 @@ RedChannel *red_channel_create(int size,
                                uint32_t type, uint32_t id,
                                int handle_acks,
                                channel_handle_message_proc handle_message,
-                               ChannelCbs *channel_cbs,
+                               const ChannelCbs *channel_cbs,
                                uint32_t migration_flags);
 
 /* alternative constructor, meant for marshaller based (inputs,main) channels,
@@ -374,11 +374,11 @@ RedChannel *red_channel_create_parser(int size,
                                int handle_acks,
                                spice_parse_channel_func_t parser,
                                channel_handle_parsed_proc handle_parsed,
-                               ChannelCbs *channel_cbs,
+                               const ChannelCbs *channel_cbs,
                                uint32_t migration_flags);
 void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat);
 
-void red_channel_register_client_cbs(RedChannel *channel, ClientCbs *client_cbs);
+void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs);
 // caps are freed when the channel is destroyed
 void red_channel_set_common_cap(RedChannel *channel, uint32_t cap);
 void red_channel_set_cap(RedChannel *channel, uint32_t cap);
