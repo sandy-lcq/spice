@@ -971,22 +971,17 @@ void red_dispatcher_async_complete(struct RedDispatcher *dispatcher,
     pthread_mutex_unlock(&dispatcher->async_lock);
     switch (async_command->message) {
     case RED_WORKER_MESSAGE_UPDATE_ASYNC:
-        break;
     case RED_WORKER_MESSAGE_ADD_MEMSLOT_ASYNC:
-        break;
     case RED_WORKER_MESSAGE_DESTROY_SURFACES_ASYNC:
+    case RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT_ASYNC:
+    case RED_WORKER_MESSAGE_FLUSH_SURFACES_ASYNC:
+    case RED_WORKER_MESSAGE_MONITORS_CONFIG_ASYNC:
         break;
     case RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC:
         red_dispatcher_create_primary_surface_complete(dispatcher);
         break;
     case RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE_ASYNC:
         red_dispatcher_destroy_primary_surface_complete(dispatcher);
-        break;
-    case RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT_ASYNC:
-        break;
-    case RED_WORKER_MESSAGE_FLUSH_SURFACES_ASYNC:
-        break;
-    case RED_WORKER_MESSAGE_MONITORS_CONFIG_ASYNC:
         break;
     default:
         spice_warning("unexpected message %d", async_command->message);
