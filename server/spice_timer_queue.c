@@ -20,6 +20,7 @@
 #include "red-common.h"
 #include "spice_timer_queue.h"
 #include "common/ring.h"
+#include "utils.h"
 
 static Ring timer_queue_list;
 static int queue_count = 0;
@@ -178,13 +179,9 @@ static void _spice_timer_set(SpiceTimer *timer, uint32_t ms, uint64_t now)
 
 void spice_timer_set(SpiceTimer *timer, uint32_t ms)
 {
-    struct timespec now;
-
     spice_assert(pthread_equal(timer->queue->thread, pthread_self()) != 0);
 
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    _spice_timer_set(timer, ms,
-                     (uint64_t)now.tv_sec * 1000 + (now.tv_nsec / 1000 / 1000));
+    _spice_timer_set(timer, ms, spice_get_monotonic_time_ms());
 }
 
 void spice_timer_cancel(SpiceTimer *timer)
@@ -217,7 +214,6 @@ void spice_timer_remove(SpiceTimer *timer)
 
 unsigned int spice_timer_queue_get_timeout_ms(void)
 {
-    struct timespec now;
     int64_t now_ms;
     RingItem *head;
     SpiceTimer *head_timer;
@@ -232,8 +228,7 @@ unsigned int spice_timer_queue_get_timeout_ms(void)
     head = ring_get_head(&queue->active_timers);
     head_timer = SPICE_CONTAINEROF(head, SpiceTimer, active_link);
 
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    now_ms = ((int64_t)now.tv_sec * 1000) + (now.tv_nsec / 1000 / 1000);
+    now_ms = spice_get_monotonic_time_ms();
 
     return MAX(0, ((int64_t)head_timer->expiry_time - now_ms));
 }
@@ -241,7 +236,6 @@ unsigned int spice_timer_queue_get_timeout_ms(void)
 
 void spice_timer_queue_cb(void)
 {
-    struct timespec now;
     uint64_t now_ms;
     RingItem *head;
     SpiceTimerQueue *queue = spice_timer_queue_find_with_lock();
@@ -252,8 +246,7 @@ void spice_timer_queue_cb(void)
         return;
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    now_ms = ((uint64_t)now.tv_sec * 1000) + (now.tv_nsec / 1000 / 1000);
+    now_ms = spice_get_monotonic_time_ms();
 
     while ((head = ring_get_head(&queue->active_timers))) {
         SpiceTimer *timer = SPICE_CONTAINEROF(head, SpiceTimer, active_link);
