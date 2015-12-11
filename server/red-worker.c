@@ -320,7 +320,7 @@ static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *r
             }
             display_channel_process_surface_cmd(worker->display_channel, &surface,
                                                 ext_cmd.group_id, FALSE);
-            // do not release resource as is released inside red_process_surface
+            // do not release resource as is released inside display_channel_process_surface_cmd
             red_put_surface_cmd(&surface);
             break;
         }
