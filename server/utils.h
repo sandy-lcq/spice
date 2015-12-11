@@ -59,6 +59,11 @@ static inline red_time_t spice_get_monotonic_time_ns(void)
     return (red_time_t) time.tv_sec * (1000 * 1000 * 1000) + time.tv_nsec;
 }
 
+static inline red_time_t spice_get_monotonic_time_ms(void)
+{
+    return g_get_monotonic_time() / 1000;
+}
+
 int rgb32_data_has_alpha(int width, int height, size_t stride,
                          uint8_t *data, int *all_set_out);
 

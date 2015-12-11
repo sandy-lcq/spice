@@ -29,7 +29,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <limits.h>
-#include <time.h>
 #include <pthread.h>
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -69,6 +68,7 @@
 #include "smartcard.h"
 #endif
 #include "reds-stream.h"
+#include "utils.h"
 
 #include "reds-private.h"
 
@@ -2882,9 +2882,7 @@ static void migrate_timeout(void *opaque)
 
 uint32_t reds_get_mm_time(void)
 {
-    struct timespec time_space;
-    clock_gettime(CLOCK_MONOTONIC, &time_space);
-    return time_space.tv_sec * 1000 + time_space.tv_nsec / 1000 / 1000;
+    return spice_get_monotonic_time_ms();
 }
 
 void reds_enable_mm_time(void)

@@ -18,8 +18,6 @@
 #ifndef REDS_PRIVATE_H
 #define REDS_PRIVATE_H
 
-#include <time.h>
-
 #include <spice/protocol.h>
 
 #define MIGRATE_TIMEOUT (1000 * 10) /* 10sec */
