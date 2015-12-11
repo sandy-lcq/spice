@@ -553,7 +553,7 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_PING, NULL);
     ping.id = rcc->latency_monitor.id;
-    ping.timestamp = red_get_monotonic_time();
+    ping.timestamp = spice_get_monotonic_time_ns();
     spice_marshall_msg_ping(rcc->send_data.marshaller, &ping);
     red_channel_client_begin_send_message(rcc);
 }
@@ -1432,7 +1432,7 @@ static void red_channel_client_restart_ping_timer(RedChannelClient *rcc)
 {
     uint64_t passed, timeout;
 
-    passed = red_get_monotonic_time();
+    passed = spice_get_monotonic_time_ns();
     passed = passed - rcc->latency_monitor.last_pong_time;
     passed /= 1000*1000;
     timeout = PING_TEST_IDLE_NET_TIMEOUT_MS;
@@ -1480,7 +1480,7 @@ static void red_channel_client_handle_pong(RedChannelClient *rcc, SpiceMsgPing *
         return;
     }
 
-    now = red_get_monotonic_time();
+    now = spice_get_monotonic_time_ns();
 
     if (rcc->latency_monitor.state == PING_STATE_WARMUP) {
         rcc->latency_monitor.state = PING_STATE_LATENCY;
@@ -2318,7 +2318,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
         return TRUE;
     }
     if (timeout != -1) {
-        end_time = red_get_monotonic_time() + timeout;
+        end_time = spice_get_monotonic_time_ns() + timeout;
     } else {
         end_time = UINT64_MAX;
     }
@@ -2329,7 +2329,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
         red_channel_client_receive(rcc);
         red_channel_client_send(rcc);
     } while ((blocked = red_channel_client_blocked(rcc)) &&
-             (timeout == -1 || red_get_monotonic_time() < end_time));
+             (timeout == -1 || spice_get_monotonic_time_ns() < end_time));
 
     if (blocked) {
         spice_warning("timeout");
@@ -2351,7 +2351,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     spice_info(NULL);
 
     if (timeout != -1) {
-        end_time = red_get_monotonic_time() + timeout;
+        end_time = spice_get_monotonic_time_ns() + timeout;
     } else {
         end_time = UINT64_MAX;
     }
@@ -2365,7 +2365,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     red_channel_client_push(rcc);
 
     while((item_in_pipe = ring_item_is_linked(&item->link)) &&
-          (timeout == -1 || red_get_monotonic_time() < end_time)) {
+          (timeout == -1 || spice_get_monotonic_time_ns() < end_time)) {
         usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
         red_channel_client_receive(rcc);
         red_channel_client_send(rcc);
@@ -2378,7 +2378,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         return FALSE;
     } else {
         return red_channel_client_wait_outgoing_item(rcc,
-                                                     timeout == -1 ? -1 : end_time - red_get_monotonic_time());
+                                                     timeout == -1 ? -1 : end_time - spice_get_monotonic_time_ns());
     }
 }
 
@@ -2390,7 +2390,7 @@ int red_channel_wait_all_sent(RedChannel *channel,
     int blocked = FALSE;
 
     if (timeout != -1) {
-        end_time = red_get_monotonic_time() + timeout;
+        end_time = spice_get_monotonic_time_ns() + timeout;
     } else {
         end_time = UINT64_MAX;
     }
@@ -2398,7 +2398,7 @@ int red_channel_wait_all_sent(RedChannel *channel,
     red_channel_push(channel);
     while (((max_pipe_size = red_channel_max_pipe_size(channel)) ||
            (blocked = red_channel_any_blocked(channel))) &&
-           (timeout == -1 || red_get_monotonic_time() < end_time)) {
+           (timeout == -1 || spice_get_monotonic_time_ns() < end_time)) {
         spice_debug("pipe-size %u blocked %d", max_pipe_size, blocked);
         usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
         red_channel_receive(channel);

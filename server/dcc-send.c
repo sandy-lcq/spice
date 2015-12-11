@@ -1689,7 +1689,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     }
 
     StreamAgent *agent = &dcc->stream_agents[get_stream_id(display, stream)];
-    uint64_t time_now = red_get_monotonic_time();
+    uint64_t time_now = spice_get_monotonic_time_ns();
     size_t outbuf_size;
 
     if (!dcc->use_mjpeg_encoder_rate_control) {

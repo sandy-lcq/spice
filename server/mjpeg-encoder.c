@@ -716,7 +716,7 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
         uint64_t now;
         uint64_t interval;
 
-        now = red_get_monotonic_time();
+        now = spice_get_monotonic_time_ns();
 
         if (!rate_control->adjusted_fps_start_time) {
             rate_control->adjusted_fps_start_time = now;
@@ -995,7 +995,7 @@ static void mjpeg_encoder_decrease_bit_rate(MJpegEncoder *encoder)
     if (rate_control->warmup_start_time) {
         uint64_t now;
 
-        now = red_get_monotonic_time();
+        now = spice_get_monotonic_time_ns();
         if (now - rate_control->warmup_start_time < MJPEG_WARMUP_TIME) {
             spice_debug("during warmup. ignoring");
             return;
@@ -1351,7 +1351,7 @@ MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
         encoder->rate_control.during_quality_eval = TRUE;
         encoder->rate_control.quality_eval_data.type = MJPEG_QUALITY_EVAL_TYPE_SET;
         encoder->rate_control.quality_eval_data.reason = MJPEG_QUALITY_EVAL_REASON_RATE_CHANGE;
-        encoder->rate_control.warmup_start_time = red_get_monotonic_time();
+        encoder->rate_control.warmup_start_time = spice_get_monotonic_time_ns();
     } else {
         encoder->cbs.get_roundtrip_ms = NULL;
         mjpeg_encoder_reset_quality(encoder, MJPEG_LEGACY_STATIC_QUALITY_ID, MJPEG_MAX_FPS, 0);

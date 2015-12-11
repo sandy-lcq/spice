@@ -902,7 +902,7 @@ void stream_timeout(DisplayChannel *display)
     Ring *ring = &display->streams;
     RingItem *item;
 
-    red_time_t now = red_get_monotonic_time();
+    red_time_t now = spice_get_monotonic_time_ns();
     item = ring_get_head(ring);
     while (item) {
         Stream *stream = SPICE_CONTAINEROF(item, Stream, link);

@@ -415,7 +415,7 @@ static void dcc_create_all_streams(DisplayChannelClient *dcc)
 static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
 {
     dcc->expect_init = TRUE;
-    uint64_t end_time = red_get_monotonic_time() + DISPLAY_CLIENT_TIMEOUT;
+    uint64_t end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_TIMEOUT;
     for (;;) {
         red_channel_client_receive(RED_CHANNEL_CLIENT(dcc));
         if (!red_channel_client_is_connected(RED_CHANNEL_CLIENT(dcc))) {
@@ -431,7 +431,7 @@ static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
             }
             return TRUE;
         }
-        if (red_get_monotonic_time() > end_time) {
+        if (spice_get_monotonic_time_ns() > end_time) {
             spice_warning("timeout");
             red_channel_client_disconnect(RED_CHANNEL_CLIENT(dcc));
             break;

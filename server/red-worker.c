@@ -228,7 +228,7 @@ static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *r
 {
     QXLCommandExt ext_cmd;
     int n = 0;
-    uint64_t start = red_get_monotonic_time();
+    uint64_t start = spice_get_monotonic_time_ns();
 
     if (!worker->running) {
         *ring_is_empty = TRUE;
@@ -330,7 +330,7 @@ static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *r
         n++;
         if ((worker->display_channel &&
              red_channel_all_blocked(&worker->display_channel->common.base))
-            || red_get_monotonic_time() - start > 10 * 1000 * 1000) {
+            || spice_get_monotonic_time_ns() - start > 10 * 1000 * 1000) {
             worker->event_timeout = 0;
             return n;
         }
@@ -397,7 +397,7 @@ static void flush_display_commands(RedWorker *worker)
         if (ring_is_empty) {
             break;
         }
-        end_time = red_get_monotonic_time() + DISPLAY_CLIENT_TIMEOUT;
+        end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
             red_channel_push(RED_CHANNEL(worker->display_channel));
@@ -410,7 +410,7 @@ static void flush_display_commands(RedWorker *worker)
             red_channel_send(channel);
             // TODO: MC: the whole timeout will break since it takes lowest timeout, should
             // do it client by client.
-            if (red_get_monotonic_time() >= end_time) {
+            if (spice_get_monotonic_time_ns() >= end_time) {
                 spice_warning("update timeout");
                 red_disconnect_all_display_TODO_remove_me(channel);
             } else {
@@ -441,7 +441,7 @@ static void flush_cursor_commands(RedWorker *worker)
         if (ring_is_empty) {
             break;
         }
-        end_time = red_get_monotonic_time() + DISPLAY_CLIENT_TIMEOUT;
+        end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
             red_channel_push(RED_CHANNEL(worker->cursor_channel));
@@ -452,7 +452,7 @@ static void flush_cursor_commands(RedWorker *worker)
             RedChannel *channel = (RedChannel *)worker->cursor_channel;
             red_channel_receive(channel);
             red_channel_send(channel);
-            if (red_get_monotonic_time() >= end_time) {
+            if (spice_get_monotonic_time_ns() >= end_time) {
                 spice_warning("flush cursor timeout");
                 cursor_channel_disconnect(worker->cursor_channel);
                 worker->cursor_channel = NULL;

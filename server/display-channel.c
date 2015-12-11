@@ -181,7 +181,7 @@ int display_channel_get_streams_timeout(DisplayChannel *display)
     Ring *ring = &display->streams;
     RingItem *item = ring;
 
-    red_time_t now = red_get_monotonic_time();
+    red_time_t now = spice_get_monotonic_time_ns();
     while ((item = ring_next(ring, item))) {
         Stream *stream;
 
@@ -1187,7 +1187,7 @@ void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_draw
 
 int display_channel_wait_for_migrate_data(DisplayChannel *display)
 {
-    uint64_t end_time = red_get_monotonic_time() + DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT;
+    uint64_t end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT;
     RedChannel *channel = &display->common.base;
     RedChannelClient *rcc;
     int ret = FALSE;
@@ -1212,7 +1212,7 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
             ret = TRUE;
             break;
         }
-        if (red_get_monotonic_time() > end_time) {
+        if (spice_get_monotonic_time_ns() > end_time) {
             spice_warning("timeout");
             red_channel_client_disconnect(rcc);
             break;
@@ -1371,7 +1371,7 @@ Drawable *display_channel_drawable_try_new(DisplayChannel *display,
 
     bzero(drawable, sizeof(Drawable));
     drawable->refs = 1;
-    drawable->creation_time = drawable->first_frame_time = red_get_monotonic_time();
+    drawable->creation_time = drawable->first_frame_time = spice_get_monotonic_time_ns();
     ring_item_init(&drawable->list_link);
     ring_item_init(&drawable->surface_list_link);
     ring_item_init(&drawable->tree_item.base.siblings_link);

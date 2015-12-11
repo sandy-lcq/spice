@@ -588,7 +588,7 @@ static void main_channel_marshall_notify(RedChannelClient *rcc,
     SpiceMsgNotify notify;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_NOTIFY, &item->base);
-    notify.time_stamp = red_get_monotonic_time(); // TODO - move to main_new_notify_item
+    notify.time_stamp = spice_get_monotonic_time_ns(); // TODO - move to main_new_notify_item
     notify.severity = SPICE_NOTIFY_SEVERITY_WARN;
     notify.visibilty = SPICE_NOTIFY_VISIBILITY_HIGH;
     notify.what = SPICE_WARN_GENERAL;
