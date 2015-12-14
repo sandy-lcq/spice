@@ -53,7 +53,7 @@ static GAsyncQueue *aqueue = NULL;
 static long total_size;
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static guint fill_source_id = 0;
+static GSource *fill_source = NULL;
 
 
 #define MEM_SLOT_GROUP_ID 0
@@ -125,7 +125,11 @@ static gboolean fill_queue_idle(gpointer user_data)
 end:
     if (!keep) {
         pthread_mutex_lock(&mutex);
-        fill_source_id = 0;
+        if (fill_source) {
+            g_source_destroy(fill_source);
+            g_source_unref(fill_source);
+            fill_source = NULL;
+        }
         pthread_mutex_unlock(&mutex);
     }
     spice_qxl_wakeup(&display_sin);
@@ -140,10 +144,12 @@ static void fill_queue(void)
     if (!started)
         goto end;
 
-    if (fill_source_id != 0)
+    if (fill_source)
         goto end;
 
-    fill_source_id = g_idle_add(fill_queue_idle, NULL);
+    fill_source = g_idle_source_new();
+    g_source_set_callback(fill_source, fill_queue_idle, NULL, NULL);
+    g_source_attach(fill_source, basic_event_loop_get_context());
 
 end:
     pthread_mutex_unlock(&mutex);
@@ -178,7 +184,7 @@ static int req_cmd_notification(QXLInstance *qin)
         return TRUE;
 
     g_printerr("id: %d, queue length: %d",
-                   fill_source_id, g_async_queue_length(aqueue));
+                   g_source_get_id(fill_source), g_async_queue_length(aqueue));
 
     return TRUE;
 }
@@ -392,7 +398,7 @@ int main(int argc, char **argv)
         fill_queue();
     }
 
-    loop = g_main_loop_new(NULL, FALSE);
+    loop = g_main_loop_new(basic_event_loop_get_context(), FALSE);
     g_main_loop_run(loop);
 
     end_replay();

@@ -19,7 +19,9 @@
 #define __BASIC_EVENT_LOOP_H__
 
 #include <spice.h>
+#include <glib.h>
 
+GMainContext *basic_event_loop_get_context(void);
 SpiceCoreInterface *basic_event_loop_init(void);
 void basic_event_loop_mainloop(void);
 

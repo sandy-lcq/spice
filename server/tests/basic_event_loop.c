@@ -21,7 +21,6 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <string.h>
-#include <glib.h>
 
 #include "spice/macros.h"
 #include "common/ring.h"
@@ -36,10 +35,17 @@ int debug = 0;
     } \
 }
 
+static GMainContext *main_context = NULL;
+
+GMainContext *basic_event_loop_get_context(void)
+{
+    return main_context;
+}
+
 struct SpiceTimer {
     SpiceTimerFunc func;
     void *opaque;
-    guint source_id;
+    GSource *source;
 };
 
 static SpiceTimer* timer_add(SpiceTimerFunc func, void *opaque)
@@ -56,7 +62,6 @@ static gboolean timer_func(gpointer user_data)
 {
     SpiceTimer *timer = user_data;
 
-    timer->source_id = 0;
     timer->func(timer->opaque);
     /* timer might be free after func(), don't touch */
 
@@ -65,34 +70,40 @@ static gboolean timer_func(gpointer user_data)
 
 static void timer_cancel(SpiceTimer *timer)
 {
-    if (timer->source_id == 0)
-        return;
-
-    g_source_remove(timer->source_id);
-    timer->source_id = 0;
+    if (timer->source) {
+        g_source_destroy(timer->source);
+        g_source_unref(timer->source);
+        timer->source = NULL;
+    }
 }
 
 static void timer_start(SpiceTimer *timer, uint32_t ms)
 {
     timer_cancel(timer);
 
-    timer->source_id = g_timeout_add(ms, timer_func, timer);
+    timer->source = g_timeout_source_new(ms);
+    spice_assert(timer->source != NULL);
+
+    g_source_set_callback(timer->source, timer_func, timer, NULL);
+
+    g_source_attach(timer->source, main_context);
 }
 
 static void timer_remove(SpiceTimer *timer)
 {
     timer_cancel(timer);
+    spice_assert(timer->source == NULL);
     free(timer);
 }
 
 struct SpiceWatch {
     void *opaque;
-    guint source_id;
+    GSource *source;
     GIOChannel *channel;
     SpiceWatchFunc func;
 };
 
-static GIOCondition spice_event_to_condition(int event_mask)
+static GIOCondition spice_event_to_giocondition(int event_mask)
 {
     GIOCondition condition = 0;
 
@@ -104,7 +115,7 @@ static GIOCondition spice_event_to_condition(int event_mask)
     return condition;
 }
 
-static int condition_to_spice_event(GIOCondition condition)
+static int giocondition_to_spice_event(GIOCondition condition)
 {
     int event = 0;
 
@@ -122,37 +133,49 @@ static gboolean watch_func(GIOChannel *source, GIOCondition condition,
     SpiceWatch *watch = data;
     int fd = g_io_channel_unix_get_fd(source);
 
-    watch->func(fd, condition_to_spice_event(condition), watch->opaque);
+    watch->func(fd, giocondition_to_spice_event(condition), watch->opaque);
 
     return TRUE;
+}
+
+static void watch_update_mask(SpiceWatch *watch, int event_mask)
+{
+    if (watch->source) {
+        g_source_destroy(watch->source);
+        g_source_unref(watch->source);
+        watch->source = NULL;
+    }
+
+    if (!event_mask)
+        return;
+
+    watch->source = g_io_create_watch(watch->channel, spice_event_to_giocondition(event_mask));
+    g_source_set_callback(watch->source, (GSourceFunc)watch_func, watch, NULL);
+    g_source_attach(watch->source, main_context);
 }
 
 static SpiceWatch *watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
     SpiceWatch *watch;
-    GIOCondition condition = spice_event_to_condition(event_mask);
+
+    spice_return_val_if_fail(fd != -1, NULL);
+    spice_return_val_if_fail(func != NULL, NULL);
 
     watch = spice_malloc0(sizeof(SpiceWatch));
     watch->channel = g_io_channel_unix_new(fd);
-    watch->source_id = g_io_add_watch(watch->channel, condition, watch_func, watch);
     watch->func = func;
     watch->opaque = opaque;
+
+    watch_update_mask(watch, event_mask);
 
     return watch;
 }
 
-static void watch_update_mask(SpiceWatch *watch, int event_mask)
-{
-    GIOCondition condition = spice_event_to_condition(event_mask);
-
-    g_source_remove(watch->source_id);
-    if (condition != 0)
-        watch->source_id = g_io_add_watch(watch->channel, condition, watch_func, watch);
-}
-
 static void watch_remove(SpiceWatch *watch)
 {
-    g_source_remove(watch->source_id);
+    watch_update_mask(watch, 0);
+    spice_assert(watch->source == NULL);
+
     g_io_channel_unref(watch->channel);
     free(watch);
 }
@@ -165,7 +188,7 @@ static void channel_event(int event, SpiceChannelEventInfo *info)
 
 void basic_event_loop_mainloop(void)
 {
-    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+    GMainLoop *loop = g_main_loop_new(main_context, FALSE);
 
     g_main_loop_run(loop);
     g_main_loop_unref(loop);
@@ -199,5 +222,7 @@ static SpiceCoreInterface core = {
 SpiceCoreInterface *basic_event_loop_init(void)
 {
     ignore_sigpipe();
+    spice_assert(main_context == NULL);
+    main_context = g_main_context_new();
     return &core;
 }
