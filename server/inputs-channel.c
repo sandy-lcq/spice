@@ -42,6 +42,7 @@
 #include "main-channel.h"
 #include "inputs-channel.h"
 #include "migration-protocol.h"
+#include "utils.h"
 
 // TODO: RECEIVE_BUF_SIZE used to be the same for inputs_channel and main_channel
 // since it was defined once in reds.c which contained both.
@@ -111,7 +112,7 @@ static SpiceTimer *key_modifiers_timer;
 
 static InputsChannel *g_inputs_channel = NULL;
 
-#define KEY_MODIFIERS_TTL (1000 * 2) /*2sec*/
+#define KEY_MODIFIERS_TTL (MSEC_PER_SEC * 2)
 
 #define SCROLL_LOCK_SCAN_CODE 0x46
 #define NUM_LOCK_SCAN_CODE 0x45

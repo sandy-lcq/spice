@@ -59,7 +59,7 @@ static const int mjpeg_quality_samples[MJPEG_QUALITY_SAMPLE_NUM] = {20, 30, 40, 
  * avoid interrupting the playback when there are temporary
  * incidents of instability (with respect to server and client drops)
  */
-#define MJPEG_MAX_CLIENT_PLAYBACK_DELAY 5000 // 5 sec
+#define MJPEG_MAX_CLIENT_PLAYBACK_DELAY (MSEC_PER_SEC * 5)
 
 /*
  * The stream starts after lossless frames were sent to the client,
@@ -663,11 +663,11 @@ static void mjpeg_encoder_adjust_fps(MJpegEncoder *encoder, uint64_t now)
 
     if (!rate_control->during_quality_eval &&
         adjusted_fps_time_passed > MJPEG_ADJUST_FPS_TIMEOUT &&
-        adjusted_fps_time_passed > 1000 / rate_control->adjusted_fps) {
+        adjusted_fps_time_passed > MSEC_PER_SEC / rate_control->adjusted_fps) {
         double avg_fps;
         double fps_ratio;
 
-        avg_fps = ((double)rate_control->adjusted_fps_num_frames*1000) /
+        avg_fps = ((double)rate_control->adjusted_fps_num_frames * MSEC_PER_SEC) /
                   adjusted_fps_time_passed;
         spice_debug("#frames-adjust=%"PRIu64" #adjust-time=%"PRIu64" avg-fps=%.2f",
                     rate_control->adjusted_fps_num_frames, adjusted_fps_time_passed, avg_fps);
@@ -1165,7 +1165,7 @@ static uint32_t get_min_required_playback_delay(uint64_t frame_enc_size,
     if (!frame_enc_size || !byte_rate) {
         return latency;
     }
-    one_frame_time = (frame_enc_size*1000)/byte_rate;
+    one_frame_time = (frame_enc_size * MSEC_PER_SEC) / byte_rate;
 
     min_delay = MIN(one_frame_time*2 + latency, MJPEG_MAX_CLIENT_PLAYBACK_DELAY);
     return min_delay;

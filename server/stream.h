@@ -36,7 +36,7 @@
 #define RED_STREAM_CHANNEL_CAPACITY 0.8
 /* the client's stream report frequency is the minimum of the 2 values below */
 #define RED_STREAM_CLIENT_REPORT_WINDOW 5 // #frames
-#define RED_STREAM_CLIENT_REPORT_TIMEOUT 1000 // milliseconds
+#define RED_STREAM_CLIENT_REPORT_TIMEOUT MSEC_PER_SEC
 #define RED_STREAM_DEFAULT_HIGH_START_BIT_RATE (10 * 1024 * 1024) // 10Mbps
 #define RED_STREAM_DEFAULT_LOW_START_BIT_RATE (2.5 * 1024 * 1024) // 2.5Mbps
 #define MAX_FPS 30

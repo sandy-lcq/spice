@@ -50,8 +50,8 @@ typedef struct EmptyMsgPipeItem {
     int msg;
 } EmptyMsgPipeItem;
 
-#define PING_TEST_TIMEOUT_MS 15000
-#define PING_TEST_IDLE_NET_TIMEOUT_MS 100
+#define PING_TEST_TIMEOUT_MS (MSEC_PER_SEC * 15)
+#define PING_TEST_IDLE_NET_TIMEOUT_MS (MSEC_PER_SEC / 10)
 
 #define CHANNEL_BLOCKED_SLEEP_DURATION 10000 //micro
 

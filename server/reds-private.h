@@ -20,7 +20,7 @@
 
 #include <spice/protocol.h>
 
-#define MIGRATE_TIMEOUT (1000 * 10) /* 10sec */
+#define MIGRATE_TIMEOUT (MSEC_PER_SEC * 10)
 #define MM_TIME_DELTA 400 /*ms*/
 
 typedef struct TicketAuthentication {

@@ -53,9 +53,9 @@
 #define NET_TEST_WARMUP_BYTES 0
 #define NET_TEST_BYTES (1024 * 250)
 
-#define PING_INTERVAL (1000 * 10)
+#define PING_INTERVAL (MSEC_PER_SEC * 10)
 
-#define CLIENT_CONNECTIVITY_TIMEOUT (30*1000) // 30 seconds
+#define CLIENT_CONNECTIVITY_TIMEOUT (MSEC_PER_SEC * 30)
 
 static uint8_t zero_page[ZERO_BUF_SIZE] = {0};
 
@@ -1050,7 +1050,7 @@ static void do_ping_client(MainChannelClient *mcc,
         main_channel_client_push_ping(mcc, 0);
     } else if (!strcmp(opt, "on")) {
         if (has_interval && interval > 0) {
-            mcc->ping_interval = interval * 1000;
+            mcc->ping_interval = interval * MSEC_PER_SEC;
         }
         core->timer_start(mcc->ping_timer, mcc->ping_interval);
     } else if (!strcmp(opt, "off")) {

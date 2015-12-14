@@ -62,6 +62,8 @@ static inline red_time_t spice_get_monotonic_time_ns(void)
     return NSEC_PER_SEC * time.tv_sec + time.tv_nsec;
 }
 
+#define MSEC_PER_SEC 1000
+
 static inline red_time_t spice_get_monotonic_time_ms(void)
 {
     return g_get_monotonic_time() / 1000;
