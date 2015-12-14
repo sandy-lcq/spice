@@ -549,7 +549,7 @@ void cursor_channel_reset(CursorChannel *cursor)
             red_pipes_add_verb(channel, SPICE_MSG_CURSOR_RESET);
         }
         if (!red_channel_wait_all_sent(&cursor->common.base,
-                                       DISPLAY_CLIENT_TIMEOUT)) {
+                                       COMMON_CLIENT_TIMEOUT)) {
             red_channel_apply_clients(channel,
                                       red_channel_client_disconnect_if_pending_send);
         }

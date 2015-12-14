@@ -397,7 +397,7 @@ static void flush_display_commands(RedWorker *worker)
         if (ring_is_empty) {
             break;
         }
-        end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_TIMEOUT;
+        end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
             red_channel_push(RED_CHANNEL(worker->display_channel));
@@ -441,7 +441,7 @@ static void flush_cursor_commands(RedWorker *worker)
         if (ring_is_empty) {
             break;
         }
-        end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_TIMEOUT;
+        end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
             red_channel_push(RED_CHANNEL(worker->cursor_channel));
@@ -952,12 +952,12 @@ static void handle_dev_stop(void *opaque, void *payload)
      * to the client (there is no such message right now), and start
      * from scratch on the destination side */
     if (!red_channel_wait_all_sent(RED_CHANNEL(worker->display_channel),
-                                   DISPLAY_CLIENT_TIMEOUT)) {
+                                   COMMON_CLIENT_TIMEOUT)) {
         red_channel_apply_clients(RED_CHANNEL(worker->display_channel),
                                  red_channel_client_disconnect_if_pending_send);
     }
     if (!red_channel_wait_all_sent(RED_CHANNEL(worker->cursor_channel),
-                                   DISPLAY_CLIENT_TIMEOUT)) {
+                                   COMMON_CLIENT_TIMEOUT)) {
         red_channel_apply_clients(RED_CHANNEL(worker->cursor_channel),
                                  red_channel_client_disconnect_if_pending_send);
     }

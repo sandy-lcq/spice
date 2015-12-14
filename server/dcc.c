@@ -123,7 +123,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
 
     if (item) {
         return red_channel_client_wait_pipe_item_sent(RED_CHANNEL_CLIENT(dcc), item,
-                                                      DISPLAY_CLIENT_TIMEOUT);
+                                                      COMMON_CLIENT_TIMEOUT);
     } else {
         /*
          * in case that the pipe didn't contain any item that is dependent on the surface, but
@@ -415,7 +415,7 @@ static void dcc_create_all_streams(DisplayChannelClient *dcc)
 static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
 {
     dcc->expect_init = TRUE;
-    uint64_t end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_TIMEOUT;
+    uint64_t end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
     for (;;) {
         red_channel_client_receive(RED_CHANNEL_CLIENT(dcc));
         if (!red_channel_client_is_connected(RED_CHANNEL_CLIENT(dcc))) {
