@@ -50,13 +50,16 @@ static inline int test_bit(int index, uint32_t val)
 
 typedef int64_t red_time_t;
 
+#define NSEC_PER_SEC      1000000000LL
+#define NSEC_PER_MILLISEC 1000000LL
+
 /* FIXME: consider g_get_monotonic_time (), but in microseconds */
 static inline red_time_t spice_get_monotonic_time_ns(void)
 {
     struct timespec time;
 
     clock_gettime(CLOCK_MONOTONIC, &time);
-    return (red_time_t) time.tv_sec * (1000 * 1000 * 1000) + time.tv_nsec;
+    return NSEC_PER_SEC * time.tv_sec + time.tv_nsec;
 }
 
 static inline red_time_t spice_get_monotonic_time_ms(void)

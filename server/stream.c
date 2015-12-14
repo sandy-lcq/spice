@@ -430,8 +430,8 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
      * the nearest integer, for instance 24 for 23.976.
      */
     uint64_t duration = drawable->creation_time - drawable->first_frame_time;
-    if (duration > (uint64_t)drawable->frames_count * 1000 * 1000 * 1000 / MAX_FPS) {
-        stream->input_fps = ((uint64_t)drawable->frames_count * 1000 * 1000 * 1000 + duration / 2) / duration;
+    if (duration > NSEC_PER_SEC * drawable->frames_count / MAX_FPS) {
+        stream->input_fps = (NSEC_PER_SEC * drawable->frames_count + duration / 2) / duration;
     } else {
         stream->input_fps = MAX_FPS;
     }

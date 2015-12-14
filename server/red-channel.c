@@ -1370,7 +1370,7 @@ int red_channel_client_get_roundtrip_ms(RedChannelClient *rcc)
     if (rcc->latency_monitor.roundtrip < 0) {
         return rcc->latency_monitor.roundtrip;
     }
-    return rcc->latency_monitor.roundtrip / 1000 / 1000;
+    return rcc->latency_monitor.roundtrip / NSEC_PER_MILLISEC;
 }
 
 static void red_channel_client_init_outgoing_messages_window(RedChannelClient *rcc)
@@ -1432,9 +1432,7 @@ static void red_channel_client_restart_ping_timer(RedChannelClient *rcc)
 {
     uint64_t passed, timeout;
 
-    passed = spice_get_monotonic_time_ns();
-    passed = passed - rcc->latency_monitor.last_pong_time;
-    passed /= 1000*1000;
+    passed = (spice_get_monotonic_time_ns() - rcc->latency_monitor.last_pong_time) / NSEC_PER_MILLISEC;
     timeout = PING_TEST_IDLE_NET_TIMEOUT_MS;
     if (passed  < PING_TEST_TIMEOUT_MS) {
         timeout += PING_TEST_TIMEOUT_MS - passed;
@@ -1511,7 +1509,7 @@ static void red_channel_client_handle_pong(RedChannelClient *rcc, SpiceMsgPing *
     if (rcc->latency_monitor.roundtrip < 0 ||
         now - ping->timestamp < rcc->latency_monitor.roundtrip) {
         rcc->latency_monitor.roundtrip = now - ping->timestamp;
-        spice_debug("update roundtrip %.2f(ms)", rcc->latency_monitor.roundtrip/1000.0/1000.0);
+        spice_debug("update roundtrip %.2f(ms)", ((double)rcc->latency_monitor.roundtrip)/NSEC_PER_MILLISEC);
     }
 
     rcc->latency_monitor.last_pong_time = now;

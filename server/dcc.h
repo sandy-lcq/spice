@@ -31,7 +31,7 @@
 #define PALETTE_CACHE_HASH_KEY(id) ((id) & PALETTE_CACHE_HASH_MASK)
 #define CLIENT_PALETTE_CACHE_SIZE 128
 
-#define DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT 10000000000ULL //nano, 10 sec
+#define DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT (NSEC_PER_SEC * 10)
 #define DISPLAY_CLIENT_RETRY_INTERVAL 10000 //micro
 
 /* Each drawable can refer to at most 3 images: src, brush and mask */

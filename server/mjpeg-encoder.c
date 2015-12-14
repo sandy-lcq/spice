@@ -68,7 +68,7 @@ static const int mjpeg_quality_samples[MJPEG_QUALITY_SAMPLE_NUM] = {20, 30, 40, 
  * are not necessarily related to mis-estimation of the bit rate, and we would
  * like to wait till the stream stabilizes.
  */
-#define MJPEG_WARMUP_TIME 3000000000LL // 3 sec
+#define MJPEG_WARMUP_TIME (NSEC_PER_SEC * 3)
 
 enum {
     MJPEG_QUALITY_EVAL_TYPE_SET,
@@ -659,7 +659,7 @@ static void mjpeg_encoder_adjust_fps(MJpegEncoder *encoder, uint64_t now)
 
     spice_assert(rate_control_is_active(encoder));
 
-    adjusted_fps_time_passed = (now - rate_control->adjusted_fps_start_time) / 1000 / 1000;
+    adjusted_fps_time_passed = (now - rate_control->adjusted_fps_start_time) / NSEC_PER_MILLISEC;
 
     if (!rate_control->during_quality_eval &&
         adjusted_fps_time_passed > MJPEG_ADJUST_FPS_TIMEOUT &&
@@ -724,7 +724,7 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
         mjpeg_encoder_adjust_fps(encoder, now);
         interval = (now - rate_control->bit_rate_info.last_frame_time);
 
-        if (interval < (1000*1000*1000) / rate_control->adjusted_fps) {
+        if (interval < NSEC_PER_SEC / rate_control->adjusted_fps) {
             return MJPEG_ENCODER_FRAME_DROP;
         }
 
@@ -1009,7 +1009,7 @@ static void mjpeg_encoder_decrease_bit_rate(MJpegEncoder *encoder)
         double duration_sec;
 
         duration_sec = (bit_rate_info->last_frame_time - bit_rate_info->change_start_time);
-        duration_sec /= (1000.0 * 1000.0 * 1000.0);
+        duration_sec /= NSEC_PER_SEC;
         measured_byte_rate = bit_rate_info->sum_enc_size / duration_sec;
         measured_fps = bit_rate_info->num_enc_frames / duration_sec;
         decrease_size = bit_rate_info->sum_enc_size / bit_rate_info->num_enc_frames;
@@ -1078,7 +1078,7 @@ static void mjpeg_encoder_increase_bit_rate(MJpegEncoder *encoder)
         double duration_sec;
 
         duration_sec = (bit_rate_info->last_frame_time - bit_rate_info->change_start_time);
-        duration_sec /= (1000.0 * 1000.0 * 1000.0);
+        duration_sec /= NSEC_PER_SEC;
         measured_byte_rate = bit_rate_info->sum_enc_size / duration_sec;
         measured_fps = bit_rate_info->num_enc_frames / duration_sec;
         avg_frame_size = bit_rate_info->sum_enc_size / bit_rate_info->num_enc_frames;

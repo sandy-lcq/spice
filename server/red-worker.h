@@ -33,7 +33,7 @@ typedef struct CommonChannelClient {
 } CommonChannelClient;
 
 #define COMMON_CHANNEL_CLIENT(Client) ((CommonChannelClient*)(Client))
-#define COMMON_CLIENT_TIMEOUT 30000000000ULL //nano
+#define COMMON_CLIENT_TIMEOUT (NSEC_PER_SEC * 30)
 
 #define CHANNEL_RECEIVE_BUF_SIZE 1024
 typedef struct CommonChannel {
