@@ -198,7 +198,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
     if (*buf == NULL) {
         *buf = malloc(*size + base_size);
         if (*buf == NULL) {
-            spice_error("allocation error for %ld", *size);
+            spice_error("allocation error for %zu", *size);
             exit(1);
         }
     }
@@ -259,7 +259,7 @@ static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
     size_t next_data_size;
     QXLDataChunk *cur;
 
-    replay_fscanf(replay, "data_chunks %d %ld\n", &count_chunks, &data_size);
+    replay_fscanf(replay, "data_chunks %d %zu\n", &count_chunks, &data_size);
     if (base_size == 0) {
         base_size = sizeof(QXLDataChunk);
     }
@@ -407,7 +407,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         } else {
             size = red_replay_data_chunks(replay, "bitmap.data", (uint8_t**)&qxl->bitmap.data, 0);
             if (size != bitmap_size) {
-                spice_printerr("bad image, %ld != %ld", size, bitmap_size);
+                spice_printerr("bad image, %zu != %zu", size, bitmap_size);
                 return NULL;
             }
         }
@@ -1028,7 +1028,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
         if ((qxl->flags & QXL_SURF_FLAG_KEEP_DATA) != 0) {
             read_binary(replay, "data", &read_size, (uint8_t**)&qxl->u.surface_create.data, 0);
             if (read_size != size) {
-                spice_printerr("mismatch %ld != %ld", size, read_size);
+                spice_printerr("mismatch %zu != %zu", size, read_size);
             }
         } else {
             qxl->u.surface_create.data = (QXLPHYSICAL)malloc(size);
