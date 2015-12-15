@@ -25,6 +25,7 @@
 
 #include "spice/macros.h"
 #include "common/ring.h"
+#include "common/mem.h"
 #include "test_util.h"
 #include "basic_event_loop.h"
 
@@ -47,7 +48,7 @@ struct SpiceTimer {
 
 static SpiceTimer* timer_add(SpiceTimerFunc func, void *opaque)
 {
-    SpiceTimer *timer = calloc(sizeof(SpiceTimer), 1);
+    SpiceTimer *timer = spice_malloc0(sizeof(SpiceTimer));
 
     timer->func = func;
     timer->opaque = opaque;
@@ -85,7 +86,7 @@ static void timer_start(SpiceTimer *timer, uint32_t ms)
 static void timer_remove(SpiceTimer *timer)
 {
     timer_cancel(timer);
-    g_free(timer);
+    free(timer);
 }
 
 struct SpiceWatch {
@@ -135,7 +136,7 @@ static SpiceWatch *watch_add(int fd, int event_mask, SpiceWatchFunc func, void *
     SpiceWatch *watch;
     GIOCondition condition = spice_event_to_condition(event_mask);
 
-    watch = g_new(SpiceWatch, 1);
+    watch = spice_malloc0(sizeof(SpiceWatch));
     watch->channel = g_io_channel_unix_new(fd);
     watch->source_id = g_io_add_watch(watch->channel, condition, watch_func, watch);
     watch->func = func;
@@ -157,7 +158,7 @@ static void watch_remove(SpiceWatch *watch)
 {
     g_source_remove(watch->source_id);
     g_io_channel_unref(watch->channel);
-    g_free(watch);
+    free(watch);
 }
 
 static void channel_event(int event, SpiceChannelEventInfo *info)
