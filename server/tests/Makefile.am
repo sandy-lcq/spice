@@ -121,11 +121,9 @@ test_display_width_stride_SOURCES =		\
 	$(NULL)
 
 spice_server_replay_SOURCES = 			\
+	$(COMMON_BASE)				\
 	replay.c				\
 	test_display_base.h			\
-	basic_event_loop.c			\
-	basic_event_loop.h			\
-	test_util.h				\
 	$(NULL)
 
 stat_test_SOURCES = stat-main.c
