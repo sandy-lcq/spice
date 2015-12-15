@@ -236,6 +236,24 @@ int reds_stream_get_family(const RedsStream *s)
     return s->priv->info->laddr_ext.ss_family;
 }
 
+int reds_stream_is_plain_unix(const RedsStream *s)
+{
+    spice_return_val_if_fail(s != NULL, FALSE);
+
+    if (reds_stream_get_family(s) != AF_UNIX)
+        return FALSE;
+
+#if HAVE_SASL
+    if (s->priv->sasl.conn)
+        return FALSE;
+#endif
+    if (s->priv->ssl)
+        return FALSE;
+
+    return TRUE;
+
+}
+
 ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt)
 {
     int i;
