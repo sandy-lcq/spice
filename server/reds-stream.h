@@ -74,6 +74,7 @@ int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx);
 void reds_stream_set_info_flag(RedsStream *stream, unsigned int flag);
 int reds_stream_get_family(const RedsStream *stream);
 int reds_stream_is_plain_unix(const RedsStream *stream);
+int reds_stream_send_msgfd(RedsStream *stream, int fd);
 
 typedef enum {
     REDS_SASL_ERROR_OK,
