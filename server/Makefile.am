@@ -159,6 +159,7 @@ EXTRA_DIST =					\
 	cache-item.tmpl.c			\
 	glz-encode-match.tmpl.c			\
 	glz-encode.tmpl.c			\
+	event-loop.tmpl.c			\
 	spice-server.syms			\
 	$(NULL)
 
