@@ -29,7 +29,6 @@ LDADD =								\
 COMMON_BASE =					\
 	basic_event_loop.c			\
 	basic_event_loop.h			\
-	test_util.h				\
 	$(NULL)
 
 noinst_PROGRAMS =				\

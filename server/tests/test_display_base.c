@@ -32,7 +32,6 @@
 
 #include "test_display_base.h"
 #include "red-channel.h"
-#include "test_util.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -382,10 +381,10 @@ static void create_primary_surface(Test *test, uint32_t width,
 {
     QXLDevSurfaceCreate surface = { 0, };
 
-    ASSERT(height <= MAX_HEIGHT);
-    ASSERT(width <= MAX_WIDTH);
-    ASSERT(height > 0);
-    ASSERT(width > 0);
+    spice_assert(height <= MAX_HEIGHT);
+    spice_assert(width <= MAX_WIDTH);
+    spice_assert(height > 0);
+    spice_assert(width > 0);
 
     surface.format     = SPICE_SURFACE_FMT_32_xRGB;
     surface.width      = test->primary_width = width;
@@ -472,7 +471,7 @@ struct QXLCommandExt* commands[1024];
 
 static void push_command(QXLCommandExt *ext)
 {
-    ASSERT(commands_end - commands_start < (int) COMMANDS_SIZE);
+    spice_assert(commands_end - commands_start < (int) COMMANDS_SIZE);
     commands[commands_end % COMMANDS_SIZE] = ext;
     commands_end++;
 }
@@ -480,7 +479,7 @@ static void push_command(QXLCommandExt *ext)
 static struct QXLCommandExt *get_simple_command(void)
 {
     struct QXLCommandExt *ret = commands[commands_start % COMMANDS_SIZE];
-    ASSERT(commands_start < commands_end);
+    spice_assert(commands_start < commands_end);
     commands_start++;
     return ret;
 }
@@ -506,7 +505,7 @@ static void produce_command(Test *test)
     Command *command;
     QXLWorker *qxl_worker = test->qxl_worker;
 
-    ASSERT(qxl_worker);
+    spice_assert(qxl_worker);
 
     if (test->has_secondary)
         test->target_surface = 1;
@@ -583,9 +582,9 @@ static void produce_command(Test *test)
         case SIMPLE_CREATE_SURFACE: {
             SimpleSurfaceCmd *update;
             if (command->create_surface.data) {
-                ASSERT(command->create_surface.surface_id > 0);
-                ASSERT(command->create_surface.surface_id < MAX_SURFACE_NUM);
-                ASSERT(command->create_surface.surface_id == 1);
+                spice_assert(command->create_surface.surface_id > 0);
+                spice_assert(command->create_surface.surface_id < MAX_SURFACE_NUM);
+                spice_assert(command->create_surface.surface_id == 1);
                 update = create_surface(command->create_surface.surface_id,
                                         command->create_surface.format,
                                         command->create_surface.width,
@@ -649,7 +648,7 @@ static void release_resource(SPICE_GNUC_UNUSED QXLInstance *qin,
 {
     QXLCommandExt *ext = (QXLCommandExt*)(unsigned long)release_info.info->id;
     //printf("%s\n", __func__);
-    ASSERT(release_info.group_id == MEM_SLOT_GROUP_ID);
+    spice_assert(release_info.group_id == MEM_SLOT_GROUP_ID);
     switch (ext->cmd.type) {
         case QXL_CMD_DRAW:
             test_spice_destroy_update((void*)ext);
