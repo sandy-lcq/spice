@@ -42,12 +42,14 @@ noinst_PROGRAMS =				\
 	test_vdagent				\
 	test_display_width_stride		\
 	spice-server-replay			\
+	stream-test				\
 	stat_test \
 	$(NULL)
 
-TESTS =	\
+TESTS =						\
 	stat_test				\
 	test-qxl-parsing			\
+	stream-test				\
 	$(NULL)
 
 check_PROGRAMS = $(TESTS)
@@ -124,6 +126,12 @@ spice_server_replay_SOURCES = 			\
 	replay.c				\
 	test_display_base.h			\
 	$(NULL)
+
+stream_test_SOURCES =				\
+	$(COMMON_BASE)				\
+	stream-test.c				\
+	$(NULL)
+stream_test_LDADD = ../libserver.la
 
 stat_test_SOURCES = stat-main.c
 stat_test_LDADD = \

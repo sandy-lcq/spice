@@ -1,0 +1,118 @@
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <unistd.h>
+
+#include "common/log.h"
+#include "reds-stream.h"
+#include "basic_event_loop.h"
+
+static int server_init(void)
+{
+    SpiceCoreInterface *core = basic_event_loop_init();
+    SpiceServer *server = spice_server_new();
+
+    return spice_server_init(server, core);
+}
+
+
+/*
+ * Based on code from Keith Packard:
+ * http://keithp.com/blogs/fd-passing/
+ */
+static ssize_t
+sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
+{
+    ssize_t size;
+
+    if (fd) {
+        struct msghdr msg;
+        struct iovec iov;
+        union {
+            struct cmsghdr cmsghdr;
+            char control[CMSG_SPACE(sizeof (int))];
+        } cmsgu;
+        struct cmsghdr *cmsg;
+
+        iov.iov_base = buf;
+        iov.iov_len = bufsize;
+
+        msg.msg_name = NULL;
+        msg.msg_namelen = 0;
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        msg.msg_control = cmsgu.control;
+        msg.msg_controllen = sizeof(cmsgu.control);
+        size = recvmsg(sock, &msg, 0);
+        if (size < 0) {
+            perror ("recvmsg");
+            exit(1);
+        }
+        cmsg = CMSG_FIRSTHDR(&msg);
+        if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
+            if (cmsg->cmsg_level != SOL_SOCKET) {
+                fprintf(stderr, "invalid cmsg_level %d\n",
+                        cmsg->cmsg_level);
+                exit(1);
+            }
+            if (cmsg->cmsg_type != SCM_RIGHTS) {
+                fprintf(stderr, "invalid cmsg_type %d\n",
+                        cmsg->cmsg_type);
+                exit(1);
+            }
+
+            *fd = *((int *) CMSG_DATA(cmsg));
+        } else
+            *fd = -1;
+    } else {
+        size = read(sock, buf, bufsize);
+        if (size < 0) {
+            perror("read");
+            exit(1);
+        }
+    }
+
+    return size;
+}
+
+int main(int argc, char *argv[])
+{
+    RedsStream *st[2];
+    int sv[2];
+    int ret, fd = -1;
+    char c;
+
+    spice_return_val_if_fail(server_init() == 0, -1);
+
+    if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sv) == -1) {
+        spice_error("socketpair failed %s", strerror(errno));
+        return -1;
+    }
+
+    st[0] = reds_stream_new(sv[0]);
+    spice_assert(reds_stream_is_plain_unix(st[0]));
+    st[1] = reds_stream_new(sv[1]);
+    spice_assert(reds_stream_is_plain_unix(st[1]));
+
+    /* send stdin, for the fun of it */
+    ret = reds_stream_send_msgfd(st[0], 0);
+    spice_assert(ret == 1);
+    ret = sock_fd_read(sv[1], &c, 1, &fd);
+    spice_assert(c == '@');
+    spice_assert(ret == 1);
+    spice_assert(fd != -1);
+    close(fd);
+
+    /* send invalid fd behaviour */
+    ret = reds_stream_send_msgfd(st[0], -1);
+    spice_assert(ret == 1);
+    ret = sock_fd_read(sv[1], &c, 1, &fd);
+    spice_assert(c == '@');
+    spice_assert(ret == 1);
+    spice_assert(fd == -1);
+
+    reds_stream_free(st[0]);
+    reds_stream_free(st[1]);
+
+    return 0;
+}
