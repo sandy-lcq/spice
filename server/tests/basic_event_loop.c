@@ -37,9 +37,6 @@ int debug = 0;
     } \
 }
 
-#define NOT_IMPLEMENTED printf("%s not implemented\n", __func__);
-
-
 struct SpiceTimer {
     SpiceTimerFunc func;
     void *opaque;
