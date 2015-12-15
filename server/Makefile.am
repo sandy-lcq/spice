@@ -17,6 +17,7 @@ AM_CPPFLAGS =					\
 	$(WARN_CFLAGS)				\
 	$(NULL)
 
+noinst_LTLIBRARIES = libserver.la
 lib_LTLIBRARIES = libspice-server.la
 
 libspice_server_la_LDFLAGS =			\
@@ -31,7 +32,7 @@ libspice_server_la_LDFLAGS += \
 	-Wl,--version-script=$(top_srcdir)/server/spice-server.syms
 endif
 
-libspice_server_la_LIBADD =						\
+libserver_la_LIBADD =							\
 	$(top_builddir)/spice-common/common/libspice-common.la		\
 	$(top_builddir)/spice-common/common/libspice-common-server.la	\
 	$(GL_LIBS)							\
@@ -61,7 +62,7 @@ libspice_serverinclude_HEADERS =		\
 	spice.h					\
 	$(NULL)
 
-libspice_server_la_SOURCES =			\
+libserver_la_SOURCES =				\
 	$(libspice_serverinclude_HEADERS)	\
 	agent-msg-filter.c			\
 	agent-msg-filter.h			\
@@ -144,11 +145,14 @@ libspice_server_la_SOURCES =			\
 	$(NULL)
 
 if HAVE_SMARTCARD
-libspice_server_la_SOURCES +=	\
+libserver_la_SOURCES +=	\
 	smartcard.c		\
 	smartcard.h		\
 	$(NULL)
 endif
+
+libspice_server_la_LIBADD = libserver.la
+libspice_server_la_SOURCES =
 
 EXTRA_DIST =					\
 	spice-bitmap-utils.tmpl.c			\
