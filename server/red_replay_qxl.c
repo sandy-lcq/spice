@@ -370,7 +370,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
     }
 
     qxl = (QXLImage*)malloc(sizeof(QXLImage));
-    replay_fscanf(replay, "descriptor.id %ld\n", &qxl->descriptor.id);
+    replay_fscanf(replay, "descriptor.id %"PRIu64"\n", &qxl->descriptor.id);
     replay_fscanf(replay, "descriptor.type %d\n", &temp); qxl->descriptor.type = temp;
     replay_fscanf(replay, "descriptor.flags %d\n", &temp); qxl->descriptor.flags = temp;
     replay_fscanf(replay, "descriptor.width %d\n", &qxl->descriptor.width);
@@ -393,7 +393,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
             qp = malloc(sizeof(QXLPalette) + num_ents * sizeof(qp->ents[0]));
             qp->num_ents = num_ents;
             qxl->bitmap.palette = (QXLPHYSICAL)qp;
-            replay_fscanf(replay, "unique %ld\n", &qp->unique);
+            replay_fscanf(replay, "unique %"PRIu64"\n", &qp->unique);
             for (i = 0; i < num_ents; i++) {
                 replay_fscanf(replay, "ents %d\n", &qp->ents[i]);
             }
@@ -1121,7 +1121,7 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
     int counter;
 
     while (what != 0) {
-        replay_fscanf(replay, "event %d %d %d %ld\n", &counter,
+        replay_fscanf(replay, "event %d %d %d %"PRIu64"\n", &counter,
                             &what, &type, &timestamp);
         if (replay->eof) {
             return NULL;
@@ -1133,7 +1133,7 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
     cmd = g_slice_new(QXLCommandExt);
     cmd->cmd.type = type;
     cmd->group_id = 0;
-    spice_debug("command %ld, %d\r", timestamp, cmd->cmd.type);
+    spice_debug("command %"PRIu64", %d\r", timestamp, cmd->cmd.type);
     switch (cmd->cmd.type) {
     case QXL_CMD_DRAW:
         cmd->flags = 0;
