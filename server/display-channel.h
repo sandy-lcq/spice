@@ -28,7 +28,6 @@
 #include "sw-canvas.h"
 #include "stat.h"
 #include "reds.h"
-#include "mjpeg-encoder.h"
 #include "memslot.h"
 #include "red-parse-qxl.h"
 #include "red-record-qxl.h"
