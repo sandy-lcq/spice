@@ -226,7 +226,7 @@ ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
     return ret;
 }
 
-int reds_stream_get_family(RedsStream *s)
+int reds_stream_get_family(const RedsStream *s)
 {
     spice_return_val_if_fail(s != NULL, -1);
 
