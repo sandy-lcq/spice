@@ -106,3 +106,10 @@ SpiceCoreInterface *basic_event_loop_init(void)
     core.watch_remove = event_loop_core.watch_remove;
     return &core;
 }
+
+void basic_event_loop_destroy(void)
+{
+    spice_assert(main_context != NULL);
+    g_main_context_unref(main_context);
+    main_context = NULL;
+}

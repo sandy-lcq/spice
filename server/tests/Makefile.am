@@ -49,12 +49,14 @@ noinst_PROGRAMS =				\
 	spice-server-replay			\
 	stream-test				\
 	stat_test				\
+	test-loop				\
 	$(NULL)
 
 TESTS =						\
 	stat_test				\
 	test-qxl-parsing			\
 	stream-test				\
+	test-loop				\
 	$(NULL)
 
 check_PROGRAMS = $(TESTS)
