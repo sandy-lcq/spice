@@ -21,6 +21,7 @@
 
 
 #include <config.h>
+#include <inttypes.h>
 #include "char-device.h"
 #include "red-channel.h"
 #include "reds.h"
@@ -830,7 +831,7 @@ void spice_char_device_client_remove(SpiceCharDeviceState *dev,
     }
 
     if (dev->num_clients == 0) {
-        spice_debug("client removed, memory pool will be freed (%lu bytes)", dev->cur_pool_size);
+        spice_debug("client removed, memory pool will be freed (%"PRIu64" bytes)", dev->cur_pool_size);
         write_buffers_queue_free(&dev->write_bufs_pool);
         dev->cur_pool_size = 0;
     }
