@@ -97,7 +97,6 @@ bool       red_worker_run(RedWorker *worker);
 QXLInstance* red_worker_get_qxl(RedWorker *worker);
 RedChannel* red_worker_get_cursor_channel(RedWorker *worker);
 RedChannel* red_worker_get_display_channel(RedWorker *worker);
-clockid_t red_worker_get_clockid(RedWorker *worker);
 RedMemSlotInfo* red_worker_get_memslot(RedWorker *worker);
 
 void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,

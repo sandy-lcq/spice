@@ -67,7 +67,6 @@ struct SpiceWatch {
 
 struct RedWorker {
     pthread_t thread;
-    clockid_t clockid;
     QXLInstance *qxl;
     RedDispatcher *red_dispatcher;
     int running;
@@ -256,7 +255,7 @@ static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *r
 
         if (worker->record_fd)
             red_record_qxl_command(worker->record_fd, &worker->mem_slots, ext_cmd,
-                                   stat_now(worker->clockid));
+                                   stat_now(CLOCK_THREAD_CPUTIME_ID));
 
         stat_inc_counter(worker->command_counter, 1);
         worker->display_poll_tries = 0;
@@ -1348,7 +1347,7 @@ static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *
 {
     RedWorker *worker = opaque;
 
-    red_record_event(worker->record_fd, 1, message_type, stat_now(worker->clockid));
+    red_record_event(worker->record_fd, 1, message_type, stat_now(CLOCK_THREAD_CPUTIME_ID));
 }
 
 static void register_callbacks(Dispatcher *dispatcher)
@@ -1619,10 +1618,6 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
         spice_error("failed to create timer queue");
     }
 
-    if (pthread_getcpuclockid(pthread_self(), &worker->clockid)) {
-        spice_warning("getcpuclockid failed");
-    }
-
     RED_CHANNEL(worker->cursor_channel)->thread_id = pthread_self();
     RED_CHANNEL(worker->display_channel)->thread_id = pthread_self();
 
@@ -1722,11 +1717,4 @@ RedChannel* red_worker_get_display_channel(RedWorker *worker)
     spice_return_val_if_fail(worker, NULL);
 
     return RED_CHANNEL(worker->display_channel);
-}
-
-clockid_t red_worker_get_clockid(RedWorker *worker)
-{
-    spice_return_val_if_fail(worker, 0);
-
-    return worker->clockid;
 }

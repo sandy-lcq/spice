@@ -2041,7 +2041,7 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
         &cbs, dcc_handle_message);
     spice_return_val_if_fail(display, NULL);
 
-    clockid_t stat_clock = red_worker_get_clockid(worker);
+    clockid_t stat_clock = CLOCK_THREAD_CPUTIME_ID;
     stat_init(&display->add_stat, "add", stat_clock);
     stat_init(&display->exclude_stat, "exclude", stat_clock);
     stat_init(&display->__exclude_stat, "__exclude", stat_clock);
