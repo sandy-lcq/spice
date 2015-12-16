@@ -10270,11 +10270,11 @@ static int display_channel_handle_preferred_compression(DisplayChannelClient *dc
     case SPICE_IMAGE_COMPRESSION_GLZ:
     case SPICE_IMAGE_COMPRESSION_OFF:
         display_channel->common.worker->image_compression = pc->image_compression;
-        return TRUE;
+        break;
     default:
         spice_warning("preferred-compression: unsupported image compression setting");
-        return FALSE;
     }
+    return TRUE;
 }
 
 static int display_channel_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type,
