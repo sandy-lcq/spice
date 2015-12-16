@@ -76,6 +76,7 @@ AS_IF([test x"$enable_automated_tests" != "xno"], [enable_automated_tests="yes"]
 AM_CONDITIONAL(HAVE_AUTOMATED_TESTS, test "x$enable_automated_tests" != "xno")
 
 SPICE_CHECK_LZ4
+SPICE_CHECK_SASL
 
 dnl =========================================================================
 dnl Check deps
@@ -139,57 +140,6 @@ AC_SUBST(JPEG_LIBS)
 
 AC_CHECK_LIB(z, deflate, Z_LIBS='-lz', AC_MSG_ERROR([zlib not found]))
 AC_SUBST(Z_LIBS)
-
-dnl Cyrus SASL, check from gtk-vnc
-AC_ARG_WITH([sasl],
-  [AS_HELP_STRING([--with-sasl],
-    [use cyrus SASL for authentication @<:@default=check@:>@])],
-  [],
-  [with_sasl=check])
-
-SASL_CFLAGS=
-SASL_LIBS=
-enable_sasl=no
-if test "x$with_sasl" != "xno"; then
-  if test "x$with_sasl" != "xyes" && test "x$with_sasl" != "xcheck"; then
-    SASL_CFLAGS="-I$with_sasl"
-    SASL_LIBS="-L$with_sasl"
-  fi
-  fail=0
-  old_cflags="$CFLAGS"
-  old_libs="$LIBS"
-  CFLAGS="$CFLAGS $SASL_CFLAGS"
-  LIBS="$LIBS $SASL_LIBS"
-  AC_CHECK_HEADER([sasl/sasl.h],[],[
-    if test "x$with_sasl" != "xcheck" ; then
-        with_sasl=no
-    else
-        fail=1
-    fi])
-  if test "x$with_sasl" != "xno" ; then
-    AC_CHECK_LIB([sasl2], [sasl_client_init],[with_sasl2=yes],[with_sasl2=no])
-  fi
-  if test "x$with_sasl2" = "xno" && test "x$with_sasl" != "xno" ; then
-    AC_CHECK_LIB([sasl], [sasl_client_init],[with_sasl=yes],[with_sasl=no])
-  fi
-  if test "x$with_sasl2" = "xyes"; then
-    SASL_LIBS="$SASL_LIBS -lsasl2"
-  elif test "x$with_sasl" = "xyes"; then
-    SASL_LIBS="$SASL_LIBS -lsasl"
-  else
-    AC_MSG_ERROR([Missing required Cyrus SASL development package])
-  fi
-  CFLAGS="$old_cflags"
-  LIBS="$old_libs"
-  if test "x$with_sasl2" = "xyes" || test "x$with_sasl" = "xyes" ; then
-    AC_DEFINE_UNQUOTED([HAVE_SASL], 1,
-      [whether Cyrus SASL is available for authentication])
-    enable_sasl=yes
-  fi
-fi
-AM_CONDITIONAL([HAVE_SASL], [test "x$with_sasl2" = "xyes" || test "x$with_sasl" = "xyes"])
-AC_SUBST([SASL_CFLAGS])
-AC_SUBST([SASL_LIBS])
 
 if test "x$enable_automated_tests" = "xyes"; then
     AC_MSG_CHECKING([for spicy-screenshot])
@@ -288,7 +238,7 @@ AC_MSG_NOTICE([
 
         LZ4 support:              ${enable_lz4}
         Smartcard:                ${have_smartcard}
-        SASL support:             ${enable_sasl}
+        SASL support:             ${have_sasl}
         Automated tests:          ${enable_automated_tests}
         Manual:                   ${have_asciidoc}
 
