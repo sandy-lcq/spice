@@ -331,7 +331,7 @@ static void smartcard_char_device_notify_reader_add(SmartCardDeviceState *st)
     SpiceCharDeviceWriteBuffer *write_buf;
     VSCMsgHeader *vheader;
 
-    write_buf = spice_char_device_write_buffer_get(st->chardev_st, NULL, sizeof(vheader));
+    write_buf = spice_char_device_write_buffer_get(st->chardev_st, NULL, sizeof(*vheader));
     if (!write_buf) {
         spice_error("failed to allocate write buffer");
         return;
@@ -378,7 +378,7 @@ static void smartcard_char_device_notify_reader_remove(SmartCardDeviceState *st)
         spice_debug("reader add was never sent to the device");
         return;
     }
-    write_buf = spice_char_device_write_buffer_get(st->chardev_st, NULL, sizeof(vheader));
+    write_buf = spice_char_device_write_buffer_get(st->chardev_st, NULL, sizeof(*vheader));
     if (!write_buf) {
         spice_error("failed to allocate write buffer");
         return;
