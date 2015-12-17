@@ -171,9 +171,10 @@ static void smartcard_send_msg_to_client(RedPipeItem *msg,
                                          void *opaque)
 {
     RedCharDeviceSmartcard *dev = opaque;
-    spice_assert(dev->priv->scc && dev->priv->scc->base.client == client);
-    smartcard_channel_client_pipe_add_push(&dev->priv->scc->base, msg);
 
+    spice_assert(dev->priv->scc && dev->priv->scc->base.client == client);
+    red_pipe_item_ref(msg);
+    smartcard_channel_client_pipe_add_push(&dev->priv->scc->base, msg);
 }
 
 static void smartcard_send_tokens_to_client(RedClient *client, uint32_t tokens, void *opaque)
