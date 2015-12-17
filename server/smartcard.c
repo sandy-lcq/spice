@@ -295,7 +295,7 @@ static void smartcard_char_device_notify_reader_add(RedCharDeviceSmartcard *dev)
     RedCharDeviceWriteBuffer *write_buf;
     VSCMsgHeader *vheader;
 
-    write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev), NULL, sizeof(vheader));
+    write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev), NULL, sizeof(*vheader));
     if (!write_buf) {
         spice_error("failed to allocate write buffer");
         return;
@@ -342,7 +342,7 @@ static void smartcard_char_device_notify_reader_remove(RedCharDeviceSmartcard *d
         spice_debug("reader add was never sent to the device");
         return;
     }
-    write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev), NULL, sizeof(vheader));
+    write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev), NULL, sizeof(*vheader));
     if (!write_buf) {
         spice_error("failed to allocate write buffer");
         return;
