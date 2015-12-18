@@ -950,8 +950,8 @@ void red_qxl_gl_draw_async_complete(QXLInstance *qxl)
 void red_qxl_init(RedsState *reds, QXLInstance *qxl)
 {
     QXLState *qxl_state;
-    RedChannel *channel;
-    ClientCbs client_cbs = { NULL, };
+    ClientCbs client_cursor_cbs = { NULL, };
+    ClientCbs client_display_cbs = { NULL, };
 
     spice_return_if_fail(qxl != NULL);
 
@@ -983,26 +983,18 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     qxl_state->max_monitors = UINT_MAX;
     qxl->st = qxl_state;
 
-    // TODO: reference and free
-    RedWorker *worker = red_worker_new(qxl);
-
     // TODO: move to their respective channel files
-    channel = red_worker_get_cursor_channel(worker);
-    client_cbs.connect = red_qxl_set_cursor_peer;
-    client_cbs.disconnect = red_qxl_disconnect_cursor_peer;
-    client_cbs.migrate = red_qxl_cursor_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs, &qxl_state->dispatcher);
-    reds_register_channel(reds, channel);
+    client_cursor_cbs.connect = red_qxl_set_cursor_peer;
+    client_cursor_cbs.disconnect = red_qxl_disconnect_cursor_peer;
+    client_cursor_cbs.migrate = red_qxl_cursor_migrate;
 
-    channel = red_worker_get_display_channel(worker);
-    client_cbs.connect = red_qxl_set_display_peer;
-    client_cbs.disconnect = red_qxl_disconnect_display_peer;
-    client_cbs.migrate = red_qxl_display_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs, &qxl_state->dispatcher);
-    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
-    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
-    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
-    reds_register_channel(reds, channel);
+    client_display_cbs.connect = red_qxl_set_display_peer;
+    client_display_cbs.disconnect = red_qxl_disconnect_display_peer;
+    client_display_cbs.migrate = red_qxl_display_migrate;
+
+    // TODO: reference and free
+    RedWorker *worker = red_worker_new(qxl, &client_cursor_cbs,
+                                       &client_display_cbs);
 
     red_worker_run(worker);
 }

@@ -1464,13 +1464,16 @@ static GSourceFuncs worker_source_funcs = {
     .dispatch = worker_source_dispatch,
 };
 
-RedWorker* red_worker_new(QXLInstance *qxl)
+RedWorker* red_worker_new(QXLInstance *qxl,
+                          const ClientCbs *client_cursor_cbs,
+                          const ClientCbs *client_display_cbs)
 {
     QXLDevInitInfo init_info;
     RedWorker *worker;
     Dispatcher *dispatcher;
     const char *record_filename;
     RedsState *reds = red_qxl_get_server(qxl->st);
+    RedChannel *channel;
 
     red_qxl_get_init_info(qxl, &init_info);
 
@@ -1533,9 +1536,20 @@ RedWorker* red_worker_new(QXLInstance *qxl)
     worker->event_timeout = INF_EVENT_WAIT;
 
     worker->cursor_channel = cursor_channel_new(worker);
+    channel = RED_CHANNEL(worker->cursor_channel);
+    red_channel_register_client_cbs(channel, client_cursor_cbs, dispatcher);
+    reds_register_channel(reds, channel);
+
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
     worker->display_channel = display_channel_new(reds, worker, FALSE, reds_get_streaming_video(reds),
                                                   init_info.n_surfaces);
+
+    channel = RED_CHANNEL(worker->display_channel);
+    red_channel_register_client_cbs(channel, client_display_cbs, dispatcher);
+    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
+    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
+    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
+    reds_register_channel(reds, channel);
 
     return worker;
 }
@@ -1579,20 +1593,6 @@ bool red_worker_run(RedWorker *worker)
     pthread_sigmask(SIG_SETMASK, &curr_sig_mask, NULL);
 
     return r == 0;
-}
-
-RedChannel* red_worker_get_cursor_channel(RedWorker *worker)
-{
-    spice_return_val_if_fail(worker, NULL);
-
-    return RED_CHANNEL(worker->cursor_channel);
-}
-
-RedChannel* red_worker_get_display_channel(RedWorker *worker)
-{
-    spice_return_val_if_fail(worker, NULL);
-
-    return RED_CHANNEL(worker->display_channel);
 }
 
 static RedsState* red_worker_get_server(RedWorker *worker)
