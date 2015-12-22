@@ -1314,9 +1314,15 @@ static int dcc_handle_stream_report(DisplayChannelClient *dcc,
 {
     StreamAgent *agent;
 
-    spice_return_val_if_fail(report->stream_id < NUM_STREAMS, FALSE);
+    if (report->stream_id >= NUM_STREAMS) {
+        return FALSE;
+    }
+
     agent = &dcc->stream_agents[report->stream_id];
-    spice_return_val_if_fail(agent->mjpeg_encoder, TRUE);
+    if (!agent->mjpeg_encoder) {
+        return TRUE;
+    }
+
     spice_return_val_if_fail(report->unique_id == agent->report_id, TRUE);
 
     mjpeg_encoder_client_stream_report(agent->mjpeg_encoder,
