@@ -77,6 +77,8 @@ struct RedWorker {
     RedStatNode stat;
     RedStatCounter wakeup_counter;
     RedStatCounter command_counter;
+    RedStatCounter full_loop_counter;
+    RedStatCounter total_loop_counter;
 
     int driver_cap_monitors_config;
 
@@ -190,6 +192,8 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         return n;
     }
 
+    stat_inc_counter(worker->total_loop_counter, 1);
+
     worker->process_display_generation++;
     *ring_is_empty = FALSE;
     while (red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) <= MAX_PIPE_SIZE) {
@@ -270,6 +274,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         }
     }
     worker->was_blocked = TRUE;
+    stat_inc_counter(worker->full_loop_counter, 1);
     return n;
 }
 
@@ -1321,6 +1326,8 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     stat_init_node(&worker->stat, reds, NULL, worker_str, TRUE);
     stat_init_counter(&worker->wakeup_counter, reds, &worker->stat, "wakeups", TRUE);
     stat_init_counter(&worker->command_counter, reds, &worker->stat, "commands", TRUE);
+    stat_init_counter(&worker->full_loop_counter, reds, &worker->stat, "full_loops", TRUE);
+    stat_init_counter(&worker->total_loop_counter, reds, &worker->stat, "total_loops", TRUE);
 
     worker->dispatch_watch =
         worker->core.watch_add(&worker->core, dispatcher_get_recv_fd(dispatcher),
