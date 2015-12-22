@@ -306,12 +306,16 @@ int main(int argc, char **argv)
         g_printerr("%s\n", g_option_context_get_help(context, TRUE, NULL));
         exit(1);
     }
+    g_option_context_free(context);
+    context = NULL;
 
     if (strncmp(file[0], "-", 1) == 0) {
         fd = stdin;
     } else {
         fd = fopen(file[0], "r");
     }
+    g_strfreev(file);
+    file = NULL;
     if (fd == NULL) {
         g_printerr("error opening %s\n", argv[1]);
         return 1;
@@ -345,6 +349,8 @@ int main(int argc, char **argv)
     if (client) {
         start_client(client, &error);
         wait = TRUE;
+        g_free(client);
+        client = NULL;
     }
 
     if (!wait) {
