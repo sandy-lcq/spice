@@ -291,7 +291,7 @@ int main(int argc, char **argv)
         { "compression", 'C', 0, G_OPTION_ARG_INT, &compression, "Compression (default 2)", "INT" },
         { "port", 'p', 0, G_OPTION_ARG_INT, &port, "Server port (default 5000)", "PORT" },
         { "wait", 'w', 0, G_OPTION_ARG_NONE, &wait, "Wait for client", NULL },
-        { "slow", 's', 0, G_OPTION_ARG_INT, &slow, "Slow down replay", NULL },
+        { "slow", 's', 0, G_OPTION_ARG_INT, &slow, "Slow down replay. Delays USEC microseconds before each command", "USEC" },
         { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &file, "replay file", "FILE" },
         { NULL }
     };
