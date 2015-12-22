@@ -103,6 +103,8 @@ typedef struct  {
     char message_buf[512];
 } EncoderData;
 
+void encoder_data_reset(EncoderData *data);
+
 typedef struct {
     QuicUsrContext usr;
     EncoderData data;

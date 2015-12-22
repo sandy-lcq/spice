@@ -150,6 +150,17 @@ void compress_buf_free(RedCompressBuf *buf)
     g_slice_free(RedCompressBuf, buf);
 }
 
+void encoder_data_reset(EncoderData *data)
+{
+    RedCompressBuf *buf = data->bufs_head;
+    while (buf) {
+        RedCompressBuf *next = buf->send_next;
+        compress_buf_free(buf);
+        buf = next;
+    }
+    data->bufs_head = data->bufs_tail = NULL;
+}
+
 /* Allocate more space for compressed buffer.
  * The pointer returned in io_ptr is garanteed to be aligned to 4 bytes.
  */

@@ -702,19 +702,10 @@ int dcc_compress_image_glz(DisplayChannelClient *dcc,
 
     // the compressed buffer is bigger than the original data
     if (zlib_size >= glz_size) {
-        while (zlib_data->data.bufs_head) {
-            RedCompressBuf *buf = zlib_data->data.bufs_head;
-            zlib_data->data.bufs_head = buf->send_next;
-            compress_buf_free(buf);
-        }
+        encoder_data_reset(&zlib_data->data);
         goto glz;
     } else {
-        while (glz_data->data.bufs_head) {
-            RedCompressBuf *buf = glz_data->data.bufs_head;
-            glz_data->data.bufs_head = buf->send_next;
-            compress_buf_free(buf);
-        }
-        glz_data->data.bufs_tail = NULL;
+        encoder_data_reset(&glz_data->data);
     }
 
     dest->descriptor.type = SPICE_IMAGE_TYPE_ZLIB_GLZ_RGB;
@@ -753,11 +744,7 @@ int dcc_compress_image_lz(DisplayChannelClient *dcc,
     lz_data->data.dcc = dcc;
 
     if (setjmp(lz_data->data.jmp_env)) {
-        while (lz_data->data.bufs_head) {
-            RedCompressBuf *buf = lz_data->data.bufs_head;
-            lz_data->data.bufs_head = buf->send_next;
-            compress_buf_free(buf);
-        }
+        encoder_data_reset(&lz_data->data);
         return FALSE;
     }
 
@@ -846,11 +833,7 @@ int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
     jpeg_data->data.dcc = dcc;
 
     if (setjmp(jpeg_data->data.jmp_env)) {
-        while (jpeg_data->data.bufs_head) {
-            RedCompressBuf *buf = jpeg_data->data.bufs_head;
-            jpeg_data->data.bufs_head = buf->send_next;
-            compress_buf_free(buf);
-        }
+        encoder_data_reset(&jpeg_data->data);
         return FALSE;
     }
 
@@ -957,11 +940,7 @@ int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
     lz4_data->data.dcc = dcc;
 
     if (setjmp(lz4_data->data.jmp_env)) {
-        while (lz4_data->data.bufs_head) {
-            RedCompressBuf *buf = lz4_data->data.bufs_head;
-            lz4_data->data.bufs_head = buf->send_next;
-            compress_buf_free(buf);
-        }
+        encoder_data_reset(&lz4_data->data);
         return FALSE;
     }
 
@@ -1028,11 +1007,7 @@ int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
     quic_data->data.dcc = dcc;
 
     if (setjmp(quic_data->data.jmp_env)) {
-        while (quic_data->data.bufs_head) {
-            RedCompressBuf *buf = quic_data->data.bufs_head;
-            quic_data->data.bufs_head = buf->send_next;
-            compress_buf_free(buf);
-        }
+        encoder_data_reset(&quic_data->data);
         return FALSE;
     }
 
