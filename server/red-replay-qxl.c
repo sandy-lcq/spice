@@ -199,11 +199,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
         return REPLAY_EOF;
 
     if (*buf == NULL) {
-        *buf = malloc(*size + base_size);
-        if (*buf == NULL) {
-            spice_error("allocation error for %zu", *size);
-            exit(1);
-        }
+        *buf = spice_malloc(*size + base_size);
     }
 #if 0
     {
@@ -217,7 +213,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
         int ret;
 
         replay_fscanf(replay, "%d:", &zlib_size);
-        zlib_buffer = malloc(zlib_size);
+        zlib_buffer = spice_malloc(zlib_size);
         replay_fread(replay, zlib_buffer, zlib_size);
         strm.zalloc = Z_NULL;
         strm.zfree = Z_NULL;
@@ -373,7 +369,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         return NULL;
     }
 
-    qxl = (QXLImage*)malloc(sizeof(QXLImage));
+    qxl = (QXLImage*)spice_malloc0(sizeof(QXLImage));
     replay_fscanf(replay, "descriptor.id %"PRIu64"\n", &qxl->descriptor.id);
     replay_fscanf(replay, "descriptor.type %d\n", &temp); qxl->descriptor.type = temp;
     replay_fscanf(replay, "descriptor.flags %d\n", &temp); qxl->descriptor.flags = temp;
@@ -394,7 +390,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
             int i, num_ents;
 
             replay_fscanf(replay, "qp.num_ents %d\n", &num_ents);
-            qp = malloc(sizeof(QXLPalette) + num_ents * sizeof(qp->ents[0]));
+            qp = spice_malloc(sizeof(QXLPalette) + num_ents * sizeof(qp->ents[0]));
             qp->num_ents = num_ents;
             qxl->bitmap.palette = QXLPHYSICAL_FROM_PTR(qp);
             replay_fscanf(replay, "unique %"PRIu64"\n", &qp->unique);
@@ -784,7 +780,7 @@ static void red_replay_composite_free(SpiceReplay *replay, QXLComposite *qxl, ui
 
 static QXLDrawable *red_replay_native_drawable(SpiceReplay *replay, uint32_t flags)
 {
-    QXLDrawable *qxl = malloc(sizeof(QXLDrawable)); // TODO - this is too large usually
+    QXLDrawable *qxl = spice_malloc0(sizeof(QXLDrawable)); // TODO - this is too large usually
     int i;
     int temp;
 
@@ -915,7 +911,7 @@ static void red_replay_native_drawable_free(SpiceReplay *replay, QXLDrawable *qx
 static QXLCompatDrawable *red_replay_compat_drawable(SpiceReplay *replay, uint32_t flags)
 {
     int temp;
-    QXLCompatDrawable *qxl = malloc(sizeof(QXLCompatDrawable)); // TODO - too large usually
+    QXLCompatDrawable *qxl = spice_malloc0(sizeof(QXLCompatDrawable)); // TODO - too large usually
 
     red_replay_rect_ptr(replay, "bbox", &qxl->bbox);
     red_replay_clip_ptr(replay, &qxl->clip);
@@ -990,7 +986,7 @@ static QXLPHYSICAL red_replay_drawable(SpiceReplay *replay, uint32_t flags)
 
 static QXLUpdateCmd *red_replay_update_cmd(SpiceReplay *replay)
 {
-    QXLUpdateCmd *qxl = malloc(sizeof(QXLUpdateCmd));
+    QXLUpdateCmd *qxl = spice_malloc0(sizeof(QXLUpdateCmd));
 
     replay_fscanf(replay, "update\n");
     red_replay_rect_ptr(replay, "area", &qxl->area);
@@ -1015,7 +1011,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
     size_t size;
     size_t read_size;
     int temp;
-    QXLSurfaceCmd *qxl = calloc(1, sizeof(QXLSurfaceCmd));
+    QXLSurfaceCmd *qxl = spice_malloc0(sizeof(QXLSurfaceCmd));
 
     replay_fscanf(replay, "surface_cmd\n");
     replay_fscanf(replay, "surface_id %d\n", &qxl->surface_id);
@@ -1035,7 +1031,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
                 spice_printerr("mismatch %zu != %zu", size, read_size);
             }
         } else {
-            qxl->u.surface_create.data = QXLPHYSICAL_FROM_PTR(malloc(size));
+            qxl->u.surface_create.data = QXLPHYSICAL_FROM_PTR(spice_malloc(size));
         }
         qxl->surface_id = replay_id_new(replay, qxl->surface_id);
         break;
@@ -1215,7 +1211,7 @@ SpiceReplay *spice_replay_new(FILE *file, int nsurfaces)
         }
     }
 
-    replay = malloc(sizeof(SpiceReplay));
+    replay = spice_malloc0(sizeof(SpiceReplay));
 
     replay->eof = 0;
     replay->fd = file;
