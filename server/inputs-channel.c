@@ -674,7 +674,7 @@ void inputs_init(void)
     red_channel_set_cap(&g_inputs_channel->base, SPICE_INPUTS_CAP_KEY_SCANCODE);
     reds_register_channel(&g_inputs_channel->base);
 
-    if (!(key_modifiers_timer = core->timer_add(key_modifiers_sender, NULL))) {
+    if (!(key_modifiers_timer = core->timer_add(core, key_modifiers_sender, NULL))) {
         spice_error("key modifiers timer create failed");
     }
 }

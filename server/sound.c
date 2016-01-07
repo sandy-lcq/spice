@@ -947,7 +947,7 @@ static SndChannel *__new_channel(SndWorker *worker, int size, uint32_t channel_i
     channel->receive_data.end = channel->receive_data.buf + sizeof(channel->receive_data.buf);
     channel->send_data.marshaller = spice_marshaller_new();
 
-    stream->watch = core->watch_add(stream->socket, SPICE_WATCH_EVENT_READ,
+    stream->watch = core->watch_add(core, stream->socket, SPICE_WATCH_EVENT_READ,
                                   snd_event, channel);
     if (stream->watch == NULL) {
         spice_printerr("watch_add failed, %s", strerror(errno));

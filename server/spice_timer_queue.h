@@ -29,7 +29,8 @@ typedef struct SpiceTimerQueue SpiceTimerQueue;
 int spice_timer_queue_create(void);
 void spice_timer_queue_destroy(void);
 
-SpiceTimer *spice_timer_queue_add(SpiceTimerFunc func, void *opaque);
+SpiceTimer *spice_timer_queue_add(const SpiceCoreInterfaceInternal *iface,
+                                  SpiceTimerFunc func, void *opaque);
 void spice_timer_set(SpiceTimer *timer, uint32_t ms);
 void spice_timer_cancel(SpiceTimer *timer);
 void spice_timer_remove(SpiceTimer *timer);

@@ -530,7 +530,8 @@ static void worker_watch_update_mask(SpiceWatch *watch, int event_mask)
     }
 }
 
-static SpiceWatch *worker_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
+static SpiceWatch *worker_watch_add(const SpiceCoreInterfaceInternal *iface,
+                                    int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
     /* Since we are a channel core implementation, we always get called from
        red_channel_client_create(), so opaque always is our rcc */

@@ -42,12 +42,12 @@
 typedef struct SpiceCoreInterfaceInternal SpiceCoreInterfaceInternal;
 
 struct SpiceCoreInterfaceInternal {
-    SpiceTimer *(*timer_add)(SpiceTimerFunc func, void *opaque);
+    SpiceTimer *(*timer_add)(const SpiceCoreInterfaceInternal *iface, SpiceTimerFunc func, void *opaque);
     void (*timer_start)(SpiceTimer *timer, uint32_t ms);
     void (*timer_cancel)(SpiceTimer *timer);
     void (*timer_remove)(SpiceTimer *timer);
 
-    SpiceWatch *(*watch_add)(int fd, int event_mask, SpiceWatchFunc func, void *opaque);
+    SpiceWatch *(*watch_add)(const SpiceCoreInterfaceInternal *iface, int fd, int event_mask, SpiceWatchFunc func, void *opaque);
     void (*watch_update_mask)(SpiceWatch *watch, int event_mask);
     void (*watch_remove)(SpiceWatch *watch);
 

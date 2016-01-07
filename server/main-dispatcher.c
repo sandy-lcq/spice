@@ -200,7 +200,7 @@ void main_dispatcher_init(SpiceCoreInterfaceInternal *core)
     memset(&main_dispatcher, 0, sizeof(main_dispatcher));
     main_dispatcher.core = core;
     dispatcher_init(&main_dispatcher.base, MAIN_DISPATCHER_NUM_MESSAGES, &main_dispatcher.base);
-    core->watch_add(main_dispatcher.base.recv_fd, SPICE_WATCH_EVENT_READ,
+    core->watch_add(core, main_dispatcher.base.recv_fd, SPICE_WATCH_EVENT_READ,
                     dispatcher_handle_read, &main_dispatcher.base);
     dispatcher_register_handler(&main_dispatcher.base, MAIN_DISPATCHER_CHANNEL_EVENT,
                                 main_dispatcher_handle_channel_event,

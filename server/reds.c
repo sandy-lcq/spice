@@ -76,7 +76,7 @@ SpiceCoreInterfaceInternal *core = NULL;
 
 static SpiceCoreInterface *core_public = NULL;
 
-static SpiceTimer *adapter_timer_add(SpiceTimerFunc func, void *opaque)
+static SpiceTimer *adapter_timer_add(const SpiceCoreInterfaceInternal *iface, SpiceTimerFunc func, void *opaque)
 {
     return core_public->timer_add(func, opaque);
 }
@@ -96,7 +96,8 @@ static void adapter_timer_remove(SpiceTimer *timer)
     core_public->timer_remove(timer);
 }
 
-static SpiceWatch *adapter_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
+static SpiceWatch *adapter_watch_add(const SpiceCoreInterfaceInternal *iface,
+                                     int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
     return core_public->watch_add(fd, event_mask, func, opaque);
 }
@@ -2358,11 +2359,11 @@ static RedLinkInfo *reds_init_client_ssl_connection(int socket)
         case REDS_STREAM_SSL_STATUS_ERROR:
             goto error;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
-            link->stream->watch = core->watch_add(link->stream->socket, SPICE_WATCH_EVENT_READ,
+            link->stream->watch = core->watch_add(core, link->stream->socket, SPICE_WATCH_EVENT_READ,
                                             reds_handle_ssl_accept, link);
             break;
         case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
-            link->stream->watch = core->watch_add(link->stream->socket, SPICE_WATCH_EVENT_WRITE,
+            link->stream->watch = core->watch_add(core, link->stream->socket, SPICE_WATCH_EVENT_WRITE,
                                                   reds_handle_ssl_accept, link);
             break;
     }
@@ -2555,7 +2556,7 @@ static int reds_init_net(void)
         if (-1 == reds->listen_socket) {
             return -1;
         }
-        reds->listen_watch = core->watch_add(reds->listen_socket,
+        reds->listen_watch = core->watch_add(core, reds->listen_socket,
                                              SPICE_WATCH_EVENT_READ,
                                              reds_accept, NULL);
         if (reds->listen_watch == NULL) {
@@ -2570,7 +2571,7 @@ static int reds_init_net(void)
         if (-1 == reds->secure_listen_socket) {
             return -1;
         }
-        reds->secure_listen_watch = core->watch_add(reds->secure_listen_socket,
+        reds->secure_listen_watch = core->watch_add(core, reds->secure_listen_socket,
                                                     SPICE_WATCH_EVENT_READ,
                                                     reds_accept_ssl_connection, NULL);
         if (reds->secure_listen_watch == NULL) {
@@ -2581,7 +2582,7 @@ static int reds_init_net(void)
 
     if (spice_listen_socket_fd != -1 ) {
         reds->listen_socket = spice_listen_socket_fd;
-        reds->listen_watch = core->watch_add(reds->listen_socket,
+        reds->listen_watch = core->watch_add(core, reds->listen_socket,
                                              SPICE_WATCH_EVENT_READ,
                                              reds_accept, NULL);
         if (reds->listen_watch == NULL) {
@@ -3343,7 +3344,7 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
     ring_init(&reds->mig_wait_disconnect_clients);
     reds->vm_running = TRUE; /* for backward compatibility */
 
-    if (!(reds->mig_timer = core->timer_add(migrate_timeout, NULL))) {
+    if (!(reds->mig_timer = core->timer_add(core, migrate_timeout, NULL))) {
         spice_error("migration timer create failed");
     }
 

@@ -129,7 +129,8 @@ void spice_timer_queue_destroy(void)
     pthread_mutex_unlock(&queue_list_lock);
 }
 
-SpiceTimer *spice_timer_queue_add(SpiceTimerFunc func, void *opaque)
+SpiceTimer *spice_timer_queue_add(const SpiceCoreInterfaceInternal *iface,
+                                  SpiceTimerFunc func, void *opaque)
 {
     SpiceTimer *timer = spice_new0(SpiceTimer, 1);
     SpiceTimerQueue *queue = spice_timer_queue_find_with_lock();

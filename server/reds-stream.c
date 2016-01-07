@@ -457,7 +457,7 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
                 switch (errno) {
                 case EAGAIN:
                     if (!async->stream->watch) {
-                        async->stream->watch = core->watch_add(async->stream->socket,
+                        async->stream->watch = core->watch_add(core, async->stream->socket,
                                                                SPICE_WATCH_EVENT_READ,
                                                                async_read_handler, async);
                     }

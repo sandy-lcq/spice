@@ -694,7 +694,7 @@ SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *si
     sif = SPICE_CONTAINEROF(char_dev->sin->base.sif, SpiceCharDeviceInterface, base);
     if (sif->base.minor_version <= 2 ||
         !(sif->flags & SPICE_CHAR_DEVICE_NOTIFY_WRITABLE)) {
-        char_dev->write_to_dev_timer = core->timer_add(spice_char_dev_write_retry, char_dev);
+        char_dev->write_to_dev_timer = core->timer_add(core, spice_char_dev_write_retry, char_dev);
         if (!char_dev->write_to_dev_timer) {
             spice_error("failed creating char dev write timer");
         }
@@ -793,7 +793,7 @@ int spice_char_device_client_add(SpiceCharDeviceState *dev,
     dev_client->max_send_queue_size = max_send_queue_size;
     dev_client->do_flow_control = do_flow_control;
     if (do_flow_control) {
-        dev_client->wait_for_tokens_timer = core->timer_add(device_client_wait_for_tokens_timeout,
+        dev_client->wait_for_tokens_timer = core->timer_add(core, device_client_wait_for_tokens_timeout,
                                                             dev_client);
         if (!dev_client->wait_for_tokens_timer) {
             spice_error("failed to create wait for tokens timer");

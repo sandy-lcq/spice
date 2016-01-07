@@ -832,7 +832,7 @@ void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uin
      */
     if (rcc->latency_monitor.timer == NULL) {
         rcc->latency_monitor.timer = rcc->channel->core->timer_add(
-            red_channel_client_ping_timer, rcc);
+            rcc->channel->core, red_channel_client_ping_timer, rcc);
         if (!rcc->client->during_target_migrate) {
             red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
         }
@@ -841,7 +841,7 @@ void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uin
     if (rcc->connectivity_monitor.timer == NULL) {
         rcc->connectivity_monitor.state = CONNECTIVITY_STATE_CONNECTED;
         rcc->connectivity_monitor.timer = rcc->channel->core->timer_add(
-            red_channel_client_connectivity_timer, rcc);
+            rcc->channel->core, red_channel_client_connectivity_timer, rcc);
         rcc->connectivity_monitor.timeout = timeout_ms;
         if (!rcc->client->during_target_migrate) {
            rcc->channel->core->timer_start(rcc->connectivity_monitor.timer,
@@ -906,7 +906,8 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
     ring_init(&rcc->pipe);
     rcc->pipe_size = 0;
 
-    stream->watch = channel->core->watch_add(stream->socket,
+    stream->watch = channel->core->watch_add(channel->core,
+                                           stream->socket,
                                            SPICE_WATCH_EVENT_READ,
                                            red_channel_client_event, rcc);
     rcc->id = channel->clients_num;
@@ -917,7 +918,7 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
 
     if (monitor_latency && reds_stream_get_family(stream) != AF_UNIX) {
         rcc->latency_monitor.timer = channel->core->timer_add(
-            red_channel_client_ping_timer, rcc);
+            channel->core, red_channel_client_ping_timer, rcc);
         if (!client->during_target_migrate) {
             red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
         }
@@ -1070,7 +1071,8 @@ static void dummy_watch_update_mask(SpiceWatch *watch, int event_mask)
 {
 }
 
-static SpiceWatch *dummy_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
+static SpiceWatch *dummy_watch_add(const SpiceCoreInterfaceInternal *iface,
+                                   int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
     return NULL; // apparently allowed?
 }
