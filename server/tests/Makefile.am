@@ -19,7 +19,6 @@ AM_CPPFLAGS += -DAUTOMATED_TESTS
 endif
 
 LDADD =								\
-	$(GLIB2_LIBS)						\
 	$(top_builddir)/spice-common/common/libspice-common.la	\
 	$(top_builddir)/server/libspice-server.la		\
 	$(GLIB2_LIBS)						\
@@ -127,11 +126,11 @@ spice_server_replay_SOURCES = 			\
 
 stat_test_SOURCES = stat-main.c
 stat_test_LDADD = \
-	$(LDADD) \
 	libstat_test1.a \
 	libstat_test2.a \
 	libstat_test3.a \
 	libstat_test4.a \
+	$(LDADD) \
 	$(NULL)
 
 libstat_test1_a_SOURCES = stat-test.c
