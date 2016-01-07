@@ -70,6 +70,7 @@ struct RedWorker {
     QXLInstance *qxl;
     RedDispatcher *red_dispatcher;
     int running;
+    SpiceCoreInterfaceInternal core;
     struct pollfd poll_fds[MAX_EVENT_SOURCES];
     struct SpiceWatch watches[MAX_EVENT_SOURCES];
     unsigned int event_timeout;
@@ -533,15 +534,8 @@ static void worker_watch_update_mask(SpiceWatch *watch, int event_mask)
 static SpiceWatch *worker_watch_add(const SpiceCoreInterfaceInternal *iface,
                                     int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
-    /* Since we are a channel core implementation, we always get called from
-       red_channel_client_create(), so opaque always is our rcc */
-    RedChannelClient *rcc = opaque;
-    struct RedWorker *worker;
+    RedWorker *worker = SPICE_CONTAINEROF(iface, RedWorker, core);
     int i;
-
-    /* Since we are called from red_channel_client_create()
-       CommonChannelClient->worker has not been set yet! */
-    worker = SPICE_CONTAINEROF(rcc->channel, CommonChannel, base)->worker;
 
     /* Search for a free slot in our poll_fds & watches arrays */
     for (i = 0; i < MAX_EVENT_SOURCES; i++) {
@@ -550,6 +544,9 @@ static SpiceWatch *worker_watch_add(const SpiceCoreInterfaceInternal *iface,
         }
     }
     if (i == MAX_EVENT_SOURCES) {
+        /* Since we are a channel core implementation, we always get called from
+           red_channel_client_create(), so opaque always is our rcc */
+        RedChannelClient *rcc = opaque;
         spice_warning("could not add a watch for channel type %u id %u",
                       rcc->channel->type, rcc->channel->id);
         return NULL;
@@ -580,7 +577,7 @@ static void worker_watch_remove(SpiceWatch *watch)
     memset(watch, 0, sizeof(SpiceWatch));
 }
 
-SpiceCoreInterfaceInternal worker_core = {
+static const SpiceCoreInterfaceInternal worker_core_initializer = {
     .timer_add = spice_timer_queue_add,
     .timer_start = spice_timer_set,
     .timer_cancel = spice_timer_cancel,
@@ -640,7 +637,7 @@ CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
     channel_cbs->alloc_recv_buf = common_alloc_recv_buf;
     channel_cbs->release_recv_buf = common_release_recv_buf;
 
-    channel = red_channel_create_parser(size, &worker_core,
+    channel = red_channel_create_parser(size, &worker->core,
                                         channel_type, worker->qxl->id,
                                         TRUE /* handle_acks */,
                                         spice_get_client_channel_parser(channel_type, NULL),
@@ -1545,6 +1542,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     qxl->st->qif->get_init_info(qxl, &init_info);
 
     worker = spice_new0(RedWorker, 1);
+    worker->core = worker_core_initializer;
 
     record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
     if (record_filename) {
