@@ -72,7 +72,8 @@
 
 #include "reds-private.h"
 
-SpiceCoreInterface *core = NULL;
+SpiceCoreInterfaceInternal *core = NULL;
+
 static SpiceCharDeviceInstance *vdagent = NULL;
 static SpiceMigrateInstance *migration_interface = NULL;
 
@@ -3274,7 +3275,7 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
         spice_warning("bad core interface version");
         goto err;
     }
-    core = core_interface;
+    core = (SpiceCoreInterfaceInternal *) core_interface;
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
     init_vd_agent_resources();

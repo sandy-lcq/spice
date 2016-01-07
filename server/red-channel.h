@@ -311,7 +311,7 @@ struct RedChannel {
 
     RingItem link; // channels link for reds
 
-    const SpiceCoreInterface *core;
+    const SpiceCoreInterfaceInternal *core;
     int handle_acks;
 
     // RedChannel will hold only connected channel clients (logic - when pushing pipe item to all channel clients, there
@@ -359,7 +359,7 @@ struct RedChannel {
 /* if one of the callbacks should cause disconnect, use red_channel_shutdown and don't
  * explicitly destroy the channel */
 RedChannel *red_channel_create(int size,
-                               const SpiceCoreInterface *core,
+                               const SpiceCoreInterfaceInternal *core,
                                uint32_t type, uint32_t id,
                                int handle_acks,
                                channel_handle_message_proc handle_message,
@@ -369,7 +369,7 @@ RedChannel *red_channel_create(int size,
 /* alternative constructor, meant for marshaller based (inputs,main) channels,
  * will become default eventually */
 RedChannel *red_channel_create_parser(int size,
-                               const SpiceCoreInterface *core,
+                               const SpiceCoreInterfaceInternal *core,
                                uint32_t type, uint32_t id,
                                int handle_acks,
                                spice_parse_channel_func_t parser,

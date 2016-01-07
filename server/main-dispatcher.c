@@ -49,7 +49,7 @@
 
 typedef struct {
     Dispatcher base;
-    SpiceCoreInterface *core;
+    SpiceCoreInterfaceInternal *core;
 } MainDispatcher;
 
 MainDispatcher main_dispatcher;
@@ -195,7 +195,7 @@ static void dispatcher_handle_read(int fd, int event, void *opaque)
  * Reds routines shouldn't be exposed. Instead reds.c should register the callbacks,
  * and the corresponding operations should be made only via main_dispatcher.
  */
-void main_dispatcher_init(SpiceCoreInterface *core)
+void main_dispatcher_init(SpiceCoreInterfaceInternal *core)
 {
     memset(&main_dispatcher, 0, sizeof(main_dispatcher));
     main_dispatcher.core = core;

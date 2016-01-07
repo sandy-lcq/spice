@@ -31,6 +31,6 @@ void main_dispatcher_set_mm_time_latency(RedClient *client, uint32_t latency);
  */
 void main_dispatcher_client_disconnect(RedClient *client);
 
-void main_dispatcher_init(SpiceCoreInterface *core);
+void main_dispatcher_init(SpiceCoreInterfaceInternal *core);
 
 #endif //MAIN_DISPATCHER_H

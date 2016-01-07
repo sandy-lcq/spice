@@ -579,7 +579,7 @@ static void worker_watch_remove(SpiceWatch *watch)
     memset(watch, 0, sizeof(SpiceWatch));
 }
 
-SpiceCoreInterface worker_core = {
+SpiceCoreInterfaceInternal worker_core = {
     .timer_add = spice_timer_queue_add,
     .timer_start = spice_timer_set,
     .timer_cancel = spice_timer_cancel,

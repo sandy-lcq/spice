@@ -43,7 +43,7 @@ struct AsyncRead {
 };
 typedef struct AsyncRead AsyncRead;
 
-extern SpiceCoreInterface *core;
+extern SpiceCoreInterfaceInternal *core;
 
 #if HAVE_SASL
 #include <sasl/sasl.h>

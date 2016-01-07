@@ -22,7 +22,6 @@
 #include <math.h>
 
 #include <spice.h>
-#include "reds.h"
 #include "basic_event_loop.h"
 
 /* test the audio playback interface. Really basic no frils test - create
