@@ -74,6 +74,61 @@
 
 SpiceCoreInterfaceInternal *core = NULL;
 
+static SpiceCoreInterface *core_public = NULL;
+
+static SpiceTimer *adapter_timer_add(SpiceTimerFunc func, void *opaque)
+{
+    return core_public->timer_add(func, opaque);
+}
+
+static void adapter_timer_start(SpiceTimer *timer, uint32_t ms)
+{
+    core_public->timer_start(timer, ms);
+}
+
+static void adapter_timer_cancel(SpiceTimer *timer)
+{
+    core_public->timer_cancel(timer);
+}
+
+static void adapter_timer_remove(SpiceTimer *timer)
+{
+    core_public->timer_remove(timer);
+}
+
+static SpiceWatch *adapter_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
+{
+    return core_public->watch_add(fd, event_mask, func, opaque);
+}
+
+static void adapter_watch_update_mask(SpiceWatch *watch, int event_mask)
+{
+    core_public->watch_update_mask(watch, event_mask);
+}
+
+static void adapter_watch_remove(SpiceWatch *watch)
+{
+    core_public->watch_remove(watch);
+}
+
+static void adapter_channel_event(int event, SpiceChannelEventInfo *info)
+{
+    if (core_public->base.minor_version >= 3 && core_public->channel_event != NULL)
+        core_public->channel_event(event, info);
+}
+
+
+static SpiceCoreInterfaceInternal core_interface_adapter = {
+    .timer_add = adapter_timer_add,
+    .timer_start = adapter_timer_start,
+    .timer_cancel = adapter_timer_cancel,
+    .timer_remove = adapter_timer_remove,
+    .watch_add = adapter_watch_add,
+    .watch_update_mask = adapter_watch_update_mask,
+    .watch_remove = adapter_watch_remove,
+    .channel_event = adapter_channel_event,
+};
+
 static SpiceCharDeviceInstance *vdagent = NULL;
 static SpiceMigrateInstance *migration_interface = NULL;
 
@@ -177,8 +232,7 @@ static ChannelSecurityOptions *find_channel_security(int id)
 
 void reds_handle_channel_event(int event, SpiceChannelEventInfo *info)
 {
-    if (core->base.minor_version >= 3 && core->channel_event != NULL)
-        core->channel_event(event, info);
+    core->channel_event(event, info);
 
     if (event == SPICE_CHANNEL_EVENT_DISCONNECTED) {
         free(info);
@@ -3275,7 +3329,8 @@ static int do_spice_init(SpiceCoreInterface *core_interface)
         spice_warning("bad core interface version");
         goto err;
     }
-    core = (SpiceCoreInterfaceInternal *) core_interface;
+    core_public = core_interface;
+    core = &core_interface_adapter;
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
     init_vd_agent_resources();

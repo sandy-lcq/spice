@@ -42,8 +42,6 @@
 typedef struct SpiceCoreInterfaceInternal SpiceCoreInterfaceInternal;
 
 struct SpiceCoreInterfaceInternal {
-    SpiceBaseInterface base;
-
     SpiceTimer *(*timer_add)(SpiceTimerFunc func, void *opaque);
     void (*timer_start)(SpiceTimer *timer, uint32_t ms);
     void (*timer_cancel)(SpiceTimer *timer);
