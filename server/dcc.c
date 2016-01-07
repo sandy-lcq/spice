@@ -708,6 +708,13 @@ int dcc_compress_image_glz(DisplayChannelClient *dcc,
             compress_buf_free(buf);
         }
         goto glz;
+    } else {
+        while (glz_data->data.bufs_head) {
+            RedCompressBuf *buf = glz_data->data.bufs_head;
+            glz_data->data.bufs_head = buf->send_next;
+            compress_buf_free(buf);
+        }
+        glz_data->data.bufs_tail = NULL;
     }
 
     dest->descriptor.type = SPICE_IMAGE_TYPE_ZLIB_GLZ_RGB;
