@@ -1,3 +1,21 @@
+Changes in 0.12.7:
+==================
+* Added public spice_server_set_keepalive_timeout() to make it possible
+  to tweak keepalive on all SPICE connection. This can prevent unwanted
+  idle disconnections if proxies are used between the client and the host.
+* Fix important memory usage when the webdav channel is used
+* Do not disconnect when the client requests an unsupported compression type
+* Fix potential race condition when using multiple QXL devices
+* Fix display glitch when using XSpice
+* Improve help string for 'replay -s'
+* Fix crashes in corner cases (buggy spice-html5 + win10, vnc + SPICE port
+  configured, USB webcam redirection over a slow link)
+* Fix various compilation warning when building on 32 bit machines
+* Some fixes for big-endian machines, more work is likely to be needed
+* Do not build static libraries by default, this can be reenabled with
+  --enable-static
+* Fix small leak in MJPEG code
+
 Major changes in 0.12.6:
 ========================
 * Removed spicec client code, it has been superseded by remote-viewer and other
