@@ -257,7 +257,7 @@ static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
     size_t data_size;
     int count_chunks;
     size_t next_data_size;
-    QXLDataChunk *cur;
+    QXLDataChunk *cur, *next;
 
     replay_fscanf(replay, "data_chunks %d %zu\n", &count_chunks, &data_size);
     if (base_size == 0) {
@@ -277,10 +277,11 @@ static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
             return 0;
         }
         data_size += next_data_size;
-        ((QXLDataChunk*)cur->next_chunk)->prev_chunk = (QXLPHYSICAL)cur;
-        cur = (QXLDataChunk*)cur->next_chunk;
-        cur->data_size = next_data_size;
-        cur->next_chunk = 0;
+        next = (QXLDataChunk*)cur->next_chunk;
+        next->prev_chunk = (QXLPHYSICAL)cur;
+        next->data_size = next_data_size;
+        next->next_chunk = 0;
+        cur = next;
     }
 
     return data_size;
