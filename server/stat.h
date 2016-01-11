@@ -101,15 +101,22 @@ static inline void stat_reset(G_GNUC_UNUSED stat_info_t *info)
 #endif
 }
 
-static inline void stat_compress_init(G_GNUC_UNUSED stat_info_t *info,
-                                      G_GNUC_UNUSED const char *name,
-                                      G_GNUC_UNUSED clockid_t clock)
+static inline void stat_init(G_GNUC_UNUSED stat_info_t *info,
+                             G_GNUC_UNUSED const char *name,
+                             G_GNUC_UNUSED clockid_t clock)
 {
-#ifdef COMPRESS_STAT
+#if defined(RED_WORKER_STAT) || defined(COMPRESS_STAT)
     info->name = name;
     info->clock = clock;
     stat_reset(info);
 #endif
+}
+
+static inline void stat_compress_init(G_GNUC_UNUSED stat_info_t *info,
+                                      G_GNUC_UNUSED const char *name,
+                                      G_GNUC_UNUSED clockid_t clock)
+{
+    stat_init(info, name, clock);
 }
 
 static inline void stat_compress_add(G_GNUC_UNUSED stat_info_t *info,
@@ -132,17 +139,6 @@ static inline void stat_compress_add(G_GNUC_UNUSED stat_info_t *info,
 static inline double stat_byte_to_mega(uint64_t size)
 {
     return (double)size / (1000 * 1000);
-}
-
-static inline void stat_init(G_GNUC_UNUSED stat_info_t *info,
-                             G_GNUC_UNUSED const char *name,
-                             G_GNUC_UNUSED clockid_t clock)
-{
-#ifdef RED_WORKER_STAT
-    info->name = name;
-    info->clock = clock;
-    stat_reset(info);
-#endif
 }
 
 static inline void stat_add(G_GNUC_UNUSED stat_info_t *info,
