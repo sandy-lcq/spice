@@ -137,6 +137,22 @@ int spice_bitmap_from_surface_type(uint32_t surface_format)
 
 #define RAM_PATH "/tmp/tmpfs"
 
+static void put_16le(uint8_t **ptr, uint16_t val)
+{
+    **ptr = val & 0xffu;
+    (*ptr)++;
+    val >>= 8;
+    **ptr = val & 0xffu;
+    (*ptr)++;
+}
+
+static void put_32le(uint8_t **ptr, uint32_t val)
+{
+    put_16le(ptr, val & 0xffffu);
+    val >>= 16;
+    put_16le(ptr, val & 0xffffu);
+}
+
 static void dump_palette(FILE *f, SpicePalette* plt)
 {
     int i;
@@ -170,11 +186,9 @@ void dump_bitmap(SpiceBitmap *bitmap)
     int alpha = 0;
     uint32_t header_size = 14 + 40;
     uint32_t bitmap_data_offset;
-    uint32_t tmp_u32;
-    int32_t tmp_32;
-    uint16_t tmp_u16;
     FILE *f;
     int i, j;
+    uint8_t header[128], *ptr;
 
     switch (bitmap->format) {
     case SPICE_BITMAP_FMT_1BIT_BE:
@@ -233,36 +247,28 @@ void dump_bitmap(SpiceBitmap *bitmap)
     }
 
     /* writing the bmp v3 header */
-    fprintf(f, "BM");
-    fwrite(&file_size, sizeof(file_size), 1, f);
-    tmp_u16 = alpha ? 1 : 0;
-    fwrite(&tmp_u16, sizeof(tmp_u16), 1, f); // reserved for application
-    tmp_u16 = 0;
-    fwrite(&tmp_u16, sizeof(tmp_u16), 1, f);
-    fwrite(&bitmap_data_offset, sizeof(bitmap_data_offset), 1, f);
-    tmp_u32 = header_size - 14;
-    fwrite(&tmp_u32, sizeof(tmp_u32), 1, f); // sub header size
-    tmp_32 = bitmap->x;
-    fwrite(&tmp_32, sizeof(tmp_32), 1, f);
-    tmp_32 = bitmap->y;
-    fwrite(&tmp_32, sizeof(tmp_32), 1, f);
+    ptr = header;
+    put_16le(&ptr, 0x4D42); // "BM"
+    put_32le(&ptr, file_size);
+    put_16le(&ptr, alpha);
+    put_16le(&ptr, 0);
+    put_32le(&ptr, bitmap_data_offset);
+    put_32le(&ptr, header_size - 14);
+    put_32le(&ptr, bitmap->x);
+    put_32le(&ptr, bitmap->y);
 
-    tmp_u16 = 1;
-    fwrite(&tmp_u16, sizeof(tmp_u16), 1, f); // color plane
-    fwrite(&n_pixel_bits, sizeof(n_pixel_bits), 1, f); // pixel depth
+    put_16le(&ptr, 1); // plane
+    put_16le(&ptr, n_pixel_bits);
 
-    tmp_u32 = 0;
-    fwrite(&tmp_u32, sizeof(tmp_u32), 1, f); // compression method
+    put_32le(&ptr, 0); // compression
 
-    tmp_u32 = 0; //file_size - bitmap_data_offset;
-    fwrite(&tmp_u32, sizeof(tmp_u32), 1, f); // image size
-    tmp_32 = 0;
-    fwrite(&tmp_32, sizeof(tmp_32), 1, f);
-    fwrite(&tmp_32, sizeof(tmp_32), 1, f);
-    tmp_u32 = (!plt) ? 0 : plt->num_ents; // plt entries
-    fwrite(&tmp_u32, sizeof(tmp_u32), 1, f);
-    tmp_u32 = 0;
-    fwrite(&tmp_u32, sizeof(tmp_u32), 1, f);
+    put_32le(&ptr, 0); //file_size - bitmap_data_offset;
+    put_32le(&ptr, 0);
+    put_32le(&ptr, 0);
+    put_32le(&ptr, !plt ? 0 : plt->num_ents); // plt entries
+    put_32le(&ptr, 0);
+
+    fwrite(header, 1, ptr - header, f);
 
     if (plt) {
         dump_palette(f, plt);
