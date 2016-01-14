@@ -662,9 +662,7 @@ int dcc_compress_image_glz(DisplayChannelClient *dcc,
     int glz_size;
     int zlib_size;
 
-    glz_data->data.bufs_tail = compress_buf_new();
-    glz_data->data.bufs_head = glz_data->data.bufs_tail;
-    glz_data->data.dcc = dcc;
+    encoder_data_init(&glz_data->data, dcc);
 
     glz_drawable = get_glz_drawable(dcc, drawable);
     glz_drawable_instance = add_glz_drawable_instance(glz_drawable);
@@ -689,9 +687,7 @@ int dcc_compress_image_glz(DisplayChannelClient *dcc,
     stat_start_time_init(&start_time, &display_channel->zlib_glz_stat);
     zlib_data = &dcc->zlib_data;
 
-    zlib_data->data.bufs_tail = compress_buf_new();
-    zlib_data->data.bufs_head = zlib_data->data.bufs_tail;
-    zlib_data->data.dcc = dcc;
+    encoder_data_init(&zlib_data->data, dcc);
 
     zlib_data->data.u.compressed_data.next = glz_data->data.bufs_head;
     zlib_data->data.u.compressed_data.size_left = glz_size;
@@ -739,9 +735,7 @@ int dcc_compress_image_lz(DisplayChannelClient *dcc,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz_stat);
 
-    lz_data->data.bufs_tail = compress_buf_new();
-    lz_data->data.bufs_head = lz_data->data.bufs_tail;
-    lz_data->data.dcc = dcc;
+    encoder_data_init(&lz_data->data, dcc);
 
     if (setjmp(lz_data->data.jmp_env)) {
         encoder_data_reset(&lz_data->data);
@@ -828,9 +822,7 @@ int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
         return FALSE;
     }
 
-    jpeg_data->data.bufs_tail = compress_buf_new();
-    jpeg_data->data.bufs_head = jpeg_data->data.bufs_tail;
-    jpeg_data->data.dcc = dcc;
+    encoder_data_init(&jpeg_data->data, dcc);
 
     if (setjmp(jpeg_data->data.jmp_env)) {
         encoder_data_reset(&jpeg_data->data);
@@ -928,16 +920,7 @@ int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz4_stat);
 
-    lz4_data->data.bufs_tail = compress_buf_new();
-    lz4_data->data.bufs_head = lz4_data->data.bufs_tail;
-
-    if (!lz4_data->data.bufs_head) {
-        spice_warning("failed to allocate compress buffer");
-        return FALSE;
-    }
-
-    lz4_data->data.bufs_head->send_next = NULL;
-    lz4_data->data.dcc = dcc;
+    encoder_data_init(&lz4_data->data, dcc);
 
     if (setjmp(lz4_data->data.jmp_env)) {
         encoder_data_reset(&lz4_data->data);
@@ -1002,9 +985,7 @@ int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
         return FALSE;
     }
 
-    quic_data->data.bufs_tail = compress_buf_new();
-    quic_data->data.bufs_head = quic_data->data.bufs_tail;
-    quic_data->data.dcc = dcc;
+    encoder_data_init(&quic_data->data, dcc);
 
     if (setjmp(quic_data->data.jmp_env)) {
         encoder_data_reset(&quic_data->data);

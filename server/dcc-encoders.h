@@ -51,9 +51,6 @@ void             marshaller_add_compressed                   (SpiceMarshaller *m
                                                               RedCompressBuf *comp_buf,
                                                               size_t size);
 
-RedCompressBuf*  compress_buf_new                            (void);
-void             compress_buf_free                           (RedCompressBuf *buf);
-
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 struct RedCompressBuf {
     /* This buffer provide space for compression algorithms.
@@ -103,6 +100,7 @@ typedef struct  {
     char message_buf[512];
 } EncoderData;
 
+void encoder_data_init(EncoderData *data, DisplayChannelClient *dcc);
 void encoder_data_reset(EncoderData *data);
 
 typedef struct {

@@ -136,18 +136,12 @@ static void glz_usr_free(GlzEncoderUsrContext *usr, void *ptr)
     free(ptr);
 }
 
-RedCompressBuf* compress_buf_new(void)
+void encoder_data_init(EncoderData *data, DisplayChannelClient *dcc)
 {
-    RedCompressBuf *buf = g_slice_new(RedCompressBuf);
-
-    buf->send_next = NULL;
-
-    return buf;
-}
-
-void compress_buf_free(RedCompressBuf *buf)
-{
-    g_slice_free(RedCompressBuf, buf);
+    data->bufs_tail = g_new(RedCompressBuf, 1);
+    data->bufs_head = data->bufs_tail;
+    data->dcc = dcc;
+    data->bufs_head->send_next = NULL;
 }
 
 void encoder_data_reset(EncoderData *data)
@@ -155,7 +149,7 @@ void encoder_data_reset(EncoderData *data)
     RedCompressBuf *buf = data->bufs_head;
     while (buf) {
         RedCompressBuf *next = buf->send_next;
-        compress_buf_free(buf);
+        g_free(buf);
         buf = next;
     }
     data->bufs_head = data->bufs_tail = NULL;
@@ -168,7 +162,7 @@ static int encoder_usr_more_space(EncoderData *enc_data, uint8_t **io_ptr)
 {
     RedCompressBuf *buf;
 
-    buf = compress_buf_new();
+    buf = g_new(RedCompressBuf, 1);
     enc_data->bufs_tail->send_next = buf;
     enc_data->bufs_tail = buf;
     buf->send_next = NULL;
@@ -435,7 +429,7 @@ void dcc_encoders_free(DisplayChannelClient *dcc)
 
 static void marshaller_compress_buf_free(uint8_t *data, void *opaque)
 {
-    compress_buf_free((RedCompressBuf *) opaque);
+    g_free(opaque);
 }
 
 void marshaller_add_compressed(SpiceMarshaller *m,
