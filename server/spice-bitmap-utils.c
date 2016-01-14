@@ -153,23 +153,36 @@ static void put_32le(uint8_t **ptr, uint32_t val)
     put_16le(ptr, val & 0xffffu);
 }
 
-static void dump_palette(FILE *f, SpicePalette* plt)
+#define WRITE(buf, size, f) do { \
+    if (fwrite(buf, 1, (size), f) != (size)) \
+        goto write_err; \
+} while(0)
+
+static bool dump_palette(FILE *f, SpicePalette* plt)
 {
     int i;
     for (i = 0; i < plt->num_ents; i++) {
-        fwrite(plt->ents + i, sizeof(uint32_t), 1, f);
+        WRITE(plt->ents + i, sizeof(uint32_t), f);
     }
+    return true;
+
+write_err:
+    return false;
 }
 
-static void dump_line(FILE *f, uint8_t* line, uint16_t n_pixel_bits, int width, int row_size)
+static bool dump_line(FILE *f, uint8_t* line, uint16_t n_pixel_bits, int width, int row_size)
 {
     static char zeroes[4] = { 0 };
     int copy_bytes_size = SPICE_ALIGN(n_pixel_bits * width, 8) / 8;
 
-    fwrite(line, 1, copy_bytes_size, f);
+    WRITE(line, copy_bytes_size, f);
     // each line should be 4 bytes aligned
-    g_return_if_fail(row_size - copy_bytes_size >= 0 && row_size - copy_bytes_size <= 4);
-    fwrite(zeroes, 1, row_size - copy_bytes_size, f);
+    g_return_val_if_fail(row_size - copy_bytes_size >= 0 && row_size - copy_bytes_size <= 4, false);
+    WRITE(zeroes, row_size - copy_bytes_size, f);
+    return true;
+
+write_err:
+    return false;
 }
 
 void dump_bitmap(SpiceBitmap *bitmap)
@@ -268,18 +281,25 @@ void dump_bitmap(SpiceBitmap *bitmap)
     put_32le(&ptr, !plt ? 0 : plt->num_ents); // plt entries
     put_32le(&ptr, 0);
 
-    fwrite(header, 1, ptr - header, f);
+    WRITE(header, ptr - header, f);
 
     if (plt) {
-        dump_palette(f, plt);
+        if (!dump_palette(f, plt))
+            goto write_err;
     }
     /* writing the data */
     for (i = 0; i < bitmap->data->num_chunks; i++) {
         SpiceChunk *chunk = &bitmap->data->chunk[i];
         int num_lines = chunk->len / bitmap->stride;
         for (j = 0; j < num_lines; j++) {
-            dump_line(f, chunk->data + (j * bitmap->stride), n_pixel_bits, bitmap->x, row_size);
+            if (!dump_line(f, chunk->data + (j * bitmap->stride), n_pixel_bits, bitmap->x, row_size))
+                goto write_err;
         }
     }
     fclose(f);
+    return;
+
+write_err:
+    fclose(f);
+    remove(file_str);
 }
