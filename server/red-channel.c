@@ -2233,7 +2233,7 @@ typedef int (*rcc_item_cond_t)(RedChannelClient *rcc, PipeItem *item);
  * @channel: a channel
  * @creator: a callback to create pipe item (not null)
  * @data: the data to pass to the creator
- * @pipe_add: a callback to add pipe items (not null)
+ * @pipe_add: a callback to add non-null pipe items (not null)
  **/
 static void red_channel_pipes_create_batch(RedChannel *channel,
                                 new_pipe_item_t creator, void *data,
@@ -2250,7 +2250,9 @@ static void red_channel_pipes_create_batch(RedChannel *channel,
     RING_FOREACH_SAFE(link, next, &channel->clients) {
         rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
         item = (*creator)(rcc, data, num++);
-        (*pipe_add)(rcc, item);
+        if (item) {
+            (*pipe_add)(rcc, item);
+        }
     }
 }
 
