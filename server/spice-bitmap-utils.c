@@ -147,17 +147,15 @@ static void dump_palette(FILE *f, SpicePalette* plt)
 
 static void dump_line(FILE *f, uint8_t* line, uint16_t n_pixel_bits, int width, int row_size)
 {
-    int i;
+    static char zeroes[4] = { 0 };
     int copy_bytes_size = SPICE_ALIGN(n_pixel_bits * width, 8) / 8;
 
     fwrite(line, 1, copy_bytes_size, f);
-    if (row_size > copy_bytes_size) {
-        // each line should be 4 bytes aligned
-        for (i = copy_bytes_size; i < row_size; i++) {
-            fprintf(f, "%c", 0);
-        }
-    }
+    // each line should be 4 bytes aligned
+    g_return_if_fail(row_size - copy_bytes_size >= 0 && row_size - copy_bytes_size <= 4);
+    fwrite(zeroes, 1, row_size - copy_bytes_size, f);
 }
+
 void dump_bitmap(SpiceBitmap *bitmap)
 {
     static uint32_t file_id = 0;
