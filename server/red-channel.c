@@ -2228,21 +2228,29 @@ int red_client_during_migrate_at_target(RedClient *client)
 typedef void (*rcc_item_t)(RedChannelClient *rcc, PipeItem *item);
 typedef int (*rcc_item_cond_t)(RedChannelClient *rcc, PipeItem *item);
 
+/**
+ * red_channel_pipes_create_batch:
+ * @channel: a channel
+ * @creator: a callback to create pipe item (not null)
+ * @data: the data to pass to the creator
+ * @pipe_add: a callback to add pipe items (not null)
+ **/
 static void red_channel_pipes_create_batch(RedChannel *channel,
                                 new_pipe_item_t creator, void *data,
-                                rcc_item_t callback)
+                                rcc_item_t pipe_add)
 {
     RingItem *link, *next;
     RedChannelClient *rcc;
     PipeItem *item;
     int num = 0;
 
+    spice_assert(creator != NULL);
+    spice_assert(pipe_add != NULL);
+
     RING_FOREACH_SAFE(link, next, &channel->clients) {
         rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
         item = (*creator)(rcc, data, num++);
-        if (callback) {
-            (*callback)(rcc, item);
-        }
+        (*pipe_add)(rcc, item);
     }
 }
 
