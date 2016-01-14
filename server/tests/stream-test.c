@@ -111,6 +111,22 @@ int main(int argc, char *argv[])
     spice_assert(ret == 1);
     spice_assert(fd == -1);
 
+    /* batch test */
+    ret = reds_stream_send_msgfd(st[0], 0);
+    spice_assert(ret == 1);
+    ret = reds_stream_send_msgfd(st[0], 0);
+    spice_assert(ret == 1);
+    ret = sock_fd_read(sv[1], &c, 1, &fd);
+    spice_assert(c == '@');
+    spice_assert(ret == 1);
+    spice_assert(fd != -1);
+    close(fd);
+    ret = sock_fd_read(sv[1], &c, 1, &fd);
+    spice_assert(c == '@');
+    spice_assert(ret == 1);
+    spice_assert(fd != -1);
+    close(fd);
+
     reds_stream_free(st[0]);
     reds_stream_free(st[1]);
 
