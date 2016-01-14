@@ -18,16 +18,21 @@ if HAVE_AUTOMATED_TESTS
 AM_CPPFLAGS += -DAUTOMATED_TESTS
 endif
 
+noinst_LIBRARIES = libtest.a
+
+libtest_a_SOURCES =				\
+	basic_event_loop.c			\
+	basic_event_loop.h			\
+	test_display_base.c			\
+	test_display_base.h			\
+	$(NULL)
+
 LDADD =								\
+	libtest.a						\
 	$(top_builddir)/spice-common/common/libspice-common.la	\
 	$(top_builddir)/server/libspice-server.la		\
 	$(GLIB2_LIBS)						\
 	$(SPICE_NONPKGCONFIG_LIBS)		                \
-	$(NULL)
-
-COMMON_BASE =					\
-	basic_event_loop.c			\
-	basic_event_loop.h			\
 	$(NULL)
 
 noinst_PROGRAMS =				\
@@ -43,7 +48,7 @@ noinst_PROGRAMS =				\
 	test_display_width_stride		\
 	spice-server-replay			\
 	stream-test				\
-	stat_test \
+	stat_test				\
 	$(NULL)
 
 TESTS =						\
@@ -54,84 +59,16 @@ TESTS =						\
 
 check_PROGRAMS = $(TESTS)
 
-noinst_LIBRARIES = \
+noinst_LIBRARIES += \
 	libstat_test1.a \
 	libstat_test2.a \
 	libstat_test3.a \
 	libstat_test4.a \
 	$(NULL)
 
-test_vdagent_SOURCES =		\
-	$(COMMON_BASE)				\
-	test_display_base.c			\
-	test_display_base.h			\
-	test_vdagent.c		\
-	$(NULL)
+spice_server_replay_SOURCES = replay.c
 
-test_display_streaming_SOURCES =		\
-	$(COMMON_BASE)				\
-	test_display_base.c			\
-	test_display_base.h			\
-	test_display_streaming.c		\
-	$(NULL)
-
-test_display_no_ssl_SOURCES =			\
-	$(COMMON_BASE)				\
-	test_display_base.c			\
-	test_display_base.h			\
-	test_display_no_ssl.c 			\
-	$(NULL)
-
-test_display_resolution_changes_SOURCES = \
-	$(COMMON_BASE)				\
-	test_display_base.c			\
-	test_display_base.h			\
-	test_display_resolution_changes.c	\
-	$(NULL)
-
-test_just_sockets_no_ssl_SOURCES =		\
-	$(COMMON_BASE)				\
-	test_just_sockets_no_ssl.c		\
-	$(NULL)
-
-test_playback_SOURCES =				\
-	$(COMMON_BASE)				\
-	test_playback.c				\
-	$(NULL)
-
-test_empty_success_SOURCES =			\
-	test_empty_success.c			\
-	$(NULL)
-
-test_fail_on_null_core_interface_SOURCES =	\
-	test_fail_on_null_core_interface.c	\
-	$(NULL)
-
-test_two_servers_SOURCES =			\
-	$(COMMON_BASE)				\
-	test_display_base.c			\
-	test_display_base.h			\
-	test_two_servers.c 			\
-	$(NULL)
-
-test_display_width_stride_SOURCES =		\
-	$(COMMON_BASE)				\
-	test_display_base.c			\
-	test_display_base.h			\
-	test_display_width_stride.c 		\
-	$(NULL)
-
-spice_server_replay_SOURCES = 			\
-	$(COMMON_BASE)				\
-	replay.c				\
-	test_display_base.h			\
-	$(NULL)
-
-stream_test_SOURCES =				\
-	$(COMMON_BASE)				\
-	stream-test.c				\
-	$(NULL)
-stream_test_LDADD = ../libserver.la
+stream_test_LDADD = ../libserver.la $(LDADD)
 
 stat_test_SOURCES = stat-main.c
 stat_test_LDADD = \
