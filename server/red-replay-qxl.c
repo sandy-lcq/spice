@@ -1134,7 +1134,7 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
             replay_handle_dev_input(worker, replay, type);
         }
     }
-    cmd = g_slice_new(QXLCommandExt);
+    cmd = g_new(QXLCommandExt, 1);
     cmd->cmd.type = type;
     cmd->group_id = 0;
     spice_debug("command %"PRIu64", %d\r", timestamp, cmd->cmd.type);
@@ -1195,7 +1195,7 @@ SPICE_GNUC_VISIBLE void spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt
         break;
     }
 
-    g_slice_free(QXLCommandExt, cmd);
+    g_free(cmd);
 }
 
 /* caller is incharge of closing the replay when done and releasing the SpiceReplay

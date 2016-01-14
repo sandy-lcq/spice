@@ -95,7 +95,7 @@ static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd, uint32_t
 
     spice_return_val_if_fail(cmd != NULL, NULL);
 
-    cursor_item = g_slice_new0(CursorItem);
+    cursor_item = g_new0(CursorItem, 1);
     cursor_item->qxl = qxl;
     cursor_item->refs = 1;
     cursor_item->group_id = group_id;
@@ -131,7 +131,7 @@ static void cursor_item_unref(CursorItem *item)
     red_put_cursor_cmd(cursor_cmd);
     free(cursor_cmd);
 
-    g_slice_free(CursorItem, item);
+    g_free(item);
 
 }
 
