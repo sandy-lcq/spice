@@ -283,12 +283,14 @@ int main(int argc, char **argv)
     GOptionContext *context = NULL;
     gchar *client = NULL, **file = NULL;
     gint port = 5000, compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
+    gint streaming = SPICE_STREAM_VIDEO_FILTER;
     gboolean wait = FALSE;
     FILE *fd;
 
     GOptionEntry entries[] = {
         { "client", 'c', 0, G_OPTION_ARG_STRING, &client, "Client", "CMD" },
         { "compression", 'C', 0, G_OPTION_ARG_INT, &compression, "Compression (default 2)", "INT" },
+        { "streaming", 'S', 0, G_OPTION_ARG_INT, &streaming, "Streaming (default 3)", "INT" },
         { "port", 'p', 0, G_OPTION_ARG_INT, &port, "Server port (default 5000)", "PORT" },
         { "wait", 'w', 0, G_OPTION_ARG_NONE, &wait, "Wait for client", NULL },
         { "slow", 's', 0, G_OPTION_ARG_INT, &slow, "Slow down replay. Delays USEC microseconds before each command", "USEC" },
@@ -308,6 +310,11 @@ int main(int argc, char **argv)
     }
     g_option_context_free(context);
     context = NULL;
+
+    if (streaming < 0 || streaming == SPICE_STREAM_VIDEO_INVALID) {
+        g_printerr("invalid streaming value\n");
+        exit(1);
+    }
 
     if (strncmp(file[0], "-", 1) == 0) {
         fd = stdin;
@@ -337,6 +344,7 @@ int main(int argc, char **argv)
 
     server = spice_server_new();
     spice_server_set_image_compression(server, compression);
+    spice_server_set_streaming_video(server, streaming);
     spice_server_set_port(server, port);
     spice_server_set_noauth(server);
 
