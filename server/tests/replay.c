@@ -298,8 +298,29 @@ int main(int argc, char **argv)
         { NULL }
     };
 
+    static const char description[] =
+        "Compression values:\n"
+        "\t1=off 2=auto_glz 3=auto_lz 4=quic 5=glz 6=lz 7=lz4\n"
+        "\n"
+        "Streaming values:\n"
+        "\t1=off 2=all 3=filter";
+
+    /* these asserts are here to check that the documentation we state above is still correct */
+    G_STATIC_ASSERT(SPICE_STREAM_VIDEO_OFF == 1);
+    G_STATIC_ASSERT(SPICE_STREAM_VIDEO_ALL == 2);
+    G_STATIC_ASSERT(SPICE_STREAM_VIDEO_FILTER == 3);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_INVALID == 0);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_OFF == 1);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_AUTO_GLZ == 2);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_AUTO_LZ == 3);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_QUIC == 4);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_GLZ == 5);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_LZ == 6);
+    G_STATIC_ASSERT(SPICE_IMAGE_COMPRESSION_LZ4 == 7);
+
     context = g_option_context_new("- replay spice server recording");
     g_option_context_add_main_entries(context, entries, NULL);
+    g_option_context_set_description(context, description);
     if (!g_option_context_parse(context, &argc, &argv, &error)) {
         g_printerr("Option parsing failed: %s\n", error->message);
         exit(1);
@@ -311,6 +332,11 @@ int main(int argc, char **argv)
     g_option_context_free(context);
     context = NULL;
 
+    if (compression <= SPICE_IMAGE_COMPRESSION_INVALID
+        || compression >= SPICE_IMAGE_COMPRESSION_ENUM_END) {
+        g_printerr("invalid compression value\n");
+        exit(1);
+    }
     if (streaming < 0 || streaming == SPICE_STREAM_VIDEO_INVALID) {
         g_printerr("invalid streaming value\n");
         exit(1);
