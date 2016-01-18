@@ -65,6 +65,8 @@ int main(int argc, char **argv)
     QXLCursor *cursor;
     QXLDataChunk *chunks[2];
 
+    void *surface_mem;
+
     memset(&qxl, 0, sizeof(qxl));
 
     qxl.surface_id = 123;
@@ -75,7 +77,8 @@ int main(int argc, char **argv)
     qxl.u.surface_create.width = 128;
     qxl.u.surface_create.stride = 512;
     qxl.u.surface_create.height = 128;
-    qxl.u.surface_create.data = to_physical(malloc(0x10000));
+    surface_mem = malloc(0x10000);
+    qxl.u.surface_create.data = to_physical(surface_mem);
     if (red_get_surface_cmd(&mem_info, 0, &cmd, to_physical(&qxl)))
         failure();
 
@@ -117,6 +120,7 @@ int main(int argc, char **argv)
 
     if (red_get_cursor_cmd(&mem_info, 0, &red_cursor_cmd, to_physical(&cursor_cmd)))
         failure();
+    free(red_cursor_cmd.u.set.shape.data);
     free(cursor);
 
     /* a circular list of empty chunks should not be a problems */
@@ -172,6 +176,10 @@ int main(int argc, char **argv)
     }
     free(cursor);
     free(chunks[0]);
+
+    free(mem_info.mem_slots[0]);
+    free(mem_info.mem_slots);
+    free(surface_mem);
 
     return exit_code;
 }
