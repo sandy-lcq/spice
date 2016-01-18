@@ -74,6 +74,19 @@ static void *loop_func(void *arg)
     return NULL;
 }
 
+static SpiceTimer *twice_timers[2] = { NULL, NULL };
+static int twice_called = 0;
+static void timer_not_twice(void *opaque)
+{
+    spice_assert(++twice_called == 1);
+
+    /* delete timers, should not have another call */
+    core->timer_remove(twice_timers[0]);
+    core->timer_remove(twice_timers[1]);
+    twice_timers[0] = NULL;
+    twice_timers[1] = NULL;
+}
+
 int main(int argc, char **argv)
 {
     SpiceTimer *timer, *timers[10];
@@ -106,6 +119,14 @@ int main(int argc, char **argv)
     /* create a timer that does something */
     timer = timers[i++] = core->timer_add(timer_exit, NULL);
     core->timer_start(timer, 10);
+
+    /* test events are not called when freed */
+    timer = twice_timers[0] = core->timer_add(timer_not_twice, NULL);
+    spice_assert(timer != NULL);
+    core->timer_start(timer, 2);
+    timer = twice_timers[1] = core->timer_add(timer_not_twice, NULL);
+    spice_assert(timer != NULL);
+    core->timer_start(timer, 2);
 
     /* run the loop */
     loop = g_main_loop_new(basic_event_loop_get_context(), FALSE);
