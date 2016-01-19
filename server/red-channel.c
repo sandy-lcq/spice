@@ -1233,6 +1233,10 @@ void red_channel_client_unref(RedChannelClient *rcc)
 {
     if (!--rcc->refs) {
         spice_debug("destroy rcc=%p", rcc);
+
+        reds_stream_free(rcc->stream);
+        rcc->stream = NULL;
+
         if (rcc->send_data.main.marshaller) {
             spice_marshaller_destroy(rcc->send_data.main.marshaller);
         }
@@ -1749,7 +1753,7 @@ void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type)
 int red_channel_client_is_connected(RedChannelClient *rcc)
 {
     if (!rcc->dummy) {
-        return rcc->stream != NULL;
+        return ring_item_is_linked(&rcc->channel_link);
     } else {
         return rcc->dummy_connected;
     }
@@ -1804,6 +1808,8 @@ static void red_channel_remove_client(RedChannelClient *rcc)
                       rcc->channel->type, rcc->channel->id,
                       rcc->channel->thread_id, pthread_self());
     }
+    spice_return_if_fail(ring_item_is_linked(&rcc->channel_link));
+
     ring_remove(&rcc->channel_link);
     spice_assert(rcc->channel->clients_num > 0);
     rcc->channel->clients_num--;
@@ -1845,8 +1851,6 @@ void red_channel_client_disconnect(RedChannelClient *rcc)
         rcc->channel->core->watch_remove(rcc->stream->watch);
         rcc->stream->watch = NULL;
     }
-    reds_stream_free(rcc->stream);
-    rcc->stream = NULL;
     if (rcc->latency_monitor.timer) {
         rcc->channel->core->timer_remove(rcc->latency_monitor.timer);
         rcc->latency_monitor.timer = NULL;
