@@ -1920,20 +1920,14 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     DisplayChannel *display = DCC_TO_DC(dcc);
     SpiceImage red_image;
-    RedWorker *worker;
     SpiceBitmap bitmap;
     SpiceChunks *chunks;
     QRegion *surface_lossy_region;
-    int comp_succeeded = FALSE;
-    int lossy_comp = FALSE;
-    int quic_comp = FALSE;
-    SpiceImageCompression comp_mode;
     SpiceMsgDisplayDrawCopy copy;
     SpiceMarshaller *src_bitmap_out, *mask_bitmap_out;
     SpiceMarshaller *bitmap_palette_out, *lzplt_palette_out;
 
     spice_assert(rcc && display && item);
-    worker = display->common.worker;
 
     QXL_SET_IMAGE_ID(&red_image, QXL_IMAGE_GROUP_RED, display_channel_generate_uid(display));
     red_image.descriptor.type = SPICE_IMAGE_TYPE_BITMAP;
@@ -1981,41 +1975,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
 
     compress_send_data_t comp_send_data = {0};
 
-    comp_mode = dcc->image_compression;
-
-    if (((comp_mode == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
-        (comp_mode == SPICE_IMAGE_COMPRESSION_AUTO_GLZ)) && !bitmap_has_extra_stride(&bitmap)) {
-
-        if (bitmap_fmt_has_graduality(item->image_format)) {
-            BitmapGradualType grad_level;
-
-            grad_level = bitmap_get_graduality_level(&bitmap);
-            if (grad_level == BITMAP_GRADUAL_HIGH) {
-                // if we use lz for alpha, the stride can't be extra
-                lossy_comp = display->enable_jpeg && item->can_lossy;
-                quic_comp = TRUE;
-            }
-        }
-    } else if (comp_mode == SPICE_IMAGE_COMPRESSION_QUIC) {
-        quic_comp = TRUE;
-    }
-
-    uint32_t groupid = red_worker_get_memslot(worker)->internal_groupslot_id;
-
-    if (lossy_comp) {
-        comp_succeeded = dcc_compress_image_jpeg(dcc, &red_image, &bitmap, &comp_send_data, groupid);
-    } else if (quic_comp) {
-        comp_succeeded = dcc_compress_image_quic(dcc, &red_image, &bitmap, &comp_send_data, groupid);
-#ifdef USE_LZ4
-    } else if (comp_mode == SPICE_IMAGE_COMPRESSION_LZ4 &&
-               bitmap_fmt_is_rgb(bitmap.format) &&
-               red_channel_client_test_remote_cap(&dcc->common.base,
-                                                  SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-        comp_succeeded = dcc_compress_image_lz4(dcc, &red_image, &bitmap, &comp_send_data, groupid);
-#endif
-    } else if (comp_mode != SPICE_IMAGE_COMPRESSION_OFF) {
-        comp_succeeded = dcc_compress_image_lz(dcc, &red_image, &bitmap, &comp_send_data, groupid);
-    }
+    int comp_succeeded = dcc_compress_image(dcc, &red_image, &bitmap, NULL, item->can_lossy, &comp_send_data);
 
     surface_lossy_region = &dcc->surface_client_lossy_region[item->surface_id];
     if (comp_succeeded) {
@@ -2029,7 +1989,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
             spice_marshall_Palette(lzplt_palette_out, comp_send_data.lzplt_palette);
         }
 
-        if (lossy_comp) {
+        if (spice_image_descriptor_is_lossy(&red_image.descriptor)) {
             region_add(surface_lossy_region, &copy.base.box);
         } else {
             region_remove(surface_lossy_region, &copy.base.box);
