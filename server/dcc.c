@@ -1037,6 +1037,7 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     SpiceImageCompression image_compression = dcc->image_compression;
     int quic_compress = FALSE;
+    uint32_t group_id;
 
     if ((image_compression == SPICE_IMAGE_COMPRESSION_OFF) ||
         ((src->y * src->stride) < MIN_SIZE_TO_COMPRESS)) { // TODO: change the size cond
@@ -1067,7 +1068,8 @@ int dcc_compress_image(DisplayChannelClient *dcc,
                 if ((src->x < MIN_DIMENSION_TO_QUIC) || (src->y < MIN_DIMENSION_TO_QUIC)) {
                     quic_compress = FALSE;
                 } else {
-                    if (drawable->copy_bitmap_graduality == BITMAP_GRADUAL_INVALID) {
+                    if (drawable == NULL ||
+                        drawable->copy_bitmap_graduality == BITMAP_GRADUAL_INVALID) {
                         quic_compress = bitmap_fmt_has_graduality(src->format) &&
                             bitmap_get_graduality_level(src) == BITMAP_GRADUAL_HIGH;
                     } else {
@@ -1080,6 +1082,12 @@ int dcc_compress_image(DisplayChannelClient *dcc,
         }
     }
 
+    if (drawable != NULL) {
+        group_id = drawable->group_id;
+    } else {
+        group_id = red_worker_get_memslot(display_channel->common.worker)->internal_groupslot_id;
+    }
+
     if (quic_compress) {
 #ifdef COMPRESS_DEBUG
         spice_info("QUIC compress");
@@ -1090,20 +1098,17 @@ int dcc_compress_image(DisplayChannelClient *dcc,
             (image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ))) {
             // if we use lz for alpha, the stride can't be extra
             if (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src)) {
-                return dcc_compress_image_jpeg(dcc, dest,
-                                               src, o_comp_data, drawable->group_id);
+                return dcc_compress_image_jpeg(dcc, dest, src, o_comp_data, group_id);
             }
         }
-        return dcc_compress_image_quic(dcc, dest,
-                                       src, o_comp_data, drawable->group_id);
+        return dcc_compress_image_quic(dcc, dest, src, o_comp_data, group_id);
     } else {
         int glz;
         int ret;
         if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ) ||
             (image_compression == SPICE_IMAGE_COMPRESSION_GLZ)) {
-            glz = bitmap_fmt_has_graduality(src->format) && (
-                    (src->x * src->y) < glz_enc_dictionary_get_size(
-                        dcc->glz_dict->dict));
+            glz = drawable != NULL && bitmap_fmt_has_graduality(src->format) &&
+                  ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict));
         } else if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
                    (image_compression == SPICE_IMAGE_COMPRESSION_LZ) ||
                    (image_compression == SPICE_IMAGE_COMPRESSION_LZ4)) {
@@ -1132,12 +1137,10 @@ int dcc_compress_image(DisplayChannelClient *dcc,
                 bitmap_fmt_is_rgb(src->format) &&
                 red_channel_client_test_remote_cap(&dcc->common.base,
                         SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-                ret = dcc_compress_image_lz4(dcc, dest, src, o_comp_data,
-                                             drawable->group_id);
+                ret = dcc_compress_image_lz4(dcc, dest, src, o_comp_data, group_id);
             } else
 #endif
-                ret = dcc_compress_image_lz(dcc, dest, src, o_comp_data,
-                                            drawable->group_id);
+                ret = dcc_compress_image_lz(dcc, dest, src, o_comp_data, group_id);
 #ifdef COMPRESS_DEBUG
             spice_info("LZ LOCAL compress");
 #endif
