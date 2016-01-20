@@ -131,7 +131,7 @@
 #ifndef LZ_PLT
 #define PIXEL_ID(pix_ptr, seg_ptr) \
     ((pix_ptr) - ((PIXEL *)(seg_ptr)->lines) + (seg_ptr)->pixels_so_far)
-#define PIXEL_DIST(src_pix_ptr, src_seg_ptr, ref_pix_ptr, ref_seg_ptr) \
+#define PIXEL_DIST(src_pix_ptr, src_seg_ptr, ref_pix_ptr, ref_seg_ptr, pix_per_byte) \
     (PIXEL_ID(src_pix_ptr,src_seg_ptr) - PIXEL_ID(ref_pix_ptr, ref_seg_ptr))
 #else
 #define PIXEL_ID(pix_ptr, seg_ptr, pix_per_byte) \
@@ -202,25 +202,12 @@ static inline size_t FNAME(do_match)(SharedDictionary *dict,
     *o_image_dist = ip_seg->image->id - ref_seg->image->id;
 
     if (!(*o_image_dist)) { // the ref is inside the same image - encode distance
-#ifndef LZ_PLT
-        *o_pix_distance = PIXEL_DIST(ip, ip_seg, ref, ref_seg);
-#else
-        // in bytes
         *o_pix_distance = PIXEL_DIST(ip, ip_seg, ref, ref_seg, pix_per_byte);
-#endif
     } else { // the ref is at different image - encode offset from the image start
-#ifndef LZ_PLT
-        *o_pix_distance = PIXEL_DIST(ref, ref_seg,
-                                     (PIXEL *)(dict->window.segs[ref_seg->image->first_seg].lines),
-                                     &dict->window.segs[ref_seg->image->first_seg]
-                                     );
-#else
-        // in bytes
         *o_pix_distance = PIXEL_DIST(ref, ref_seg,
                                      (PIXEL *)(dict->window.segs[ref_seg->image->first_seg].lines),
                                      &dict->window.segs[ref_seg->image->first_seg],
                                      pix_per_byte);
-#endif
     }
 
     if ((*o_pix_distance == 0) || (*o_pix_distance >= MAX_PIXEL_LONG_DISTANCE) ||
