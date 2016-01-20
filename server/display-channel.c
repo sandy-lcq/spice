@@ -46,7 +46,7 @@ void display_channel_compress_stats_reset(DisplayChannel *display)
     stat_reset(&display->lz4_stat);
 }
 
-#define STAT_FMT "%s\t%8d\t%13.2f\t%12.2f\t%12.2f"
+#define STAT_FMT "%s\t%8u\t%13.8g\t%12.8g\t%12.8g"
 
 #ifdef COMPRESS_STAT
 static void stat_print_one(const char *name, const stat_info_t *stat)
