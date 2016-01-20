@@ -646,9 +646,9 @@ static const LzImageType bitmap_fmt_to_lz_image_type[] = {
 
 #define MIN_GLZ_SIZE_FOR_ZLIB 100
 
-int dcc_compress_image_glz(DisplayChannelClient *dcc,
-                           SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
-                           compress_send_data_t* o_comp_data)
+static int dcc_compress_image_glz(DisplayChannelClient *dcc,
+                                  SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
+                                  compress_send_data_t* o_comp_data)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     stat_start_time_t start_time;
@@ -723,9 +723,9 @@ glz:
     return TRUE;
 }
 
-int dcc_compress_image_lz(DisplayChannelClient *dcc,
-                          SpiceImage *dest, SpiceBitmap *src,
-                          compress_send_data_t* o_comp_data, uint32_t group_id)
+static int dcc_compress_image_lz(DisplayChannelClient *dcc,
+                                 SpiceImage *dest, SpiceBitmap *src,
+                                 compress_send_data_t* o_comp_data, uint32_t group_id)
 {
     LzData *lz_data = &dcc->lz_data;
     LzContext *lz = dcc->lz;
@@ -785,9 +785,9 @@ int dcc_compress_image_lz(DisplayChannelClient *dcc,
     return TRUE;
 }
 
-int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
-                            SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                            uint32_t group_id)
+static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
+                                   SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                   uint32_t group_id)
 {
     JpegData *jpeg_data = &dcc->jpeg_data;
     LzData *lz_data = &dcc->lz_data;
@@ -910,9 +910,9 @@ int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
 }
 
 #ifdef USE_LZ4
-int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
-                           SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                           uint32_t group_id)
+static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
+                                  SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                  uint32_t group_id)
 {
     Lz4Data *lz4_data = &dcc->lz4_data;
     Lz4EncoderContext *lz4 = dcc->lz4;
@@ -957,9 +957,9 @@ int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
 }
 #endif
 
-int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
-                            SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                            uint32_t group_id)
+static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
+                                   SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                   uint32_t group_id)
 {
     QuicData *quic_data = &dcc->quic_data;
     QuicContext *quic = dcc->quic;

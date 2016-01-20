@@ -219,20 +219,5 @@ int                        dcc_compress_image                        (DisplayCha
                                                                       SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
                                                                       int can_lossy,
                                                                       compress_send_data_t* o_comp_data);
-int                        dcc_compress_image_glz                    (DisplayChannelClient *dcc,
-                                                                      SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
-                                                                      compress_send_data_t* o_comp_data);
-int                        dcc_compress_image_lz                     (DisplayChannelClient *dcc,
-                                                                      SpiceImage *dest, SpiceBitmap *src,
-                                                                      compress_send_data_t* o_comp_data, uint32_t group_id);
-int                        dcc_compress_image_jpeg                   (DisplayChannelClient *dcc, SpiceImage *dest,
-                                                                      SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                                                      uint32_t group_id);
-int                        dcc_compress_image_quic                   (DisplayChannelClient *dcc, SpiceImage *dest,
-                                                                      SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                                                      uint32_t group_id);
-int                        dcc_compress_image_lz4                    (DisplayChannelClient *dcc, SpiceImage *dest,
-                                                                      SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                                                      uint32_t group_id);
 
 #endif /* DCC_H_ */
