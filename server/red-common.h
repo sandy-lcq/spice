@@ -52,6 +52,10 @@ struct SpiceCoreInterfaceInternal {
     void (*watch_remove)(SpiceWatch *watch);
 
     void (*channel_event)(int event, SpiceChannelEventInfo *info);
+
+    GMainContext *main_context;
 };
+
+extern SpiceCoreInterfaceInternal event_loop_core;
 
 #endif

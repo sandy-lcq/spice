@@ -30,9 +30,9 @@ libtest_a_SOURCES =				\
 LDADD =								\
 	libtest.a						\
 	$(top_builddir)/spice-common/common/libspice-common.la	\
-	$(top_builddir)/server/libspice-server.la		\
+	$(top_builddir)/server/libserver.la			\
 	$(GLIB2_LIBS)						\
-	$(SPICE_NONPKGCONFIG_LIBS)		                \
+	$(SPICE_NONPKGCONFIG_LIBS)				\
 	$(NULL)
 
 noinst_PROGRAMS =				\
@@ -69,8 +69,6 @@ noinst_LIBRARIES += \
 	$(NULL)
 
 spice_server_replay_SOURCES = replay.c
-
-stream_test_LDADD = ../libserver.la $(LDADD)
 
 stat_test_SOURCES = stat-main.c
 stat_test_LDADD = \

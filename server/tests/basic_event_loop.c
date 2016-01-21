@@ -43,18 +43,11 @@ GMainContext *basic_event_loop_get_context(void)
     return main_context;
 }
 
-static inline GMainContext *event_loop_context_from_iface(const SpiceCoreInterfaceInternal *iface)
-{
-    return main_context;
-}
-
 static void event_loop_channel_event(int event, SpiceChannelEventInfo *info)
 {
     DPRINTF(0, "channel event con, type, id, event: %d, %d, %d, %d",
             info->connection_id, info->type, info->id, event);
 }
-
-#include "../event-loop.tmpl.c"
 
 void basic_event_loop_mainloop(void)
 {
@@ -91,7 +84,6 @@ static SpiceCoreInterface core = {
     },
     .timer_add = base_timer_add,
     .watch_add = base_watch_add,
-    .channel_event = event_loop_channel_event,
 };
 
 SpiceCoreInterface *basic_event_loop_init(void)
@@ -104,6 +96,9 @@ SpiceCoreInterface *basic_event_loop_init(void)
     core.timer_remove = event_loop_core.timer_remove;
     core.watch_update_mask = event_loop_core.watch_update_mask;
     core.watch_remove = event_loop_core.watch_remove;
+    event_loop_core.channel_event = core.channel_event = event_loop_channel_event;
+    event_loop_core.main_context = main_context;
+
     return &core;
 }
 

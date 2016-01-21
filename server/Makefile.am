@@ -70,6 +70,7 @@ libserver_la_SOURCES =				\
 	char-device.c				\
 	char-device.h				\
 	demarshallers.h				\
+	event-loop.c				\
 	glz-encoder.c				\
 	glz-encoder.h				\
 	glz-encoder-dict.c		\
@@ -159,7 +160,6 @@ EXTRA_DIST =					\
 	cache-item.tmpl.c			\
 	glz-encode-match.tmpl.c			\
 	glz-encode.tmpl.c			\
-	event-loop.tmpl.c			\
 	spice-server.syms			\
 	$(NULL)
 

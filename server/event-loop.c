@@ -16,18 +16,10 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-/* This is a template file to implement event loop using GLib one.
- *
- * Is implemented as a template file to avoid some linker problem.
- *
- * This file export a variable:
+/*
+ *This file export a global variable:
  *
  * SpiceCoreInterfaceInternal event_loop_core;
- *
- * You should also define some functions like:
- *
- * GMainContext *event_loop_context_from_iface(const SpiceCoreInterfaceInternal *opaque);
- * void event_loop_channel_event(int event, SpiceChannelEventInfo *info);
  */
 
 #include "red-common.h"
@@ -44,7 +36,7 @@ static SpiceTimer* timer_add(const SpiceCoreInterfaceInternal *iface,
 {
     SpiceTimer *timer = spice_malloc0(sizeof(SpiceTimer));
 
-    timer->context = event_loop_context_from_iface(iface);
+    timer->context = iface->main_context;
     timer->func = func;
     timer->opaque = opaque;
 
@@ -157,7 +149,7 @@ static SpiceWatch *watch_add(const SpiceCoreInterfaceInternal *iface,
     spice_return_val_if_fail(func != NULL, NULL);
 
     watch = spice_malloc0(sizeof(SpiceWatch));
-    watch->context = event_loop_context_from_iface(iface);
+    watch->context = iface->main_context;
     watch->channel = g_io_channel_unix_new(fd);
     watch->func = func;
     watch->opaque = opaque;
@@ -176,7 +168,7 @@ static void watch_remove(SpiceWatch *watch)
     free(watch);
 }
 
-static SpiceCoreInterfaceInternal event_loop_core = {
+SpiceCoreInterfaceInternal event_loop_core = {
     .timer_add = timer_add,
     .timer_start = timer_start,
     .timer_cancel = timer_cancel,
@@ -185,6 +177,4 @@ static SpiceCoreInterfaceInternal event_loop_core = {
     .watch_add = watch_add,
     .watch_update_mask = watch_update_mask,
     .watch_remove = watch_remove,
-
-    .channel_event = event_loop_channel_event
 };
