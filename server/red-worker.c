@@ -49,21 +49,13 @@
 
 #include "spice.h"
 #include "red-worker.h"
-#include "spice_timer_queue.h"
 #include "cursor-channel.h"
 #include "tree.h"
 
 #define CMD_RING_POLL_TIMEOUT 10 //milli
 #define CMD_RING_POLL_RETRIES 200
 
-#define MAX_EVENT_SOURCES 20
 #define INF_EVENT_WAIT ~0
-
-struct SpiceWatch {
-    struct RedWorker *worker;
-    SpiceWatchFunc watch_func;
-    void *watch_func_opaque;
-};
 
 struct RedWorker {
     pthread_t thread;
@@ -72,8 +64,7 @@ struct RedWorker {
     SpiceWatch *dispatch_watch;
     int running;
     SpiceCoreInterfaceInternal core;
-    struct pollfd poll_fds[MAX_EVENT_SOURCES];
-    struct SpiceWatch watches[MAX_EVENT_SOURCES];
+
     unsigned int event_timeout;
 
     DisplayChannel *display_channel;
@@ -496,84 +487,6 @@ static int common_channel_config_socket(RedChannelClient *rcc)
     }
     return TRUE;
 }
-
-static void worker_watch_update_mask(SpiceWatch *watch, int event_mask)
-{
-    struct RedWorker *worker;
-    int i;
-
-    if (!watch) {
-        return;
-    }
-
-    worker = watch->worker;
-    i = watch - worker->watches;
-
-    worker->poll_fds[i].events = 0;
-    if (event_mask & SPICE_WATCH_EVENT_READ) {
-        worker->poll_fds[i].events |= POLLIN;
-    }
-    if (event_mask & SPICE_WATCH_EVENT_WRITE) {
-        worker->poll_fds[i].events |= POLLOUT;
-    }
-}
-
-static SpiceWatch *worker_watch_add(const SpiceCoreInterfaceInternal *iface,
-                                    int fd, int event_mask, SpiceWatchFunc func, void *opaque)
-{
-    RedWorker *worker = SPICE_CONTAINEROF(iface, RedWorker, core);
-    int i;
-
-    /* Search for a free slot in our poll_fds & watches arrays */
-    for (i = 0; i < MAX_EVENT_SOURCES; i++) {
-        if (worker->poll_fds[i].fd == -1) {
-            break;
-        }
-    }
-    if (i == MAX_EVENT_SOURCES) {
-        /* Since we are a channel core implementation, we always get called from
-           red_channel_client_create(), so opaque always is our rcc */
-        RedChannelClient *rcc = opaque;
-        spice_warning("could not add a watch for channel type %u id %u",
-                      rcc->channel->type, rcc->channel->id);
-        return NULL;
-    }
-
-    worker->poll_fds[i].fd = fd;
-    worker->watches[i].worker = worker;
-    worker->watches[i].watch_func = func;
-    worker->watches[i].watch_func_opaque = opaque;
-    worker_watch_update_mask(&worker->watches[i], event_mask);
-
-    return &worker->watches[i];
-}
-
-static void worker_watch_remove(SpiceWatch *watch)
-{
-    if (!watch) {
-        return;
-    }
-
-    /* Note we don't touch the poll_fd here, to avoid the
-       poll_fds/watches table entry getting re-used in the same
-       red_worker_main loop over the fds as it is removed.
-
-       This is done because re-using it while events were pending on
-       the fd previously occupying the slot would lead to incorrectly
-       calling the watch_func for the new fd. */
-    memset(watch, 0, sizeof(SpiceWatch));
-}
-
-static const SpiceCoreInterfaceInternal worker_core_initializer = {
-    .timer_add = spice_timer_queue_add,
-    .timer_start = spice_timer_set,
-    .timer_cancel = spice_timer_cancel,
-    .timer_remove = spice_timer_remove,
-
-    .watch_update_mask = worker_watch_update_mask,
-    .watch_add = worker_watch_add,
-    .watch_remove = worker_watch_remove,
-};
 
 CommonChannelClient *common_channel_new_client(CommonChannel *common,
                                                int size,
@@ -1518,18 +1431,81 @@ static void handle_dev_input(int fd, int event, void *opaque)
     dispatcher_handle_recv_read(red_dispatcher_get_dispatcher(worker->red_dispatcher));
 }
 
+typedef struct RedWorkerSource {
+    GSource source;
+    RedWorker *worker;
+} RedWorkerSource;
+
+static gboolean worker_source_prepare(GSource *source, gint *p_timeout)
+{
+    RedWorkerSource *wsource = SPICE_CONTAINEROF(source, RedWorkerSource, source);
+    RedWorker *worker = wsource->worker;
+    unsigned int timeout;
+
+    timeout = MIN(worker->event_timeout,
+                  display_channel_get_streams_timeout(worker->display_channel));
+
+    *p_timeout = (timeout == INF_EVENT_WAIT) ? -1 : timeout;
+    if (*p_timeout == 0)
+        return TRUE;
+
+    return FALSE;
+}
+
+static gboolean worker_source_check(GSource *source)
+{
+    RedWorkerSource *wsource = SPICE_CONTAINEROF(source, RedWorkerSource, source);
+    RedWorker *worker = wsource->worker;
+
+    return worker->running /* TODO && worker->pending_process */;
+}
+
+static gboolean worker_source_dispatch(GSource *source, GSourceFunc callback,
+                                       gpointer user_data)
+{
+    RedWorkerSource *wsource = SPICE_CONTAINEROF(source, RedWorkerSource, source);
+    RedWorker *worker = wsource->worker;
+    DisplayChannel *display = worker->display_channel;
+    int ring_is_empty;
+
+    /* during migration, in the dest, the display channel can be initialized
+       while the global lz data not since migrate data msg hasn't been
+       received yet */
+    /* TODO: why is this here, and not in display_channel_create */
+    display_channel_free_glz_drawables_to_free(display);
+
+    /* TODO: could use its own source */
+    stream_timeout(display);
+
+    worker->event_timeout = INF_EVENT_WAIT;
+    red_process_cursor(worker, &ring_is_empty);
+    red_process_display(worker, &ring_is_empty);
+
+    /* TODO: remove me? that should be handled by watch out condition */
+    red_push(worker);
+
+    return TRUE;
+}
+
+/* cannot be const */
+static GSourceFuncs worker_source_funcs = {
+    .prepare = worker_source_prepare,
+    .check = worker_source_check,
+    .dispatch = worker_source_dispatch,
+};
+
 RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 {
     QXLDevInitInfo init_info;
     RedWorker *worker;
     Dispatcher *dispatcher;
-    int i;
     const char *record_filename;
 
     qxl->st->qif->get_init_info(qxl, &init_info);
 
     worker = spice_new0(RedWorker, 1);
-    worker->core = worker_core_initializer;
+    worker->core = event_loop_core;
+    worker->core.main_context = g_main_context_new();
 
     record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
     if (record_filename) {
@@ -1563,14 +1539,16 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
     worker->wakeup_counter = stat_add_counter(worker->stat, "wakeups", TRUE);
     worker->command_counter = stat_add_counter(worker->stat, "commands", TRUE);
 #endif
-    for (i = 0; i < MAX_EVENT_SOURCES; i++) {
-        worker->poll_fds[i].fd = -1;
-    }
 
     worker->dispatch_watch =
         worker->core.watch_add(&worker->core, dispatcher_get_recv_fd(dispatcher),
                                SPICE_WATCH_EVENT_READ, handle_dev_input, worker);
     spice_assert(worker->dispatch_watch != NULL);
+
+    GSource *source = g_source_new(&worker_source_funcs, sizeof(RedWorkerSource));
+    SPICE_CONTAINEROF(source, RedWorkerSource, source)->worker = worker;
+    g_source_attach(source, worker->core.main_context);
+    g_source_unref(source);
 
     memslot_info_init(&worker->mem_slots,
                       init_info.num_memslots_groups,
@@ -1599,73 +1577,15 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
     spice_assert(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
            MAX_PIPE_SIZE > NARROW_CLIENT_ACK_WINDOW); //ensure wakeup by ack message
 
-    if (!spice_timer_queue_create()) {
-        spice_error("failed to create timer queue");
-    }
-
     RED_CHANNEL(worker->cursor_channel)->thread_id = pthread_self();
     RED_CHANNEL(worker->display_channel)->thread_id = pthread_self();
 
-    for (;;) {
-        int i, num_events;
-        unsigned int timeout;
+    GMainLoop *loop = g_main_loop_new(worker->core.main_context, FALSE);
+    g_main_loop_run(loop);
+    g_main_loop_unref(loop);
 
-        timeout = spice_timer_queue_get_timeout_ms();
-        worker->event_timeout = MIN(timeout, worker->event_timeout);
-        timeout = display_channel_get_streams_timeout(worker->display_channel);
-        worker->event_timeout = MIN(timeout, worker->event_timeout);
-        num_events = poll(worker->poll_fds, MAX_EVENT_SOURCES, worker->event_timeout);
-        stream_timeout(worker->display_channel);
-        spice_timer_queue_cb();
-
-        if (worker->display_channel) {
-            /* during migration, in the dest, the display channel can be initialized
-               while the global lz data not since migrate data msg hasn't been
-               received yet */
-            display_channel_free_glz_drawables_to_free(worker->display_channel);
-        }
-
-        worker->event_timeout = INF_EVENT_WAIT;
-        if (num_events == -1) {
-            if (errno != EINTR) {
-                spice_error("poll failed, %s", strerror(errno));
-            }
-        }
-
-        for (i = 0; i < MAX_EVENT_SOURCES; i++) {
-            /* The watch may have been removed by the watch-func from
-               another fd (ie a disconnect through the dispatcher),
-               in this case watch_func is NULL. */
-            if (worker->poll_fds[i].revents && worker->watches[i].watch_func) {
-                int events = 0;
-                if (worker->poll_fds[i].revents & POLLIN) {
-                    events |= SPICE_WATCH_EVENT_READ;
-                }
-                if (worker->poll_fds[i].revents & POLLOUT) {
-                    events |= SPICE_WATCH_EVENT_WRITE;
-                }
-                worker->watches[i].watch_func(worker->poll_fds[i].fd, events,
-                                        worker->watches[i].watch_func_opaque);
-            }
-        }
-
-        /* Clear the poll_fd for any removed watches, see the comment in
-           watch_remove for why we don't do this there. */
-        for (i = 0; i < MAX_EVENT_SOURCES; i++) {
-            if (!worker->watches[i].watch_func) {
-                worker->poll_fds[i].fd = -1;
-            }
-        }
-
-        if (worker->running) {
-            int ring_is_empty;
-            red_process_cursor(worker, &ring_is_empty);
-            red_process_display(worker, &ring_is_empty);
-        }
-        red_push(worker);
-    }
-
-    spice_warn_if_reached();
+    /* FIXME: free worker, and join threads */
+    exit(0);
 }
 
 bool red_worker_run(RedWorker *worker)

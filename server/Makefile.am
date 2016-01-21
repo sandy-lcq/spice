@@ -121,8 +121,6 @@ libserver_la_SOURCES =				\
 	sound.h				\
 	stat.h					\
 	spicevmc.c				\
-	spice_timer_queue.c			\
-	spice_timer_queue.h			\
 	zlib-encoder.c				\
 	zlib-encoder.h				\
 	image-cache.h			\
