@@ -108,6 +108,7 @@ static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
 static gboolean fill_queue_idle(gpointer user_data)
 {
     gboolean keep = FALSE;
+    gboolean wakeup = FALSE;
 
     while (g_async_queue_length(aqueue) < 50) {
         QXLCommandExt *cmd = spice_replay_next_cmd(replay, qxl_worker);
@@ -119,6 +120,7 @@ static gboolean fill_queue_idle(gpointer user_data)
         if (slow)
             g_usleep(slow);
 
+        wakeup = TRUE;
         g_async_queue_push(aqueue, cmd);
     }
 
@@ -132,7 +134,8 @@ end:
         }
         pthread_mutex_unlock(&mutex);
     }
-    spice_qxl_wakeup(&display_sin);
+    if (wakeup)
+        spice_qxl_wakeup(&display_sin);
 
     return keep;
 }
