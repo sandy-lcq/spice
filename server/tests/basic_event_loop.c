@@ -76,12 +76,12 @@ static void ignore_sigpipe(void)
 
 static SpiceTimer* base_timer_add(SpiceTimerFunc func, void *opaque)
 {
-    return event_loop_core.timer_add(NULL, func, opaque);
+    return event_loop_core.timer_add(&event_loop_core, func, opaque);
 }
 
 static SpiceWatch *base_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
-    return event_loop_core.watch_add(NULL, fd, event_mask, func, opaque);
+    return event_loop_core.watch_add(&event_loop_core, fd, event_mask, func, opaque);
 }
 
 static SpiceCoreInterface core = {
