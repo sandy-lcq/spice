@@ -321,16 +321,6 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
     return n;
 }
 
-static void red_push(RedWorker *worker)
-{
-    if (worker->cursor_channel) {
-        red_channel_push(RED_CHANNEL(worker->cursor_channel));
-    }
-    if (worker->display_channel) {
-        red_channel_push(RED_CHANNEL(worker->display_channel));
-    }
-}
-
 static void red_disconnect_display(RedWorker *worker)
 {
     spice_warning("update timeout");
@@ -1457,9 +1447,6 @@ static gboolean worker_source_dispatch(GSource *source, GSourceFunc callback,
     worker->event_timeout = INF_EVENT_WAIT;
     red_process_cursor(worker, &ring_is_empty);
     red_process_display(worker, &ring_is_empty);
-
-    /* TODO: remove me? that should be handled by watch out condition */
-    red_push(worker);
 
     return TRUE;
 }

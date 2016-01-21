@@ -1359,6 +1359,11 @@ void red_channel_client_push(RedChannelClient *rcc)
     while ((pipe_item = red_channel_client_pipe_item_get(rcc))) {
         red_channel_client_send_item(rcc, pipe_item);
     }
+    if (red_channel_client_no_item_being_sent(rcc) && ring_is_empty(&rcc->pipe)
+        && rcc->stream->watch) {
+        rcc->channel->core->watch_update_mask(rcc->stream->watch,
+                                              SPICE_WATCH_EVENT_READ);
+    }
     rcc->during_send = FALSE;
     red_channel_client_unref(rcc);
 }
@@ -1659,7 +1664,7 @@ void red_channel_pipe_item_init(RedChannel *channel, PipeItem *item, int type)
     item->type = type;
 }
 
-static inline int validate_pipe_add(RedChannelClient *rcc, PipeItem *item)
+static inline gboolean client_pipe_add(RedChannelClient *rcc, PipeItem *item, RingItem *pos)
 {
     spice_assert(rcc && item);
     if (SPICE_UNLIKELY(!red_channel_client_is_connected(rcc))) {
@@ -1667,17 +1672,20 @@ static inline int validate_pipe_add(RedChannelClient *rcc, PipeItem *item)
         red_channel_client_release_item(rcc, item, FALSE);
         return FALSE;
     }
+    if (ring_is_empty(&rcc->pipe) && rcc->stream->watch) {
+        rcc->channel->core->watch_update_mask(rcc->stream->watch,
+                                         SPICE_WATCH_EVENT_READ |
+                                         SPICE_WATCH_EVENT_WRITE);
+    }
+    rcc->pipe_size++;
+    ring_add(pos, &item->link);
     return TRUE;
 }
 
 void red_channel_client_pipe_add(RedChannelClient *rcc, PipeItem *item)
 {
 
-    if (!validate_pipe_add(rcc, item)) {
-        return;
-    }
-    rcc->pipe_size++;
-    ring_add(&rcc->pipe, &item->link);
+    client_pipe_add(rcc, item, &rcc->pipe);
 }
 
 void red_channel_client_pipe_add_push(RedChannelClient *rcc, PipeItem *item)
@@ -1690,11 +1698,7 @@ void red_channel_client_pipe_add_after(RedChannelClient *rcc,
                                        PipeItem *item, PipeItem *pos)
 {
     spice_assert(pos);
-    if (!validate_pipe_add(rcc, item)) {
-        return;
-    }
-    rcc->pipe_size++;
-    ring_add_after(&item->link, &pos->link);
+    client_pipe_add(rcc, item, &pos->link);
 }
 
 int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc,
@@ -1706,21 +1710,14 @@ int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc,
 void red_channel_client_pipe_add_tail_no_push(RedChannelClient *rcc,
                                               PipeItem *item)
 {
-    if (!validate_pipe_add(rcc, item)) {
-        return;
-    }
-    rcc->pipe_size++;
-    ring_add_before(&item->link, &rcc->pipe);
+    client_pipe_add(rcc, item, rcc->pipe.prev);
 }
 
 void red_channel_client_pipe_add_tail(RedChannelClient *rcc, PipeItem *item)
 {
-    if (!validate_pipe_add(rcc, item)) {
-        return;
+    if (client_pipe_add(rcc, item, rcc->pipe.prev)) {
+        red_channel_client_push(rcc);
     }
-    rcc->pipe_size++;
-    ring_add_before(&item->link, &rcc->pipe);
-    red_channel_client_push(rcc);
 }
 
 void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
