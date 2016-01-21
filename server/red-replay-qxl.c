@@ -1209,6 +1209,9 @@ SpiceReplay *spice_replay_new(FILE *file, int nsurfaces)
             spice_warning("Replay file version unsupported");
             return NULL;
         }
+    } else {
+        spice_warning("This doesn't look like a valid replay file");
+        return NULL;
     }
 
     replay = spice_malloc0(sizeof(SpiceReplay));

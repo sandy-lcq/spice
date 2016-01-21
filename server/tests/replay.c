@@ -369,6 +369,10 @@ int main(int argc, char **argv)
     if (total_size > 0)
         g_timeout_add_seconds(1, progress_timer, fd);
     replay = spice_replay_new(fd, MAX_SURFACE_NUM);
+    if (replay == NULL) {
+        g_printerr("Error initializing replay\n");
+        exit(1);
+    }
 
     aqueue = g_async_queue_new();
     core = basic_event_loop_init();
