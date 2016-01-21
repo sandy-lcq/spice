@@ -399,7 +399,6 @@ void dcc_push_surface_image(DisplayChannelClient *dcc, int surface_id)
     /* not allowing lossy compression because probably, especially if it is a primary surface,
        it combines both "picture-like" areas with areas that are more "artificial"*/
     dcc_add_surface_area_image(dcc, surface_id, &area, NULL, FALSE);
-    red_channel_client_push(RED_CHANNEL_CLIENT(dcc));
 }
 
 static void add_drawable_surface_images(DisplayChannelClient *dcc, Drawable *drawable)
@@ -679,7 +678,6 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
     mci = red_monitors_config_item_new(red_channel_client_get_channel(RED_CHANNEL_CLIENT(dcc)),
                                        monitors_config);
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &mci->pipe_item);
-    red_channel_client_push(RED_CHANNEL_CLIENT(dcc));
 }
 
 static RedSurfaceDestroyItem *red_surface_destroy_item_new(RedChannel *channel,
