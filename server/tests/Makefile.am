@@ -35,6 +35,13 @@ LDADD =								\
 	$(SPICE_NONPKGCONFIG_LIBS)				\
 	$(NULL)
 
+TESTS =						\
+	stat_test				\
+	stream-test				\
+	test-loop				\
+	test-qxl-parsing			\
+	$(NULL)
+
 noinst_PROGRAMS =				\
 	test_display_no_ssl			\
 	test_display_streaming			\
@@ -47,16 +54,7 @@ noinst_PROGRAMS =				\
 	test_vdagent				\
 	test_display_width_stride		\
 	spice-server-replay			\
-	stream-test				\
-	stat_test				\
-	test-loop				\
-	$(NULL)
-
-TESTS =						\
-	stat_test				\
-	test-qxl-parsing			\
-	stream-test				\
-	test-loop				\
+	$(TESTS)				\
 	$(NULL)
 
 check_PROGRAMS = $(TESTS)
