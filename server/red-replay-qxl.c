@@ -215,7 +215,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
 {
     char template[1024];
     int with_zlib = -1;
-    int zlib_size;
+    unsigned int zlib_size;
     uint8_t *zlib_buffer;
     z_stream strm;
 
@@ -238,7 +238,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
     if (with_zlib) {
         int ret;
 
-        replay_fscanf(replay, "%d:", &zlib_size);
+        replay_fscanf(replay, "%u:", &zlib_size);
         if (replay->error) {
             return REPLAY_ERROR;
         }
@@ -284,11 +284,11 @@ static ssize_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
                                       uint8_t **mem, size_t base_size)
 {
     size_t data_size;
-    int count_chunks;
+    unsigned int count_chunks;
     size_t next_data_size;
     QXLDataChunk *cur, *next;
 
-    replay_fscanf(replay, "data_chunks %d %zu\n", &count_chunks, &data_size);
+    replay_fscanf(replay, "data_chunks %u %zu\n", &count_chunks, &data_size);
     if (replay->error) {
         return -1;
     }
@@ -379,9 +379,9 @@ static void red_replay_path_free(SpiceReplay *replay, QXLPHYSICAL p)
 static QXLClipRects *red_replay_clip_rects(SpiceReplay *replay)
 {
     QXLClipRects *qxl = NULL;
-    int num_rects;
+    unsigned int num_rects;
 
-    replay_fscanf(replay, "num_rects %d\n", &num_rects);
+    replay_fscanf(replay, "num_rects %u\n", &num_rects);
     if (replay->error) {
         return NULL;
     }
@@ -444,9 +444,9 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         replay_fscanf(replay, "has_palette %d\n", &has_palette);
         if (has_palette) {
             QXLPalette *qp;
-            int i, num_ents;
+            unsigned int i, num_ents;
 
-            replay_fscanf(replay, "qp.num_ents %d\n", &num_ents);
+            replay_fscanf(replay, "qp.num_ents %u\n", &num_ents);
             if (replay->error) {
                 return NULL;
             }
