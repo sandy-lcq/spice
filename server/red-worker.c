@@ -165,7 +165,7 @@ void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
     free(red_drawable);
 }
 
-static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
+static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
 {
     QXLCommandExt ext_cmd;
     int n = 0;
@@ -177,7 +177,7 @@ static int red_process_cursor(RedWorker *worker, uint32_t max_pipe_size, int *ri
 
     *ring_is_empty = FALSE;
     while (!cursor_is_connected(worker) ||
-           red_channel_max_pipe_size(RED_CHANNEL(worker->cursor_channel)) <= max_pipe_size) {
+           red_channel_max_pipe_size(RED_CHANNEL(worker->cursor_channel)) <= MAX_PIPE_SIZE) {
         if (!worker->qxl->st->qif->get_cursor_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->cursor_poll_tries < CMD_RING_POLL_RETRIES) {
@@ -224,7 +224,7 @@ static RedDrawable *red_drawable_new(RedWorker *worker)
     return red;
 }
 
-static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *ring_is_empty)
+static int red_process_display(RedWorker *worker, int *ring_is_empty)
 {
     QXLCommandExt ext_cmd;
     int n = 0;
@@ -238,7 +238,7 @@ static int red_process_display(RedWorker *worker, uint32_t max_pipe_size, int *r
     worker->process_display_generation++;
     *ring_is_empty = FALSE;
     while (!display_is_connected(worker) ||
-           red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) <= max_pipe_size) {
+           red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) <= MAX_PIPE_SIZE) {
         if (!worker->qxl->st->qif->get_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;;
             if (worker->display_poll_tries < CMD_RING_POLL_RETRIES) {
@@ -385,12 +385,12 @@ static void flush_display_commands(RedWorker *worker)
         uint64_t end_time;
         int ring_is_empty;
 
-        red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty);
+        red_process_display(worker, &ring_is_empty);
         if (ring_is_empty) {
             break;
         }
 
-        while (red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
+        while (red_process_display(worker, &ring_is_empty)) {
             red_channel_push(RED_CHANNEL(worker->display_channel));
         }
 
@@ -429,12 +429,12 @@ static void flush_cursor_commands(RedWorker *worker)
         uint64_t end_time;
         int ring_is_empty = FALSE;
 
-        red_process_cursor(worker, MAX_PIPE_SIZE, &ring_is_empty);
+        red_process_cursor(worker, &ring_is_empty);
         if (ring_is_empty) {
             break;
         }
 
-        while (red_process_cursor(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
+        while (red_process_cursor(worker, &ring_is_empty)) {
             red_channel_push(RED_CHANNEL(worker->cursor_channel));
         }
 
@@ -1000,7 +1000,7 @@ static void handle_dev_oom(void *opaque, void *payload)
                 display->glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
-    while (red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty)) {
+    while (red_process_display(worker, &ring_is_empty)) {
         red_channel_push(display_red_channel);
     }
     if (worker->qxl->st->qif->flush_resources(worker->qxl) == 0) {
@@ -1673,8 +1673,8 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
 
         if (worker->running) {
             int ring_is_empty;
-            red_process_cursor(worker, MAX_PIPE_SIZE, &ring_is_empty);
-            red_process_display(worker, MAX_PIPE_SIZE, &ring_is_empty);
+            red_process_cursor(worker, &ring_is_empty);
+            red_process_display(worker, &ring_is_empty);
         }
         red_push(worker);
     }
