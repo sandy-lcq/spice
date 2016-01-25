@@ -331,15 +331,15 @@ static void red_push(RedWorker *worker)
     }
 }
 
-void red_disconnect_all_display_TODO_remove_me(RedChannel *channel)
+static void red_disconnect_display(RedWorker *worker)
 {
+    spice_warning("update timeout");
+
     // TODO: we need to record the client that actually causes the timeout. So
     // we need to check the locations of the various pipe heads when counting,
     // and disconnect only those/that.
-    if (!channel) {
-        return;
-    }
-    red_channel_apply_clients(channel, red_channel_client_disconnect);
+    red_channel_apply_clients(RED_CHANNEL(worker->display_channel),
+                              red_channel_client_disconnect);
 }
 
 static void red_migrate_display(DisplayChannel *display, RedChannelClient *rcc)
@@ -360,20 +360,22 @@ static void red_migrate_display(DisplayChannel *display, RedChannelClient *rcc)
     }
 }
 
-static void flush_display_commands(RedWorker *worker)
-{
-    RedChannel *red_channel = RED_CHANNEL(worker->display_channel);
+typedef int (*red_process_t)(RedWorker *worker, int *ring_is_empty);
+typedef void (*red_disconnect_t)(RedWorker *worker);
 
+static void flush_commands(RedWorker *worker, RedChannel *red_channel,
+                           red_process_t process, red_disconnect_t disconnect)
+{
     for (;;) {
         uint64_t end_time;
         int ring_is_empty;
 
-        red_process_display(worker, &ring_is_empty);
+        process(worker, &ring_is_empty);
         if (ring_is_empty) {
             break;
         }
 
-        while (red_process_display(worker, &ring_is_empty)) {
+        while (process(worker, &ring_is_empty)) {
             red_channel_push(red_channel);
         }
 
@@ -381,7 +383,6 @@ static void flush_display_commands(RedWorker *worker)
             break;
         }
         end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
-        int sleep_count = 0;
         for (;;) {
             red_channel_push(red_channel);
             if (red_channel_max_pipe_size(red_channel) <= MAX_PIPE_SIZE) {
@@ -392,54 +393,30 @@ static void flush_display_commands(RedWorker *worker)
             // TODO: MC: the whole timeout will break since it takes lowest timeout, should
             // do it client by client.
             if (spice_get_monotonic_time_ns() >= end_time) {
-                spice_warning("update timeout");
-                red_disconnect_all_display_TODO_remove_me(red_channel);
+                disconnect(worker);
             } else {
-                sleep_count++;
                 usleep(DISPLAY_CLIENT_RETRY_INTERVAL);
             }
         }
     }
 }
 
+static void flush_display_commands(RedWorker *worker)
+{
+    flush_commands(worker, RED_CHANNEL(worker->display_channel),
+                   red_process_display, red_disconnect_display);
+}
+
+static void red_disconnect_cursor(RedWorker *worker)
+{
+    spice_warning("flush cursor timeout");
+    cursor_channel_disconnect(worker->cursor_channel);
+}
+
 static void flush_cursor_commands(RedWorker *worker)
 {
-    RedChannel *red_channel = RED_CHANNEL(worker->cursor_channel);
-
-    for (;;) {
-        uint64_t end_time;
-        int ring_is_empty = FALSE;
-
-        red_process_cursor(worker, &ring_is_empty);
-        if (ring_is_empty) {
-            break;
-        }
-
-        while (red_process_cursor(worker, &ring_is_empty)) {
-            red_channel_push(red_channel);
-        }
-
-        if (ring_is_empty) {
-            break;
-        }
-        end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
-        int sleep_count = 0;
-        for (;;) {
-            red_channel_push(red_channel);
-            if (red_channel_max_pipe_size(red_channel) <= MAX_PIPE_SIZE) {
-                break;
-            }
-            red_channel_receive(red_channel);
-            red_channel_send(red_channel);
-            if (spice_get_monotonic_time_ns() >= end_time) {
-                spice_warning("flush cursor timeout");
-                cursor_channel_disconnect(worker->cursor_channel);
-            } else {
-                sleep_count++;
-                usleep(DISPLAY_CLIENT_RETRY_INTERVAL);
-            }
-        }
-    }
+    flush_commands(worker, RED_CHANNEL(worker->cursor_channel),
+                   red_process_cursor, red_disconnect_cursor);
 }
 
 // TODO: on timeout, don't disconnect all channels immediatly - try to disconnect the slowest ones
