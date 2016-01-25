@@ -321,8 +321,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             spice_error("bad command type");
         }
         n++;
-        if ((worker->display_channel &&
-             red_channel_all_blocked(&worker->display_channel->common.base))
+        if (red_channel_all_blocked(&worker->display_channel->common.base)
             || spice_get_monotonic_time_ns() - start > NSEC_PER_SEC / 100) {
             worker->event_timeout = 0;
             return n;
