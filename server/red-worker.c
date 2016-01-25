@@ -379,7 +379,7 @@ static void red_migrate_display(DisplayChannel *display, RedChannelClient *rcc)
 
 static void flush_display_commands(RedWorker *worker)
 {
-    RedChannel *display_red_channel = RED_CHANNEL(worker->display_channel);
+    RedChannel *red_channel = RED_CHANNEL(worker->display_channel);
 
     for (;;) {
         uint64_t end_time;
@@ -391,7 +391,7 @@ static void flush_display_commands(RedWorker *worker)
         }
 
         while (red_process_display(worker, &ring_is_empty)) {
-            red_channel_push(RED_CHANNEL(worker->display_channel));
+            red_channel_push(red_channel);
         }
 
         if (ring_is_empty) {
@@ -400,19 +400,18 @@ static void flush_display_commands(RedWorker *worker)
         end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
-            red_channel_push(RED_CHANNEL(worker->display_channel));
+            red_channel_push(red_channel);
             if (!display_is_connected(worker) ||
-                red_channel_max_pipe_size(display_red_channel) <= MAX_PIPE_SIZE) {
+                red_channel_max_pipe_size(red_channel) <= MAX_PIPE_SIZE) {
                 break;
             }
-            RedChannel *channel = (RedChannel *)worker->display_channel;
-            red_channel_receive(channel);
-            red_channel_send(channel);
+            red_channel_receive(red_channel);
+            red_channel_send(red_channel);
             // TODO: MC: the whole timeout will break since it takes lowest timeout, should
             // do it client by client.
             if (spice_get_monotonic_time_ns() >= end_time) {
                 spice_warning("update timeout");
-                red_disconnect_all_display_TODO_remove_me(channel);
+                red_disconnect_all_display_TODO_remove_me(red_channel);
             } else {
                 sleep_count++;
                 usleep(DISPLAY_CLIENT_RETRY_INTERVAL);
@@ -423,7 +422,7 @@ static void flush_display_commands(RedWorker *worker)
 
 static void flush_cursor_commands(RedWorker *worker)
 {
-    RedChannel *cursor_red_channel = RED_CHANNEL(worker->cursor_channel);
+    RedChannel *red_channel = RED_CHANNEL(worker->cursor_channel);
 
     for (;;) {
         uint64_t end_time;
@@ -435,7 +434,7 @@ static void flush_cursor_commands(RedWorker *worker)
         }
 
         while (red_process_cursor(worker, &ring_is_empty)) {
-            red_channel_push(RED_CHANNEL(worker->cursor_channel));
+            red_channel_push(red_channel);
         }
 
         if (ring_is_empty) {
@@ -444,14 +443,13 @@ static void flush_cursor_commands(RedWorker *worker)
         end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
         int sleep_count = 0;
         for (;;) {
-            red_channel_push(RED_CHANNEL(worker->cursor_channel));
+            red_channel_push(red_channel);
             if (!cursor_is_connected(worker)
-                || red_channel_max_pipe_size(cursor_red_channel) <= MAX_PIPE_SIZE) {
+                || red_channel_max_pipe_size(red_channel) <= MAX_PIPE_SIZE) {
                 break;
             }
-            RedChannel *channel = (RedChannel *)worker->cursor_channel;
-            red_channel_receive(channel);
-            red_channel_send(channel);
+            red_channel_receive(red_channel);
+            red_channel_send(red_channel);
             if (spice_get_monotonic_time_ns() >= end_time) {
                 spice_warning("flush cursor timeout");
                 cursor_channel_disconnect(worker->cursor_channel);
