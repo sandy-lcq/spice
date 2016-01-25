@@ -25,60 +25,52 @@
 #include "red-common.h"
 
 struct SpiceTimer {
-    GMainContext *context;
-    SpiceTimerFunc func;
-    void *opaque;
-    GSource *source;
+    GSource source;
 };
 
-static SpiceTimer* timer_add(const SpiceCoreInterfaceInternal *iface,
-                             SpiceTimerFunc func, void *opaque)
+static gboolean
+spice_timer_dispatch(GSource     *source,
+                     GSourceFunc  callback,
+                     gpointer     user_data)
 {
-    SpiceTimer *timer = spice_malloc0(sizeof(SpiceTimer));
+    SpiceTimerFunc func = (SpiceTimerFunc) callback;
 
-    timer->context = iface->main_context;
-    timer->func = func;
-    timer->opaque = opaque;
-
-    return timer;
-}
-
-static gboolean timer_func(gpointer user_data)
-{
-    SpiceTimer *timer = user_data;
-
-    timer->func(timer->opaque);
+    func(user_data);
     /* timer might be free after func(), don't touch */
 
     return FALSE;
 }
 
+static GSourceFuncs spice_timer_funcs = {
+    .dispatch = spice_timer_dispatch,
+};
+
+static SpiceTimer* timer_add(const SpiceCoreInterfaceInternal *iface,
+                             SpiceTimerFunc func, void *opaque)
+{
+    SpiceTimer *timer = (SpiceTimer *) g_source_new(&spice_timer_funcs, sizeof(SpiceTimer));
+
+    g_source_set_callback(&timer->source, (GSourceFunc) func, opaque, NULL);
+
+    g_source_attach(&timer->source, iface->main_context);
+
+    return timer;
+}
+
 static void timer_cancel(SpiceTimer *timer)
 {
-    if (timer->source) {
-        g_source_destroy(timer->source);
-        g_source_unref(timer->source);
-        timer->source = NULL;
-    }
+    g_source_set_ready_time(&timer->source, -1);
 }
 
 static void timer_start(SpiceTimer *timer, uint32_t ms)
 {
-    timer_cancel(timer);
-
-    timer->source = g_timeout_source_new(ms);
-    spice_assert(timer->source != NULL);
-
-    g_source_set_callback(timer->source, timer_func, timer, NULL);
-
-    g_source_attach(timer->source, timer->context);
+    g_source_set_ready_time(&timer->source, g_get_monotonic_time() + ms * 1000u);
 }
 
 static void timer_remove(SpiceTimer *timer)
 {
-    timer_cancel(timer);
-    spice_assert(timer->source == NULL);
-    free(timer);
+    g_source_destroy(&timer->source);
+    g_source_unref(&timer->source);
 }
 
 struct SpiceWatch {
