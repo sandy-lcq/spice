@@ -454,7 +454,6 @@ static void flush_cursor_commands(RedWorker *worker)
             if (spice_get_monotonic_time_ns() >= end_time) {
                 spice_warning("flush cursor timeout");
                 cursor_channel_disconnect(worker->cursor_channel);
-                worker->cursor_channel = NULL;
             } else {
                 sleep_count++;
                 usleep(DISPLAY_CLIENT_RETRY_INTERVAL);
