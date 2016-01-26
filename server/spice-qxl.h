@@ -166,7 +166,17 @@ struct QXLInterface {
     void (*set_mm_time)(QXLInstance *qin, uint32_t mm_time) SPICE_GNUC_DEPRECATED;
 
     void (*get_init_info)(QXLInstance *qin, QXLDevInitInfo *info);
+
+    /* Retrieve the next command to be processed
+     * This call should be non-blocking. If no commands are available, it
+     * should return 0, or 1 if a command was retrieved */
     int (*get_command)(QXLInstance *qin, struct QXLCommandExt *cmd);
+
+    /* Request notification when new commands are available
+     * When a new command becomes available, the spice server should be
+     * notified by calling spice_qxl_wakeup(). If commands are already
+     * available, this function should return false and no notification
+     * triggered */
     int (*req_cmd_notification)(QXLInstance *qin);
     void (*release_resource)(QXLInstance *qin, struct QXLReleaseInfoExt release_info);
     int (*get_cursor_command)(QXLInstance *qin, struct QXLCommandExt *cmd);
