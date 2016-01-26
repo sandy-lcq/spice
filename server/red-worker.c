@@ -240,7 +240,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
     while (!display_is_connected(worker) ||
            red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) <= MAX_PIPE_SIZE) {
         if (!worker->qxl->st->qif->get_command(worker->qxl, &ext_cmd)) {
-            *ring_is_empty = TRUE;;
+            *ring_is_empty = TRUE;
             if (worker->display_poll_tries < CMD_RING_POLL_RETRIES) {
                 worker->display_poll_tries++;
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
