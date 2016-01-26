@@ -69,6 +69,7 @@ struct RedWorker {
     pthread_t thread;
     QXLInstance *qxl;
     RedDispatcher *red_dispatcher;
+    SpiceWatch *dispatch_watch;
     int running;
     SpiceCoreInterfaceInternal core;
     struct pollfd poll_fds[MAX_EVENT_SOURCES];
@@ -1578,11 +1579,10 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
         worker->poll_fds[i].fd = -1;
     }
 
-    worker->poll_fds[0].fd = dispatcher_get_recv_fd(dispatcher);
-    worker->poll_fds[0].events = POLLIN;
-    worker->watches[0].worker = worker;
-    worker->watches[0].watch_func = handle_dev_input;
-    worker->watches[0].watch_func_opaque = worker;
+    worker->dispatch_watch =
+        worker->core.watch_add(&worker->core, dispatcher_get_recv_fd(dispatcher),
+                               SPICE_WATCH_EVENT_READ, handle_dev_input, worker);
+    spice_assert(worker->dispatch_watch != NULL);
 
     memslot_info_init(&worker->mem_slots,
                       init_info.num_memslots_groups,
