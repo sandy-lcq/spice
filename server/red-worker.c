@@ -167,16 +167,13 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
         if (!worker->qxl->st->qif->get_cursor_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->cursor_poll_tries < CMD_RING_POLL_RETRIES) {
-                worker->cursor_poll_tries++;
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
-                return n;
+            } else if (worker->cursor_poll_tries == CMD_RING_POLL_RETRIES &&
+                       !worker->qxl->st->qif->req_cursor_notification(worker->qxl)) {
+                continue;
             }
-            if (worker->cursor_poll_tries > CMD_RING_POLL_RETRIES ||
-                worker->qxl->st->qif->req_cursor_notification(worker->qxl)) {
-                worker->cursor_poll_tries++;
-                return n;
-            }
-            continue;
+            worker->cursor_poll_tries++;
+            return n;
         }
         worker->cursor_poll_tries = 0;
         switch (ext_cmd.cmd.type) {
@@ -228,16 +225,13 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         if (!worker->qxl->st->qif->get_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->display_poll_tries < CMD_RING_POLL_RETRIES) {
-                worker->display_poll_tries++;
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
-                return n;
+            } else if (worker->display_poll_tries == CMD_RING_POLL_RETRIES &&
+                       !worker->qxl->st->qif->req_cmd_notification(worker->qxl)) {
+                continue;
             }
-            if (worker->display_poll_tries > CMD_RING_POLL_RETRIES ||
-                         worker->qxl->st->qif->req_cmd_notification(worker->qxl)) {
-                worker->display_poll_tries++;
-                return n;
-            }
-            continue;
+            worker->display_poll_tries++;
+            return n;
         }
 
         if (worker->record_fd)
