@@ -183,12 +183,6 @@ static int get_command(QXLInstance *qin, QXLCommandExt *ext)
 
 static int req_cmd_notification(QXLInstance *qin)
 {
-    if (!started)
-        return TRUE;
-
-    g_printerr("id: %d, queue length: %d",
-                   g_source_get_id(fill_source), g_async_queue_length(aqueue));
-
     return TRUE;
 }
 
