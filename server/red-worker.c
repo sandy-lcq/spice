@@ -69,6 +69,7 @@ struct RedWorker {
 
     DisplayChannel *display_channel;
     uint32_t display_poll_tries;
+    gboolean was_blocked;
 
     CursorChannel *cursor_channel;
     uint32_t cursor_poll_tries;
@@ -196,6 +197,7 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
         }
         n++;
     }
+    worker->was_blocked = TRUE;
     return n;
 }
 
@@ -318,7 +320,14 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             return n;
         }
     }
+    worker->was_blocked = TRUE;
     return n;
+}
+
+static bool red_process_is_blocked(RedWorker *worker)
+{
+    return red_channel_max_pipe_size(RED_CHANNEL(worker->cursor_channel)) > MAX_PIPE_SIZE ||
+           red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) > MAX_PIPE_SIZE;
 }
 
 static void red_disconnect_display(RedWorker *worker)
@@ -1416,6 +1425,10 @@ static gboolean worker_source_prepare(GSource *source, gint *p_timeout)
     if (*p_timeout == 0)
         return TRUE;
 
+    if (worker->was_blocked && !red_process_is_blocked(worker)) {
+        return TRUE;
+    }
+
     return FALSE;
 }
 
@@ -1445,6 +1458,7 @@ static gboolean worker_source_dispatch(GSource *source, GSourceFunc callback,
     stream_timeout(display);
 
     worker->event_timeout = INF_EVENT_WAIT;
+    worker->was_blocked = FALSE;
     red_process_cursor(worker, &ring_is_empty);
     red_process_display(worker, &ring_is_empty);
 
