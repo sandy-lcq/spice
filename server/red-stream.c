@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <netinet/tcp.h>
 
 #include <glib.h>
 
@@ -36,6 +37,11 @@
 #include "red-common.h"
 #include "red-stream.h"
 #include "reds.h"
+
+// compatibility for *BSD systems
+#ifndef TCP_CORK
+#define TCP_CORK TCP_NOPUSH
+#endif
 
 struct AsyncRead {
     void *opaque;
@@ -83,6 +89,8 @@ struct RedStreamPrivate {
      * deallocated when main_dispatcher handles the SPICE_CHANNEL_EVENT_DISCONNECTED
      * event, either from same thread or by call back from main thread. */
     SpiceChannelEventInfo* info;
+    bool use_cork;
+    bool corked;
 
     ssize_t (*read)(RedStream *s, void *buf, size_t nbyte);
     ssize_t (*write)(RedStream *s, const void *buf, size_t nbyte);
@@ -91,6 +99,16 @@ struct RedStreamPrivate {
     RedsState *reds;
     SpiceCoreInterfaceInternal *core;
 };
+
+/**
+ * Set TCP_CORK on socket
+ */
+/* NOTE: enabled must be int */
+static int socket_set_cork(int socket, int enabled)
+{
+    SPICE_VERIFY(sizeof(enabled) == sizeof(int));
+    return setsockopt(socket, IPPROTO_TCP, TCP_CORK, &enabled, sizeof(enabled));
+}
 
 static ssize_t stream_write_cb(RedStream *s, const void *buf, size_t size)
 {
@@ -205,11 +223,31 @@ bool red_stream_write_all(RedStream *stream, const void *in_buf, size_t n)
 
 bool red_stream_set_auto_flush(RedStream *s, bool auto_flush)
 {
-    return auto_flush;
+    if (s->priv->use_cork == !auto_flush) {
+        return true;
+    }
+
+    s->priv->use_cork = !auto_flush;
+    if (s->priv->use_cork) {
+        if (socket_set_cork(s->socket, 1)) {
+            s->priv->use_cork = false;
+            return false;
+        } else {
+            s->priv->corked = true;
+        }
+    } else if (s->priv->corked) {
+        socket_set_cork(s->socket, 0);
+        s->priv->corked = false;
+    }
+    return true;
 }
 
 void red_stream_flush(RedStream *s)
 {
+    if (s->priv->corked) {
+        socket_set_cork(s->socket, 0);
+        socket_set_cork(s->socket, 1);
+    }
 }
 
 #if HAVE_SASL
