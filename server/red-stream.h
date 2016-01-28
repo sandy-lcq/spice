@@ -69,6 +69,26 @@ bool red_stream_set_no_delay(RedStream *stream, bool no_delay);
 int red_stream_get_no_delay(RedStream *stream);
 int red_stream_send_msgfd(RedStream *stream, int fd);
 
+/**
+ * Set auto flush flag.
+ * If set, stream will send data to the underlying socket as
+ * soon as data are written. This is the default.
+ * If not set, you should call red_stream_flush to force
+ * data to be sent. Failing to call red_stream_flush on a
+ * manual flush stream could lead to latency.
+ * Disabling auto flush can fail while enabling cannot.
+ *
+ * Returns true on success or false on failure.
+ */
+bool red_stream_set_auto_flush(RedStream *stream, bool auto_flush);
+
+/**
+ * Flush data to the underlying socket.
+ * Calling this function on a stream with auto flush set has
+ * no result.
+ */
+void red_stream_flush(RedStream *stream);
+
 typedef enum {
     RED_SASL_ERROR_OK,
     RED_SASL_ERROR_GENERIC,

@@ -203,6 +203,15 @@ bool red_stream_write_all(RedStream *stream, const void *in_buf, size_t n)
     return true;
 }
 
+bool red_stream_set_auto_flush(RedStream *s, bool auto_flush)
+{
+    return auto_flush;
+}
+
+void red_stream_flush(RedStream *s)
+{
+}
+
 #if HAVE_SASL
 static ssize_t red_stream_sasl_write(RedStream *s, const void *buf, size_t nbyte);
 #endif
