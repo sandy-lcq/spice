@@ -53,7 +53,7 @@
 #include "tree.h"
 
 #define CMD_RING_POLL_TIMEOUT 10 //milli
-#define CMD_RING_POLL_RETRIES 200
+#define CMD_RING_POLL_RETRIES 1
 
 #define INF_EVENT_WAIT ~0
 
