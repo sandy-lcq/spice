@@ -3339,11 +3339,9 @@ static void reds_init_vd_agent_resources(RedsState *reds)
     }
 }
 
-const char *version_string = VERSION;
-
 static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 {
-    spice_info("starting %s", version_string);
+    spice_info("starting %s", VERSION);
 
     if (core_interface->base.major_version != SPICE_INTERFACE_CORE_MAJOR) {
         spice_warning("bad core interface version");
