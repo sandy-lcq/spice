@@ -83,14 +83,15 @@ bool common_channel_client_config_socket(RedChannelClient *rcc)
 
     // TODO - this should be dynamic, not one time at channel creation
     is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
-    /* FIXME: Using Nagle's Algorithm can lead to apparent delays, depending
-     * on the delayed ack timeout on the other side.
-     * Instead of using Nagle's, we need to implement message buffering on
-     * the application level.
-     * see: http://www.stuartcheshire.org/papers/NagleDelayedAck/
-     */
-    red_stream_set_no_delay(stream, !is_low_bandwidth);
-
+    if (!red_stream_set_auto_flush(stream, false)) {
+        /* FIXME: Using Nagle's Algorithm can lead to apparent delays, depending
+         * on the delayed ack timeout on the other side.
+         * Instead of using Nagle's, we need to implement message buffering on
+         * the application level.
+         * see: http://www.stuartcheshire.org/papers/NagleDelayedAck/
+         */
+        red_stream_set_no_delay(stream, !is_low_bandwidth);
+    }
     // TODO: move wide/narrow ack setting to red_channel.
     red_channel_client_ack_set_client_window(rcc,
         is_low_bandwidth ?

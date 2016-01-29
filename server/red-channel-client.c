@@ -1328,6 +1328,11 @@ void red_channel_client_push(RedChannelClient *rcc)
     if ((red_channel_client_no_item_being_sent(rcc) && g_queue_is_empty(&rcc->priv->pipe)) ||
         red_channel_client_waiting_for_ack(rcc)) {
         red_channel_client_watch_update_mask(rcc, SPICE_WATCH_EVENT_READ);
+        /* channel has no pending data to send so now we can flush data in
+         * order to avoid data stall into buffers in case of manual
+         * flushing
+         */
+        red_stream_flush(rcc->priv->stream);
     }
     rcc->priv->during_send = FALSE;
     g_object_unref(rcc);
