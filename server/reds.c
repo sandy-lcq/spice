@@ -3442,7 +3442,7 @@ typedef struct RendererInfo {
     const char *name;
 } RendererInfo;
 
-static RendererInfo renderers_info[] = {
+static const RendererInfo renderers_info[] = {
     {RED_RENDERER_SW, "sw"},
     {RED_RENDERER_INVALID, NULL},
 };
@@ -3450,9 +3450,9 @@ static RendererInfo renderers_info[] = {
 uint32_t renderers[RED_RENDERER_LAST];
 uint32_t num_renderers = 0;
 
-static RendererInfo *find_renderer(const char *name)
+static const RendererInfo *find_renderer(const char *name)
 {
-    RendererInfo *inf = renderers_info;
+    const RendererInfo *inf = renderers_info;
     while (inf->name) {
         if (strcmp(name, inf->name) == 0) {
             return inf;
@@ -3464,7 +3464,7 @@ static RendererInfo *find_renderer(const char *name)
 
 static int red_add_renderer(const char *name)
 {
-    RendererInfo *inf;
+    const RendererInfo *inf;
 
     if (num_renderers == RED_RENDERER_LAST || !(inf = find_renderer(name))) {
         return FALSE;
