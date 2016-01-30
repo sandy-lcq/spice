@@ -3415,6 +3415,8 @@ err:
     return -1;
 }
 
+static const char default_renderer[] = "sw";
+
 /* new interface */
 SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 {
@@ -3422,7 +3424,6 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     spice_assert(reds == NULL);
 
     reds = spice_new0(RedsState, 1);
-    reds->default_renderer = "sw";
     reds->spice_port = -1;
     reds->spice_secure_port = -1;
     reds->spice_listen_socket_fd = -1;
@@ -3478,8 +3479,8 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *s, SpiceCoreInterface *cor
 
     spice_assert(reds == s);
     ret = do_spice_init(s, core);
-    if (s->default_renderer) {
-        red_add_renderer(s->default_renderer);
+    if (num_renderers == 0) {
+        red_add_renderer(default_renderer);
     }
     return ret;
 }
@@ -3775,7 +3776,6 @@ SPICE_GNUC_VISIBLE int spice_server_add_renderer(SpiceServer *s, const char *nam
     if (!red_add_renderer(name)) {
         return -1;
     }
-    s->default_renderer = NULL;
     return 0;
 }
 

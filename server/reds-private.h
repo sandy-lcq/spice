@@ -191,8 +191,6 @@ struct RedsState {
     int mm_time_enabled;
     uint32_t mm_time_latency;
 
-    const char *default_renderer;
-
     int spice_port;
     int spice_secure_port;
     SpiceCharDeviceInstance *vdagent;
