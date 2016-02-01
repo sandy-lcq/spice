@@ -2803,15 +2803,6 @@ static void set_one_channel_security(int id, uint32_t security)
 
 #define REDS_SAVE_VERSION 1
 
-typedef struct RedsMigSpiceMessage {
-    uint32_t connection_id;
-} RedsMigSpiceMessage;
-
-typedef struct RedsMigCertPubKeyInfo {
-    uint16_t type;
-    uint32_t len;
-} RedsMigCertPubKeyInfo;
-
 static void reds_mig_release(RedsState *reds)
 {
     if (reds->mig_spice) {
