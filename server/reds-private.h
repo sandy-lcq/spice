@@ -214,6 +214,7 @@ struct RedsState {
     bool spice_uuid_is_set;
     uint8_t spice_uuid[16];
 
+    gboolean ticketing_enabled;
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
 };

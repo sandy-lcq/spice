@@ -144,7 +144,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 #define REDS_TOKENS_TO_SEND 5
 #define REDS_VDI_PORT_NUM_RECEIVE_BUFFS 5
 
-static int ticketing_enabled = 1; //Ticketing is enabled by default
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
 uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
@@ -1938,7 +1937,7 @@ static void reds_handle_ticket(void *opaque)
     }
     password[password_size] = '\0';
 
-    if (ticketing_enabled && !link->skip_auth) {
+    if (reds->ticketing_enabled && !link->skip_auth) {
         int expired =  reds->taTicket.expiration_time < ltime;
 
         if (strlen(reds->taTicket.password) == 0) {
@@ -2764,7 +2763,7 @@ static void reds_exit(void)
 
 static inline void on_activating_ticketing(RedsState *reds)
 {
-    if (!ticketing_enabled && reds_main_channel_connected(reds)) {
+    if (!reds->ticketing_enabled && reds_main_channel_connected(reds)) {
         spice_warning("disconnecting");
         reds_disconnect(reds);
     }
@@ -3420,6 +3419,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 #endif
     reds->spice_uuid_is_set = FALSE;
     memset(reds->spice_uuid, 0, sizeof(reds->spice_uuid));
+    reds->ticketing_enabled = TRUE; /* ticketing enabled by default */
     reds->image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
     reds->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
     return reds;
@@ -3544,7 +3544,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_noauth(SpiceServer *s)
 {
     spice_assert(reds == s);
     memset(s->taTicket.password, 0, sizeof(s->taTicket.password));
-    ticketing_enabled = 0;
+    s->ticketing_enabled = FALSE;
     return 0;
 }
 
@@ -3600,7 +3600,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *s,
     }
 
     on_activating_ticketing(reds);
-    ticketing_enabled = 1;
+    reds->ticketing_enabled = TRUE;
     if (lifetime == 0) {
         reds->taTicket.expiration_time = INT_MAX;
     } else {
