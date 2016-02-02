@@ -608,8 +608,22 @@ static inline void red_channel_client_release_sent_item(RedChannelClient *rcc)
 static void red_channel_peer_on_out_msg_done(void *opaque)
 {
     RedChannelClient *rcc = (RedChannelClient *)opaque;
+    int fd;
 
     rcc->send_data.size = 0;
+
+    if (spice_marshaller_get_fd(rcc->send_data.marshaller, &fd)) {
+        if (reds_stream_send_msgfd(rcc->stream, fd) < 0) {
+            perror("sendfd");
+            red_channel_client_disconnect(rcc);
+            if (fd != -1)
+                close(fd);
+            return;
+        }
+        if (fd != -1)
+            close(fd);
+    }
+
     red_channel_client_release_sent_item(rcc);
     if (rcc->send_data.blocked) {
         rcc->send_data.blocked = FALSE;
