@@ -24,6 +24,7 @@
 
 #include "red-common.h"
 
+#if GLIB_CHECK_VERSION(2, 34, 0)
 struct SpiceTimer {
     GSource source;
 };
@@ -72,6 +73,64 @@ static void timer_remove(SpiceTimer *timer)
     g_source_destroy(&timer->source);
     g_source_unref(&timer->source);
 }
+#else
+struct SpiceTimer {
+    GMainContext *context;
+    SpiceTimerFunc func;
+    void *opaque;
+    GSource *source;
+};
+
+static SpiceTimer* timer_add(const SpiceCoreInterfaceInternal *iface,
+                             SpiceTimerFunc func, void *opaque)
+{
+    SpiceTimer *timer = spice_malloc0(sizeof(SpiceTimer));
+
+    timer->context = iface->main_context;
+    timer->func = func;
+    timer->opaque = opaque;
+
+    return timer;
+}
+
+static gboolean timer_func(gpointer user_data)
+{
+    SpiceTimer *timer = user_data;
+
+    timer->func(timer->opaque);
+    /* timer might be free after func(), don't touch */
+
+    return FALSE;
+}
+
+static void timer_cancel(SpiceTimer *timer)
+{
+    if (timer->source) {
+        g_source_destroy(timer->source);
+        g_source_unref(timer->source);
+        timer->source = NULL;
+    }
+}
+
+static void timer_start(SpiceTimer *timer, uint32_t ms)
+{
+    timer_cancel(timer);
+
+    timer->source = g_timeout_source_new(ms);
+    spice_assert(timer->source != NULL);
+
+    g_source_set_callback(timer->source, timer_func, timer, NULL);
+
+    g_source_attach(timer->source, timer->context);
+}
+
+static void timer_remove(SpiceTimer *timer)
+{
+    timer_cancel(timer);
+    spice_assert(timer->source == NULL);
+    free(timer);
+}
+#endif
 
 struct SpiceWatch {
     GMainContext *context;
