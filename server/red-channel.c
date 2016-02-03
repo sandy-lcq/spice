@@ -1707,13 +1707,13 @@ int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc,
     return ring_item_is_linked(&item->link);
 }
 
-void red_channel_client_pipe_add_tail_no_push(RedChannelClient *rcc,
+void red_channel_client_pipe_add_tail(RedChannelClient *rcc,
                                               PipeItem *item)
 {
     client_pipe_add(rcc, item, rcc->pipe.prev);
 }
 
-void red_channel_client_pipe_add_tail(RedChannelClient *rcc, PipeItem *item)
+void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, PipeItem *item)
 {
     if (client_pipe_add(rcc, item, rcc->pipe.prev)) {
         red_channel_client_push(rcc);
@@ -2292,7 +2292,7 @@ void red_channel_pipes_new_add(RedChannel *channel, new_pipe_item_t creator, voi
 void red_channel_pipes_new_add_tail(RedChannel *channel, new_pipe_item_t creator, void *data)
 {
     red_channel_pipes_create_batch(channel, creator, data,
-                                     red_channel_client_pipe_add_tail_no_push);
+                                     red_channel_client_pipe_add_tail);
 }
 
 uint32_t red_channel_max_pipe_size(RedChannel *channel)
