@@ -1542,7 +1542,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 
     worker->cursor_channel = cursor_channel_new(worker);
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
-    worker->display_channel = display_channel_new(worker, FALSE, streaming_video,
+    worker->display_channel = display_channel_new(worker, FALSE, reds_get_streaming_video(reds),
                                                   init_info.n_surfaces);
 
     return worker;

@@ -215,6 +215,7 @@ struct RedsState {
     uint8_t spice_uuid[16];
 
     gboolean ticketing_enabled;
+    uint32_t streaming_video;
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;

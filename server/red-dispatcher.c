@@ -704,8 +704,9 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
 
 static inline int calc_compression_level(void)
 {
-    spice_assert(streaming_video != SPICE_STREAM_VIDEO_INVALID);
-    if ((streaming_video != SPICE_STREAM_VIDEO_OFF) ||
+    spice_assert(reds_get_streaming_video(reds) != SPICE_STREAM_VIDEO_INVALID);
+
+    if ((reds_get_streaming_video(reds) != SPICE_STREAM_VIDEO_OFF) ||
         (spice_server_get_image_compression(reds) != SPICE_IMAGE_COMPRESSION_QUIC)) {
         return 0;
     } else {
@@ -736,7 +737,7 @@ void red_dispatcher_on_sv_change(void)
     RedDispatcher *now = dispatchers;
     while (now) {
         now->qxl->st->qif->set_compression_level(now->qxl, compression_level);
-        payload.streaming_video = streaming_video;
+        payload.streaming_video = reds_get_streaming_video(reds);
         dispatcher_send_message(&now->dispatcher,
                                 RED_WORKER_MESSAGE_SET_STREAMING_VIDEO,
                                 &payload);

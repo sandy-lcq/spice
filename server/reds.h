@@ -74,7 +74,6 @@ extern uint32_t renderers[RED_RENDERER_LAST];
 extern uint32_t num_renderers;
 
 extern struct SpiceCoreInterfaceInternal *core;
-extern uint32_t streaming_video;
 
 // Temporary measures to make splitting reds.c to inputs-channel.c easier
 
@@ -111,6 +110,7 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc);
 void reds_on_char_device_state_destroy(RedsState *reds, SpiceCharDeviceState *dev);
 
 void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_t latency);
+uint32_t reds_get_streaming_video(const RedsState *reds);
 spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds);
 spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds);
 

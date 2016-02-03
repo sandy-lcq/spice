@@ -146,7 +146,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
-uint32_t streaming_video = SPICE_STREAM_VIDEO_FILTER;
 int agent_mouse = TRUE;
 
 RedsState *reds = NULL;
@@ -3423,6 +3422,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->spice_uuid_is_set = FALSE;
     memset(reds->spice_uuid, 0, sizeof(reds->spice_uuid));
     reds->ticketing_enabled = TRUE; /* ticketing enabled by default */
+    reds->streaming_video = SPICE_STREAM_VIDEO_FILTER;
     reds->image_compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
     reds->jpeg_state = SPICE_WAN_COMPRESSION_AUTO;
     reds->zlib_glz_state = SPICE_WAN_COMPRESSION_AUTO;
@@ -3787,9 +3787,14 @@ SPICE_GNUC_VISIBLE int spice_server_set_streaming_video(SpiceServer *s, int valu
         value != SPICE_STREAM_VIDEO_ALL &&
         value != SPICE_STREAM_VIDEO_FILTER)
         return -1;
-    streaming_video = value;
+    s->streaming_video = value;
     red_dispatcher_on_sv_change();
     return 0;
+}
+
+uint32_t reds_get_streaming_video(const RedsState *reds)
+{
+    return reds->streaming_video;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_playback_compression(SpiceServer *s, int enable)
