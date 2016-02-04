@@ -74,18 +74,30 @@ static void *loop_func(void *arg)
     return NULL;
 }
 
-static SpiceTimer *twice_timers[2] = { NULL, NULL };
-static int twice_called = 0;
-static void timer_not_twice(void *opaque)
+static SpiceTimer *twice_timers_remove[2] = { NULL, NULL };
+static int twice_remove_called = 0;
+static void timer_not_twice_remove(void *opaque)
 {
-    spice_assert(++twice_called == 1);
+    spice_assert(++twice_remove_called == 1);
 
     /* delete timers, should not have another call */
-    core->timer_remove(twice_timers[0]);
-    core->timer_remove(twice_timers[1]);
-    twice_timers[0] = NULL;
-    twice_timers[1] = NULL;
+    core->timer_remove(twice_timers_remove[0]);
+    core->timer_remove(twice_timers_remove[1]);
+    twice_timers_remove[0] = NULL;
+    twice_timers_remove[1] = NULL;
 }
+
+static SpiceTimer *twice_timers_cancel[2] = { NULL, NULL };
+static int twice_cancel_called = 0;
+static void timer_not_twice(void *opaque)
+{
+    spice_assert(++twice_cancel_called == 1);
+
+    /* cancel timers, should not have another call */
+    core->timer_cancel(twice_timers_cancel[0]);
+    core->timer_cancel(twice_timers_cancel[1]);
+}
+
 
 int main(int argc, char **argv)
 {
@@ -121,12 +133,20 @@ int main(int argc, char **argv)
     core->timer_start(timer, 10);
 
     /* test events are not called when freed */
-    timer = twice_timers[0] = core->timer_add(timer_not_twice, NULL);
+    timer = twice_timers_remove[0] = core->timer_add(timer_not_twice_remove, NULL);
     spice_assert(timer != NULL);
     core->timer_start(timer, 2);
-    timer = twice_timers[1] = core->timer_add(timer_not_twice, NULL);
+    timer = twice_timers_remove[1] = core->timer_add(timer_not_twice_remove, NULL);
     spice_assert(timer != NULL);
     core->timer_start(timer, 2);
+
+    /* test events are not called when cancelled */
+    timer = timers[i++] = twice_timers_cancel[0] = core->timer_add(timer_not_twice, core);
+    spice_assert(timer != NULL);
+    core->timer_start(timer, 4);
+    timer = timers[i++] = twice_timers_cancel[1] = core->timer_add(timer_not_twice, core);
+    spice_assert(timer != NULL);
+    core->timer_start(timer, 4);
 
     /* run the loop */
     loop = g_main_loop_new(basic_event_loop_get_context(), FALSE);
