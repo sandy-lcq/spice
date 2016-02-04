@@ -1506,7 +1506,7 @@ static void red_channel_client_handle_pong(RedChannelClient *rcc, SpiceMsgPing *
         return;
     }
 
-    /* set TCO_NODELAY=0, in case we reverted it for the test*/
+    /* set TCP_NODELAY=0, in case we reverted it for the test*/
     if (!rcc->latency_monitor.tcp_nodelay) {
         int delay_val = 0;
 
