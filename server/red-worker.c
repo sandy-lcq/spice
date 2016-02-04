@@ -242,7 +242,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
 
         if (worker->record_fd)
             red_record_qxl_command(worker->record_fd, &worker->mem_slots, ext_cmd,
-                                   stat_now(CLOCK_THREAD_CPUTIME_ID));
+                                   stat_now(CLOCK_MONOTONIC));
 
         stat_inc_counter(worker->command_counter, 1);
         worker->display_poll_tries = 0;
@@ -1221,7 +1221,7 @@ static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *
 {
     RedWorker *worker = opaque;
 
-    red_record_event(worker->record_fd, 1, message_type, stat_now(CLOCK_THREAD_CPUTIME_ID));
+    red_record_event(worker->record_fd, 1, message_type, stat_now(CLOCK_MONOTONIC));
 }
 
 static void register_callbacks(Dispatcher *dispatcher)
