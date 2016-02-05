@@ -42,7 +42,6 @@
 static int num_active_workers = 0;
 
 struct AsyncCommand {
-    RingItem link;
     RedWorkerMessage message;
     uint64_t cookie;
 };
@@ -57,8 +56,6 @@ struct RedDispatcher {
     int y_res;
     int use_hardware_cursor;
     RedDispatcher *next;
-    Ring async_commands;
-    pthread_mutex_t  async_lock;
     QXLDevSurfaceCreate surface_create;
     unsigned int max_monitors;
 };
@@ -288,9 +285,6 @@ static AsyncCommand *async_command_alloc(RedDispatcher *dispatcher,
     async_command->cookie = cookie;
     async_command->message = message;
 
-    pthread_mutex_lock(&dispatcher->async_lock);
-    ring_add(&dispatcher->async_commands, &async_command->link);
-    pthread_mutex_unlock(&dispatcher->async_lock);
     spice_debug("%p", async_command);
     return async_command;
 }
@@ -1019,13 +1013,7 @@ void spice_qxl_gl_draw_async(QXLInstance *qxl,
 void red_dispatcher_async_complete(struct RedDispatcher *dispatcher,
                                    AsyncCommand *async_command)
 {
-    pthread_mutex_lock(&dispatcher->async_lock);
-    ring_remove(&async_command->link);
     spice_debug("%p: cookie %" PRId64, async_command, async_command->cookie);
-    if (ring_is_empty(&dispatcher->async_commands)) {
-        spice_debug("no more async commands");
-    }
-    pthread_mutex_unlock(&dispatcher->async_lock);
     switch (async_command->message) {
     case RED_WORKER_MESSAGE_UPDATE_ASYNC:
     case RED_WORKER_MESSAGE_ADD_MEMSLOT_ASYNC:
@@ -1067,10 +1055,7 @@ void red_dispatcher_init(QXLInstance *qxl)
 
     red_dispatcher = spice_new0(RedDispatcher, 1);
     red_dispatcher->qxl = qxl;
-    ring_init(&red_dispatcher->async_commands);
-    spice_debug("red_dispatcher->async_commands.next %p", red_dispatcher->async_commands.next);
     dispatcher_init(&red_dispatcher->dispatcher, RED_WORKER_MESSAGE_COUNT, NULL);
-    pthread_mutex_init(&red_dispatcher->async_lock, NULL);
     red_dispatcher->base.major_version = SPICE_INTERFACE_QXL_MAJOR;
     red_dispatcher->base.minor_version = SPICE_INTERFACE_QXL_MINOR;
     red_dispatcher->base.wakeup = qxl_worker_wakeup;
