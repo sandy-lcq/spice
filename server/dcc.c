@@ -445,7 +445,7 @@ void dcc_start(DisplayChannelClient *dcc)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
-    QXLInstance *qxl = red_worker_get_qxl(COMMON_CHANNEL(display)->worker);
+    QXLInstance *qxl = display->common.qxl;
 
     red_channel_client_push_set_ack(RED_CHANNEL_CLIENT(dcc));
 

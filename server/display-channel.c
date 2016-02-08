@@ -241,8 +241,7 @@ static void stop_streams(DisplayChannel *display)
 void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 {
     RedSurface *surface = &display->surfaces[surface_id];
-    RedWorker *worker = COMMON_CHANNEL(display)->worker;
-    QXLInstance *qxl = red_worker_get_qxl(worker);
+    QXLInstance *qxl = display->common.qxl;
     DisplayChannelClient *dcc;
     RingItem *link, *next;
 
@@ -1445,7 +1444,7 @@ void display_channel_drawable_unref(DisplayChannel *display, Drawable *drawable)
         ring_remove(item);
     }
     if (drawable->red_drawable) {
-        red_drawable_unref(COMMON_CHANNEL(display)->worker, drawable->red_drawable, drawable->group_id);
+        red_drawable_unref(display, drawable->red_drawable, drawable->group_id);
     }
     drawable_free(display, drawable);
     display->drawable_count--;
@@ -2155,8 +2154,7 @@ void display_channel_gl_scanout(DisplayChannel *display)
 
 static void set_gl_draw_async_count(DisplayChannel *display, int num)
 {
-    RedWorker *worker = COMMON_CHANNEL(display)->worker;
-    QXLInstance *qxl = red_worker_get_qxl(worker);
+    QXLInstance *qxl = display->common.qxl;
 
     display->gl_draw_async_count = num;
 

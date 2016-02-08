@@ -38,7 +38,7 @@ typedef struct CommonChannelClient {
 typedef struct CommonChannel {
     RedChannel base; // Must be the first thing
 
-    struct RedWorker *worker;
+    QXLInstance *qxl;
     uint8_t recv_buf[CHANNEL_RECEIVE_BUF_SIZE];
     uint32_t id_alloc; // bitfield. TODO - use this instead of shift scheme.
     int during_target_migrate; /* TRUE when the client that is associated with the channel
@@ -97,7 +97,8 @@ QXLInstance* red_worker_get_qxl(RedWorker *worker);
 RedChannel* red_worker_get_cursor_channel(RedWorker *worker);
 RedChannel* red_worker_get_display_channel(RedWorker *worker);
 
-void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
+struct DisplayChannel;
+void red_drawable_unref(struct DisplayChannel *display, RedDrawable *red_drawable,
                         uint32_t group_id);
 
 CommonChannel *red_worker_new_channel(RedWorker *worker, int size,

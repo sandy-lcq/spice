@@ -489,7 +489,7 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd,
     spice_return_if_fail(cursor);
     spice_return_if_fail(cursor_cmd);
 
-    cursor_item = cursor_item_new(red_worker_get_qxl(cursor->common.worker),
+    cursor_item = cursor_item_new(cursor->common.qxl,
                                   cursor_cmd, group_id);
 
     switch (cursor_cmd->type) {

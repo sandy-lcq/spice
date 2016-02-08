@@ -129,7 +129,7 @@ static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
     }
 }
 
-void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
+void red_drawable_unref(DisplayChannel *display, RedDrawable *red_drawable,
                         uint32_t group_id)
 {
     QXLReleaseInfoExt release_info_ext;
@@ -137,10 +137,10 @@ void red_drawable_unref(RedWorker *worker, RedDrawable *red_drawable,
     if (--red_drawable->refs) {
         return;
     }
-    worker->display_channel->red_drawable_count--;
+    display->red_drawable_count--;
     release_info_ext.group_id = group_id;
     release_info_ext.info = red_drawable->release_info;
-    worker->qxl->st->qif->release_resource(worker->qxl, release_info_ext);
+    display->common.qxl->st->qif->release_resource(display->common.qxl, release_info_ext);
     red_put_drawable(red_drawable);
     free(red_drawable);
 }
@@ -243,7 +243,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                                              worker->process_display_generation);
             }
             // release the red_drawable
-            red_drawable_unref(worker, red_drawable, ext_cmd.group_id);
+            red_drawable_unref(worker->display_channel, red_drawable, ext_cmd.group_id);
             break;
         }
         case QXL_CMD_UPDATE: {
@@ -469,7 +469,7 @@ CommonChannelClient *common_channel_new_client(CommonChannel *common,
         return NULL;
     }
     CommonChannelClient *common_cc = (CommonChannelClient*)rcc;
-    common_cc->id = common->worker->qxl->id;
+    common_cc->id = common->qxl->id;
     common->during_target_migrate = mig_target;
 
     // TODO: move wide/narrow ack setting to red_channel.
@@ -510,7 +510,7 @@ CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
     red_channel_set_stat_node(channel, stat_add_node(worker->stat, name, TRUE));
 
     common = (CommonChannel *)channel;
-    common->worker = worker;
+    common->qxl = worker->qxl;
     return common;
 }
 

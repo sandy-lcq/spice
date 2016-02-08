@@ -2305,8 +2305,7 @@ static void marshall_gl_scanout(RedChannelClient *rcc,
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    RedWorker *worker = display_channel->common.worker;
-    QXLInstance* qxl = red_worker_get_qxl(worker);
+    QXLInstance* qxl = display_channel->common.qxl;
     SpiceMsgDisplayGlScanoutUnix *so = &qxl->st->scanout;
 
     pthread_mutex_lock(&qxl->st->scanout_mutex);

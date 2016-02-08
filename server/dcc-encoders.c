@@ -456,7 +456,6 @@ void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
                                     GlzDrawableInstanceItem *instance)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    RedWorker *worker = display_channel->common.worker;
     RedGlzDrawable *glz_drawable;
 
     spice_assert(instance);
@@ -484,7 +483,7 @@ void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
         if (drawable) {
             ring_remove(&glz_drawable->drawable_link);
         }
-        red_drawable_unref(worker, glz_drawable->red_drawable,
+        red_drawable_unref(display_channel, glz_drawable->red_drawable,
                            glz_drawable->group_id);
         display_channel->glz_drawable_count--;
         if (ring_item_is_linked(&glz_drawable->link)) {
