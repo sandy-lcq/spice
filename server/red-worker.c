@@ -469,7 +469,6 @@ CommonChannelClient *common_channel_new_client(CommonChannel *common,
         return NULL;
     }
     CommonChannelClient *common_cc = (CommonChannelClient*)rcc;
-    common_cc->worker = common->worker;
     common_cc->id = common->worker->qxl->id;
     common->during_target_migrate = mig_target;
 
