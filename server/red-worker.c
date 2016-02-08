@@ -99,13 +99,6 @@ QXLInstance* red_worker_get_qxl(RedWorker *worker)
     return worker->qxl;
 }
 
-RedMemSlotInfo* red_worker_get_memslot(RedWorker *worker)
-{
-    spice_return_val_if_fail(worker != NULL, NULL);
-
-    return &worker->mem_slots;
-}
-
 static int display_is_connected(RedWorker *worker)
 {
     return (worker->display_channel && red_channel_is_connected(
