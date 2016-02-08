@@ -782,7 +782,7 @@ glz:
 
 static int dcc_compress_image_lz(DisplayChannelClient *dcc,
                                  SpiceImage *dest, SpiceBitmap *src,
-                                 compress_send_data_t* o_comp_data, uint32_t group_id)
+                                 compress_send_data_t* o_comp_data)
 {
     LzData *lz_data = &dcc->lz_data;
     LzContext *lz = dcc->lz;
@@ -843,8 +843,7 @@ static int dcc_compress_image_lz(DisplayChannelClient *dcc,
 }
 
 static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
-                                   SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                   uint32_t group_id)
+                                   SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     JpegData *jpeg_data = &dcc->jpeg_data;
     LzData *lz_data = &dcc->lz_data;
@@ -968,8 +967,7 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
 
 #ifdef USE_LZ4
 static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
-                                  SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                  uint32_t group_id)
+                                  SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     Lz4Data *lz4_data = &dcc->lz4_data;
     Lz4EncoderContext *lz4 = dcc->lz4;
@@ -1015,8 +1013,7 @@ static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
 #endif
 
 static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
-                                   SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                   uint32_t group_id)
+                                   SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     QuicData *quic_data = &dcc->quic_data;
     QuicContext *quic = dcc->quic;
@@ -1094,7 +1091,6 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     SpiceImageCompression image_compression = dcc->image_compression;
     int quic_compress = FALSE;
-    uint32_t group_id;
 
     if ((image_compression == SPICE_IMAGE_COMPRESSION_OFF) ||
         ((src->y * src->stride) < MIN_SIZE_TO_COMPRESS)) { // TODO: change the size cond
@@ -1139,12 +1135,6 @@ int dcc_compress_image(DisplayChannelClient *dcc,
         }
     }
 
-    if (drawable != NULL) {
-        group_id = drawable->group_id;
-    } else {
-        group_id = red_worker_get_memslot(display_channel->common.worker)->internal_groupslot_id;
-    }
-
     if (quic_compress) {
 #ifdef COMPRESS_DEBUG
         spice_info("QUIC compress");
@@ -1155,10 +1145,10 @@ int dcc_compress_image(DisplayChannelClient *dcc,
             (image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ))) {
             // if we use lz for alpha, the stride can't be extra
             if (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src)) {
-                return dcc_compress_image_jpeg(dcc, dest, src, o_comp_data, group_id);
+                return dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
             }
         }
-        return dcc_compress_image_quic(dcc, dest, src, o_comp_data, group_id);
+        return dcc_compress_image_quic(dcc, dest, src, o_comp_data);
     } else {
         int glz;
         int ret;
@@ -1194,10 +1184,10 @@ int dcc_compress_image(DisplayChannelClient *dcc,
                 bitmap_fmt_is_rgb(src->format) &&
                 red_channel_client_test_remote_cap(&dcc->common.base,
                         SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-                ret = dcc_compress_image_lz4(dcc, dest, src, o_comp_data, group_id);
+                ret = dcc_compress_image_lz4(dcc, dest, src, o_comp_data);
             } else
 #endif
-                ret = dcc_compress_image_lz(dcc, dest, src, o_comp_data, group_id);
+                ret = dcc_compress_image_lz(dcc, dest, src, o_comp_data);
 #ifdef COMPRESS_DEBUG
             spice_info("LZ LOCAL compress");
 #endif
