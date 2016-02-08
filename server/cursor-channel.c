@@ -45,13 +45,6 @@ typedef struct CursorItem {
 
 G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
-typedef struct LocalCursor {
-    CursorItem base;
-    SpicePoint16 position;
-    uint32_t data_size;
-    SpiceCursor red_cursor;
-} LocalCursor;
-
 typedef struct CursorPipeItem {
     PipeItem base;
     CursorItem *cursor_item;
