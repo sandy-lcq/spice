@@ -494,6 +494,8 @@ static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
 
 void dcc_stop(DisplayChannelClient *dcc)
 {
+    DisplayChannel *dc = DCC_TO_DC(dcc);
+
     pixmap_cache_unref(dcc->pixmap_cache);
     dcc->pixmap_cache = NULL;
     dcc_release_glz(dcc);
@@ -502,6 +504,10 @@ void dcc_stop(DisplayChannelClient *dcc)
     free(dcc->send_data.free_list.res);
     dcc_destroy_stream_agents(dcc);
     dcc_encoders_free(dcc);
+
+    if (dcc->gl_draw_ongoing) {
+        display_channel_gl_draw_done(dc);
+    }
 }
 
 void dcc_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
@@ -1391,6 +1397,22 @@ static int dcc_handle_preferred_compression(DisplayChannelClient *dcc,
     return TRUE;
 }
 
+static int dcc_handle_gl_draw_done(DisplayChannelClient *dcc)
+{
+    DisplayChannel *display = DCC_TO_DC(dcc);
+
+    if (G_UNLIKELY(!dcc->gl_draw_ongoing)) {
+        g_warning("unexpected DRAW_DONE received\n");
+        /* close client connection */
+        return FALSE;
+    }
+
+    dcc->gl_draw_ongoing = FALSE;
+    display_channel_gl_draw_done(display);
+
+    return TRUE;
+}
+
 int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void *msg)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1403,6 +1425,8 @@ int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void
     case SPICE_MSGC_DISPLAY_PREFERRED_COMPRESSION:
         return dcc_handle_preferred_compression(dcc,
             (SpiceMsgcDisplayPreferredCompression *)msg);
+    case SPICE_MSGC_DISPLAY_GL_DRAW_DONE:
+        return dcc_handle_gl_draw_done(dcc);
     default:
         return red_channel_client_handle_message(rcc, size, type, msg);
     }

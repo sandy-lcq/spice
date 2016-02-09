@@ -2178,3 +2178,8 @@ void display_channel_gl_draw(DisplayChannel *display, SpiceMsgDisplayGlDraw *dra
     num = red_channel_pipes_new_add_push(RED_CHANNEL(display), dcc_gl_draw_item_new, draw);
     set_gl_draw_async_count(display, num);
 }
+
+void display_channel_gl_draw_done(DisplayChannel *display)
+{
+    set_gl_draw_async_count(display, display->gl_draw_async_count - 1);
+}

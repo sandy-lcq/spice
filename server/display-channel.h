@@ -313,6 +313,7 @@ void                       display_channel_update_compression        (DisplayCha
 void                       display_channel_gl_scanout                (DisplayChannel *display);
 void                       display_channel_gl_draw                   (DisplayChannel *display,
                                                                       SpiceMsgDisplayGlDraw *draw);
+void                       display_channel_gl_draw_done              (DisplayChannel *display);
 
 static inline int validate_surface(DisplayChannel *display, uint32_t surface_id)
 {
