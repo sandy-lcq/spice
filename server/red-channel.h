@@ -478,7 +478,7 @@ void red_channel_pipe_item_init(RedChannel *channel, PipeItem *item, int type);
 
 // helper to push a new item to all channels
 typedef PipeItem *(*new_pipe_item_t)(RedChannelClient *rcc, void *data, int num);
-void red_channel_pipes_new_add_push(RedChannel *channel, new_pipe_item_t creator, void *data);
+int red_channel_pipes_new_add_push(RedChannel *channel, new_pipe_item_t creator, void *data);
 void red_channel_pipes_new_add(RedChannel *channel, new_pipe_item_t creator, void *data);
 void red_channel_pipes_new_add_tail(RedChannel *channel, new_pipe_item_t creator, void *data);
 

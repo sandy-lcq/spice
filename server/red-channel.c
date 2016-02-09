@@ -2245,15 +2245,17 @@ typedef int (*rcc_item_cond_t)(RedChannelClient *rcc, PipeItem *item);
  * @creator: a callback to create pipe item (not null)
  * @data: the data to pass to the creator
  * @pipe_add: a callback to add non-null pipe items (not null)
+ *
+ * Returns: the number of added items
  **/
-static void red_channel_pipes_create_batch(RedChannel *channel,
+static int red_channel_pipes_create_batch(RedChannel *channel,
                                 new_pipe_item_t creator, void *data,
                                 rcc_item_t pipe_add)
 {
     RingItem *link, *next;
     RedChannelClient *rcc;
     PipeItem *item;
-    int num = 0;
+    int num = 0, n = 0;
 
     spice_assert(creator != NULL);
     spice_assert(pipe_add != NULL);
@@ -2263,16 +2265,21 @@ static void red_channel_pipes_create_batch(RedChannel *channel,
         item = (*creator)(rcc, data, num++);
         if (item) {
             (*pipe_add)(rcc, item);
+            n++;
         }
     }
+
+    return n;
 }
 
-void red_channel_pipes_new_add_push(RedChannel *channel,
-                              new_pipe_item_t creator, void *data)
+int red_channel_pipes_new_add_push(RedChannel *channel,
+                                   new_pipe_item_t creator, void *data)
 {
-    red_channel_pipes_create_batch(channel, creator, data,
-                                     red_channel_client_pipe_add);
+    int n = red_channel_pipes_create_batch(channel, creator, data,
+                                           red_channel_client_pipe_add);
     red_channel_push(channel);
+
+    return n;
 }
 
 void red_channel_pipes_new_add(RedChannel *channel, new_pipe_item_t creator, void *data)
