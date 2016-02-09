@@ -124,6 +124,10 @@ typedef struct SurfaceCreateItem {
     PipeItem pipe_item;
 } SurfaceCreateItem;
 
+typedef struct GlScanoutUnixItem {
+    PipeItem base;
+} GlScanoutUnixItem;
+
 typedef struct ImageItem {
     PipeItem link;
     int refs;
@@ -207,6 +211,8 @@ int                        dcc_clear_surface_drawables_from_pipe     (DisplayCha
                                                                       int wait_if_used);
 int                        dcc_drawable_is_in_pipe                   (DisplayChannelClient *dcc,
                                                                       Drawable *drawable);
+PipeItem *                 dcc_gl_scanout_item_new                   (RedChannelClient *rcc,
+                                                                      void *data, int num);
 
 typedef struct compress_send_data_t {
     void*    comp_buf;

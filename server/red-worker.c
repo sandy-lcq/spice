@@ -1159,6 +1159,14 @@ static void handle_dev_driver_unload(void *opaque, void *payload)
     worker->driver_cap_monitors_config = 0;
 }
 
+static
+void handle_dev_gl_scanout(void *opaque, void *payload)
+{
+    RedWorker *worker = opaque;
+
+    display_channel_gl_scanout(worker->display_channel);
+}
+
 static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
 {
     RedCursorCmd *cursor_cmd;
@@ -1395,6 +1403,11 @@ static void register_callbacks(Dispatcher *dispatcher)
                                 RED_WORKER_MESSAGE_DRIVER_UNLOAD,
                                 handle_dev_driver_unload,
                                 sizeof(RedWorkerMessageDriverUnload),
+                                DISPATCHER_NONE);
+    dispatcher_register_handler(dispatcher,
+                                RED_WORKER_MESSAGE_GL_SCANOUT,
+                                handle_dev_gl_scanout,
+                                0,
                                 DISPATCHER_NONE);
 }
 

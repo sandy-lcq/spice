@@ -970,6 +970,8 @@ void spice_qxl_gl_scanout(QXLInstance *qxl,
     spice_return_if_fail(qxl != NULL);
     spice_return_if_fail(qxl->st->gl_draw_async == NULL);
 
+    pthread_mutex_lock(&qxl->st->scanout_mutex);
+
     if (qxl->st->scanout.drm_dma_buf_fd != -1) {
         close(qxl->st->scanout.drm_dma_buf_fd);
     }
@@ -982,6 +984,12 @@ void spice_qxl_gl_scanout(QXLInstance *qxl,
         .stride = stride,
         .drm_fourcc_format = format
     };
+
+    pthread_mutex_unlock(&qxl->st->scanout_mutex);
+
+    /* FIXME: find a way to coallesce all pending SCANOUTs */
+    dispatcher_send_message(&qxl->st->dispatcher->dispatcher,
+                            RED_WORKER_MESSAGE_GL_SCANOUT, NULL);
 }
 
 SPICE_GNUC_VISIBLE

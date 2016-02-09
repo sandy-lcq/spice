@@ -2149,3 +2149,8 @@ void display_channel_update_compression(DisplayChannel *display, DisplayChannelC
     spice_info("jpeg %s", display->enable_jpeg ? "enabled" : "disabled");
     spice_info("zlib-over-glz %s", display->enable_zlib_glz_wrap ? "enabled" : "disabled");
 }
+
+void display_channel_gl_scanout(DisplayChannel *display)
+{
+    red_channel_pipes_new_add_push(RED_CHANNEL(display), dcc_gl_scanout_item_new, NULL);
+}

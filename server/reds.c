@@ -3185,6 +3185,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
 
         qxl = SPICE_CONTAINEROF(sin, QXLInstance, base);
         qxl->st = spice_new0(QXLState, 1);
+        pthread_mutex_init(&qxl->st->scanout_mutex, NULL);
         qxl->st->scanout.drm_dma_buf_fd = -1;
         qxl->st->qif = SPICE_CONTAINEROF(interface, QXLInterface, base);
         red_dispatcher_init(qxl);

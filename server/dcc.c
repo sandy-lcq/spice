@@ -556,6 +556,25 @@ static SurfaceDestroyItem *surface_destroy_item_new(RedChannel *channel,
     return destroy;
 }
 
+PipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
+{
+    GlScanoutUnixItem *item = spice_new(GlScanoutUnixItem, 1);
+    spice_return_val_if_fail(item != NULL, NULL);
+
+    /* FIXME: on !unix peer, start streaming with a video codec */
+    if (!reds_stream_is_plain_unix(rcc->stream) ||
+        !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
+        spice_printerr("FIXME: client does not support GL scanout");
+        red_channel_client_disconnect(rcc);
+        return NULL;
+    }
+
+    red_channel_pipe_item_init(rcc->channel, &item->base,
+                               PIPE_ITEM_TYPE_GL_SCANOUT);
+
+    return &item->base;
+}
+
 void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
 {
     DisplayChannel *display;
@@ -1527,6 +1546,7 @@ static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
     case PIPE_ITEM_TYPE_IMAGE:
         image_item_unref((ImageItem *)item);
         break;
+    case PIPE_ITEM_TYPE_GL_SCANOUT:
     case PIPE_ITEM_TYPE_VERB:
         free(item);
         break;
@@ -1601,6 +1621,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
     case PIPE_ITEM_TYPE_PIXMAP_RESET:
     case PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
     case PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT:
+    case PIPE_ITEM_TYPE_GL_SCANOUT:
         free(item);
         break;
     default:

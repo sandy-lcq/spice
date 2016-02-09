@@ -2299,6 +2299,28 @@ static void marshall_stream_activate_report(RedChannelClient *rcc,
     spice_marshall_msg_display_stream_activate_report(base_marshaller, &msg);
 }
 
+static void marshall_gl_scanout(RedChannelClient *rcc,
+                                SpiceMarshaller *m,
+                                PipeItem *item)
+{
+    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    DisplayChannel *display_channel = DCC_TO_DC(dcc);
+    RedWorker *worker = display_channel->common.worker;
+    QXLInstance* qxl = red_worker_get_qxl(worker);
+    SpiceMsgDisplayGlScanoutUnix *so = &qxl->st->scanout;
+
+    pthread_mutex_lock(&qxl->st->scanout_mutex);
+
+    if (so->drm_dma_buf_fd == -1)
+        goto end;
+
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_GL_SCANOUT_UNIX, NULL);
+    spice_marshall_msg_display_gl_scanout_unix(m, so);
+
+end:
+    pthread_mutex_unlock(&qxl->st->scanout_mutex);
+}
+
 static void begin_send_message(RedChannelClient *rcc)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -2410,6 +2432,9 @@ void dcc_send_item(DisplayChannelClient *dcc, PipeItem *pipe_item)
         marshall_stream_activate_report(rcc, m, report_item->stream_id);
         break;
     }
+    case PIPE_ITEM_TYPE_GL_SCANOUT:
+        marshall_gl_scanout(rcc, m, pipe_item);
+        break;
     default:
         spice_warn_if_reached();
     }
