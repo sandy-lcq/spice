@@ -998,9 +998,22 @@ void spice_qxl_gl_draw_async(QXLInstance *qxl,
                              uint32_t w, uint32_t h,
                              uint64_t cookie)
 {
+    RedDispatcher *dispatcher;
+    RedWorkerMessage message = RED_WORKER_MESSAGE_GL_DRAW_ASYNC;
+    SpiceMsgDisplayGlDraw draw = {
+        .x = x,
+        .y = y,
+        .w = w,
+        .h = h
+    };
+
     spice_return_if_fail(qxl != NULL);
     spice_return_if_fail(qxl->st->scanout.drm_dma_buf_fd != -1);
     spice_return_if_fail(qxl->st->gl_draw_async == NULL);
+
+    dispatcher = qxl->st->dispatcher;
+    qxl->st->gl_draw_async = async_command_alloc(dispatcher, message, cookie);
+    dispatcher_send_message(&dispatcher->dispatcher, message, &draw);
 }
 
 void red_dispatcher_async_complete(struct RedDispatcher *dispatcher,
@@ -1020,6 +1033,7 @@ void red_dispatcher_async_complete(struct RedDispatcher *dispatcher,
     case RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT_ASYNC:
     case RED_WORKER_MESSAGE_FLUSH_SURFACES_ASYNC:
     case RED_WORKER_MESSAGE_MONITORS_CONFIG_ASYNC:
+    case RED_WORKER_MESSAGE_GL_DRAW_ASYNC:
         break;
     case RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC:
         red_dispatcher_create_primary_surface_complete(dispatcher);

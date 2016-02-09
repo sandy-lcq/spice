@@ -107,6 +107,7 @@ enum {
     PIPE_ITEM_TYPE_MONITORS_CONFIG,
     PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT,
     PIPE_ITEM_TYPE_GL_SCANOUT,
+    PIPE_ITEM_TYPE_GL_DRAW,
 };
 
 typedef struct MonitorsConfig {
@@ -200,6 +201,8 @@ struct DisplayChannel {
 
     ImageCache image_cache;
     RedCompressBuf *free_compress_bufs;
+
+    int gl_draw_async_count;
 
 /* TODO: some day unify this, make it more runtime.. */
     stat_info_t add_stat;
@@ -308,6 +311,8 @@ void                       display_channel_process_surface_cmd       (DisplayCha
 void                       display_channel_update_compression        (DisplayChannel *display,
                                                                       DisplayChannelClient *dcc);
 void                       display_channel_gl_scanout                (DisplayChannel *display);
+void                       display_channel_gl_draw                   (DisplayChannel *display,
+                                                                      SpiceMsgDisplayGlDraw *draw);
 
 static inline int validate_surface(DisplayChannel *display, uint32_t surface_id)
 {

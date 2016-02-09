@@ -111,6 +111,7 @@ struct DisplayChannelClient {
     int use_mjpeg_encoder_rate_control;
     uint32_t streams_max_latency;
     uint64_t streams_max_bit_rate;
+    bool gl_draw_ongoing;
 };
 
 #define DCC_TO_WORKER(dcc)                                              \
@@ -127,6 +128,11 @@ typedef struct SurfaceCreateItem {
 typedef struct GlScanoutUnixItem {
     PipeItem base;
 } GlScanoutUnixItem;
+
+typedef struct GlDrawItem {
+    PipeItem base;
+    SpiceMsgDisplayGlDraw draw;
+} GlDrawItem;
 
 typedef struct ImageItem {
     PipeItem link;
@@ -212,6 +218,8 @@ int                        dcc_clear_surface_drawables_from_pipe     (DisplayCha
 int                        dcc_drawable_is_in_pipe                   (DisplayChannelClient *dcc,
                                                                       Drawable *drawable);
 PipeItem *                 dcc_gl_scanout_item_new                   (RedChannelClient *rcc,
+                                                                      void *data, int num);
+PipeItem *                 dcc_gl_draw_item_new                      (RedChannelClient *rcc,
                                                                       void *data, int num);
 
 typedef struct compress_send_data_t {

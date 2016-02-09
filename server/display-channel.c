@@ -2154,3 +2154,27 @@ void display_channel_gl_scanout(DisplayChannel *display)
 {
     red_channel_pipes_new_add_push(RED_CHANNEL(display), dcc_gl_scanout_item_new, NULL);
 }
+
+static void set_gl_draw_async_count(DisplayChannel *display, int num)
+{
+    RedWorker *worker = COMMON_CHANNEL(display)->worker;
+    QXLInstance *qxl = red_worker_get_qxl(worker);
+
+    display->gl_draw_async_count = num;
+
+    if (num == 0) {
+        struct AsyncCommand *async = qxl->st->gl_draw_async;
+        qxl->st->gl_draw_async = NULL;
+        red_dispatcher_async_complete(qxl->st->dispatcher, async);
+    }
+}
+
+void display_channel_gl_draw(DisplayChannel *display, SpiceMsgDisplayGlDraw *draw)
+{
+    int num;
+
+    spice_return_if_fail(display->gl_draw_async_count == 0);
+
+    num = red_channel_pipes_new_add_push(RED_CHANNEL(display), dcc_gl_draw_item_new, draw);
+    set_gl_draw_async_count(display, num);
+}

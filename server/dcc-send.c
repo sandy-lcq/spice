@@ -2321,6 +2321,17 @@ end:
     pthread_mutex_unlock(&qxl->st->scanout_mutex);
 }
 
+static void marshall_gl_draw(RedChannelClient *rcc,
+                             SpiceMarshaller *m,
+                             PipeItem *item)
+{
+    GlDrawItem *p = SPICE_CONTAINEROF(item, GlDrawItem, base);
+
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_GL_DRAW, NULL);
+    spice_marshall_msg_display_gl_draw(m, &p->draw);
+}
+
+
 static void begin_send_message(RedChannelClient *rcc)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -2434,6 +2445,9 @@ void dcc_send_item(DisplayChannelClient *dcc, PipeItem *pipe_item)
     }
     case PIPE_ITEM_TYPE_GL_SCANOUT:
         marshall_gl_scanout(rcc, m, pipe_item);
+        break;
+    case PIPE_ITEM_TYPE_GL_DRAW:
+        marshall_gl_draw(rcc, m, pipe_item);
         break;
     default:
         spice_warn_if_reached();

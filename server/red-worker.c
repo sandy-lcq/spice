@@ -1167,6 +1167,15 @@ void handle_dev_gl_scanout(void *opaque, void *payload)
     display_channel_gl_scanout(worker->display_channel);
 }
 
+static
+void handle_dev_gl_draw_async(void *opaque, void *payload)
+{
+    RedWorker *worker = opaque;
+    SpiceMsgDisplayGlDraw *draw = payload;
+
+    display_channel_gl_draw(worker->display_channel, draw);
+}
+
 static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
 {
     RedCursorCmd *cursor_cmd;
@@ -1408,6 +1417,11 @@ static void register_callbacks(Dispatcher *dispatcher)
                                 RED_WORKER_MESSAGE_GL_SCANOUT,
                                 handle_dev_gl_scanout,
                                 0,
+                                DISPATCHER_NONE);
+    dispatcher_register_handler(dispatcher,
+                                RED_WORKER_MESSAGE_GL_DRAW_ASYNC,
+                                handle_dev_gl_draw_async,
+                                sizeof(SpiceMsgDisplayGlDraw),
                                 DISPATCHER_NONE);
 }
 
