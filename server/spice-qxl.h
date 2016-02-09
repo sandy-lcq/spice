@@ -104,6 +104,16 @@ void spice_qxl_driver_unload(QXLInstance *instance);
 /* since spice 0.12.6 */
 void spice_qxl_set_max_monitors(QXLInstance *instance,
                                 unsigned int max_monitors);
+/* since spice 0.13.1 */
+void spice_qxl_gl_scanout(QXLInstance *instance,
+                          int fd,
+                          uint32_t width, uint32_t height,
+                          uint32_t stride, uint32_t format,
+                          int y_0_top);
+void spice_qxl_gl_draw_async(QXLInstance *instance,
+                             uint32_t x, uint32_t y,
+                             uint32_t w, uint32_t h,
+                             uint64_t cookie);
 
 typedef struct QXLDrawArea {
     uint8_t *buf;

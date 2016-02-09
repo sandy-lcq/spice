@@ -960,6 +960,41 @@ void spice_qxl_driver_unload(QXLInstance *instance)
     red_dispatcher_driver_unload(instance->st->dispatcher);
 }
 
+SPICE_GNUC_VISIBLE
+void spice_qxl_gl_scanout(QXLInstance *qxl,
+                          int fd,
+                          uint32_t width, uint32_t height,
+                          uint32_t stride, uint32_t format,
+                          int y_0_top)
+{
+    spice_return_if_fail(qxl != NULL);
+    spice_return_if_fail(qxl->st->gl_draw_async == NULL);
+
+    if (qxl->st->scanout.drm_dma_buf_fd != -1) {
+        close(qxl->st->scanout.drm_dma_buf_fd);
+    }
+
+    qxl->st->scanout = (SpiceMsgDisplayGlScanoutUnix) {
+        .flags = y_0_top ? SPICE_GL_SCANOUT_FLAGS_Y0TOP : 0,
+        .drm_dma_buf_fd = fd,
+        .width = width,
+        .height = height,
+        .stride = stride,
+        .drm_fourcc_format = format
+    };
+}
+
+SPICE_GNUC_VISIBLE
+void spice_qxl_gl_draw_async(QXLInstance *qxl,
+                             uint32_t x, uint32_t y,
+                             uint32_t w, uint32_t h,
+                             uint64_t cookie)
+{
+    spice_return_if_fail(qxl != NULL);
+    spice_return_if_fail(qxl->st->scanout.drm_dma_buf_fd != -1);
+    spice_return_if_fail(qxl->st->gl_draw_async == NULL);
+}
+
 void red_dispatcher_async_complete(struct RedDispatcher *dispatcher,
                                    AsyncCommand *async_command)
 {

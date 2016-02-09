@@ -36,6 +36,8 @@ extern RedsState *reds;
 struct QXLState {
     QXLInterface          *qif;
     struct RedDispatcher  *dispatcher;
+    SpiceMsgDisplayGlScanoutUnix scanout;
+    struct AsyncCommand *gl_draw_async;
 };
 
 struct TunnelWorker;
