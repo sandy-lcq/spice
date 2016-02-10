@@ -2374,6 +2374,7 @@ static void reds_accept_ssl_connection(int fd, int event, void *data)
 
 static void reds_accept(int fd, int event, void *data)
 {
+    RedsState *reds = data;
     int socket;
 
     if ((socket = accept(reds->listen_socket, NULL, 0)) == -1) {
@@ -2537,7 +2538,7 @@ static int reds_init_net(RedsState *reds)
         }
         reds->listen_watch = core->watch_add(core, reds->listen_socket,
                                              SPICE_WATCH_EVENT_READ,
-                                             reds_accept, NULL);
+                                             reds_accept, reds);
         if (reds->listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
@@ -2563,7 +2564,7 @@ static int reds_init_net(RedsState *reds)
         reds->listen_socket = reds->spice_listen_socket_fd;
         reds->listen_watch = core->watch_add(core, reds->listen_socket,
                                              SPICE_WATCH_EVENT_READ,
-                                             reds_accept, NULL);
+                                             reds_accept, reds);
         if (reds->listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
