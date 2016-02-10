@@ -2552,7 +2552,7 @@ static int reds_init_net(RedsState *reds)
         }
         reds->secure_listen_watch = core->watch_add(core, reds->secure_listen_socket,
                                                     SPICE_WATCH_EVENT_READ,
-                                                    reds_accept_ssl_connection, NULL);
+                                                    reds_accept_ssl_connection, reds);
         if (reds->secure_listen_watch == NULL) {
             spice_warning("set fd handle failed");
             return -1;
