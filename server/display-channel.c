@@ -1920,6 +1920,8 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
 
     if (display->renderer == RED_RENDERER_INVALID) {
         int i;
+        QXLInstance *qxl = display->common.qxl;
+        RedsState *reds = red_qxl_get_server(qxl->st);
         GArray *renderers = reds_get_renderers(reds);
         for (i = 0; i < renderers->len; i++) {
             uint32_t renderer = g_array_index(renderers, uint32_t, i);

@@ -32,7 +32,6 @@
 #include "migration-protocol.h"
 
 typedef struct RedsState RedsState;
-extern RedsState *reds;
 
 static inline QXLInterface * qxl_get_interface(QXLInstance *qxl)
 {

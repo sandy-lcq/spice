@@ -110,7 +110,7 @@ static struct Readers {
 
 static SpiceCharDeviceInstance* smartcard_readers_get_unattached(void);
 static SpiceCharDeviceInstance* smartcard_readers_get(uint32_t reader_id);
-static int smartcard_char_device_add_to_readers(SpiceCharDeviceInstance *sin);
+static int smartcard_char_device_add_to_readers(RedsState *reds, SpiceCharDeviceInstance *sin);
 static void smartcard_char_device_attach_client(
     SpiceCharDeviceInstance *char_device, SmartCardChannelClient *scc);
 static void smartcard_channel_write_to_reader(SpiceCharDeviceWriteBuffer *write_buf);
@@ -119,7 +119,7 @@ static MsgItem *smartcard_char_device_on_message_from_device(
     SmartCardDeviceState *state, VSCMsgHeader *header);
 static SmartCardDeviceState *smartcard_device_state_new(RedsState *reds, SpiceCharDeviceInstance *sin);
 static void smartcard_device_state_free(SmartCardDeviceState* st);
-static void smartcard_init(void);
+static void smartcard_init(RedsState *reds);
 
 static void smartcard_read_buf_prepare(SmartCardDeviceState *state, VSCMsgHeader *vheader)
 {
@@ -234,7 +234,7 @@ MsgItem *smartcard_char_device_on_message_from_device(SmartCardDeviceState *stat
     return NULL;
 }
 
-static int smartcard_char_device_add_to_readers(SpiceCharDeviceInstance *char_device)
+static int smartcard_char_device_add_to_readers(RedsState *reds, SpiceCharDeviceInstance *char_device)
 {
     SmartCardDeviceState *state = spice_char_device_state_opaque_get(char_device->st);
 
@@ -243,7 +243,7 @@ static int smartcard_char_device_add_to_readers(SpiceCharDeviceInstance *char_de
     }
     state->reader_id = g_smartcard_readers.num;
     g_smartcard_readers.sin[g_smartcard_readers.num++] = char_device;
-    smartcard_init();
+    smartcard_init(reds);
     return 0;
 }
 
@@ -320,7 +320,7 @@ SpiceCharDeviceState *smartcard_device_connect(RedsState *reds, SpiceCharDeviceI
     SmartCardDeviceState *st;
 
     st = smartcard_device_state_new(reds, char_device);
-    if (smartcard_char_device_add_to_readers(char_device) == -1) {
+    if (smartcard_char_device_add_to_readers(reds, char_device) == -1) {
         smartcard_device_state_free(st);
         return NULL;
     }
@@ -831,7 +831,7 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
 
 SmartCardChannel *g_smartcard_channel;
 
-static void smartcard_init(void)
+static void smartcard_init(RedsState *reds)
 {
     ChannelCbs channel_cbs = { NULL, };
     ClientCbs client_cbs = { NULL, };

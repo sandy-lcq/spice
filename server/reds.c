@@ -145,7 +145,9 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 static pthread_mutex_t *lock_cs;
 static long *lock_count;
 
-RedsState *reds = NULL;
+/* TODO while we can technically create more than one server in a process,
+ * the intended use is to support a single server per process */
+GList *servers = NULL;
 
 typedef struct RedLinkInfo {
     RedsState *reds;
@@ -878,9 +880,8 @@ static int reds_get_n_clients(RedsState *reds)
     return reds ? reds->num_clients : 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *s)
+SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *reds)
 {
-    spice_assert(reds == s);
     return reds_get_n_clients(reds);
 }
 
@@ -2444,11 +2445,10 @@ static void reds_accept(int fd, int event, void *data)
 }
 
 
-SPICE_GNUC_VISIBLE int spice_server_add_client(SpiceServer *s, int socket, int skip_auth)
+SPICE_GNUC_VISIBLE int spice_server_add_client(SpiceServer *reds, int socket, int skip_auth)
 {
     RedLinkInfo *link;
 
-    spice_assert(reds == s);
     if (!(link = reds_init_client_connection(reds, socket))) {
         spice_warning("accept failed");
         return -1;
@@ -2461,11 +2461,10 @@ SPICE_GNUC_VISIBLE int spice_server_add_client(SpiceServer *s, int socket, int s
 }
 
 
-SPICE_GNUC_VISIBLE int spice_server_add_ssl_client(SpiceServer *s, int socket, int skip_auth)
+SPICE_GNUC_VISIBLE int spice_server_add_ssl_client(SpiceServer *reds, int socket, int skip_auth)
 {
     RedLinkInfo *link;
 
-    spice_assert(reds == s);
     if (!(link = reds_init_client_ssl_connection(reds, socket))) {
         return -1;
     }
@@ -2791,11 +2790,8 @@ static int reds_init_ssl(RedsState *reds)
     return 0;
 }
 
-static void reds_exit(void)
+static void reds_cleanup(RedsState *reds)
 {
-    if (reds->main_channel) {
-        main_channel_close(reds->main_channel);
-    }
 #ifdef RED_STATISTICS
     if (reds->stat_shm_name) {
         shm_unlink(reds->stat_shm_name);
@@ -2803,6 +2799,16 @@ static void reds_exit(void)
         reds->stat_shm_name = NULL;
     }
 #endif
+}
+
+static void reds_exit(void)
+{
+    GList *l;
+
+    for (l = servers; l != NULL; l = l->next) {
+        RedsState *reds = l->data;
+        reds_cleanup(reds);
+    }
 }
 
 static inline void on_activating_ticketing(RedsState *reds)
@@ -3092,18 +3098,16 @@ void reds_on_char_device_state_destroy(RedsState *reds, SpiceCharDeviceState *de
     reds_char_device_remove_state(reds, dev);
 }
 
-static int spice_server_char_device_add_interface(SpiceServer *s,
+static int spice_server_char_device_add_interface(SpiceServer *reds,
                                            SpiceBaseInstance *sin)
 {
     SpiceCharDeviceInstance* char_device =
             SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
     SpiceCharDeviceState *dev_state = NULL;
 
-    spice_assert(s == reds);
-
     spice_info("CHAR_DEVICE %s", char_device->subtype);
     if (strcmp(char_device->subtype, SUBTYPE_VDAGENT) == 0) {
-        if (s->vdagent) {
+        if (reds->vdagent) {
             spice_warning("vdagent already attached");
             return -1;
         }
@@ -3168,12 +3172,10 @@ static void spice_server_char_device_remove_interface(RedsState *reds, SpiceBase
     char_device->st = NULL;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
+SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *reds,
                                                   SpiceBaseInstance *sin)
 {
     const SpiceBaseInterface *interface = sin->sif;
-
-    spice_assert(reds == s);
 
     if (strcmp(interface->type, SPICE_INTERFACE_KEYBOARD) == 0) {
         spice_info("SPICE_INTERFACE_KEYBOARD");
@@ -3256,7 +3258,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
             spice_warning("unsupported char device interface");
             return -1;
         }
-        spice_server_char_device_add_interface(s, sin);
+        spice_server_char_device_add_interface(reds, sin);
 
     } else if (strcmp(interface->type, SPICE_INTERFACE_MIGRATION) == 0) {
         spice_info("SPICE_INTERFACE_MIGRATION");
@@ -3333,6 +3335,7 @@ static void reds_init_vd_agent_resources(RedsState *reds)
 
 static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 {
+    static gboolean first = TRUE;
     spice_info("starting %s", VERSION);
 
     if (core_interface->base.major_version != SPICE_INTERFACE_CORE_MAJOR) {
@@ -3413,7 +3416,11 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     if (reds->allow_multiple_clients) {
         spice_warning("spice: allowing multiple client connections");
     }
-    atexit(reds_exit);
+    if (first) {
+        atexit(reds_exit);
+        first = FALSE;
+    }
+    servers = g_list_prepend(servers, reds);
     return 0;
 
 err:
@@ -3425,10 +3432,7 @@ static const char default_renderer[] = "sw";
 /* new interface */
 SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 {
-    /* we can't handle multiple instances (yet) */
-    spice_assert(reds == NULL);
-
-    reds = spice_new0(RedsState, 1);
+    RedsState *reds = spice_new0(RedsState, 1);
     reds->default_channel_security =
         SPICE_CHANNEL_SECURITY_NONE | SPICE_CHANNEL_SECURITY_SSL;
     reds->renderers = g_array_sized_new(FALSE, TRUE, sizeof(uint32_t), RED_RENDERER_LAST);
@@ -3487,23 +3491,28 @@ static int reds_add_renderer(RedsState *reds, const char *name)
     return TRUE;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *s, SpiceCoreInterface *core)
+SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *reds, SpiceCoreInterface *core)
 {
     int ret;
 
-    spice_assert(reds == s);
-    ret = do_spice_init(s, core);
-    if (s->renderers->len == 0) {
-        reds_add_renderer(s, default_renderer);
+    ret = do_spice_init(reds, core);
+    if (reds->renderers->len == 0) {
+        reds_add_renderer(reds, default_renderer);
     }
     return ret;
 }
 
-SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *s)
+SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
 {
-    spice_assert(reds == s);
-    g_array_unref(s->renderers);
-    reds_exit();
+    g_array_unref(reds->renderers);
+    if (reds->main_channel) {
+        main_channel_close(reds->main_channel);
+    }
+    reds_cleanup(reds);
+
+    /* remove the server from the list of servers so that we don't attempt to
+     * free it again at exit */
+    servers = g_list_remove(servers, reds);
 }
 
 SPICE_GNUC_VISIBLE spice_compat_version_t spice_get_current_compat_version(void)
@@ -3511,7 +3520,7 @@ SPICE_GNUC_VISIBLE spice_compat_version_t spice_get_current_compat_version(void)
     return SPICE_COMPAT_VERSION_CURRENT;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_compat_version(SpiceServer *s,
+SPICE_GNUC_VISIBLE int spice_server_set_compat_version(SpiceServer *reds,
                                                        spice_compat_version_t version)
 {
     if (version < SPICE_COMPAT_VERSION_0_6) {
@@ -3526,28 +3535,25 @@ SPICE_GNUC_VISIBLE int spice_server_set_compat_version(SpiceServer *s,
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_port(SpiceServer *s, int port)
+SPICE_GNUC_VISIBLE int spice_server_set_port(SpiceServer *reds, int port)
 {
-    spice_assert(reds == s);
     if (port < 0 || port > 0xffff) {
         return -1;
     }
-    s->spice_port = port;
+    reds->spice_port = port;
     return 0;
 }
 
-SPICE_GNUC_VISIBLE void spice_server_set_addr(SpiceServer *s, const char *addr, int flags)
+SPICE_GNUC_VISIBLE void spice_server_set_addr(SpiceServer *reds, const char *addr, int flags)
 {
-    spice_assert(reds == s);
-
-    g_strlcpy(s->spice_addr, addr, sizeof(s->spice_addr));
+    g_strlcpy(reds->spice_addr, addr, sizeof(reds->spice_addr));
 
     if (flags == SPICE_ADDR_FLAG_IPV4_ONLY) {
-        s->spice_family = PF_INET;
+        reds->spice_family = PF_INET;
     } else if (flags == SPICE_ADDR_FLAG_IPV6_ONLY) {
-        s->spice_family = PF_INET6;
+        reds->spice_family = PF_INET6;
     } else if (flags == SPICE_ADDR_FLAG_UNIX_ONLY) {
-        s->spice_family = AF_UNIX;
+        reds->spice_family = AF_UNIX;
     } else if (flags != 0) {
         spice_warning("unknown address flag: 0x%X", flags);
     }
@@ -3555,21 +3561,18 @@ SPICE_GNUC_VISIBLE void spice_server_set_addr(SpiceServer *s, const char *addr, 
 
 SPICE_GNUC_VISIBLE int spice_server_set_listen_socket_fd(SpiceServer *s, int listen_fd)
 {
-    spice_assert(reds == s);
     s->spice_listen_socket_fd = listen_fd;
     return 0;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_exit_on_disconnect(SpiceServer *s, int flag)
 {
-    spice_assert(reds == s);
     s->exit_on_disconnect = !!flag;
     return 0;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_noauth(SpiceServer *s)
 {
-    spice_assert(reds == s);
     memset(s->taTicket.password, 0, sizeof(s->taTicket.password));
     s->ticketing_enabled = FALSE;
     return 0;
@@ -3577,7 +3580,6 @@ SPICE_GNUC_VISIBLE int spice_server_set_noauth(SpiceServer *s)
 
 SPICE_GNUC_VISIBLE int spice_server_set_sasl(SpiceServer *s, int enabled)
 {
-    spice_assert(reds == s);
 #if HAVE_SASL
     s->sasl_enabled = enabled;
     return 0;
@@ -3588,7 +3590,6 @@ SPICE_GNUC_VISIBLE int spice_server_set_sasl(SpiceServer *s, int enabled)
 
 SPICE_GNUC_VISIBLE int spice_server_set_sasl_appname(SpiceServer *s, const char *appname)
 {
-    spice_assert(reds == s);
 #if HAVE_SASL
     free(s->sasl_appname);
     s->sasl_appname = spice_strdup(appname);
@@ -3610,13 +3611,11 @@ SPICE_GNUC_VISIBLE void spice_server_set_uuid(SpiceServer *s, const uint8_t uuid
     s->spice_uuid_is_set = TRUE;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *s,
+SPICE_GNUC_VISIBLE int spice_server_set_ticket(SpiceServer *reds,
                                                const char *passwd, int lifetime,
                                                int fail_if_connected,
                                                int disconnect_if_connected)
 {
-    spice_assert(reds == s);
-
     if (reds_main_channel_connected(reds)) {
         if (fail_if_connected) {
             return -1;
@@ -3650,7 +3649,6 @@ SPICE_GNUC_VISIBLE int spice_server_set_tls(SpiceServer *s, int port,
                                             const char *private_key_file, const char *key_passwd,
                                             const char *dh_key_file, const char *ciphersuite)
 {
-    spice_assert(reds == s);
     if (port == 0 || ca_cert_file == NULL || certs_file == NULL ||
         private_key_file == NULL) {
         return -1;
@@ -3686,7 +3684,6 @@ SPICE_GNUC_VISIBLE int spice_server_set_tls(SpiceServer *s, int port,
 SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
                                                           SpiceImageCompression comp)
 {
-    spice_assert(reds == s);
 #ifndef USE_LZ4
     if (comp == SPICE_IMAGE_COMPRESSION_LZ4) {
         spice_warning("LZ4 compression not supported, falling back to auto GLZ");
@@ -3701,13 +3698,11 @@ SPICE_GNUC_VISIBLE int spice_server_set_image_compression(SpiceServer *s,
 
 SPICE_GNUC_VISIBLE SpiceImageCompression spice_server_get_image_compression(SpiceServer *s)
 {
-    spice_assert(reds == s);
     return s->image_compression;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_jpeg_compression(SpiceServer *s, spice_wan_compression_t comp)
 {
-    spice_assert(reds == s);
     if (comp == SPICE_WAN_COMPRESSION_INVALID) {
         spice_error("invalid jpeg state");
         return -1;
@@ -3719,7 +3714,6 @@ SPICE_GNUC_VISIBLE int spice_server_set_jpeg_compression(SpiceServer *s, spice_w
 
 SPICE_GNUC_VISIBLE int spice_server_set_zlib_glz_compression(SpiceServer *s, spice_wan_compression_t comp)
 {
-    spice_assert(reds == s);
     if (comp == SPICE_WAN_COMPRESSION_INVALID) {
         spice_error("invalid zlib_glz state");
         return -1;
@@ -3746,8 +3740,6 @@ SPICE_GNUC_VISIBLE int spice_server_set_channel_security(SpiceServer *s, const c
     };
     int i;
 
-    spice_assert(reds == s);
-
     if (channel == NULL) {
         s->default_channel_security = security;
         return 0;
@@ -3761,34 +3753,30 @@ SPICE_GNUC_VISIBLE int spice_server_set_channel_security(SpiceServer *s, const c
     return -1;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_get_sock_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen)
+SPICE_GNUC_VISIBLE int spice_server_get_sock_info(SpiceServer *reds, struct sockaddr *sa, socklen_t *salen)
 {
-    spice_assert(reds == s);
     if (main_channel_getsockname(reds->main_channel, sa, salen) < 0) {
         return -1;
     }
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_get_peer_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen)
+SPICE_GNUC_VISIBLE int spice_server_get_peer_info(SpiceServer *reds, struct sockaddr *sa, socklen_t *salen)
 {
-    spice_assert(reds == s);
     if (main_channel_getpeername(reds->main_channel, sa, salen) < 0) {
         return -1;
     }
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_is_server_mouse(SpiceServer *s)
+SPICE_GNUC_VISIBLE int spice_server_is_server_mouse(SpiceServer *reds)
 {
-    spice_assert(reds == s);
     return reds->mouse_mode == SPICE_MOUSE_MODE_SERVER;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_add_renderer(SpiceServer *s, const char *name)
+SPICE_GNUC_VISIBLE int spice_server_add_renderer(SpiceServer *reds, const char *name)
 {
-    spice_assert(reds == s);
-    if (!reds_add_renderer(s, name)) {
+    if (!reds_add_renderer(reds, name)) {
         return -1;
     }
     return 0;
@@ -3801,14 +3789,13 @@ SPICE_GNUC_VISIBLE int spice_server_kbd_leds(SpiceKbdInstance *sin, int leds)
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_streaming_video(SpiceServer *s, int value)
+SPICE_GNUC_VISIBLE int spice_server_set_streaming_video(SpiceServer *reds, int value)
 {
-    spice_assert(reds == s);
     if (value != SPICE_STREAM_VIDEO_OFF &&
         value != SPICE_STREAM_VIDEO_ALL &&
         value != SPICE_STREAM_VIDEO_FILTER)
         return -1;
-    s->streaming_video = value;
+    reds->streaming_video = value;
     reds_on_sv_change(reds);
     return 0;
 }
@@ -3818,36 +3805,32 @@ uint32_t reds_get_streaming_video(const RedsState *reds)
     return reds->streaming_video;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_playback_compression(SpiceServer *s, int enable)
+SPICE_GNUC_VISIBLE int spice_server_set_playback_compression(SpiceServer *reds, int enable)
 {
-    spice_assert(reds == s);
     snd_set_playback_compression(enable);
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_agent_mouse(SpiceServer *s, int enable)
+SPICE_GNUC_VISIBLE int spice_server_set_agent_mouse(SpiceServer *reds, int enable)
 {
-    spice_assert(reds == s);
     reds->agent_mouse = enable;
     reds_update_mouse_mode(reds);
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_agent_copypaste(SpiceServer *s, int enable)
+SPICE_GNUC_VISIBLE int spice_server_set_agent_copypaste(SpiceServer *reds, int enable)
 {
-    spice_assert(reds == s);
-    s->agent_copypaste = enable;
-    reds->agent_state.write_filter.copy_paste_enabled = s->agent_copypaste;
-    reds->agent_state.read_filter.copy_paste_enabled = s->agent_copypaste;
+    reds->agent_copypaste = enable;
+    reds->agent_state.write_filter.copy_paste_enabled = reds->agent_copypaste;
+    reds->agent_state.read_filter.copy_paste_enabled = reds->agent_copypaste;
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_set_agent_file_xfer(SpiceServer *s, int enable)
+SPICE_GNUC_VISIBLE int spice_server_set_agent_file_xfer(SpiceServer *reds, int enable)
 {
-    spice_assert(reds == s);
-    s->agent_file_xfer = enable;
-    reds->agent_state.write_filter.file_xfer_enabled = s->agent_file_xfer;
-    reds->agent_state.read_filter.file_xfer_enabled = s->agent_file_xfer;
+    reds->agent_file_xfer = enable;
+    reds->agent_state.write_filter.file_xfer_enabled = reds->agent_file_xfer;
+    reds->agent_state.read_filter.file_xfer_enabled = reds->agent_file_xfer;
     return 0;
 }
 
@@ -3878,7 +3861,7 @@ static int reds_set_migration_dest_info(RedsState *reds,
 }
 
 /* semi-seamless client migration */
-SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* dest,
+SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *reds, const char* dest,
                                                     int port, int secure_port,
                                                     const char* cert_subject)
 {
@@ -3886,18 +3869,17 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* 
     int try_seamless;
 
     spice_info(NULL);
-    spice_assert(s->migration_interface);
-    spice_assert(reds == s);
+    spice_assert(reds->migration_interface);
 
     if (reds->expect_migrate) {
         spice_info("consecutive calls without migration. Canceling previous call");
         main_channel_migrate_src_complete(reds->main_channel, FALSE);
     }
 
-    sif = SPICE_CONTAINEROF(s->migration_interface->base.sif, SpiceMigrateInterface, base);
+    sif = SPICE_CONTAINEROF(reds->migration_interface->base.sif, SpiceMigrateInterface, base);
 
     if (!reds_set_migration_dest_info(reds, dest, port, secure_port, cert_subject)) {
-        sif->migrate_connect_complete(s->migration_interface);
+        sif->migrate_connect_complete(reds->migration_interface);
         return -1;
     }
 
@@ -3923,18 +3905,18 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *s, const char* 
             reds_mig_release(reds);
             spice_info("no client connected");
         }
-        sif->migrate_connect_complete(s->migration_interface);
+        sif->migrate_connect_complete(reds->migration_interface);
     }
 
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_migrate_info(SpiceServer *s, const char* dest,
+SPICE_GNUC_VISIBLE int spice_server_migrate_info(SpiceServer *reds, const char* dest,
                                           int port, int secure_port,
                                           const char* cert_subject)
 {
     spice_info(NULL);
-    spice_assert(!s->migration_interface);
+    spice_assert(!reds->migration_interface);
 
     if (!reds_set_migration_dest_info(reds, dest, port, secure_port, cert_subject)) {
         return -1;
@@ -3942,9 +3924,8 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_info(SpiceServer *s, const char* des
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_migrate_start(SpiceServer *s)
+SPICE_GNUC_VISIBLE int spice_server_migrate_start(SpiceServer *reds)
 {
-    spice_assert(reds == s);
     spice_info(NULL);
     if (!reds->mig_spice) {
         return -1;
@@ -3952,17 +3933,16 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_start(SpiceServer *s)
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *s, int completed)
+SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *reds, int completed)
 {
     SpiceMigrateInterface *sif;
     int ret = 0;
 
     spice_info(NULL);
 
-    spice_assert(s->migration_interface);
-    spice_assert(reds == s);
+    spice_assert(reds->migration_interface);
 
-    sif = SPICE_CONTAINEROF(s->migration_interface->base.sif, SpiceMigrateInterface, base);
+    sif = SPICE_CONTAINEROF(reds->migration_interface->base.sif, SpiceMigrateInterface, base);
     if (completed && !reds->expect_migrate && reds->num_clients) {
         spice_warning("spice_server_migrate_info was not called, disconnecting clients");
         reds_disconnect(reds);
@@ -3979,15 +3959,14 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *s, int completed)
     return 0;
 complete:
     if (sif->migrate_end_complete) {
-        sif->migrate_end_complete(s->migration_interface);
+        sif->migrate_end_complete(reds->migration_interface);
     }
     return ret;
 }
 
 /* interface for switch-host migration */
-SPICE_GNUC_VISIBLE int spice_server_migrate_switch(SpiceServer *s)
+SPICE_GNUC_VISIBLE int spice_server_migrate_switch(SpiceServer *reds)
 {
-    spice_assert(reds == s);
     spice_info(NULL);
     if (!reds->num_clients) {
        return 0;
@@ -3997,11 +3976,10 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_switch(SpiceServer *s)
     return 0;
 }
 
-SPICE_GNUC_VISIBLE void spice_server_vm_start(SpiceServer *s)
+SPICE_GNUC_VISIBLE void spice_server_vm_start(SpiceServer *reds)
 {
     GList *it;
 
-    spice_assert(s == reds);
     reds->vm_running = TRUE;
     for (it = reds->char_devices; it != NULL; it = it->next) {
         spice_char_device_start((SpiceCharDeviceState *)it->data);
@@ -4009,11 +3987,10 @@ SPICE_GNUC_VISIBLE void spice_server_vm_start(SpiceServer *s)
     reds_on_vm_start(reds);
 }
 
-SPICE_GNUC_VISIBLE void spice_server_vm_stop(SpiceServer *s)
+SPICE_GNUC_VISIBLE void spice_server_vm_stop(SpiceServer *reds)
 {
     GList *it;
 
-    spice_assert(s == reds);
     reds->vm_running = FALSE;
     for (it = reds->char_devices; it != NULL; it = it->next) {
         spice_char_device_stop((SpiceCharDeviceState *)it->data);
@@ -4021,9 +3998,8 @@ SPICE_GNUC_VISIBLE void spice_server_vm_stop(SpiceServer *s)
     reds_on_vm_stop(reds);
 }
 
-SPICE_GNUC_VISIBLE void spice_server_set_seamless_migration(SpiceServer *s, int enable)
+SPICE_GNUC_VISIBLE void spice_server_set_seamless_migration(SpiceServer *reds, int enable)
 {
-    spice_assert(s == reds);
     /* seamless migration is not supported with multiple clients */
     reds->seamless_migration_enabled = enable && !reds->allow_multiple_clients;
     spice_debug("seamless migration enabled=%d", enable);
