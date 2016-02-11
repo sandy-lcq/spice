@@ -3414,6 +3414,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds = spice_new0(RedsState, 1);
     reds->default_channel_security =
         SPICE_CHANNEL_SECURITY_NONE | SPICE_CHANNEL_SECURITY_SSL;
+    reds->renderers = g_array_sized_new(FALSE, TRUE, sizeof(uint32_t), RED_RENDERER_LAST);
     reds->spice_port = -1;
     reds->spice_secure_port = -1;
     reds->spice_listen_socket_fd = -1;
@@ -3446,9 +3447,6 @@ static const RendererInfo renderers_info[] = {
     {RED_RENDERER_INVALID, NULL},
 };
 
-uint32_t renderers[RED_RENDERER_LAST];
-uint32_t num_renderers = 0;
-
 static const RendererInfo *find_renderer(const char *name)
 {
     const RendererInfo *inf = renderers_info;
@@ -3461,14 +3459,14 @@ static const RendererInfo *find_renderer(const char *name)
     return NULL;
 }
 
-static int red_add_renderer(const char *name)
+static int reds_add_renderer(RedsState *reds, const char *name)
 {
     const RendererInfo *inf;
 
-    if (num_renderers == RED_RENDERER_LAST || !(inf = find_renderer(name))) {
+    if (reds->renderers->len == RED_RENDERER_LAST || !(inf = find_renderer(name))) {
         return FALSE;
     }
-    renderers[num_renderers++] = inf->id;
+    g_array_append_val(reds->renderers, inf->id);
     return TRUE;
 }
 
@@ -3478,8 +3476,8 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *s, SpiceCoreInterface *cor
 
     spice_assert(reds == s);
     ret = do_spice_init(s, core);
-    if (num_renderers == 0) {
-        red_add_renderer(default_renderer);
+    if (s->renderers->len == 0) {
+        reds_add_renderer(s, default_renderer);
     }
     return ret;
 }
@@ -3487,6 +3485,7 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *s, SpiceCoreInterface *cor
 SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *s)
 {
     spice_assert(reds == s);
+    g_array_unref(s->renderers);
     reds_exit();
 }
 
@@ -3772,7 +3771,7 @@ SPICE_GNUC_VISIBLE int spice_server_is_server_mouse(SpiceServer *s)
 SPICE_GNUC_VISIBLE int spice_server_add_renderer(SpiceServer *s, const char *name)
 {
     spice_assert(reds == s);
-    if (!red_add_renderer(name)) {
+    if (!reds_add_renderer(s, name)) {
         return -1;
     }
     return 0;
@@ -4024,6 +4023,11 @@ SPICE_GNUC_VISIBLE void spice_server_set_keepalive_timeout(SpiceServer *s, int t
     spice_assert(s == reds);
     reds->keepalive_timeout = timeout;
     spice_debug("keepalive timeout=%d", timeout);
+}
+
+GArray* reds_get_renderers(RedsState *reds)
+{
+    return reds->renderers;
 }
 
 spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds)

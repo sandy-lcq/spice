@@ -1911,10 +1911,12 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
 
     if (display->renderer == RED_RENDERER_INVALID) {
         int i;
-        for (i = 0; i < display->num_renderers; i++) {
-            surface->context.canvas = create_canvas_for_surface(display, surface, display->renderers[i]);
+        GArray *renderers = reds_get_renderers(reds);
+        for (i = 0; i < renderers->len; i++) {
+            uint32_t renderer = g_array_index(renderers, uint32_t, i);
+            surface->context.canvas = create_canvas_for_surface(display, surface, renderer);
             if (surface->context.canvas) {
-                display->renderer = display->renderers[i];
+                display->renderer = renderer;
                 break;
             }
         }
@@ -2031,8 +2033,6 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
         image_surfaces_get,
     };
 
-    spice_return_val_if_fail(num_renderers > 0, NULL);
-
     spice_info("create display channel");
     display = (DisplayChannel *)red_worker_new_channel(
         worker, sizeof(*display), "display_channel",
@@ -2063,8 +2063,6 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
     stat_compress_init(&display->lz4_stat, "lz4", stat_clock);
 
     display->n_surfaces = n_surfaces;
-    display->num_renderers = num_renderers;
-    memcpy(display->renderers, renderers, sizeof(display->renderers));
     display->renderer = RED_RENDERER_INVALID;
 
     ring_init(&display->current_list);

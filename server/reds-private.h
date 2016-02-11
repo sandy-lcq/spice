@@ -208,6 +208,7 @@ struct RedsState {
 
     int default_channel_security;
     ChannelSecurityOptions *channels_security;
+    GArray *renderers;
 
     int spice_port;
     int spice_secure_port;

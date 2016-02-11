@@ -66,15 +66,14 @@ gboolean reds_get_agent_mouse(const RedsState *reds); // used by inputs_channel
 int reds_has_vdagent(RedsState *reds); // used by inputs channel
 void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mouse_state); // used by inputs_channel
 
+GArray* reds_get_renderers(RedsState *reds);
+
 enum {
     RED_RENDERER_INVALID,
     RED_RENDERER_SW,
 
     RED_RENDERER_LAST
 };
-
-extern uint32_t renderers[RED_RENDERER_LAST];
-extern uint32_t num_renderers;
 
 // Temporary measures to make splitting reds.c to inputs-channel.c easier
 

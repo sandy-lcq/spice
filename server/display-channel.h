@@ -170,8 +170,6 @@ struct DisplayChannel {
 
     MonitorsConfig *monitors_config;
 
-    uint32_t num_renderers;
-    uint32_t renderers[RED_RENDERER_LAST];
     uint32_t renderer;
     int enable_jpeg;
     int enable_zlib_glz_wrap;
