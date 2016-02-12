@@ -277,7 +277,6 @@ int                        display_channel_get_streams_timeout       (DisplayCha
 void                       display_channel_compress_stats_print      (const DisplayChannel *display);
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
 Drawable *                 display_channel_drawable_try_new          (DisplayChannel *display,
-                                                                      int group_id,
                                                                       int process_commands_generation);
 void                       display_channel_drawable_unref            (DisplayChannel *display, Drawable *drawable);
 void                       display_channel_surface_unref             (DisplayChannel *display,
@@ -298,11 +297,9 @@ void                       display_channel_destroy_surface           (DisplayCha
 uint32_t                   display_channel_generate_uid              (DisplayChannel *display);
 void                       display_channel_process_draw              (DisplayChannel *display,
                                                                       RedDrawable *red_drawable,
-                                                                      uint32_t group_id,
                                                                       int process_commands_generation);
 void                       display_channel_process_surface_cmd       (DisplayChannel *display,
                                                                       RedSurfaceCmd *surface,
-                                                                      uint32_t group_id,
                                                                       int loadvm);
 void                       display_channel_update_compression        (DisplayChannel *display,
                                                                       DisplayChannelClient *dcc);

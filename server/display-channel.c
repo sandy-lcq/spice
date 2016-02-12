@@ -1072,7 +1072,7 @@ static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable
  * @return initialized Drawable or NULL on failure
  */
 static Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t effect,
-                                              RedDrawable *red_drawable, uint32_t group_id,
+                                              RedDrawable *red_drawable,
                                               uint32_t process_commands_generation)
 {
     Drawable *drawable;
@@ -1091,7 +1091,7 @@ static Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t e
         }
     }
 
-    drawable = display_channel_drawable_try_new(display, group_id, process_commands_generation);
+    drawable = display_channel_drawable_try_new(display, process_commands_generation);
     if (!drawable) {
         return NULL;
     }
@@ -1169,10 +1169,10 @@ static void display_channel_add_drawable(DisplayChannel *display, Drawable *draw
 }
 
 void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_drawable,
-                                  uint32_t group_id, int process_commands_generation)
+                                  int process_commands_generation)
 {
     Drawable *drawable =
-        display_channel_get_drawable(display, red_drawable->effect, red_drawable, group_id,
+        display_channel_get_drawable(display, red_drawable->effect, red_drawable,
                                      process_commands_generation);
 
     if (!drawable) {
@@ -1359,7 +1359,7 @@ static void drawables_init(DisplayChannel *display)
  * @return pointer to uninitialized Drawable or NULL on failure
  */
 Drawable *display_channel_drawable_try_new(DisplayChannel *display,
-                                           int group_id, int process_commands_generation)
+                                           int process_commands_generation)
 {
     Drawable *drawable;
 
@@ -2074,7 +2074,7 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
 }
 
 void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd *surface,
-                                         uint32_t group_id, int loadvm)
+                                         int loadvm)
 {
     uint32_t surface_id;
     RedSurface *red_surface;

@@ -234,7 +234,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
 
             if (!red_get_drawable(&worker->mem_slots, ext_cmd.group_id,
                                  red_drawable, ext_cmd.cmd.data, ext_cmd.flags)) {
-                display_channel_process_draw(worker->display_channel, red_drawable, ext_cmd.group_id,
+                display_channel_process_draw(worker->display_channel, red_drawable,
                                              worker->process_display_generation);
             }
             // release the red_drawable
@@ -280,8 +280,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                                     &surface, ext_cmd.cmd.data)) {
                 break;
             }
-            display_channel_process_surface_cmd(worker->display_channel, &surface,
-                                                ext_cmd.group_id, FALSE);
+            display_channel_process_surface_cmd(worker->display_channel, &surface, FALSE);
             // do not release resource as is released inside display_channel_process_surface_cmd
             red_put_surface_cmd(&surface);
             break;
@@ -1169,8 +1168,7 @@ static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
             free(surface_cmd);
             return FALSE;
         }
-        display_channel_process_surface_cmd(worker->display_channel, surface_cmd,
-                                            ext->group_id, TRUE);
+        display_channel_process_surface_cmd(worker->display_channel, surface_cmd, TRUE);
         break;
     default:
         spice_warning("unhandled loadvm command type (%d)", ext->cmd.type);
