@@ -190,7 +190,7 @@ static void red_dispatcher_cursor_migrate(RedChannelClient *rcc)
                             &payload);
 }
 
-static void update_client_mouse_allowed(void)
+static void reds_update_client_mouse_allowed(RedsState *reds)
 {
     static int allowed = FALSE;
     int allow_now = FALSE;
@@ -371,7 +371,7 @@ static void red_dispatcher_destroy_primary_surface_complete(RedDispatcher *dispa
     dispatcher->use_hardware_cursor = FALSE;
     dispatcher->primary_active = FALSE;
 
-    update_client_mouse_allowed();
+    reds_update_client_mouse_allowed(reds);
 }
 
 static void
@@ -423,7 +423,7 @@ static void red_dispatcher_create_primary_surface_complete(RedDispatcher *dispat
     dispatcher->use_hardware_cursor = surface->mouse_mode;
     dispatcher->primary_active = TRUE;
 
-    update_client_mouse_allowed();
+    reds_update_client_mouse_allowed(reds);
     memset(&dispatcher->surface_create, 0, sizeof(QXLDevSurfaceCreate));
 }
 
