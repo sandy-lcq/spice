@@ -2073,13 +2073,6 @@ DisplayChannel* display_channel_new(RedWorker *worker, int migrate, int stream_v
     return display;
 }
 
-static inline void set_surface_release_info(QXLReleaseInfoExt *release_info_ext,
-                                            QXLReleaseInfo *release_info, uint32_t group_id)
-{
-    release_info_ext->info = release_info;
-    release_info_ext->group_id = group_id;
-}
-
 void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd *surface,
                                          uint32_t group_id, int loadvm)
 {
@@ -2113,7 +2106,7 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
                                        reloaded_surface,
                                        // reloaded surfaces will be sent on demand
                                        !reloaded_surface);
-        set_surface_release_info(&red_surface->create, surface->release_info, group_id);
+        red_surface->create = surface->release_info_ext;
         break;
     }
     case QXL_SURFACE_CMD_DESTROY:
@@ -2121,7 +2114,7 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
             spice_warning("avoiding destroying a surface twice");
             break;
         }
-        set_surface_release_info(&red_surface->destroy, surface->release_info, group_id);
+        red_surface->destroy = surface->release_info_ext;
         display_channel_destroy_surface(display, surface_id);
         break;
     default:

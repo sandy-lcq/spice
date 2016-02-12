@@ -65,14 +65,14 @@ static inline RedDrawable *red_drawable_ref(RedDrawable *drawable)
 }
 
 typedef struct RedUpdateCmd {
-    QXLReleaseInfo *release_info;
+    QXLReleaseInfoExt release_info_ext;
     SpiceRect area;
     uint32_t update_id;
     uint32_t surface_id;
 } RedUpdateCmd;
 
 typedef struct RedMessage {
-    QXLReleaseInfo *release_info;
+    QXLReleaseInfoExt release_info_ext;
     uint8_t *data;
 } RedMessage;
 
@@ -93,7 +93,7 @@ typedef struct RedSurfaceCreate {
 } RedSurfaceCreate;
 
 typedef struct RedSurfaceCmd {
-    QXLReleaseInfo *release_info;
+    QXLReleaseInfoExt release_info_ext;
     uint32_t surface_id;
     uint8_t type;
     uint32_t flags;
@@ -103,7 +103,7 @@ typedef struct RedSurfaceCmd {
 } RedSurfaceCmd;
 
 typedef struct RedCursorCmd {
-    QXLReleaseInfo *release_info;
+    QXLReleaseInfoExt release_info_ext;
     uint8_t type;
     union {
         struct {

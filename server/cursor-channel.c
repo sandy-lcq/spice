@@ -109,7 +109,6 @@ static CursorItem *cursor_item_ref(CursorItem *item)
 
 static void cursor_item_unref(CursorItem *item)
 {
-    QXLReleaseInfoExt release_info_ext;
     RedCursorCmd *cursor_cmd;
 
     spice_return_if_fail(item != NULL);
@@ -118,9 +117,7 @@ static void cursor_item_unref(CursorItem *item)
         return;
 
     cursor_cmd = item->red_cursor;
-    release_info_ext.group_id = item->group_id;
-    release_info_ext.info = cursor_cmd->release_info;
-    item->qxl->st->qif->release_resource(item->qxl, release_info_ext);
+    item->qxl->st->qif->release_resource(item->qxl, cursor_cmd->release_info_ext);
     red_put_cursor_cmd(cursor_cmd);
     free(cursor_cmd);
 

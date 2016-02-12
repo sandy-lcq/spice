@@ -243,7 +243,6 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         }
         case QXL_CMD_UPDATE: {
             RedUpdateCmd update;
-            QXLReleaseInfoExt release_info_ext;
 
             if (red_get_update_cmd(&worker->mem_slots, ext_cmd.group_id,
                                    &update, ext_cmd.cmd.data)) {
@@ -255,15 +254,12 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                 display_channel_draw(worker->display_channel, &update.area, update.surface_id);
                 worker->qxl->st->qif->notify_update(worker->qxl, update.update_id);
             }
-            release_info_ext.group_id = ext_cmd.group_id;
-            release_info_ext.info = update.release_info;
-            worker->qxl->st->qif->release_resource(worker->qxl, release_info_ext);
+            worker->qxl->st->qif->release_resource(worker->qxl, update.release_info_ext);
             red_put_update_cmd(&update);
             break;
         }
         case QXL_CMD_MESSAGE: {
             RedMessage message;
-            QXLReleaseInfoExt release_info_ext;
 
             if (red_get_message(&worker->mem_slots, ext_cmd.group_id,
                                 &message, ext_cmd.cmd.data)) {
@@ -273,9 +269,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             /* alert: accessing message.data is insecure */
             spice_warning("MESSAGE: %s", message.data);
 #endif
-            release_info_ext.group_id = ext_cmd.group_id;
-            release_info_ext.info = message.release_info;
-            worker->qxl->st->qif->release_resource(worker->qxl, release_info_ext);
+            worker->qxl->st->qif->release_resource(worker->qxl, message.release_info_ext);
             red_put_message(&message);
             break;
         }

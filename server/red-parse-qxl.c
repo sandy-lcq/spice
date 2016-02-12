@@ -1260,7 +1260,9 @@ int red_get_update_cmd(RedMemSlotInfo *slots, int group_id,
     if (error) {
         return 1;
     }
-    red->release_info     = &qxl->release_info;
+    red->release_info_ext.info     = &qxl->release_info;
+    red->release_info_ext.group_id = group_id;
+
 
     red_get_rect_ptr(&red->area, &qxl->area);
     red->update_id  = qxl->update_id;
@@ -1289,8 +1291,9 @@ int red_get_message(RedMemSlotInfo *slots, int group_id,
     if (error) {
         return 1;
     }
-    red->release_info  = &qxl->release_info;
-    red->data          = qxl->data;
+    red->release_info_ext.info      = &qxl->release_info;
+    red->release_info_ext.group_id  = group_id;
+    red->data                       = qxl->data;
     return 0;
 }
 
@@ -1329,7 +1332,8 @@ int red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
     if (error) {
         return 1;
     }
-    red->release_info     = &qxl->release_info;
+    red->release_info_ext.info      = &qxl->release_info;
+    red->release_info_ext.group_id  = group_id;
 
     red->surface_id = qxl->surface_id;
     red->type       = qxl->type;
@@ -1433,7 +1437,8 @@ int red_get_cursor_cmd(RedMemSlotInfo *slots, int group_id,
     if (error) {
         return error;
     }
-    red->release_info     = &qxl->release_info;
+    red->release_info_ext.info      = &qxl->release_info;
+    red->release_info_ext.group_id  = group_id;
 
     red->type = qxl->type;
     switch (red->type) {
