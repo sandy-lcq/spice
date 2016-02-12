@@ -599,7 +599,7 @@ static void qxl_worker_oom(QXLWorker *qxl_worker)
     red_dispatcher_oom((RedDispatcher*)qxl_worker);
 }
 
-static void red_dispatcher_start(RedDispatcher *dispatcher)
+void red_dispatcher_start(RedDispatcher *dispatcher)
 {
     RedWorkerMessageStart payload;
 
@@ -647,7 +647,7 @@ static void red_dispatcher_driver_unload(RedDispatcher *dispatcher)
                             &payload);
 }
 
-static void red_dispatcher_stop(RedDispatcher *dispatcher)
+void red_dispatcher_stop(RedDispatcher *dispatcher)
 {
     RedWorkerMessageStop payload;
 
@@ -682,31 +682,15 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_dispatcher_loadvm_commands((RedDispatcher*)qxl_worker, ext, count);
 }
 
+void red_dispatcher_attach_worker(RedDispatcher *dispatcher)
+{
+    QXLInstance *qxl = dispatcher->qxl;
+    qxl->st->qif->attache_worker(qxl, &dispatcher->base);
+}
+
 void red_dispatcher_set_compression_level(RedDispatcher *dispatcher, int level)
 {
     dispatcher->qxl->st->qif->set_compression_level(dispatcher->qxl, level);
-}
-
-void red_dispatcher_on_vm_stop(void)
-{
-    RedDispatcher *now = dispatchers;
-
-    spice_debug(NULL);
-    while (now) {
-        red_dispatcher_stop(now);
-        now = now->next;
-    }
-}
-
-void red_dispatcher_on_vm_start(void)
-{
-    RedDispatcher *now = dispatchers;
-
-    spice_debug(NULL);
-    while (now) {
-        red_dispatcher_start(now);
-        now = now->next;
-    }
 }
 
 uint32_t red_dispatcher_qxl_ram_size(void)
@@ -1028,9 +1012,6 @@ void red_dispatcher_init(QXLInstance *qxl)
     qxl->st->dispatcher = red_dispatcher;
     red_dispatcher->next = dispatchers;
     dispatchers = red_dispatcher;
-
-    qxl->st->qif->attache_worker(qxl, &red_dispatcher->base);
-    qxl->st->qif->set_compression_level(qxl, calc_compression_level(reds));
 }
 
 struct Dispatcher *red_dispatcher_get_dispatcher(RedDispatcher *red_dispatcher)

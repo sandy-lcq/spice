@@ -174,6 +174,8 @@ static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState 
 static void reds_send_mm_time(RedsState *reds);
 static void reds_on_ic_change(RedsState *reds);
 static void reds_on_sv_change(RedsState *reds);
+static void reds_on_vm_stop(RedsState *reds);
+static void reds_on_vm_start(RedsState *reds);
 
 static VDIReadBuf *vdi_port_state_get_read_buf(VDIPortState *state);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
@@ -3190,6 +3192,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         }
     } else if (strcmp(interface->type, SPICE_INTERFACE_QXL) == 0) {
         QXLInstance *qxl;
+        RedDispatcher *dispatcher;
 
         spice_info("SPICE_INTERFACE_QXL");
         if (interface->major_version != SPICE_INTERFACE_QXL_MAJOR ||
@@ -3204,8 +3207,16 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         qxl->st->scanout.drm_dma_buf_fd = -1;
         qxl->st->qif = SPICE_CONTAINEROF(interface, QXLInterface, base);
         red_dispatcher_init(qxl);
-        reds->dispatchers = g_list_prepend(reds->dispatchers, qxl->st->dispatcher);
+        dispatcher = qxl->st->dispatcher;
+        reds->dispatchers = g_list_prepend(reds->dispatchers, dispatcher);
 
+        /* this function has to be called after the dispatcher is on the list
+         * as QXLInstance clients expect the dispatcher to be on the list when
+         * this callback is called. This as clients assume they can start the
+         * dispatchers. Also note that this should be the first callback to
+         * be called. */
+        red_dispatcher_attach_worker(dispatcher);
+        red_dispatcher_set_compression_level(dispatcher, calc_compression_level(reds));
     } else if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
         SpiceTabletInstance *tablet = SPICE_CONTAINEROF(sin, SpiceTabletInstance, base);
         spice_info("SPICE_INTERFACE_TABLET");
@@ -3999,7 +4010,7 @@ SPICE_GNUC_VISIBLE void spice_server_vm_start(SpiceServer *s)
         st_item = SPICE_CONTAINEROF(item, SpiceCharDeviceStateItem, link);
         spice_char_device_start(st_item->st);
     }
-    red_dispatcher_on_vm_start();
+    reds_on_vm_start(reds);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_vm_stop(SpiceServer *s)
@@ -4014,7 +4025,7 @@ SPICE_GNUC_VISIBLE void spice_server_vm_stop(SpiceServer *s)
         st_item = SPICE_CONTAINEROF(item, SpiceCharDeviceStateItem, link);
         spice_char_device_stop(st_item->st);
     }
-    red_dispatcher_on_vm_stop();
+    reds_on_vm_stop(reds);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_set_seamless_migration(SpiceServer *s, int enable)
@@ -4086,4 +4097,20 @@ void reds_on_sv_change(RedsState *reds)
         red_dispatcher_set_compression_level(d, compression_level);
         red_dispatcher_on_sv_change(d, reds_get_streaming_video(reds));
     }
+}
+
+void reds_on_vm_stop(RedsState *reds)
+{
+    GList *l;
+
+    for (l = reds->dispatchers; l != NULL; l = l->next)
+        red_dispatcher_stop(l->data);
+}
+
+void reds_on_vm_start(RedsState *reds)
+{
+    GList *l;
+
+    for (l = reds->dispatchers; l != NULL; l = l->next)
+        red_dispatcher_start(l->data);
 }
