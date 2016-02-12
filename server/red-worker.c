@@ -174,7 +174,7 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
                 break;
             }
 
-            cursor_channel_process_cmd(worker->cursor_channel, cursor, ext_cmd.group_id);
+            cursor_channel_process_cmd(worker->cursor_channel, cursor);
             break;
         }
         default:
@@ -1161,7 +1161,7 @@ static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
             free(cursor_cmd);
             return FALSE;
         }
-        cursor_channel_process_cmd(worker->cursor_channel, cursor_cmd, ext->group_id);
+        cursor_channel_process_cmd(worker->cursor_channel, cursor_cmd);
         break;
     case QXL_CMD_SURFACE:
         surface_cmd = spice_new0(RedSurfaceCmd, 1);

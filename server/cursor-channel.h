@@ -34,8 +34,7 @@ CursorChannel*       cursor_channel_new         (RedWorker *worker);
 void                 cursor_channel_disconnect  (CursorChannel *cursor_channel);
 void                 cursor_channel_reset       (CursorChannel *cursor);
 void                 cursor_channel_init        (CursorChannel *cursor, CursorChannelClient* client);
-void                 cursor_channel_process_cmd (CursorChannel *cursor, RedCursorCmd *cursor_cmd,
-                                                 uint32_t group_id);
+void                 cursor_channel_process_cmd (CursorChannel *cursor, RedCursorCmd *cursor_cmd);
 void                 cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32_t mode);
 
 CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,

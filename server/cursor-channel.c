@@ -38,7 +38,6 @@ enum {
 
 typedef struct CursorItem {
     QXLInstance *qxl;
-    uint32_t group_id;
     int refs;
     RedCursorCmd *red_cursor;
 } CursorItem;
@@ -82,7 +81,7 @@ struct CursorChannelClient {
 #include "cache-item.tmpl.c"
 #undef CLIENT_CURSOR_CACHE
 
-static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd, uint32_t group_id)
+static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd)
 {
     CursorItem *cursor_item;
 
@@ -91,7 +90,6 @@ static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd, uint32_t
     cursor_item = g_new0(CursorItem, 1);
     cursor_item->qxl = qxl;
     cursor_item->refs = 1;
-    cursor_item->group_id = group_id;
     cursor_item->red_cursor = cmd;
 
     return cursor_item;
@@ -477,8 +475,7 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
     return ccc;
 }
 
-void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd,
-                                uint32_t group_id)
+void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 {
     CursorItem *cursor_item;
     int cursor_show = FALSE;
@@ -486,8 +483,7 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd,
     spice_return_if_fail(cursor);
     spice_return_if_fail(cursor_cmd);
 
-    cursor_item = cursor_item_new(cursor->common.qxl,
-                                  cursor_cmd, group_id);
+    cursor_item = cursor_item_new(cursor->common.qxl, cursor_cmd);
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
