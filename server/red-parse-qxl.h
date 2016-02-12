@@ -25,6 +25,7 @@
 
 typedef struct RedDrawable {
     int refs;
+    QXLInstance *qxl;
     QXLReleaseInfo *release_info;
     uint32_t surface_id;
     uint8_t effect;

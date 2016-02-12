@@ -139,7 +139,7 @@ void red_drawable_unref(DisplayChannel *display, RedDrawable *red_drawable,
     }
     release_info_ext.group_id = group_id;
     release_info_ext.info = red_drawable->release_info;
-    display->common.qxl->st->qif->release_resource(display->common.qxl, release_info_ext);
+    red_drawable->qxl->st->qif->release_resource(red_drawable->qxl, release_info_ext);
     red_put_drawable(red_drawable);
     free(red_drawable);
 }
@@ -190,11 +190,12 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
     return n;
 }
 
-static RedDrawable *red_drawable_new(RedWorker *worker)
+static RedDrawable *red_drawable_new(QXLInstance *qxl)
 {
     RedDrawable * red = spice_new0(RedDrawable, 1);
 
     red->refs = 1;
+    red->qxl = qxl;
 
     return red;
 }
@@ -233,7 +234,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         worker->display_poll_tries = 0;
         switch (ext_cmd.cmd.type) {
         case QXL_CMD_DRAW: {
-            RedDrawable *red_drawable = red_drawable_new(worker); // returns with 1 ref
+            RedDrawable *red_drawable = red_drawable_new(worker->qxl); // returns with 1 ref
 
             if (!red_get_drawable(&worker->mem_slots, ext_cmd.group_id,
                                  red_drawable, ext_cmd.cmd.data, ext_cmd.flags)) {
