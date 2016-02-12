@@ -1027,7 +1027,8 @@ static int red_get_native_drawable(RedMemSlotInfo *slots, int group_id,
     if (error) {
         return error;
     }
-    red->release_info     = &qxl->release_info;
+    red->release_info_ext.info     = &qxl->release_info;
+    red->release_info_ext.group_id = group_id;
 
     red_get_rect_ptr(&red->bbox, &qxl->bbox);
     red_get_clip_ptr(slots, group_id, &red->clip, &qxl->clip);
@@ -1110,7 +1111,8 @@ static int red_get_compat_drawable(RedMemSlotInfo *slots, int group_id,
     if (error) {
         return error;
     }
-    red->release_info     = &qxl->release_info;
+    red->release_info_ext.info     = &qxl->release_info;
+    red->release_info_ext.group_id = group_id;
 
     red_get_rect_ptr(&red->bbox, &qxl->bbox);
     red_get_clip_ptr(slots, group_id, &red->clip, &qxl->clip);

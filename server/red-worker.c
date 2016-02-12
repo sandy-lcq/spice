@@ -132,14 +132,11 @@ static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
 void red_drawable_unref(DisplayChannel *display, RedDrawable *red_drawable,
                         uint32_t group_id)
 {
-    QXLReleaseInfoExt release_info_ext;
-
     if (--red_drawable->refs) {
         return;
     }
-    release_info_ext.group_id = group_id;
-    release_info_ext.info = red_drawable->release_info;
-    red_drawable->qxl->st->qif->release_resource(red_drawable->qxl, release_info_ext);
+    red_drawable->qxl->st->qif->release_resource(red_drawable->qxl,
+                                                 red_drawable->release_info_ext);
     red_put_drawable(red_drawable);
     free(red_drawable);
 }
