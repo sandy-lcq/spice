@@ -657,7 +657,6 @@ static RedGlzDrawable *get_glz_drawable(DisplayChannelClient *dcc, Drawable *dra
     ret->dcc = dcc;
     ret->red_drawable = red_drawable_ref(drawable->red_drawable);
     ret->drawable = drawable;
-    ret->group_id = drawable->red_drawable->release_info_ext.group_id;
     ret->instances_count = 0;
     ring_init(&ret->instances);
 

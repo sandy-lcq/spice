@@ -156,7 +156,6 @@ struct RedGlzDrawable {
     RingItem drawable_link;
     RedDrawable *red_drawable;
     Drawable    *drawable;
-    uint32_t     group_id;
     GlzDrawableInstanceItem instances_pool[MAX_GLZ_DRAWABLE_INSTANCES];
     Ring instances;
     uint8_t instances_count;
