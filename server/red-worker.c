@@ -137,7 +137,6 @@ void red_drawable_unref(DisplayChannel *display, RedDrawable *red_drawable,
     if (--red_drawable->refs) {
         return;
     }
-    display->red_drawable_count--;
     release_info_ext.group_id = group_id;
     release_info_ext.info = red_drawable->release_info;
     display->common.qxl->st->qif->release_resource(display->common.qxl, release_info_ext);
@@ -196,7 +195,6 @@ static RedDrawable *red_drawable_new(RedWorker *worker)
     RedDrawable * red = spice_new0(RedDrawable, 1);
 
     red->refs = 1;
-    worker->display_channel->red_drawable_count++;
 
     return red;
 }
@@ -856,9 +854,8 @@ static void handle_dev_oom(void *opaque, void *payload)
 
     spice_return_if_fail(worker->running);
     // streams? but without streams also leak
-    spice_debug("OOM1 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
+    spice_debug("OOM1 #draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
-                display->red_drawable_count,
                 display->glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
@@ -869,9 +866,8 @@ static void handle_dev_oom(void *opaque, void *payload)
         display_channel_free_some(worker->display_channel);
         worker->qxl->st->qif->flush_resources(worker->qxl);
     }
-    spice_debug("OOM2 #draw=%u, #red_draw=%u, #glz_draw=%u current %u pipes %u",
+    spice_debug("OOM2 #draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
-                display->red_drawable_count,
                 display->glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));

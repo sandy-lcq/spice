@@ -181,7 +181,6 @@ struct DisplayChannel {
     _Drawable drawables[NUM_DRAWABLES];
     _Drawable *free_drawables;
 
-    uint32_t red_drawable_count;
     uint32_t glz_drawable_count;
 
     int stream_video;

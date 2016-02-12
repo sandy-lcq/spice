@@ -1297,8 +1297,8 @@ void display_channel_free_some(DisplayChannel *display)
     DisplayChannelClient *dcc;
     RingItem *item, *next;
 
-    spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d", display->drawable_count,
-                display->red_drawable_count, display->glz_drawable_count);
+    spice_debug("#draw=%d, #glz_draw=%d", display->drawable_count,
+                display->glz_drawable_count);
     FOREACH_DCC(display, item, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
 
@@ -1943,8 +1943,8 @@ static void on_disconnect(RedChannelClient *rcc)
     display_channel_compress_stats_print(display);
 
     // this was the last channel client
-    spice_debug("#draw=%d, #red_draw=%d, #glz_draw=%d",
-                display->drawable_count, display->red_drawable_count,
+    spice_debug("#draw=%d, #glz_draw=%d",
+                display->drawable_count,
                 display->glz_drawable_count);
 }
 
