@@ -111,5 +111,6 @@ uint32_t reds_get_streaming_video(const RedsState *reds);
 spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds);
 spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds);
 SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds);
+int calc_compression_level(RedsState *reds);
 
 #endif

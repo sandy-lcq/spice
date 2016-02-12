@@ -682,22 +682,10 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_dispatcher_loadvm_commands((RedDispatcher*)qxl_worker, ext, count);
 }
 
-static inline int calc_compression_level(void)
-{
-    spice_assert(reds_get_streaming_video(reds) != SPICE_STREAM_VIDEO_INVALID);
-
-    if ((reds_get_streaming_video(reds) != SPICE_STREAM_VIDEO_OFF) ||
-        (spice_server_get_image_compression(reds) != SPICE_IMAGE_COMPRESSION_QUIC)) {
-        return 0;
-    } else {
-        return 1;
-    }
-}
-
 void red_dispatcher_on_ic_change(void)
 {
     RedWorkerMessageSetCompression payload;
-    int compression_level = calc_compression_level();
+    int compression_level = calc_compression_level(reds);
     RedDispatcher *now = dispatchers;
 
     while (now) {
@@ -713,7 +701,7 @@ void red_dispatcher_on_ic_change(void)
 void red_dispatcher_on_sv_change(void)
 {
     RedWorkerMessageSetStreamingVideo payload;
-    int compression_level = calc_compression_level();
+    int compression_level = calc_compression_level(reds);
     RedDispatcher *now = dispatchers;
     while (now) {
         now->qxl->st->qif->set_compression_level(now->qxl, compression_level);
@@ -1093,7 +1081,7 @@ void red_dispatcher_init(QXLInstance *qxl)
     dispatchers = red_dispatcher;
 
     qxl->st->qif->attache_worker(qxl, &red_dispatcher->base);
-    qxl->st->qif->set_compression_level(qxl, calc_compression_level());
+    qxl->st->qif->set_compression_level(qxl, calc_compression_level(reds));
 }
 
 struct Dispatcher *red_dispatcher_get_dispatcher(RedDispatcher *red_dispatcher)
