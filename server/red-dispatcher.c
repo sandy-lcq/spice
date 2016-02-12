@@ -709,18 +709,6 @@ void red_dispatcher_on_vm_start(void)
     }
 }
 
-int red_dispatcher_count(void)
-{
-    RedDispatcher *now = dispatchers;
-    int ret = 0;
-
-    while (now) {
-        ret++;
-        now = now->next;
-    }
-    return ret;
-}
-
 uint32_t red_dispatcher_qxl_ram_size(void)
 {
     QXLDevInitInfo qxl_info;

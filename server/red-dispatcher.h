@@ -32,7 +32,6 @@ void red_dispatcher_set_mouse_mode(RedDispatcher *dispatcher, uint32_t mode);
 void red_dispatcher_set_compression_level(RedDispatcher *dispatcher, int level);
 void red_dispatcher_on_vm_stop(void);
 void red_dispatcher_on_vm_start(void);
-int red_dispatcher_count(void);
 uint32_t red_dispatcher_qxl_ram_size(void);
 void red_dispatcher_async_complete(struct RedDispatcher *, AsyncCommand *);
 struct Dispatcher *red_dispatcher_get_dispatcher(struct RedDispatcher *);
