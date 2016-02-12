@@ -1379,7 +1379,6 @@ Drawable *display_channel_drawable_try_new(DisplayChannel *display,
     ring_init(&drawable->pipes);
     ring_init(&drawable->glz_ring);
     drawable->process_commands_generation = process_commands_generation;
-    drawable->group_id = group_id;
 
     return drawable;
 }

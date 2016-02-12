@@ -73,7 +73,6 @@ struct Drawable {
     Stream *sized_stream;
     int streamable;
     BitmapGradualType copy_bitmap_graduality;
-    uint32_t group_id;
     DependItem depend_items[3];
 
     int surface_id;
