@@ -111,6 +111,9 @@ uint32_t reds_get_streaming_video(const RedsState *reds);
 spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds);
 spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds);
 SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds);
-int calc_compression_level(RedsState *reds);
+void reds_update_client_mouse_allowed(RedsState *reds);
+gboolean reds_use_client_monitors_config(RedsState *reds);
+void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
+void reds_set_mm_time(RedsState *reds, uint32_t mm_time);
 
 #endif

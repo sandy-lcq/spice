@@ -176,6 +176,9 @@ static void reds_on_ic_change(RedsState *reds);
 static void reds_on_sv_change(RedsState *reds);
 static void reds_on_vm_stop(RedsState *reds);
 static void reds_on_vm_start(RedsState *reds);
+static void reds_set_mouse_mode(RedsState *reds, uint32_t mode);
+static uint32_t reds_qxl_ram_size(RedsState *reds);
+static int calc_compression_level(RedsState *reds);
 
 static VDIReadBuf *vdi_port_state_get_read_buf(VDIPortState *state);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
@@ -1034,7 +1037,7 @@ static void reds_on_main_agent_monitors_config(RedsState *reds,
     }
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
     spice_debug("%s: %d", __func__, monitors_config->num_of_monitors);
-    red_dispatcher_client_monitors_config(monitors_config);
+    reds_client_monitors_config(reds, monitors_config);
     reds_client_monitors_config_cleanup(reds);
 }
 
@@ -1681,7 +1684,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
         main_channel_push_init(mcc, g_list_length(reds->dispatchers),
             reds->mouse_mode, reds->is_client_mouse_allowed,
             reds_get_mm_time() - MM_TIME_DELTA,
-            red_dispatcher_qxl_ram_size());
+            reds_qxl_ram_size(reds));
         if (reds->spice_name)
             main_channel_push_name(mcc, reds->spice_name);
         if (reds->spice_uuid_is_set)
@@ -1827,7 +1830,7 @@ void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *c
     main_channel_push_init(mcc, g_list_length(reds->dispatchers),
                            reds->mouse_mode, reds->is_client_mouse_allowed,
                            reds_get_mm_time() - MM_TIME_DELTA,
-                           red_dispatcher_qxl_ram_size());
+                           reds_qxl_ram_size(reds));
     reds_link_mig_target_channels(reds, client);
     main_channel_migrate_dst_complete(mcc);
 }
@@ -4063,7 +4066,74 @@ SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds)
     return reds->core;
 }
 
-int calc_compression_level(RedsState *reds)
+void reds_update_client_mouse_allowed(RedsState *reds)
+{
+    static int allowed = FALSE;
+    int allow_now = FALSE;
+    int x_res = 0;
+    int y_res = 0;
+    GList *l;
+    int num_active_workers = g_list_length(reds->dispatchers);
+
+    if (num_active_workers > 0) {
+        allow_now = TRUE;
+        for (l = reds->dispatchers; l != NULL && allow_now; l = l->next) {
+
+            RedDispatcher *now = l->data;
+            if (red_dispatcher_get_primary_active(now)) {
+                allow_now = red_dispatcher_get_allow_client_mouse(now, &x_res, &y_res);
+                break;
+            }
+        }
+    }
+
+    if (allow_now || allow_now != allowed) {
+        allowed = allow_now;
+        reds_set_client_mouse_allowed(reds, allowed, x_res, y_res);
+    }
+}
+
+gboolean reds_use_client_monitors_config(RedsState *reds)
+{
+    GList *l;
+
+    if (reds->dispatchers == NULL) {
+        return FALSE;
+    }
+
+    for (l = reds->dispatchers; l != NULL ; l = l->next) {
+        RedDispatcher *now = l->data;
+
+        if (!red_dispatcher_use_client_monitors_config(now))
+            return FALSE;
+    }
+    return TRUE;
+}
+
+void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config)
+{
+    GList *l;
+
+    for (l = reds->dispatchers; l != NULL; l = l->next) {
+        RedDispatcher *now = l->data;
+        if (!red_dispatcher_client_monitors_config(now, monitors_config)) {
+            /* this is a normal condition, some qemu devices might not implement it */
+            spice_debug("QXLInterface::client_monitors_config failed\n");
+        }
+    }
+}
+
+void reds_set_mm_time(RedsState *reds, uint32_t mm_time)
+{
+    GList *l;
+
+    for (l = reds->dispatchers; l != NULL; l = l->next) {
+        RedDispatcher *now = l->data;
+        red_dispatcher_set_mm_time(now, mm_time);
+    }
+}
+
+static int calc_compression_level(RedsState *reds)
 {
     spice_assert(reds_get_streaming_video(reds) != SPICE_STREAM_VIDEO_INVALID);
 
@@ -4113,4 +4183,15 @@ void reds_on_vm_start(RedsState *reds)
 
     for (l = reds->dispatchers; l != NULL; l = l->next)
         red_dispatcher_start(l->data);
+}
+
+uint32_t reds_qxl_ram_size(RedsState *reds)
+{
+    RedDispatcher *first;
+    if (!reds->dispatchers) {
+        return 0;
+    }
+
+    first = reds->dispatchers->data;
+    return red_dispatcher_qxl_ram_size(first);
 }

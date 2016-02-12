@@ -54,12 +54,9 @@ struct RedDispatcher {
     int x_res;
     int y_res;
     int use_hardware_cursor;
-    RedDispatcher *next;
     QXLDevSurfaceCreate surface_create;
     unsigned int max_monitors;
 };
-
-static RedDispatcher *dispatchers = NULL;
 
 static int red_dispatcher_check_qxl_version(RedDispatcher *rd, int major, int minor)
 {
@@ -190,33 +187,6 @@ static void red_dispatcher_cursor_migrate(RedChannelClient *rcc)
                             &payload);
 }
 
-static void reds_update_client_mouse_allowed(RedsState *reds)
-{
-    static int allowed = FALSE;
-    int allow_now = FALSE;
-    int x_res = 0;
-    int y_res = 0;
-
-    allow_now = TRUE;
-    RedDispatcher *now = dispatchers;
-    while (now && allow_now) {
-        if (now->primary_active) {
-            allow_now = now->use_hardware_cursor;
-            if (allow_now) {
-                x_res = now->x_res;
-                y_res = now->y_res;
-            }
-            break;
-        }
-        now = now->next;
-    }
-
-    if (allow_now || allow_now != allowed) {
-        allowed = allow_now;
-        reds_set_client_mouse_allowed(reds, allowed, x_res, y_res);
-    }
-}
-
 static void red_dispatcher_update_area(RedDispatcher *dispatcher, uint32_t surface_id,
                                    QXLRect *qxl_area, QXLRect *qxl_dirty_rects,
                                    uint32_t num_dirty_rects, uint32_t clear_dirty_region)
@@ -233,33 +203,19 @@ static void red_dispatcher_update_area(RedDispatcher *dispatcher, uint32_t surfa
                             &payload);
 }
 
-int red_dispatcher_use_client_monitors_config(void)
+gboolean red_dispatcher_use_client_monitors_config(RedDispatcher *dispatcher)
 {
-    RedDispatcher *now = dispatchers;
-
-    for (; now ; now = now->next) {
-        if (!red_dispatcher_check_qxl_version(now, 3, 3) ||
-            !now->qxl->st->qif->client_monitors_config ||
-            !now->qxl->st->qif->client_monitors_config(now->qxl, NULL)) {
-            return FALSE;
-        }
-    }
-    return TRUE;
+    return (red_dispatcher_check_qxl_version(dispatcher, 3, 3) &&
+        dispatcher->qxl->st->qif->client_monitors_config &&
+        dispatcher->qxl->st->qif->client_monitors_config(dispatcher->qxl, NULL));
 }
 
-void red_dispatcher_client_monitors_config(VDAgentMonitorsConfig *monitors_config)
+gboolean red_dispatcher_client_monitors_config(RedDispatcher *dispatcher,
+                                               VDAgentMonitorsConfig *monitors_config)
 {
-    RedDispatcher *now = dispatchers;
-
-    while (now) {
-        if (!now->qxl->st->qif->client_monitors_config ||
-            !now->qxl->st->qif->client_monitors_config(now->qxl,
-                                                       monitors_config)) {
-            /* this is a normal condition, some qemu devices might not implement it */
-            spice_debug("QXLInterface::client_monitors_config failed");
-        }
-        now = now->next;
-    }
+    return (dispatcher->qxl->st->qif->client_monitors_config &&
+        dispatcher->qxl->st->qif->client_monitors_config(dispatcher->qxl,
+                                                          monitors_config));
 }
 
 static AsyncCommand *async_command_alloc(RedDispatcher *dispatcher,
@@ -682,6 +638,11 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_dispatcher_loadvm_commands((RedDispatcher*)qxl_worker, ext, count);
 }
 
+void red_dispatcher_set_mm_time(RedDispatcher *dispatcher, uint32_t mm_time)
+{
+    dispatcher->qxl->st->qif->set_mm_time(dispatcher->qxl, mm_time);
+}
+
 void red_dispatcher_attach_worker(RedDispatcher *dispatcher)
 {
     QXLInstance *qxl = dispatcher->qxl;
@@ -693,13 +654,10 @@ void red_dispatcher_set_compression_level(RedDispatcher *dispatcher, int level)
     dispatcher->qxl->st->qif->set_compression_level(dispatcher->qxl, level);
 }
 
-uint32_t red_dispatcher_qxl_ram_size(void)
+uint32_t red_dispatcher_qxl_ram_size(RedDispatcher *dispatcher)
 {
     QXLDevInitInfo qxl_info;
-    if (!dispatchers) {
-        return 0;
-    }
-    dispatchers->qxl->st->qif->get_init_info(dispatchers->qxl, &qxl_info);
+    dispatcher->qxl->st->qif->get_init_info(dispatcher->qxl, &qxl_info);
     return qxl_info.qxl_ram_size;
 }
 
@@ -1010,8 +968,6 @@ void red_dispatcher_init(QXLInstance *qxl)
     red_worker_run(worker);
 
     qxl->st->dispatcher = red_dispatcher;
-    red_dispatcher->next = dispatchers;
-    dispatchers = red_dispatcher;
 }
 
 struct Dispatcher *red_dispatcher_get_dispatcher(RedDispatcher *red_dispatcher)
@@ -1030,6 +986,22 @@ void red_dispatcher_clear_pending(RedDispatcher *red_dispatcher, int pending)
     spice_return_if_fail(red_dispatcher != NULL);
 
     clear_bit(pending, &red_dispatcher->pending);
+}
+
+gboolean red_dispatcher_get_primary_active(RedDispatcher *dispatcher)
+{
+    return dispatcher->primary_active;
+}
+
+gboolean red_dispatcher_get_allow_client_mouse(RedDispatcher *dispatcher, gint *x_res, gint *y_res)
+{
+    if (dispatcher->use_hardware_cursor) {
+        if (x_res)
+            *x_res = dispatcher->x_res;
+        if (y_res)
+            *y_res = dispatcher->y_res;
+    }
+    return dispatcher->use_hardware_cursor;
 }
 
 void red_dispatcher_on_ic_change(RedDispatcher *dispatcher, SpiceImageCompression ic)
