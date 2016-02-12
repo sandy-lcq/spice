@@ -129,8 +129,7 @@ static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
     }
 }
 
-void red_drawable_unref(DisplayChannel *display, RedDrawable *red_drawable,
-                        uint32_t group_id)
+void red_drawable_unref(RedDrawable *red_drawable)
 {
     if (--red_drawable->refs) {
         return;
@@ -239,7 +238,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                                              worker->process_display_generation);
             }
             // release the red_drawable
-            red_drawable_unref(worker->display_channel, red_drawable, ext_cmd.group_id);
+            red_drawable_unref(red_drawable);
             break;
         }
         case QXL_CMD_UPDATE: {

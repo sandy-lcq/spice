@@ -483,8 +483,7 @@ void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
         if (drawable) {
             ring_remove(&glz_drawable->drawable_link);
         }
-        red_drawable_unref(display_channel, glz_drawable->red_drawable,
-                           glz_drawable->group_id);
+        red_drawable_unref(glz_drawable->red_drawable);
         display_channel->glz_drawable_count--;
         if (ring_item_is_linked(&glz_drawable->link)) {
             ring_remove(&glz_drawable->link);

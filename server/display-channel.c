@@ -1444,7 +1444,7 @@ void display_channel_drawable_unref(DisplayChannel *display, Drawable *drawable)
         ring_remove(item);
     }
     if (drawable->red_drawable) {
-        red_drawable_unref(display, drawable->red_drawable, drawable->group_id);
+        red_drawable_unref(drawable->red_drawable);
     }
     drawable_free(display, drawable);
     display->drawable_count--;

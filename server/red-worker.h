@@ -97,9 +97,7 @@ QXLInstance* red_worker_get_qxl(RedWorker *worker);
 RedChannel* red_worker_get_cursor_channel(RedWorker *worker);
 RedChannel* red_worker_get_display_channel(RedWorker *worker);
 
-struct DisplayChannel;
-void red_drawable_unref(struct DisplayChannel *display, RedDrawable *red_drawable,
-                        uint32_t group_id);
+void red_drawable_unref(RedDrawable *red_drawable);
 
 CommonChannel *red_worker_new_channel(RedWorker *worker, int size,
                                    const char *name,
