@@ -501,7 +501,7 @@ static void fill_mask(RedChannelClient *rcc, SpiceMarshaller *m,
     }
 }
 
-static void fill_attr(SpiceMarshaller *m, SpiceLineAttr *attr, uint32_t group_id)
+static void fill_attr(SpiceMarshaller *m, SpiceLineAttr *attr)
 {
     int i;
 
@@ -1494,7 +1494,7 @@ static void red_marshall_qxl_draw_stroke(RedChannelClient *rcc,
                           &style_out,
                           &brush_pat_out);
 
-    fill_attr(style_out, &stroke.attr, item->group_id);
+    fill_attr(style_out, &stroke.attr);
     if (brush_pat_out) {
         fill_bits(dcc, brush_pat_out, stroke.brush.u.pattern.pat, item, FALSE);
     }
