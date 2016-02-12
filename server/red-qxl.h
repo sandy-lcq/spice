@@ -24,7 +24,7 @@ typedef struct QXLState QXLState;
 
 typedef struct AsyncCommand AsyncCommand;
 
-void red_qxl_init(QXLInstance *qxl);
+void red_qxl_init(SpiceServer *reds, QXLInstance *qxl);
 
 void red_qxl_set_mm_time(QXLState *qxl_state, uint32_t);
 void red_qxl_on_ic_change(QXLState *qxl_state, SpiceImageCompression ic);

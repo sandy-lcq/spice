@@ -3209,7 +3209,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         }
 
         qxl = SPICE_CONTAINEROF(sin, QXLInstance, base);
-        red_qxl_init(qxl);
+        red_qxl_init(reds, qxl);
         qxl_state = qxl->st;
         reds->qxl_states = g_list_prepend(reds->qxl_states, qxl_state);
 

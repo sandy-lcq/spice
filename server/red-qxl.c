@@ -56,6 +56,7 @@ struct QXLState {
     int use_hardware_cursor;
     QXLDevSurfaceCreate surface_create;
     unsigned int max_monitors;
+    RedsState *reds;
 
     pthread_mutex_t scanout_mutex;
     SpiceMsgDisplayGlScanoutUnix scanout;
@@ -331,7 +332,7 @@ static void red_qxl_destroy_primary_surface_complete(QXLState *qxl_state)
     qxl_state->use_hardware_cursor = FALSE;
     qxl_state->primary_active = FALSE;
 
-    reds_update_client_mouse_allowed(reds);
+    reds_update_client_mouse_allowed(qxl_state->reds);
 }
 
 static void
@@ -383,7 +384,7 @@ static void red_qxl_create_primary_surface_complete(QXLState *qxl_state)
     qxl_state->use_hardware_cursor = surface->mouse_mode;
     qxl_state->primary_active = TRUE;
 
-    reds_update_client_mouse_allowed(reds);
+    reds_update_client_mouse_allowed(qxl_state->reds);
     memset(&qxl_state->surface_create, 0, sizeof(QXLDevSurfaceCreate));
 }
 
@@ -933,7 +934,7 @@ void red_qxl_gl_draw_async_complete(QXLState *qxl_state)
     red_qxl_async_complete(qxl_state, async);
 }
 
-void red_qxl_init(QXLInstance *qxl)
+void red_qxl_init(RedsState *reds, QXLInstance *qxl)
 {
     QXLState *qxl_state;
     RedChannel *channel;
@@ -950,6 +951,7 @@ void red_qxl_init(QXLInstance *qxl)
     }
 
     qxl_state = spice_new0(QXLState, 1);
+    qxl_state->reds = reds;
     qxl_state->qxl = qxl;
     pthread_mutex_init(&qxl_state->scanout_mutex, NULL);
     qxl_state->scanout.drm_dma_buf_fd = -1;
