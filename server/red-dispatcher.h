@@ -26,9 +26,10 @@ typedef struct AsyncCommand AsyncCommand;
 
 void red_dispatcher_init(QXLInstance *qxl);
 
-void red_dispatcher_on_ic_change(void);
-void red_dispatcher_on_sv_change(void);
+void red_dispatcher_on_ic_change(RedDispatcher *dispatcher, SpiceImageCompression ic);
+void red_dispatcher_on_sv_change(RedDispatcher *dispatcher, int sv);
 void red_dispatcher_set_mouse_mode(RedDispatcher *dispatcher, uint32_t mode);
+void red_dispatcher_set_compression_level(RedDispatcher *dispatcher, int level);
 void red_dispatcher_on_vm_stop(void);
 void red_dispatcher_on_vm_start(void);
 int red_dispatcher_count(void);

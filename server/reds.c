@@ -172,6 +172,8 @@ static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *c
 static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st);
 static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState *st);
 static void reds_send_mm_time(RedsState *reds);
+static void reds_on_ic_change(RedsState *reds);
+static void reds_on_sv_change(RedsState *reds);
 
 static VDIReadBuf *vdi_port_state_get_read_buf(VDIPortState *state);
 static VDIReadBuf *vdi_port_read_buf_ref(VDIReadBuf *buf);
@@ -2774,7 +2776,7 @@ static void reds_set_image_compression(RedsState *reds, SpiceImageCompression va
         return;
     }
     reds->image_compression = val;
-    red_dispatcher_on_ic_change();
+    reds_on_ic_change(reds);
 }
 
 static void reds_set_one_channel_security(RedsState *reds, int id, uint32_t security)
@@ -3797,7 +3799,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_streaming_video(SpiceServer *s, int valu
         value != SPICE_STREAM_VIDEO_FILTER)
         return -1;
     s->streaming_video = value;
-    red_dispatcher_on_sv_change();
+    reds_on_sv_change(reds);
     return 0;
 }
 
@@ -4059,5 +4061,29 @@ int calc_compression_level(RedsState *reds)
         return 0;
     } else {
         return 1;
+    }
+}
+
+void reds_on_ic_change(RedsState *reds)
+{
+    int compression_level = calc_compression_level(reds);
+    GList *l;
+
+    for (l = reds->dispatchers; l != NULL; l = l->next) {
+        RedDispatcher *d = l->data;
+        red_dispatcher_set_compression_level(d, compression_level);
+        red_dispatcher_on_ic_change(d, spice_server_get_image_compression(reds));
+    }
+}
+
+void reds_on_sv_change(RedsState *reds)
+{
+    int compression_level = calc_compression_level(reds);
+    GList *l;
+
+    for (l = reds->dispatchers; l != NULL; l = l->next) {
+        RedDispatcher *d = l->data;
+        red_dispatcher_set_compression_level(d, compression_level);
+        red_dispatcher_on_sv_change(d, reds_get_streaming_video(reds));
     }
 }

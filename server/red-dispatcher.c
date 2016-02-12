@@ -682,35 +682,9 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_dispatcher_loadvm_commands((RedDispatcher*)qxl_worker, ext, count);
 }
 
-void red_dispatcher_on_ic_change(void)
+void red_dispatcher_set_compression_level(RedDispatcher *dispatcher, int level)
 {
-    RedWorkerMessageSetCompression payload;
-    int compression_level = calc_compression_level(reds);
-    RedDispatcher *now = dispatchers;
-
-    while (now) {
-        now->qxl->st->qif->set_compression_level(now->qxl, compression_level);
-        payload.image_compression = spice_server_get_image_compression(reds);
-        dispatcher_send_message(&now->dispatcher,
-                                RED_WORKER_MESSAGE_SET_COMPRESSION,
-                                &payload);
-        now = now->next;
-    }
-}
-
-void red_dispatcher_on_sv_change(void)
-{
-    RedWorkerMessageSetStreamingVideo payload;
-    int compression_level = calc_compression_level(reds);
-    RedDispatcher *now = dispatchers;
-    while (now) {
-        now->qxl->st->qif->set_compression_level(now->qxl, compression_level);
-        payload.streaming_video = reds_get_streaming_video(reds);
-        dispatcher_send_message(&now->dispatcher,
-                                RED_WORKER_MESSAGE_SET_STREAMING_VIDEO,
-                                &payload);
-        now = now->next;
-    }
+    dispatcher->qxl->st->qif->set_compression_level(dispatcher->qxl, level);
 }
 
 void red_dispatcher_on_vm_stop(void)
@@ -1087,6 +1061,24 @@ void red_dispatcher_clear_pending(RedDispatcher *red_dispatcher, int pending)
     spice_return_if_fail(red_dispatcher != NULL);
 
     clear_bit(pending, &red_dispatcher->pending);
+}
+
+void red_dispatcher_on_ic_change(RedDispatcher *dispatcher, SpiceImageCompression ic)
+{
+    RedWorkerMessageSetCompression payload;
+    payload.image_compression = ic;
+    dispatcher_send_message(&dispatcher->dispatcher,
+                            RED_WORKER_MESSAGE_SET_COMPRESSION,
+                            &payload);
+}
+
+void red_dispatcher_on_sv_change(RedDispatcher *dispatcher, int sv)
+{
+    RedWorkerMessageSetStreamingVideo payload;
+    payload.streaming_video = sv;
+    dispatcher_send_message(&dispatcher->dispatcher,
+                            RED_WORKER_MESSAGE_SET_STREAMING_VIDEO,
+                            &payload);
 }
 
 void red_dispatcher_set_mouse_mode(RedDispatcher *dispatcher, uint32_t mode)
