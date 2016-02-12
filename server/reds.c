@@ -572,10 +572,9 @@ gboolean reds_get_agent_mouse(const RedsState *reds)
 static void reds_update_mouse_mode(RedsState *reds)
 {
     int allowed = 0;
-    int qxl_count = red_dispatcher_qxl_count();
 
     if ((reds->agent_mouse && reds->vdagent) ||
-        (inputs_channel_has_tablet(reds->inputs_channel) && qxl_count == 1)) {
+        (inputs_channel_has_tablet(reds->inputs_channel))) {
         allowed = reds->dispatcher_allows_client_mouse;
     }
     if (allowed == reds->is_client_mouse_allowed) {

@@ -33,7 +33,6 @@ void red_dispatcher_on_vm_stop(void);
 void red_dispatcher_on_vm_start(void);
 int red_dispatcher_count(void);
 uint32_t red_dispatcher_qxl_ram_size(void);
-int red_dispatcher_qxl_count(void);
 void red_dispatcher_async_complete(struct RedDispatcher *, AsyncCommand *);
 struct Dispatcher *red_dispatcher_get_dispatcher(struct RedDispatcher *);
 int red_dispatcher_use_client_monitors_config(void);

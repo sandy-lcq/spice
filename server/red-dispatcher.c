@@ -39,7 +39,6 @@
 
 #include "red-dispatcher.h"
 
-static int num_active_workers = 0;
 
 struct AsyncCommand {
     RedWorkerMessage message;
@@ -191,11 +190,6 @@ static void red_dispatcher_cursor_migrate(RedChannelClient *rcc)
                             &payload);
 }
 
-int red_dispatcher_qxl_count(void)
-{
-    return num_active_workers;
-}
-
 static void update_client_mouse_allowed(void)
 {
     static int allowed = FALSE;
@@ -203,22 +197,18 @@ static void update_client_mouse_allowed(void)
     int x_res = 0;
     int y_res = 0;
 
-    if (num_active_workers > 0) {
-        allow_now = TRUE;
-        RedDispatcher *now = dispatchers;
-        while (now && allow_now) {
-            if (now->primary_active) {
-                allow_now = now->use_hardware_cursor;
-                if (num_active_workers == 1) {
-                    if (allow_now) {
-                        x_res = now->x_res;
-                        y_res = now->y_res;
-                    }
-                    break;
-                }
+    allow_now = TRUE;
+    RedDispatcher *now = dispatchers;
+    while (now && allow_now) {
+        if (now->primary_active) {
+            allow_now = now->use_hardware_cursor;
+            if (allow_now) {
+                x_res = now->x_res;
+                y_res = now->y_res;
             }
-            now = now->next;
+            break;
         }
+        now = now->next;
     }
 
     if (allow_now || allow_now != allowed) {
@@ -246,10 +236,6 @@ static void red_dispatcher_update_area(RedDispatcher *dispatcher, uint32_t surfa
 int red_dispatcher_use_client_monitors_config(void)
 {
     RedDispatcher *now = dispatchers;
-
-    if (num_active_workers == 0) {
-        return FALSE;
-    }
 
     for (; now ; now = now->next) {
         if (!red_dispatcher_check_qxl_version(now, 3, 3) ||
@@ -1101,7 +1087,6 @@ void red_dispatcher_init(QXLInstance *qxl)
     reds_register_channel(reds, channel);
 
     red_worker_run(worker);
-    num_active_workers = 1;
 
     qxl->st->dispatcher = red_dispatcher;
     red_dispatcher->next = dispatchers;
