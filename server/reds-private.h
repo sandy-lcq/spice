@@ -241,7 +241,7 @@ struct RedsState {
 
     RedSSLParameters ssl_parameters;
     SpiceCoreInterfaceInternal *core;
-
+    GList *dispatchers;
 };
 
 #endif

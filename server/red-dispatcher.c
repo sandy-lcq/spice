@@ -713,19 +713,6 @@ void red_dispatcher_on_sv_change(void)
     }
 }
 
-void red_dispatcher_set_mouse_mode(uint32_t mode)
-{
-    RedWorkerMessageSetMouseMode payload;
-    RedDispatcher *now = dispatchers;
-    while (now) {
-        payload.mode = mode;
-        dispatcher_send_message(&now->dispatcher,
-                                RED_WORKER_MESSAGE_SET_MOUSE_MODE,
-                                &payload);
-        now = now->next;
-    }
-}
-
 void red_dispatcher_on_vm_stop(void)
 {
     RedDispatcher *now = dispatchers;
@@ -1100,4 +1087,13 @@ void red_dispatcher_clear_pending(RedDispatcher *red_dispatcher, int pending)
     spice_return_if_fail(red_dispatcher != NULL);
 
     clear_bit(pending, &red_dispatcher->pending);
+}
+
+void red_dispatcher_set_mouse_mode(RedDispatcher *dispatcher, uint32_t mode)
+{
+    RedWorkerMessageSetMouseMode payload;
+    payload.mode = mode;
+    dispatcher_send_message(&dispatcher->dispatcher,
+                            RED_WORKER_MESSAGE_SET_MOUSE_MODE,
+                            &payload);
 }

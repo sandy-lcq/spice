@@ -556,11 +556,16 @@ int reds_get_mouse_mode(RedsState *reds)
 
 static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
 {
+    GList *l;
+
     if (reds->mouse_mode == mode) {
         return;
     }
     reds->mouse_mode = mode;
-    red_dispatcher_set_mouse_mode(reds->mouse_mode);
+
+    for (l = reds->dispatchers; l != NULL; l = l->next)
+        red_dispatcher_set_mouse_mode(l->data, mode);
+
     main_channel_push_mouse_mode(reds->main_channel, reds->mouse_mode, reds->is_client_mouse_allowed);
 }
 
@@ -572,9 +577,10 @@ gboolean reds_get_agent_mouse(const RedsState *reds)
 static void reds_update_mouse_mode(RedsState *reds)
 {
     int allowed = 0;
+    int qxl_count = g_list_length(reds->dispatchers);
 
     if ((reds->agent_mouse && reds->vdagent) ||
-        (inputs_channel_has_tablet(reds->inputs_channel))) {
+        (inputs_channel_has_tablet(reds->inputs_channel) && qxl_count == 1)) {
         allowed = reds->dispatcher_allows_client_mouse;
     }
     if (allowed == reds->is_client_mouse_allowed) {
@@ -1668,7 +1674,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     }
 
     if (!mig_target) {
-        main_channel_push_init(mcc, red_dispatcher_count(),
+        main_channel_push_init(mcc, g_list_length(reds->dispatchers),
             reds->mouse_mode, reds->is_client_mouse_allowed,
             reds_get_mm_time() - MM_TIME_DELTA,
             red_dispatcher_qxl_ram_size());
@@ -1814,7 +1820,7 @@ void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *c
     mcc = red_client_get_main(client);
 
     // TODO: not doing net test. consider doing it on client_migrate_info
-    main_channel_push_init(mcc, red_dispatcher_count(),
+    main_channel_push_init(mcc, g_list_length(reds->dispatchers),
                            reds->mouse_mode, reds->is_client_mouse_allowed,
                            reds_get_mm_time() - MM_TIME_DELTA,
                            red_dispatcher_qxl_ram_size());
@@ -3196,6 +3202,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         qxl->st->scanout.drm_dma_buf_fd = -1;
         qxl->st->qif = SPICE_CONTAINEROF(interface, QXLInterface, base);
         red_dispatcher_init(qxl);
+        reds->dispatchers = g_list_prepend(reds->dispatchers, qxl->st->dispatcher);
 
     } else if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
         SpiceTabletInstance *tablet = SPICE_CONTAINEROF(sin, SpiceTabletInstance, base);
