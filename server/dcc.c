@@ -719,6 +719,10 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     int glz_size;
     int zlib_size;
 
+#ifdef COMPRESS_DEBUG
+    spice_info("LZ global compress fmt=%d", src->format);
+#endif
+
     encoder_data_init(&glz_data->data, dcc);
 
     glz_drawable = get_glz_drawable(dcc, drawable);
@@ -792,6 +796,10 @@ static int dcc_compress_image_lz(DisplayChannelClient *dcc,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz_stat);
 
+#ifdef COMPRESS_DEBUG
+    spice_info("LZ LOCAL compress");
+#endif
+
     encoder_data_init(&lz_data->data, dcc);
 
     if (setjmp(lz_data->data.jmp_env)) {
@@ -859,6 +867,10 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
     uint8_t *lz_out_start_byte;
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->jpeg_alpha_stat);
+
+#ifdef COMPRESS_DEBUG
+    spice_info("JPEG compress");
+#endif
 
     switch (src->format) {
     case SPICE_BITMAP_FMT_16BIT:
@@ -975,6 +987,10 @@ static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz4_stat);
 
+#ifdef COMPRESS_DEBUG
+    spice_info("LZ4 compress");
+#endif
+
     encoder_data_init(&lz4_data->data, dcc);
 
     if (setjmp(lz4_data->data.jmp_env)) {
@@ -1021,6 +1037,10 @@ static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
     int size, stride;
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->quic_stat);
+
+#ifdef COMPRESS_DEBUG
+    spice_info("QUIC compress");
+#endif
 
     switch (src->format) {
     case SPICE_BITMAP_FMT_32BIT:
@@ -1180,14 +1200,8 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     case SPICE_IMAGE_COMPRESSION_QUIC:
         if (can_lossy && display_channel->enable_jpeg &&
             (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src))) {
-#ifdef COMPRESS_DEBUG
-            spice_info("JPEG compress");
-#endif
             return dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
         }
-#ifdef COMPRESS_DEBUG
-        spice_info("QUIC compress");
-#endif
         return dcc_compress_image_quic(dcc, dest, src, o_comp_data);
     case SPICE_IMAGE_COMPRESSION_GLZ:
         if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict)) {
@@ -1196,9 +1210,6 @@ int dcc_compress_image(DisplayChannelClient *dcc,
             pthread_rwlock_rdlock(&dcc->glz_dict->encode_lock);
             frozen = dcc->glz_dict->migrate_freeze;
             if (!frozen) {
-#ifdef COMPRESS_DEBUG
-                spice_info("LZ global compress fmt=%d", src->format);
-#endif
                 ret = dcc_compress_image_glz(dcc, dest, src, drawable, o_comp_data);
             }
             pthread_rwlock_unlock(&dcc->glz_dict->encode_lock);
@@ -1211,17 +1222,11 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     case SPICE_IMAGE_COMPRESSION_LZ4:
         if (red_channel_client_test_remote_cap(&dcc->common.base,
                                                SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-#ifdef COMPRESS_DEBUG
-            spice_info("LZ4 compress");
-#endif
             return dcc_compress_image_lz4(dcc, dest, src, o_comp_data);
         }
 #endif
 lz_compress:
     case SPICE_IMAGE_COMPRESSION_LZ:
-#ifdef COMPRESS_DEBUG
-        spice_info("LZ LOCAL compress");
-#endif
         return dcc_compress_image_lz(dcc, dest, src, o_comp_data);
     default:
         spice_error("invalid image compression type %u", image_compression);
