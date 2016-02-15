@@ -848,9 +848,9 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
     LzData *lz_data = &dcc->lz_data;
     JpegEncoderContext *jpeg = dcc->jpeg;
     LzContext *lz = dcc->lz;
-    JpegEncoderImageType jpeg_in_type;
+    volatile JpegEncoderImageType jpeg_in_type;
     int jpeg_size = 0;
-    int has_alpha = FALSE;
+    volatile int has_alpha = FALSE;
     int alpha_lz_size = 0;
     int comp_head_filled;
     int comp_head_left;
@@ -1016,7 +1016,7 @@ static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
 {
     QuicData *quic_data = &dcc->quic_data;
     QuicContext *quic = dcc->quic;
-    QuicImageType type;
+    volatile QuicImageType type;
     int size, stride;
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->quic_stat);
