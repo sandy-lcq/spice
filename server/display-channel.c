@@ -36,6 +36,7 @@ void display_channel_compress_stats_reset(DisplayChannel *display)
 {
     spice_return_if_fail(display);
 
+    stat_reset(&display->off_stat);
     stat_reset(&display->quic_stat);
     stat_reset(&display->lz_stat);
     stat_reset(&display->glz_stat);
@@ -58,6 +59,12 @@ void display_channel_compress_stats_print(const DisplayChannel *display_channel)
 
     spice_info("==> Compression stats for display %u", display_channel->common.base.id);
     spice_info("Method   \t  count  \torig_size(MB)\tenc_size(MB)\tenc_time(s)");
+    spice_info("OFF     \t%8d\t%13.2f\t%12.2f\t%12.2f",
+               display_channel->off_stat.count,
+               stat_byte_to_mega(display_channel->off_stat.orig_size),
+               stat_byte_to_mega(display_channel->off_stat.comp_size),
+               stat_cpu_time_to_sec(display_channel->off_stat.total)
+               );
     spice_info("QUIC     \t%8d\t%13.2f\t%12.2f\t%12.2f",
                display_channel->quic_stat.count,
                stat_byte_to_mega(display_channel->quic_stat.orig_size),
@@ -103,18 +110,21 @@ void display_channel_compress_stats_print(const DisplayChannel *display_channel)
     spice_info("-------------------------------------------------------------------");
     spice_info("Total    \t%8d\t%13.2f\t%12.2f\t%12.2f",
                display_channel->lz_stat.count + display_channel->glz_stat.count +
+                                                display_channel->off_stat.count +
                                                 display_channel->quic_stat.count +
                                                 display_channel->jpeg_stat.count +
                                                 display_channel->lz4_stat.count +
                                                 display_channel->jpeg_alpha_stat.count,
                stat_byte_to_mega(display_channel->lz_stat.orig_size +
                                  display_channel->glz_stat.orig_size +
+                                 display_channel->off_stat.orig_size +
                                  display_channel->quic_stat.orig_size +
                                  display_channel->jpeg_stat.orig_size +
                                  display_channel->lz4_stat.orig_size +
                                  display_channel->jpeg_alpha_stat.orig_size),
                stat_byte_to_mega(display_channel->lz_stat.comp_size +
                                  glz_enc_size +
+                                 display_channel->off_stat.comp_size +
                                  display_channel->quic_stat.comp_size +
                                  display_channel->jpeg_stat.comp_size +
                                  display_channel->lz4_stat.comp_size +
@@ -122,6 +132,7 @@ void display_channel_compress_stats_print(const DisplayChannel *display_channel)
                stat_cpu_time_to_sec(display_channel->lz_stat.total +
                                     display_channel->glz_stat.total +
                                     display_channel->zlib_glz_stat.total +
+                                    display_channel->off_stat.total +
                                     display_channel->quic_stat.total +
                                     display_channel->jpeg_stat.total +
                                     display_channel->lz4_stat.total +

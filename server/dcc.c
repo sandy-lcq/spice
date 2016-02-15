@@ -1192,29 +1192,35 @@ int dcc_compress_image(DisplayChannelClient *dcc,
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     SpiceImageCompression image_compression;
+    stat_start_time_t start_time;
+    int success = FALSE;
+
+    stat_start_time_init(&start_time, &display_channel->off_stat);
 
     image_compression = get_compression_for_bitmap(src, dcc->image_compression, drawable);
     switch (image_compression) {
     case SPICE_IMAGE_COMPRESSION_OFF:
-        return FALSE;
+        break;
     case SPICE_IMAGE_COMPRESSION_QUIC:
         if (can_lossy && display_channel->enable_jpeg &&
             (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src))) {
-            return dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
+            success = dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
+            break;
         }
-        return dcc_compress_image_quic(dcc, dest, src, o_comp_data);
+        success = dcc_compress_image_quic(dcc, dest, src, o_comp_data);
+        break;
     case SPICE_IMAGE_COMPRESSION_GLZ:
         if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict)) {
-            int ret, frozen;
+            int frozen;
             /* using the global dictionary only if it is not frozen */
             pthread_rwlock_rdlock(&dcc->glz_dict->encode_lock);
             frozen = dcc->glz_dict->migrate_freeze;
             if (!frozen) {
-                ret = dcc_compress_image_glz(dcc, dest, src, drawable, o_comp_data);
+                success = dcc_compress_image_glz(dcc, dest, src, drawable, o_comp_data);
             }
             pthread_rwlock_unlock(&dcc->glz_dict->encode_lock);
             if (!frozen) {
-                return ret;
+                break;
             }
         }
         goto lz_compress;
@@ -1222,16 +1228,24 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     case SPICE_IMAGE_COMPRESSION_LZ4:
         if (red_channel_client_test_remote_cap(&dcc->common.base,
                                                SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-            return dcc_compress_image_lz4(dcc, dest, src, o_comp_data);
+            success = dcc_compress_image_lz4(dcc, dest, src, o_comp_data);
+            break;
         }
 #endif
 lz_compress:
     case SPICE_IMAGE_COMPRESSION_LZ:
-        return dcc_compress_image_lz(dcc, dest, src, o_comp_data);
+        success = dcc_compress_image_lz(dcc, dest, src, o_comp_data);
+        break;
     default:
         spice_error("invalid image compression type %u", image_compression);
     }
-    return FALSE;
+
+    if (!success) {
+        uint64_t image_size = src->stride * src->y;
+        stat_compress_add(&display_channel->off_stat, start_time, image_size, image_size);
+    }
+
+    return success;
 }
 
 #define CLIENT_PALETTE_CACHE
