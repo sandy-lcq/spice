@@ -457,7 +457,6 @@ CommonChannelClient *common_channel_new_client(CommonChannel *common,
         return NULL;
     }
     CommonChannelClient *common_cc = (CommonChannelClient*)rcc;
-    common_cc->id = common->qxl->id;
     common->during_target_migrate = mig_target;
 
     // TODO: move wide/narrow ack setting to red_channel.

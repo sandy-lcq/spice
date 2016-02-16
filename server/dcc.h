@@ -56,6 +56,7 @@ typedef struct FreeList {
 
 struct DisplayChannelClient {
     CommonChannelClient common;
+    uint32_t id;
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;

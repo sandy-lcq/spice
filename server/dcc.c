@@ -373,6 +373,7 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
         client, stream, mig_target, TRUE,
         common_caps, num_common_caps,
         caps, num_caps);
+    dcc->id = display->common.qxl->id;
     spice_return_val_if_fail(dcc, NULL);
     spice_info("New display (client %p) dcc %p stream %p", client, dcc, stream);
 
@@ -424,8 +425,8 @@ static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
         if (dcc->pixmap_cache && dcc->glz_dict) {
             dcc->pixmap_cache_generation = dcc->pixmap_cache->generation;
             /* TODO: move common.id? if it's used for a per client structure.. */
-            spice_info("creating encoder with id == %d", dcc->common.id);
-            dcc->glz = glz_encoder_create(dcc->common.id, dcc->glz_dict->dict, &dcc->glz_data.usr);
+            spice_info("creating encoder with id == %d", dcc->id);
+            dcc->glz = glz_encoder_create(dcc->id, dcc->glz_dict->dict, &dcc->glz_data.usr);
             if (!dcc->glz) {
                 spice_critical("create global lz failed");
             }
@@ -1280,7 +1281,7 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
         NewCacheItem **now;
 
         if (!(tail = (NewCacheItem *)ring_get_tail(&cache->lru)) ||
-                                                   tail->sync[dcc->common.id] == serial) {
+                                                   tail->sync[dcc->id] == serial) {
             cache->available += size;
             free(item);
             return FALSE;
@@ -1298,7 +1299,7 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
         ring_remove(&tail->lru_link);
         cache->items--;
         cache->available += tail->size;
-        cache->sync[dcc->common.id] = serial;
+        cache->sync[dcc->id] = serial;
         dcc_push_release(dcc, SPICE_RES_TYPE_PIXMAP, tail->id, tail->sync);
         free(tail);
     }
@@ -1311,8 +1312,8 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
     item->size = size;
     item->lossy = lossy;
     memset(item->sync, 0, sizeof(item->sync));
-    item->sync[dcc->common.id] = serial;
-    cache->sync[dcc->common.id] = serial;
+    item->sync[dcc->id] = serial;
+    cache->sync[dcc->id] = serial;
     return TRUE;
 }
 
@@ -1526,7 +1527,7 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
 
     if (dcc_handle_migrate_glz_dictionary(dcc, migrate_data)) {
         dcc->glz =
-            glz_encoder_create(dcc->common.id, dcc->glz_dict->dict, &dcc->glz_data.usr);
+            glz_encoder_create(dcc->id, dcc->glz_dict->dict, &dcc->glz_data.usr);
     } else {
         spice_critical("restoring global lz dictionary failed");
     }

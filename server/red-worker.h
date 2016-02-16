@@ -27,7 +27,6 @@ typedef struct RedWorker RedWorker;
 typedef struct CommonChannelClient {
     RedChannelClient base;
 
-    uint32_t id;
     int is_low_bandwidth;
 } CommonChannelClient;
 

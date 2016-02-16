@@ -61,9 +61,9 @@ static int dcc_pixmap_cache_unlocked_hit(DisplayChannelClient *dcc, uint64_t id,
         if (item->id == id) {
             ring_remove(&item->lru_link);
             ring_add(&cache->lru, &item->lru_link);
-            spice_assert(dcc->common.id < MAX_CACHE_CLIENTS);
-            item->sync[dcc->common.id] = serial;
-            cache->sync[dcc->common.id] = serial;
+            spice_assert(dcc->id < MAX_CACHE_CLIENTS);
+            item->sync[dcc->id] = serial;
+            cache->sync[dcc->id] = serial;
             *lossy = item->lossy;
             break;
         }
@@ -1886,13 +1886,13 @@ static void dcc_pixmap_cache_reset(DisplayChannelClient *dcc, SpiceMsgWaitForCha
     pixmap_cache_clear(cache);
 
     dcc->pixmap_cache_generation = ++cache->generation;
-    cache->generation_initiator.client = dcc->common.id;
+    cache->generation_initiator.client = dcc->id;
     cache->generation_initiator.message = serial;
-    cache->sync[dcc->common.id] = serial;
+    cache->sync[dcc->id] = serial;
 
     wait_count = 0;
     for (i = 0; i < MAX_CACHE_CLIENTS; i++) {
-        if (cache->sync[i] && i != dcc->common.id) {
+        if (cache->sync[i] && i != dcc->id) {
             sync_data->wait_list[wait_count].channel_type = SPICE_CHANNEL_DISPLAY;
             sync_data->wait_list[wait_count].channel_id = i;
             sync_data->wait_list[wait_count++].message_serial = cache->sync[i];
@@ -2341,7 +2341,7 @@ static void begin_send_message(RedChannelClient *rcc)
         int i;
 
         for (i = 0; i < MAX_CACHE_CLIENTS; i++) {
-            if (i != dcc->common.id && free_list->sync[i] != 0) {
+            if (i != dcc->id && free_list->sync[i] != 0) {
                 free_list->wait.header.wait_list[sync_count].channel_type = SPICE_CHANNEL_DISPLAY;
                 free_list->wait.header.wait_list[sync_count].channel_id = i;
                 free_list->wait.header.wait_list[sync_count++].message_serial = free_list->sync[i];
