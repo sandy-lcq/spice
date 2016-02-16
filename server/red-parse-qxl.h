@@ -76,14 +76,6 @@ typedef struct RedMessage {
     uint8_t *data;
 } RedMessage;
 
-typedef struct RedDataChunk RedDataChunk;
-struct RedDataChunk {
-    uint32_t data_size;
-    RedDataChunk *prev_chunk;
-    RedDataChunk *next_chunk;
-    uint8_t *data;
-};
-
 typedef struct RedSurfaceCreate {
     uint32_t format;
     uint32_t width;

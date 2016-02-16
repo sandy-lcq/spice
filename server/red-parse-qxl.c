@@ -47,6 +47,14 @@ G_STATIC_ASSERT(MAX_DATA_CHUNK <= G_MAXINT32);
 
 #define INVALID_SIZE ((size_t) -1)
 
+typedef struct RedDataChunk RedDataChunk;
+struct RedDataChunk {
+    uint32_t data_size;
+    RedDataChunk *prev_chunk;
+    RedDataChunk *next_chunk;
+    uint8_t *data;
+};
+
 #if 0
 static void hexdump_qxl(RedMemSlotInfo *slots, int group_id,
                         QXLPHYSICAL addr, uint8_t bytes)
