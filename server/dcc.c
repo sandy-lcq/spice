@@ -1081,124 +1081,152 @@ static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
     return TRUE;
 }
 
-#define MIN_SIZE_TO_COMPRESS 54
 #define MIN_DIMENSION_TO_QUIC 3
+/**
+ * quic doesn't handle:
+ *       (1) palette
+ */
+static bool can_quic_compress(SpiceBitmap *bitmap)
+{
+    return !bitmap_fmt_is_plt(bitmap->format) &&
+            bitmap->x >= MIN_DIMENSION_TO_QUIC && bitmap->y >= MIN_DIMENSION_TO_QUIC;
+}
+/**
+ * lz doesn't handle:
+ *       (1) bitmaps with strides that are larger than the width of the image in bytes
+ *       (2) unstable bitmaps
+ */
+static bool can_lz_compress(SpiceBitmap *bitmap)
+{
+    return !bitmap_has_extra_stride(bitmap) &&
+           !(bitmap->data->flags & SPICE_CHUNKS_FLAGS_UNSTABLE);
+}
+
+#define MIN_SIZE_TO_COMPRESS 54
+static SpiceImageCompression get_compression_for_bitmap(SpiceBitmap *bitmap,
+                                                        SpiceImageCompression preferred_compression,
+                                                        Drawable *drawable)
+{
+    if (bitmap->y * bitmap->stride < MIN_SIZE_TO_COMPRESS) { // TODO: change the size cond
+        return SPICE_IMAGE_COMPRESSION_OFF;
+    }
+    if (preferred_compression == SPICE_IMAGE_COMPRESSION_OFF) {
+        return SPICE_IMAGE_COMPRESSION_OFF;
+    }
+    if (preferred_compression == SPICE_IMAGE_COMPRESSION_QUIC) {
+        if (can_quic_compress(bitmap)) {
+            return SPICE_IMAGE_COMPRESSION_QUIC;
+        }
+        return SPICE_IMAGE_COMPRESSION_OFF;
+    }
+
+    if (preferred_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ ||
+        preferred_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) {
+        if (can_quic_compress(bitmap)) {
+            if (drawable == NULL ||
+                drawable->copy_bitmap_graduality == BITMAP_GRADUAL_INVALID) {
+                if (bitmap_fmt_has_graduality(bitmap->format) &&
+                    bitmap_get_graduality_level(bitmap) == BITMAP_GRADUAL_HIGH) {
+                    return SPICE_IMAGE_COMPRESSION_QUIC;
+                }
+            } else if (!can_lz_compress(bitmap) ||
+                       drawable->copy_bitmap_graduality == BITMAP_GRADUAL_HIGH) {
+                return SPICE_IMAGE_COMPRESSION_QUIC;
+            }
+        }
+        if (preferred_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) {
+            preferred_compression = SPICE_IMAGE_COMPRESSION_LZ;
+        } else {
+            preferred_compression = SPICE_IMAGE_COMPRESSION_GLZ;
+        }
+    }
+
+    if (preferred_compression == SPICE_IMAGE_COMPRESSION_GLZ) {
+        if (drawable == NULL || !bitmap_fmt_has_graduality(bitmap->format)) {
+            preferred_compression = SPICE_IMAGE_COMPRESSION_LZ;
+        }
+    }
+
+    if (preferred_compression == SPICE_IMAGE_COMPRESSION_LZ4) {
+        if (!bitmap_fmt_is_rgb(bitmap->format)) {
+            preferred_compression = SPICE_IMAGE_COMPRESSION_LZ;
+        }
+    }
+
+    if (preferred_compression == SPICE_IMAGE_COMPRESSION_LZ ||
+        preferred_compression == SPICE_IMAGE_COMPRESSION_LZ4 ||
+        preferred_compression == SPICE_IMAGE_COMPRESSION_GLZ) {
+        if (can_lz_compress(bitmap)) {
+            return preferred_compression;
+        }
+        return SPICE_IMAGE_COMPRESSION_OFF;
+    }
+
+    return SPICE_IMAGE_COMPRESSION_INVALID;
+}
+
 int dcc_compress_image(DisplayChannelClient *dcc,
                        SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
                        int can_lossy,
                        compress_send_data_t* o_comp_data)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    SpiceImageCompression image_compression = dcc->image_compression;
-    int quic_compress = FALSE;
+    SpiceImageCompression image_compression;
 
-    if ((image_compression == SPICE_IMAGE_COMPRESSION_OFF) ||
-        ((src->y * src->stride) < MIN_SIZE_TO_COMPRESS)) { // TODO: change the size cond
+    image_compression = get_compression_for_bitmap(src, dcc->image_compression, drawable);
+    switch (image_compression) {
+    case SPICE_IMAGE_COMPRESSION_OFF:
         return FALSE;
-    } else if (image_compression == SPICE_IMAGE_COMPRESSION_QUIC) {
-        if (bitmap_fmt_is_plt(src->format)) {
-            return FALSE;
-        } else {
-            quic_compress = TRUE;
+    case SPICE_IMAGE_COMPRESSION_QUIC:
+        if (can_lossy && display_channel->enable_jpeg &&
+            (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src))) {
+#ifdef COMPRESS_DEBUG
+            spice_info("JPEG compress");
+#endif
+            return dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
         }
-    } else {
-        /*
-            lz doesn't handle (1) bitmaps with strides that are larger than the width
-            of the image in bytes (2) unstable bitmaps
-        */
-        if (bitmap_has_extra_stride(src) || (src->data->flags & SPICE_CHUNKS_FLAGS_UNSTABLE)) {
-            if ((image_compression == SPICE_IMAGE_COMPRESSION_LZ) ||
-                (image_compression == SPICE_IMAGE_COMPRESSION_GLZ) ||
-                (image_compression == SPICE_IMAGE_COMPRESSION_LZ4) ||
-                bitmap_fmt_is_plt(src->format)) {
-                return FALSE;
-            } else {
-                quic_compress = TRUE;
-            }
-        } else {
-            if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
-                (image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ)) {
-                if ((src->x < MIN_DIMENSION_TO_QUIC) || (src->y < MIN_DIMENSION_TO_QUIC)) {
-                    quic_compress = FALSE;
-                } else {
-                    if (drawable == NULL ||
-                        drawable->copy_bitmap_graduality == BITMAP_GRADUAL_INVALID) {
-                        quic_compress = bitmap_fmt_has_graduality(src->format) &&
-                            bitmap_get_graduality_level(src) == BITMAP_GRADUAL_HIGH;
-                    } else {
-                        quic_compress = (drawable->copy_bitmap_graduality == BITMAP_GRADUAL_HIGH);
-                    }
-                }
-            } else {
-                quic_compress = FALSE;
-            }
-        }
-    }
-
-    if (quic_compress) {
 #ifdef COMPRESS_DEBUG
         spice_info("QUIC compress");
 #endif
-        // if bitmaps is picture-like, compress it using jpeg
-        if (can_lossy && display_channel->enable_jpeg &&
-            ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
-            (image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ))) {
-            // if we use lz for alpha, the stride can't be extra
-            if (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src)) {
-                return dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
-            }
-        }
         return dcc_compress_image_quic(dcc, dest, src, o_comp_data);
-    } else {
-        int glz;
-        int ret;
-        if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_GLZ) ||
-            (image_compression == SPICE_IMAGE_COMPRESSION_GLZ)) {
-            glz = drawable != NULL && bitmap_fmt_has_graduality(src->format) &&
-                  ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict));
-        } else if ((image_compression == SPICE_IMAGE_COMPRESSION_AUTO_LZ) ||
-                   (image_compression == SPICE_IMAGE_COMPRESSION_LZ) ||
-                   (image_compression == SPICE_IMAGE_COMPRESSION_LZ4)) {
-            glz = FALSE;
-        } else {
-            spice_error("invalid image compression type %u", image_compression);
-            return FALSE;
-        }
-
-        if (glz) {
+    case SPICE_IMAGE_COMPRESSION_GLZ:
+        if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict)) {
+            int ret, frozen;
             /* using the global dictionary only if it is not frozen */
             pthread_rwlock_rdlock(&dcc->glz_dict->encode_lock);
-            if (!dcc->glz_dict->migrate_freeze) {
-                ret = dcc_compress_image_glz(dcc,
-                                             dest, src,
-                                             drawable, o_comp_data);
-            } else {
-                glz = FALSE;
+            frozen = dcc->glz_dict->migrate_freeze;
+            if (!frozen) {
+#ifdef COMPRESS_DEBUG
+                spice_info("LZ global compress fmt=%d", src->format);
+#endif
+                ret = dcc_compress_image_glz(dcc, dest, src, drawable, o_comp_data);
             }
             pthread_rwlock_unlock(&dcc->glz_dict->encode_lock);
+            if (!frozen) {
+                return ret;
+            }
         }
-
-        if (!glz) {
+        goto lz_compress;
 #ifdef USE_LZ4
-            if (image_compression == SPICE_IMAGE_COMPRESSION_LZ4 &&
-                bitmap_fmt_is_rgb(src->format) &&
-                red_channel_client_test_remote_cap(&dcc->common.base,
-                        SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-                ret = dcc_compress_image_lz4(dcc, dest, src, o_comp_data);
-            } else
-#endif
-                ret = dcc_compress_image_lz(dcc, dest, src, o_comp_data);
+    case SPICE_IMAGE_COMPRESSION_LZ4:
+        if (red_channel_client_test_remote_cap(&dcc->common.base,
+                                               SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
 #ifdef COMPRESS_DEBUG
-            spice_info("LZ LOCAL compress");
+            spice_info("LZ4 compress");
 #endif
-        }
-#ifdef COMPRESS_DEBUG
-        else {
-            spice_info("LZ global compress fmt=%d", src->format);
+            return dcc_compress_image_lz4(dcc, dest, src, o_comp_data);
         }
 #endif
-        return ret;
+lz_compress:
+    case SPICE_IMAGE_COMPRESSION_LZ:
+#ifdef COMPRESS_DEBUG
+        spice_info("LZ LOCAL compress");
+#endif
+        return dcc_compress_image_lz(dcc, dest, src, o_comp_data);
+    default:
+        spice_error("invalid image compression type %u", image_compression);
     }
+    return FALSE;
 }
 
 #define CLIENT_PALETTE_CACHE
