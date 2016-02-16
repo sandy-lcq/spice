@@ -92,13 +92,6 @@ struct RedWorker {
     FILE *record_fd;
 };
 
-QXLInstance* red_worker_get_qxl(RedWorker *worker)
-{
-    spice_return_val_if_fail(worker != NULL, NULL);
-
-    return worker->qxl;
-}
-
 static int display_is_connected(RedWorker *worker)
 {
     return (worker->display_channel && red_channel_is_connected(
