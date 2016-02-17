@@ -61,7 +61,7 @@ int memslot_validate_virt(RedMemSlotInfo *info, unsigned long virt, int slot_id,
 
     if (virt < slot->virt_start_addr || (virt + add_size) > slot->virt_end_addr) {
         print_memslots(info);
-        spice_critical("virtual address out of range\n"
+        spice_warning("virtual address out of range\n"
               "    virt=0x%lx+0x%x slot_id=%d group_id=%d\n"
               "    slot=0x%lx-0x%lx delta=0x%lx",
               virt, add_size, slot_id, group_id,
