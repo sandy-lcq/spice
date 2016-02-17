@@ -29,17 +29,16 @@
 
 void agent_msg_filter_init(struct AgentMsgFilter *filter,
                            gboolean copy_paste, gboolean file_xfer,
-                           gboolean use_client_monitors_config,
                            int discard_all)
 {
     memset(filter, 0, sizeof(*filter));
     filter->copy_paste_enabled = copy_paste;
     filter->file_xfer_enabled = file_xfer;
-    filter->use_client_monitors_config = use_client_monitors_config;
     filter->discard_all = discard_all;
 }
 
 int agent_msg_filter_process_data(struct AgentMsgFilter *filter,
+                                  RedsState *reds,
                                   uint8_t *data, uint32_t len)
 {
     struct VDAgentMessage msg_header;
@@ -96,7 +95,7 @@ data_to_read:
             }
             break;
         case VD_AGENT_MONITORS_CONFIG:
-            if (filter->use_client_monitors_config) {
+            if (reds_use_client_monitors_config(reds)) {
                 filter->result = AGENT_MSG_FILTER_MONITORS_CONFIG;
             } else {
                 filter->result = AGENT_MSG_FILTER_OK;

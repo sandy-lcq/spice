@@ -407,8 +407,7 @@ static void reds_reset_vdp(RedsState *reds)
     }
     /* Reset read filter to start with clean state when the agent reconnects */
     agent_msg_filter_init(&state->read_filter, reds->agent_copypaste,
-                          reds->agent_file_xfer,
-                          reds_use_client_monitors_config(reds), TRUE);
+                          reds->agent_file_xfer, TRUE);
     /* Throw away pending chunks from the current (if any) and future
      * messages written by the client.
      * TODO: client should clear its agent messages queue when the agent
@@ -522,8 +521,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
 
         /* Reset write filter to start with clean state on client reconnect */
         agent_msg_filter_init(&reds->agent_state.write_filter, reds->agent_copypaste,
-                              reds->agent_file_xfer,
-                              reds_use_client_monitors_config(reds), TRUE);
+                              reds->agent_file_xfer, TRUE);
 
         /* Throw away pending chunks from the current (if any) and future
          *  messages read from the agent */
@@ -639,7 +637,7 @@ static int vdi_port_read_buf_process(RedsState *reds, VDIReadBuf *buf)
 
     switch (state->vdi_chunk_header.port) {
     case VDP_CLIENT_PORT: {
-        res = agent_msg_filter_process_data(&state->read_filter,
+        res = agent_msg_filter_process_data(&state->read_filter, reds,
                                             buf->data, buf->len);
         switch (res) {
         case AGENT_MSG_FILTER_OK:
@@ -1049,7 +1047,7 @@ void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *mess
     VDIChunkHeader *header;
     int res;
 
-    res = agent_msg_filter_process_data(&reds->agent_state.write_filter,
+    res = agent_msg_filter_process_data(&reds->agent_state.write_filter, reds,
                                         message, size);
     switch (res) {
     case AGENT_MSG_FILTER_OK:
@@ -3214,8 +3212,6 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         red_dispatcher_init(qxl);
         dispatcher = qxl->st->dispatcher;
         reds->dispatchers = g_list_prepend(reds->dispatchers, dispatcher);
-        reds->agent_state.write_filter.use_client_monitors_config = reds_use_client_monitors_config(reds);
-        reds->agent_state.read_filter.use_client_monitors_config = reds_use_client_monitors_config(reds);
 
         /* this function has to be called after the dispatcher is on the list
          * as QXLInstance clients expect the dispatcher to be on the list when
@@ -3321,11 +3317,9 @@ static void reds_init_vd_agent_resources(RedsState *reds)
 
     ring_init(&state->read_bufs);
     agent_msg_filter_init(&state->write_filter, reds->agent_copypaste,
-                          reds->agent_file_xfer,
-                          reds_use_client_monitors_config(reds), TRUE);
+                          reds->agent_file_xfer, TRUE);
     agent_msg_filter_init(&state->read_filter, reds->agent_copypaste,
-                          reds->agent_file_xfer,
-                          reds_use_client_monitors_config(reds), TRUE);
+                          reds->agent_file_xfer, TRUE);
 
     state->read_state = VDI_PORT_READ_STATE_READ_HEADER;
     state->receive_pos = (uint8_t *)&state->vdi_chunk_header;
