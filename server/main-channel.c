@@ -1090,7 +1090,7 @@ static MainChannelClient *main_channel_client_create(MainChannel *main_chan, Red
     mcc->bitrate_per_sec = ~0;
 #ifdef RED_STATISTICS
     core = reds_get_core_interface(red_channel_get_server(&main_chan->base));
-    if (!(mcc->ping_timer = core->timer_add(core, ping_timer_cb, NULL))) {
+    if (!(mcc->ping_timer = core->timer_add(core, ping_timer_cb, mcc))) {
         spice_error("ping timer create failed");
     }
     mcc->ping_interval = PING_INTERVAL;
