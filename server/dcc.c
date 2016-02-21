@@ -473,12 +473,12 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
     DisplayChannel *display = DCC_TO_DC(dcc);
 
     for (i = 0; i < NUM_STREAMS; i++) {
-        StreamAgent *agent = &dcc->priv->stream_agents[i];
+        StreamAgent *agent = &dcc->priv->streams.agents[i];
         agent->stream = &display->priv->streams_buf[i];
         region_init(&agent->vis_region);
         region_init(&agent->clip);
     }
-    dcc->priv->use_video_encoder_rate_control =
+    dcc->priv->streams.use_video_encoder_rate_control =
         red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT);
 }
 
@@ -605,7 +605,7 @@ static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
     int i;
 
     for (i = 0; i < NUM_STREAMS; i++) {
-        StreamAgent *agent = &dcc->priv->stream_agents[i];
+        StreamAgent *agent = &dcc->priv->streams.agents[i];
         region_destroy(&agent->vis_region);
         region_destroy(&agent->clip);
         if (agent->video_encoder) {
@@ -1053,7 +1053,7 @@ static int dcc_handle_stream_report(DisplayChannelClient *dcc,
         return FALSE;
     }
 
-    agent = &dcc->priv->stream_agents[report->stream_id];
+    agent = &dcc->priv->streams.agents[report->stream_id];
     if (!agent->video_encoder) {
         spice_info("stream_report: no encoder for stream id %u. "
                    "The stream has probably been destroyed",
@@ -1265,7 +1265,7 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
 
 StreamAgent* dcc_get_stream_agent(DisplayChannelClient *dcc, int stream_id)
 {
-    return &dcc->priv->stream_agents[stream_id];
+    return &dcc->priv->streams.agents[stream_id];
 }
 
 ImageEncoders* dcc_get_encoders(DisplayChannelClient *dcc)
@@ -1285,27 +1285,27 @@ spice_wan_compression_t dcc_get_zlib_glz_state(DisplayChannelClient *dcc)
 
 gboolean dcc_use_video_encoder_rate_control(DisplayChannelClient *dcc)
 {
-    return dcc->priv->use_video_encoder_rate_control;
+    return dcc->priv->streams.use_video_encoder_rate_control;
 }
 
 uint32_t dcc_get_max_stream_latency(DisplayChannelClient *dcc)
 {
-    return dcc->priv->streams_max_latency;
+    return dcc->priv->streams.max_latency;
 }
 
 void dcc_set_max_stream_latency(DisplayChannelClient *dcc, uint32_t latency)
 {
-    dcc->priv->streams_max_latency = latency;
+    dcc->priv->streams.max_latency = latency;
 }
 
 uint64_t dcc_get_max_stream_bit_rate(DisplayChannelClient *dcc)
 {
-    return dcc->priv->streams_max_bit_rate;
+    return dcc->priv->streams.max_bit_rate;
 }
 
 void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate)
 {
-    dcc->priv->streams_max_bit_rate = rate;
+    dcc->priv->streams.max_bit_rate = rate;
 }
 
 int dcc_config_socket(RedChannelClient *rcc)

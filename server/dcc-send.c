@@ -1688,10 +1688,10 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
         return FALSE;
     }
 
-    StreamAgent *agent = &dcc->priv->stream_agents[display_channel_get_stream_id(display, stream)];
+    StreamAgent *agent = &dcc->priv->streams.agents[display_channel_get_stream_id(display, stream)];
     uint64_t time_now = spice_get_monotonic_time_ns();
 
-    if (!dcc->priv->use_video_encoder_rate_control) {
+    if (!dcc->priv->streams.use_video_encoder_rate_control) {
         if (time_now - agent->last_send_time < (1000 * 1000 * 1000) / agent->fps) {
             agent->frames--;
 #ifdef STREAM_STATS
@@ -1715,7 +1715,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
                                              &outbuf);
     switch (ret) {
     case VIDEO_ENCODER_FRAME_DROP:
-        spice_assert(dcc->priv->use_video_encoder_rate_control);
+        spice_assert(dcc->priv->streams.use_video_encoder_rate_control);
 #ifdef STREAM_STATS
         agent->stats.num_drops_fps++;
 #endif
@@ -2295,7 +2295,7 @@ static void marshall_stream_activate_report(RedChannelClient *rcc,
                                             uint32_t stream_id)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    StreamAgent *agent = &dcc->priv->stream_agents[stream_id];
+    StreamAgent *agent = &dcc->priv->streams.agents[stream_id];
     SpiceMsgDisplayStreamActivateReport msg;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_ACTIVATE_REPORT, NULL);
