@@ -22,8 +22,6 @@
 #include "reds.h"
 #include "red-worker.h"
 #include "red-parse-qxl.h"
-#include "cache-item.h"
-#include "stat.h"
 
 typedef struct CursorChannel CursorChannel;
 typedef struct CursorChannelClient CursorChannelClient;
