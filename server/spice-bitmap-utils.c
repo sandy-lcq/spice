@@ -172,7 +172,7 @@ write_err:
 
 static bool dump_line(FILE *f, uint8_t* line, uint16_t n_pixel_bits, int width, int row_size)
 {
-    static char zeroes[4] = { 0 };
+    static const char zeroes[4] = { 0 };
     int copy_bytes_size = SPICE_ALIGN(n_pixel_bits * width, 8) / 8;
 
     WRITE(line, copy_bytes_size, f);

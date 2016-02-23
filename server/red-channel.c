@@ -176,21 +176,21 @@ static void mini_header_set_msg_sub_list(SpiceDataHeaderOpaque *header, uint32_t
     spice_error("attempt to set header sub list on mini header");
 }
 
-static SpiceDataHeaderOpaque full_header_wrapper = {NULL, sizeof(SpiceDataHeader),
-                                                    full_header_set_msg_type,
-                                                    full_header_set_msg_size,
-                                                    full_header_set_msg_serial,
-                                                    full_header_set_msg_sub_list,
-                                                    full_header_get_msg_type,
-                                                    full_header_get_msg_size};
+static const SpiceDataHeaderOpaque full_header_wrapper = {NULL, sizeof(SpiceDataHeader),
+                                                          full_header_set_msg_type,
+                                                          full_header_set_msg_size,
+                                                          full_header_set_msg_serial,
+                                                          full_header_set_msg_sub_list,
+                                                          full_header_get_msg_type,
+                                                          full_header_get_msg_size};
 
-static SpiceDataHeaderOpaque mini_header_wrapper = {NULL, sizeof(SpiceMiniDataHeader),
-                                                    mini_header_set_msg_type,
-                                                    mini_header_set_msg_size,
-                                                    mini_header_set_msg_serial,
-                                                    mini_header_set_msg_sub_list,
-                                                    mini_header_get_msg_type,
-                                                    mini_header_get_msg_size};
+static const SpiceDataHeaderOpaque mini_header_wrapper = {NULL, sizeof(SpiceMiniDataHeader),
+                                                          mini_header_set_msg_type,
+                                                          mini_header_set_msg_size,
+                                                          mini_header_set_msg_serial,
+                                                          mini_header_set_msg_sub_list,
+                                                          mini_header_get_msg_type,
+                                                          mini_header_get_msg_size};
 
 /* return the number of bytes read. -1 in case of error */
 static int red_peer_receive(RedsStream *stream, uint8_t *buf, uint32_t size)
@@ -1092,7 +1092,7 @@ static void dummy_watch_remove(SpiceWatch *watch)
 }
 
 // TODO: actually, since I also use channel_client_dummy, no need for core. Can be NULL
-SpiceCoreInterfaceInternal dummy_core = {
+static const SpiceCoreInterfaceInternal dummy_core = {
     .watch_update_mask = dummy_watch_update_mask,
     .watch_add = dummy_watch_add,
     .watch_remove = dummy_watch_remove,

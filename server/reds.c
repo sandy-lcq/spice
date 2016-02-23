@@ -874,7 +874,7 @@ SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *s)
     return reds_get_n_clients(reds);
 }
 
-static int secondary_channels[] = {
+static const int secondary_channels[] = {
     SPICE_CHANNEL_MAIN, SPICE_CHANNEL_DISPLAY, SPICE_CHANNEL_CURSOR, SPICE_CHANNEL_INPUTS};
 
 static int channel_is_secondary(RedChannel *channel)
@@ -3733,7 +3733,7 @@ SPICE_GNUC_VISIBLE int spice_server_set_zlib_glz_compression(SpiceServer *s, spi
 
 SPICE_GNUC_VISIBLE int spice_server_set_channel_security(SpiceServer *s, const char *channel, int security)
 {
-    static const char *names[] = {
+    static const char *const names[] = {
         [ SPICE_CHANNEL_MAIN     ] = "main",
         [ SPICE_CHANNEL_DISPLAY  ] = "display",
         [ SPICE_CHANNEL_INPUTS   ] = "inputs",

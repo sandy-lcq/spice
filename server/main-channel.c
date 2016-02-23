@@ -57,7 +57,7 @@
 
 #define CLIENT_CONNECTIVITY_TIMEOUT (MSEC_PER_SEC * 30)
 
-static uint8_t zero_page[ZERO_BUF_SIZE] = {0};
+static const uint8_t zero_page[ZERO_BUF_SIZE] = {0};
 
 enum {
     PIPE_ITEM_TYPE_MAIN_CHANNELS_LIST = PIPE_ITEM_TYPE_CHANNEL_BASE,
