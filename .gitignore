@@ -27,6 +27,7 @@ Makefile
 Makefile.in
 spice-server.pc
 stamp-h1
+test-driver
 INSTALL
 .version
 .tarball-version
