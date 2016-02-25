@@ -78,10 +78,10 @@ static void red_qxl_set_display_peer(RedChannel *channel, RedClient *client,
                                      uint32_t *caps)
 {
     RedWorkerMessageDisplayConnect payload = {0,};
-    QXLState *qxl_state;
+    Dispatcher *dispatcher;
 
     spice_debug("%s", "");
-    qxl_state = (QXLState *)channel->data;
+    dispatcher = (Dispatcher *)channel->data;
     payload.client = client;
     payload.stream = stream;
     payload.migration = migration;
@@ -93,7 +93,7 @@ static void red_qxl_set_display_peer(RedChannel *channel, RedClient *client,
     memcpy(payload.common_caps, common_caps, sizeof(uint32_t)*num_common_caps);
     memcpy(payload.caps, caps, sizeof(uint32_t)*num_caps);
 
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_DISPLAY_CONNECT,
                             &payload);
 }
@@ -101,20 +101,20 @@ static void red_qxl_set_display_peer(RedChannel *channel, RedClient *client,
 static void red_qxl_disconnect_display_peer(RedChannelClient *rcc)
 {
     RedWorkerMessageDisplayDisconnect payload;
-    QXLState *qxl_state;
+    Dispatcher *dispatcher;
 
     if (!rcc->channel) {
         return;
     }
 
-    qxl_state = (QXLState *)rcc->channel->data;
+    dispatcher = (Dispatcher *)rcc->channel->data;
 
     spice_printerr("");
     payload.rcc = rcc;
 
     // TODO: we turned it to be sync, due to client_destroy . Should we support async? - for this we will need ref count
     // for channels
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_DISPLAY_DISCONNECT,
                             &payload);
 }
@@ -122,14 +122,14 @@ static void red_qxl_disconnect_display_peer(RedChannelClient *rcc)
 static void red_qxl_display_migrate(RedChannelClient *rcc)
 {
     RedWorkerMessageDisplayMigrate payload;
-    QXLState *qxl_state;
+    Dispatcher *dispatcher;
     if (!rcc->channel) {
         return;
     }
-    qxl_state = (QXLState *)rcc->channel->data;
+    dispatcher = (Dispatcher *)rcc->channel->data;
     spice_printerr("channel type %u id %u", rcc->channel->type, rcc->channel->id);
     payload.rcc = rcc;
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_DISPLAY_MIGRATE,
                             &payload);
 }
@@ -140,7 +140,7 @@ static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, Reds
                                     uint32_t *caps)
 {
     RedWorkerMessageCursorConnect payload = {0,};
-    QXLState *qxl_state = (QXLState *)channel->data;
+    Dispatcher *dispatcher = (Dispatcher *)channel->data;
     spice_printerr("");
     payload.client = client;
     payload.stream = stream;
@@ -153,7 +153,7 @@ static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, Reds
     memcpy(payload.common_caps, common_caps, sizeof(uint32_t)*num_common_caps);
     memcpy(payload.caps, caps, sizeof(uint32_t)*num_caps);
 
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_CURSOR_CONNECT,
                             &payload);
 }
@@ -161,17 +161,17 @@ static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, Reds
 static void red_qxl_disconnect_cursor_peer(RedChannelClient *rcc)
 {
     RedWorkerMessageCursorDisconnect payload;
-    QXLState *qxl_state;
+    Dispatcher *dispatcher;
 
     if (!rcc->channel) {
         return;
     }
 
-    qxl_state = (QXLState *)rcc->channel->data;
+    dispatcher = (Dispatcher *)rcc->channel->data;
     spice_printerr("");
     payload.rcc = rcc;
 
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_CURSOR_DISCONNECT,
                             &payload);
 }
@@ -179,15 +179,15 @@ static void red_qxl_disconnect_cursor_peer(RedChannelClient *rcc)
 static void red_qxl_cursor_migrate(RedChannelClient *rcc)
 {
     RedWorkerMessageCursorMigrate payload;
-    QXLState *qxl_state;
+    Dispatcher *dispatcher;
 
     if (!rcc->channel) {
         return;
     }
-    qxl_state = (QXLState *)rcc->channel->data;
+    dispatcher = (Dispatcher *)rcc->channel->data;
     spice_printerr("channel type %u id %u", rcc->channel->type, rcc->channel->id);
     payload.rcc = rcc;
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_CURSOR_MIGRATE,
                             &payload);
 }
@@ -991,14 +991,14 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     client_cbs.connect = red_qxl_set_cursor_peer;
     client_cbs.disconnect = red_qxl_disconnect_cursor_peer;
     client_cbs.migrate = red_qxl_cursor_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs, qxl_state);
+    red_channel_register_client_cbs(channel, &client_cbs, &qxl_state->dispatcher);
     reds_register_channel(reds, channel);
 
     channel = red_worker_get_display_channel(worker);
     client_cbs.connect = red_qxl_set_display_peer;
     client_cbs.disconnect = red_qxl_disconnect_display_peer;
     client_cbs.migrate = red_qxl_display_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs, qxl_state);
+    red_channel_register_client_cbs(channel, &client_cbs, &qxl_state->dispatcher);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
