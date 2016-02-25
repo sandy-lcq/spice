@@ -974,9 +974,10 @@ void red_qxl_init(QXLInstance *qxl)
     qxl_state->base.loadvm_commands = qxl_worker_loadvm_commands;
 
     qxl_state->max_monitors = UINT_MAX;
+    qxl->st = qxl_state;
 
     // TODO: reference and free
-    RedWorker *worker = red_worker_new(qxl, qxl_state);
+    RedWorker *worker = red_worker_new(qxl);
 
     // TODO: move to their respective channel files
     channel = red_worker_get_cursor_channel(worker);
@@ -999,8 +1000,6 @@ void red_qxl_init(QXLInstance *qxl)
     reds_register_channel(reds, channel);
 
     red_worker_run(worker);
-
-    qxl->st = qxl_state;
 }
 
 struct Dispatcher *red_qxl_get_dispatcher(QXLState *qxl_state)

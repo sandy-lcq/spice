@@ -60,7 +60,6 @@
 struct RedWorker {
     pthread_t thread;
     QXLInstance *qxl;
-    QXLState *qxl_state;
     SpiceWatch *dispatch_watch;
     int running;
     SpiceCoreInterfaceInternal core;
@@ -824,7 +823,7 @@ static void handle_dev_wakeup(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     stat_inc_counter(reds, worker->wakeup_counter, 1);
-    red_qxl_clear_pending(worker->qxl_state, RED_DISPATCHER_PENDING_WAKEUP);
+    red_qxl_clear_pending(worker->qxl->st, RED_DISPATCHER_PENDING_WAKEUP);
 }
 
 static void handle_dev_oom(void *opaque, void *payload)
@@ -854,7 +853,7 @@ static void handle_dev_oom(void *opaque, void *payload)
                 display->glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
-    red_qxl_clear_pending(worker->qxl_state, RED_DISPATCHER_PENDING_OOM);
+    red_qxl_clear_pending(worker->qxl->st, RED_DISPATCHER_PENDING_OOM);
 }
 
 static void handle_dev_reset_cursor(void *opaque, void *payload)
@@ -1195,7 +1194,7 @@ static void worker_handle_dispatcher_async_done(void *opaque,
     RedWorkerMessageAsync *msg_async = payload;
 
     spice_debug(NULL);
-    red_qxl_async_complete(worker->qxl_state, msg_async->cmd);
+    red_qxl_async_complete(worker->qxl->st, msg_async->cmd);
 }
 
 static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *payload)
@@ -1463,7 +1462,7 @@ static GSourceFuncs worker_source_funcs = {
     .dispatch = worker_source_dispatch,
 };
 
-RedWorker* red_worker_new(QXLInstance *qxl, QXLState *qxl_state)
+RedWorker* red_worker_new(QXLInstance *qxl)
 {
     QXLDevInitInfo init_info;
     RedWorker *worker;
@@ -1488,10 +1487,9 @@ RedWorker* red_worker_new(QXLInstance *qxl, QXLState *qxl_state)
             spice_error("failed to write replay header");
         }
     }
-    dispatcher = red_qxl_get_dispatcher(qxl_state);
+    dispatcher = red_qxl_get_dispatcher(qxl->st);
     dispatcher_set_opaque(dispatcher, worker);
 
-    worker->qxl_state = qxl_state;
     worker->qxl = qxl;
     register_callbacks(dispatcher);
     if (worker->record_fd) {
