@@ -46,7 +46,7 @@ struct AsyncCommand {
 };
 
 struct QXLState {
-    QXLWorker base;
+    QXLWorker qxl_worker;
     QXLInstance *qxl;
     Dispatcher dispatcher;
     uint32_t pending;
@@ -257,7 +257,8 @@ static void qxl_worker_update_area(QXLWorker *qxl_worker, uint32_t surface_id,
                                    QXLRect *qxl_area, QXLRect *qxl_dirty_rects,
                                    uint32_t num_dirty_rects, uint32_t clear_dirty_region)
 {
-    red_qxl_update_area((QXLState*)qxl_worker, surface_id, qxl_area,
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_update_area(qxl_state, surface_id, qxl_area,
                         qxl_dirty_rects, num_dirty_rects, clear_dirty_region);
 }
 
@@ -273,7 +274,8 @@ static void red_qxl_add_memslot(QXLState *qxl_state, QXLDevMemSlot *mem_slot)
 
 static void qxl_worker_add_memslot(QXLWorker *qxl_worker, QXLDevMemSlot *mem_slot)
 {
-    red_qxl_add_memslot((QXLState*)qxl_worker, mem_slot);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_add_memslot(qxl_state, mem_slot);
 }
 
 static void red_qxl_add_memslot_async(QXLState *qxl_state, QXLDevMemSlot *mem_slot, uint64_t cookie)
@@ -298,7 +300,8 @@ static void red_qxl_del_memslot(QXLState *qxl_state, uint32_t slot_group_id, uin
 
 static void qxl_worker_del_memslot(QXLWorker *qxl_worker, uint32_t slot_group_id, uint32_t slot_id)
 {
-    red_qxl_del_memslot((QXLState*)qxl_worker, slot_group_id, slot_id);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_del_memslot(qxl_state, slot_group_id, slot_id);
 }
 
 static void red_qxl_destroy_surfaces(QXLState *qxl_state)
@@ -312,7 +315,8 @@ static void red_qxl_destroy_surfaces(QXLState *qxl_state)
 
 static void qxl_worker_destroy_surfaces(QXLWorker *qxl_worker)
 {
-    red_qxl_destroy_surfaces((QXLState*)qxl_worker);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_destroy_surfaces(qxl_state);
 }
 
 static void red_qxl_destroy_surfaces_async(QXLState *qxl_state, uint64_t cookie)
@@ -371,7 +375,8 @@ red_qxl_destroy_primary_surface(QXLState *qxl_state,
 
 static void qxl_worker_destroy_primary_surface(QXLWorker *qxl_worker, uint32_t surface_id)
 {
-    red_qxl_destroy_primary_surface((QXLState*)qxl_worker, surface_id, 0, 0);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_destroy_primary_surface(qxl_state, surface_id, 0, 0);
 }
 
 static void red_qxl_create_primary_surface_complete(QXLState *qxl_state)
@@ -430,7 +435,8 @@ red_qxl_create_primary_surface(QXLState *qxl_state, uint32_t surface_id,
 static void qxl_worker_create_primary_surface(QXLWorker *qxl_worker, uint32_t surface_id,
                                       QXLDevSurfaceCreate *surface)
 {
-    red_qxl_create_primary_surface((QXLState*)qxl_worker, surface_id, surface, 0, 0);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_create_primary_surface(qxl_state, surface_id, surface, 0, 0);
 }
 
 static void red_qxl_reset_image_cache(QXLState *qxl_state)
@@ -444,7 +450,8 @@ static void red_qxl_reset_image_cache(QXLState *qxl_state)
 
 static void qxl_worker_reset_image_cache(QXLWorker *qxl_worker)
 {
-    red_qxl_reset_image_cache((QXLState*)qxl_worker);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_reset_image_cache(qxl_state);
 }
 
 static void red_qxl_reset_cursor(QXLState *qxl_state)
@@ -458,7 +465,8 @@ static void red_qxl_reset_cursor(QXLState *qxl_state)
 
 static void qxl_worker_reset_cursor(QXLWorker *qxl_worker)
 {
-    red_qxl_reset_cursor((QXLState*)qxl_worker);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_reset_cursor(qxl_state);
 }
 
 static void red_qxl_destroy_surface_wait_sync(QXLState *qxl_state,
@@ -497,7 +505,8 @@ static void red_qxl_destroy_surface_wait(QXLState *qxl_state,
 
 static void qxl_worker_destroy_surface_wait(QXLWorker *qxl_worker, uint32_t surface_id)
 {
-    red_qxl_destroy_surface_wait((QXLState*)qxl_worker, surface_id, 0, 0);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_destroy_surface_wait(qxl_state, surface_id, 0, 0);
 }
 
 static void red_qxl_reset_memslots(QXLState *qxl_state)
@@ -511,7 +520,8 @@ static void red_qxl_reset_memslots(QXLState *qxl_state)
 
 static void qxl_worker_reset_memslots(QXLWorker *qxl_worker)
 {
-    red_qxl_reset_memslots((QXLState*)qxl_worker);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_reset_memslots(qxl_state);
 }
 
 static bool red_qxl_set_pending(QXLState *qxl_state, int pending)
@@ -539,7 +549,8 @@ static void red_qxl_wakeup(QXLState *qxl_state)
 
 static void qxl_worker_wakeup(QXLWorker *qxl_worker)
 {
-    red_qxl_wakeup((QXLState*)qxl_worker);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_wakeup(qxl_state);
 }
 
 static void red_qxl_oom(QXLState *qxl_state)
@@ -556,7 +567,8 @@ static void red_qxl_oom(QXLState *qxl_state)
 
 static void qxl_worker_oom(QXLWorker *qxl_worker)
 {
-    red_qxl_oom((QXLState*)qxl_worker);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_oom(qxl_state);
 }
 
 void red_qxl_start(QXLInstance *qxl)
@@ -570,7 +582,7 @@ void red_qxl_start(QXLInstance *qxl)
 
 static void qxl_worker_start(QXLWorker *qxl_worker)
 {
-    QXLState *state = (QXLState *)qxl_worker;
+    QXLState *state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
     red_qxl_start(state->qxl);
 }
 
@@ -619,7 +631,7 @@ void red_qxl_stop(QXLInstance *qxl)
 
 static void qxl_worker_stop(QXLWorker *qxl_worker)
 {
-    QXLState *state = (QXLState *)qxl_worker;
+    QXLState *state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
     red_qxl_stop(state->qxl);
 }
 
@@ -641,7 +653,8 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
                                        struct QXLCommandExt *ext,
                                        uint32_t count)
 {
-    red_qxl_loadvm_commands((QXLState*)qxl_worker, ext, count);
+    QXLState *qxl_state = SPICE_CONTAINEROF(qxl_worker, QXLState, qxl_worker);
+    red_qxl_loadvm_commands(qxl_state, ext, count);
 }
 
 void red_qxl_set_mm_time(QXLInstance *qxl, uint32_t mm_time)
@@ -653,7 +666,7 @@ void red_qxl_set_mm_time(QXLInstance *qxl, uint32_t mm_time)
 void red_qxl_attach_worker(QXLInstance *qxl)
 {
     QXLInterface *interface = qxl_get_interface(qxl);
-    interface->attache_worker(qxl, &qxl->st->base);
+    interface->attache_worker(qxl, &qxl->st->qxl_worker);
 }
 
 void red_qxl_set_compression_level(QXLInstance *qxl, int level)
@@ -961,24 +974,24 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     pthread_mutex_init(&qxl_state->scanout_mutex, NULL);
     qxl_state->scanout.drm_dma_buf_fd = -1;
     dispatcher_init(&qxl_state->dispatcher, RED_WORKER_MESSAGE_COUNT, NULL);
-    qxl_state->base.major_version = SPICE_INTERFACE_QXL_MAJOR;
-    qxl_state->base.minor_version = SPICE_INTERFACE_QXL_MINOR;
-    qxl_state->base.wakeup = qxl_worker_wakeup;
-    qxl_state->base.oom = qxl_worker_oom;
-    qxl_state->base.start = qxl_worker_start;
-    qxl_state->base.stop = qxl_worker_stop;
-    qxl_state->base.update_area = qxl_worker_update_area;
-    qxl_state->base.add_memslot = qxl_worker_add_memslot;
-    qxl_state->base.del_memslot = qxl_worker_del_memslot;
-    qxl_state->base.reset_memslots = qxl_worker_reset_memslots;
-    qxl_state->base.destroy_surfaces = qxl_worker_destroy_surfaces;
-    qxl_state->base.create_primary_surface = qxl_worker_create_primary_surface;
-    qxl_state->base.destroy_primary_surface = qxl_worker_destroy_primary_surface;
+    qxl_state->qxl_worker.major_version = SPICE_INTERFACE_QXL_MAJOR;
+    qxl_state->qxl_worker.minor_version = SPICE_INTERFACE_QXL_MINOR;
+    qxl_state->qxl_worker.wakeup = qxl_worker_wakeup;
+    qxl_state->qxl_worker.oom = qxl_worker_oom;
+    qxl_state->qxl_worker.start = qxl_worker_start;
+    qxl_state->qxl_worker.stop = qxl_worker_stop;
+    qxl_state->qxl_worker.update_area = qxl_worker_update_area;
+    qxl_state->qxl_worker.add_memslot = qxl_worker_add_memslot;
+    qxl_state->qxl_worker.del_memslot = qxl_worker_del_memslot;
+    qxl_state->qxl_worker.reset_memslots = qxl_worker_reset_memslots;
+    qxl_state->qxl_worker.destroy_surfaces = qxl_worker_destroy_surfaces;
+    qxl_state->qxl_worker.create_primary_surface = qxl_worker_create_primary_surface;
+    qxl_state->qxl_worker.destroy_primary_surface = qxl_worker_destroy_primary_surface;
 
-    qxl_state->base.reset_image_cache = qxl_worker_reset_image_cache;
-    qxl_state->base.reset_cursor = qxl_worker_reset_cursor;
-    qxl_state->base.destroy_surface_wait = qxl_worker_destroy_surface_wait;
-    qxl_state->base.loadvm_commands = qxl_worker_loadvm_commands;
+    qxl_state->qxl_worker.reset_image_cache = qxl_worker_reset_image_cache;
+    qxl_state->qxl_worker.reset_cursor = qxl_worker_reset_cursor;
+    qxl_state->qxl_worker.destroy_surface_wait = qxl_worker_destroy_surface_wait;
+    qxl_state->qxl_worker.loadvm_commands = qxl_worker_loadvm_commands;
 
     qxl_state->max_monitors = UINT_MAX;
     qxl->st = qxl_state;
