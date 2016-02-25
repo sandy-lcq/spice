@@ -1392,9 +1392,9 @@ static void register_callbacks(Dispatcher *dispatcher)
 
 static void handle_dev_input(int fd, int event, void *opaque)
 {
-    RedWorker *worker = opaque;
+    Dispatcher *dispatcher = opaque;
 
-    dispatcher_handle_recv_read(red_dispatcher_get_dispatcher(worker->red_dispatcher));
+    dispatcher_handle_recv_read(dispatcher);
 }
 
 typedef struct RedWorkerSource {
@@ -1511,7 +1511,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
 
     worker->dispatch_watch =
         worker->core.watch_add(&worker->core, dispatcher_get_recv_fd(dispatcher),
-                               SPICE_WATCH_EVENT_READ, handle_dev_input, worker);
+                               SPICE_WATCH_EVENT_READ, handle_dev_input, dispatcher);
     spice_assert(worker->dispatch_watch != NULL);
 
     GSource *source = g_source_new(&worker_source_funcs, sizeof(RedWorkerSource));
