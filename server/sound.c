@@ -33,7 +33,7 @@
 #include "red-common.h"
 #include "main-channel.h"
 #include "reds.h"
-#include "red-dispatcher.h"
+#include "red-qxl.h"
 #include "sound.h"
 #include "common/snd_codec.h"
 #include "demarshallers.h"

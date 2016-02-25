@@ -93,8 +93,8 @@ libserver_la_SOURCES =				\
 	red-common.h				\
 	dispatcher.c				\
 	dispatcher.h				\
-	red-dispatcher.c			\
-	red-dispatcher.h			\
+	red-qxl.c				\
+	red-qxl.h				\
 	main-dispatcher.c			\
 	main-dispatcher.h			\
 	migration-protocol.h		\

@@ -19,7 +19,7 @@
 #define _H_REDWORKER
 
 #include "red-common.h"
-#include "red-dispatcher.h"
+#include "red-qxl.h"
 #include "red-parse-qxl.h"
 
 typedef struct RedWorker RedWorker;

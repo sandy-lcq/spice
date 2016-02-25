@@ -37,7 +37,7 @@
 #include "dispatcher.h"
 #include "red-parse-qxl.h"
 
-#include "red-dispatcher.h"
+#include "red-qxl.h"
 
 
 struct AsyncCommand {

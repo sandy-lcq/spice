@@ -25,7 +25,7 @@
 #include "red-common.h"
 #include "agent-msg-filter.h"
 #include "reds.h"
-#include "red-dispatcher.h"
+#include "red-qxl.h"
 
 void agent_msg_filter_init(struct AgentMsgFilter *filter,
                            gboolean copy_paste, gboolean file_xfer,
