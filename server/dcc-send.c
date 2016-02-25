@@ -2306,18 +2306,13 @@ static void marshall_gl_scanout(RedChannelClient *rcc,
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     QXLInstance* qxl = display_channel->common.qxl;
-    SpiceMsgDisplayGlScanoutUnix *so = &qxl->st->scanout;
 
-    pthread_mutex_lock(&qxl->st->scanout_mutex);
-
-    if (so->drm_dma_buf_fd == -1)
-        goto end;
-
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_GL_SCANOUT_UNIX, NULL);
-    spice_marshall_msg_display_gl_scanout_unix(m, so);
-
-end:
-    pthread_mutex_unlock(&qxl->st->scanout_mutex);
+    SpiceMsgDisplayGlScanoutUnix *so = red_qxl_get_gl_scanout(qxl->st);
+    if (so != NULL) {
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_GL_SCANOUT_UNIX, NULL);
+        spice_marshall_msg_display_gl_scanout_unix(m, so);
+    }
+    red_qxl_put_gl_scanout(qxl->st, so);
 }
 
 static void marshall_gl_draw(RedChannelClient *rcc,

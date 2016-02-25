@@ -268,10 +268,10 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 
     surface->context.canvas->ops->destroy(surface->context.canvas);
     if (surface->create.info) {
-        qxl->st->qif->release_resource(qxl, surface->create);
+        qxl_get_interface(qxl)->release_resource(qxl, surface->create);
     }
     if (surface->destroy.info) {
-        qxl->st->qif->release_resource(qxl, surface->destroy);
+        qxl_get_interface(qxl)->release_resource(qxl, surface->destroy);
     }
 
     region_destroy(&surface->draw_dirty_region);
@@ -2162,9 +2162,7 @@ static void set_gl_draw_async_count(DisplayChannel *display, int num)
     display->gl_draw_async_count = num;
 
     if (num == 0) {
-        struct AsyncCommand *async = qxl->st->gl_draw_async;
-        qxl->st->gl_draw_async = NULL;
-        red_qxl_async_complete(qxl->st->dispatcher, async);
+        red_qxl_gl_draw_async_complete(qxl->st);
     }
 }
 

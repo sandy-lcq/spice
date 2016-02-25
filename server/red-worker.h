@@ -90,7 +90,7 @@ static inline void red_pipes_add_verb(RedChannel *channel, uint16_t verb)
     }
 }
 
-RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher);
+RedWorker* red_worker_new(QXLInstance *qxl, QXLState *qxl_state);
 bool       red_worker_run(RedWorker *worker);
 RedChannel* red_worker_get_cursor_channel(RedWorker *worker);
 RedChannel* red_worker_get_display_channel(RedWorker *worker);

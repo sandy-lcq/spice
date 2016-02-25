@@ -20,27 +20,30 @@
 
 #include "red-channel.h"
 
-typedef struct RedDispatcher RedDispatcher;
+typedef struct QXLState QXLState;
 
 typedef struct AsyncCommand AsyncCommand;
 
 void red_qxl_init(QXLInstance *qxl);
 
-void red_qxl_set_mm_time(RedDispatcher *dispatcher, uint32_t);
-void red_qxl_on_ic_change(RedDispatcher *dispatcher, SpiceImageCompression ic);
-void red_qxl_on_sv_change(RedDispatcher *dispatcher, int sv);
-void red_qxl_set_mouse_mode(RedDispatcher *dispatcher, uint32_t mode);
-void red_qxl_attach_worker(RedDispatcher *dispatcher);
-void red_qxl_set_compression_level(RedDispatcher *dispatcher, int level);
-void red_qxl_stop(RedDispatcher *dispatcher);
-void red_qxl_start(RedDispatcher *dispatcher);
-uint32_t red_qxl_get_ram_size(RedDispatcher *dispatcher);
-void red_qxl_async_complete(struct RedDispatcher *, AsyncCommand *);
-struct Dispatcher *red_qxl_get_dispatcher(struct RedDispatcher *);
-gboolean red_qxl_use_client_monitors_config(RedDispatcher *dispatcher);
-gboolean red_qxl_client_monitors_config(RedDispatcher *dispatcher, VDAgentMonitorsConfig *monitors_config);
-gboolean red_qxl_get_primary_active(RedDispatcher *dispatcher);
-gboolean red_qxl_get_allow_client_mouse(RedDispatcher *dispatcher, gint *x_res, gint *y_res);
+void red_qxl_set_mm_time(QXLState *qxl_state, uint32_t);
+void red_qxl_on_ic_change(QXLState *qxl_state, SpiceImageCompression ic);
+void red_qxl_on_sv_change(QXLState *qxl_state, int sv);
+void red_qxl_set_mouse_mode(QXLState *qxl_state, uint32_t mode);
+void red_qxl_attach_worker(QXLState *qxl_state);
+void red_qxl_set_compression_level(QXLState *qxl_state, int level);
+void red_qxl_stop(QXLState *qxl_state);
+void red_qxl_start(QXLState *qxl_state);
+uint32_t red_qxl_get_ram_size(QXLState *qxl_state);
+void red_qxl_async_complete(QXLState *qxl_state, AsyncCommand *cmd);
+struct Dispatcher *red_qxl_get_dispatcher(QXLState *qxl_state);
+gboolean red_qxl_use_client_monitors_config(QXLState *qxl_state);
+gboolean red_qxl_client_monitors_config(QXLState *qxl_state, VDAgentMonitorsConfig *monitors_config);
+gboolean red_qxl_get_primary_active(QXLState *qxl_state);
+gboolean red_qxl_get_allow_client_mouse(QXLState *qxl_state, gint *x_res, gint *y_res);
+SpiceMsgDisplayGlScanoutUnix *red_qxl_get_gl_scanout(QXLState *qxl_state);
+void red_qxl_put_gl_scanout(QXLState *qxl_state, SpiceMsgDisplayGlScanoutUnix *scanout);
+void red_qxl_gl_draw_async_complete(QXLState *qxl);
 
 typedef uint32_t RedWorkerMessage;
 
@@ -267,6 +270,6 @@ enum {
     RED_DISPATCHER_PENDING_OOM,
 };
 
-void red_qxl_clear_pending(RedDispatcher *red_dispatcher, int pending);
+void red_qxl_clear_pending(QXLState *qxl_state, int pending);
 
 #endif

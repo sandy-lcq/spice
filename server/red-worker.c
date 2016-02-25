@@ -60,7 +60,7 @@
 struct RedWorker {
     pthread_t thread;
     QXLInstance *qxl;
-    RedDispatcher *red_dispatcher;
+    QXLState *qxl_state;
     SpiceWatch *dispatch_watch;
     int running;
     SpiceCoreInterfaceInternal core;
@@ -127,8 +127,8 @@ void red_drawable_unref(RedDrawable *red_drawable)
     if (--red_drawable->refs) {
         return;
     }
-    red_drawable->qxl->st->qif->release_resource(red_drawable->qxl,
-                                                 red_drawable->release_info_ext);
+    qxl_get_interface(red_drawable->qxl)->release_resource(red_drawable->qxl,
+                                                           red_drawable->release_info_ext);
     red_put_drawable(red_drawable);
     free(red_drawable);
 }
@@ -145,12 +145,12 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
 
     *ring_is_empty = FALSE;
     while (red_channel_max_pipe_size(RED_CHANNEL(worker->cursor_channel)) <= MAX_PIPE_SIZE) {
-        if (!worker->qxl->st->qif->get_cursor_command(worker->qxl, &ext_cmd)) {
+        if (!qxl_get_interface(worker->qxl)->get_cursor_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->cursor_poll_tries < CMD_RING_POLL_RETRIES) {
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
             } else if (worker->cursor_poll_tries == CMD_RING_POLL_RETRIES &&
-                       !worker->qxl->st->qif->req_cursor_notification(worker->qxl)) {
+                       !qxl_get_interface(worker->qxl)->req_cursor_notification(worker->qxl)) {
                 continue;
             }
             worker->cursor_poll_tries++;
@@ -203,12 +203,12 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
     worker->process_display_generation++;
     *ring_is_empty = FALSE;
     while (red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) <= MAX_PIPE_SIZE) {
-        if (!worker->qxl->st->qif->get_command(worker->qxl, &ext_cmd)) {
+        if (!qxl_get_interface(worker->qxl)->get_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->display_poll_tries < CMD_RING_POLL_RETRIES) {
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
             } else if (worker->display_poll_tries == CMD_RING_POLL_RETRIES &&
-                       !worker->qxl->st->qif->req_cmd_notification(worker->qxl)) {
+                       !qxl_get_interface(worker->qxl)->req_cmd_notification(worker->qxl)) {
                 continue;
             }
             worker->display_poll_tries++;
@@ -245,9 +245,9 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                 spice_warning("Invalid surface in QXL_CMD_UPDATE");
             } else {
                 display_channel_draw(worker->display_channel, &update.area, update.surface_id);
-                worker->qxl->st->qif->notify_update(worker->qxl, update.update_id);
+                qxl_get_interface(worker->qxl)->notify_update(worker->qxl, update.update_id);
             }
-            worker->qxl->st->qif->release_resource(worker->qxl, update.release_info_ext);
+            qxl_get_interface(worker->qxl)->release_resource(worker->qxl, update.release_info_ext);
             red_put_update_cmd(&update);
             break;
         }
@@ -262,7 +262,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             /* alert: accessing message.data is insecure */
             spice_warning("MESSAGE: %s", message.data);
 #endif
-            worker->qxl->st->qif->release_resource(worker->qxl, message.release_info_ext);
+            qxl_get_interface(worker->qxl)->release_resource(worker->qxl, message.release_info_ext);
             red_put_message(&message);
             break;
         }
@@ -507,11 +507,12 @@ static void guest_set_client_capabilities(RedWorker *worker)
         SPICE_DISPLAY_CAP_COMPOSITE,
         SPICE_DISPLAY_CAP_A8_SURFACE,
     };
+    QXLInterface *qif = qxl_get_interface(worker->qxl);
 
-    if (worker->qxl->st->qif->base.major_version < 3 ||
-        (worker->qxl->st->qif->base.major_version == 3 &&
-        worker->qxl->st->qif->base.minor_version < 2) ||
-        !worker->qxl->st->qif->set_client_capabilities) {
+    if (qif->base.major_version < 3 ||
+        (qif->base.major_version == 3 &&
+        qif->base.minor_version < 2) ||
+        !qif->set_client_capabilities) {
         return;
     }
 #define SET_CAP(a,c)                                                    \
@@ -525,7 +526,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
     }
     if ((worker->display_channel == NULL) ||
         (RED_CHANNEL(worker->display_channel)->clients_num == 0)) {
-        worker->qxl->st->qif->set_client_capabilities(worker->qxl, FALSE, caps);
+        qif->set_client_capabilities(worker->qxl, FALSE, caps);
     } else {
         // Take least common denominator
         for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
@@ -538,7 +539,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
                     CLEAR_CAP(caps, caps_available[i]);
             }
         }
-        worker->qxl->st->qif->set_client_capabilities(worker->qxl, TRUE, caps);
+        qif->set_client_capabilities(worker->qxl, TRUE, caps);
     }
 }
 
@@ -577,15 +578,15 @@ static void handle_dev_update_async(void *opaque, void *payload)
     uint32_t num_dirty_rects = 0;
 
     spice_return_if_fail(worker->running);
-    spice_return_if_fail(worker->qxl->st->qif->update_area_complete);
+    spice_return_if_fail(qxl_get_interface(worker->qxl)->update_area_complete);
 
     flush_display_commands(worker);
     display_channel_update(worker->display_channel,
                            msg->surface_id, &msg->qxl_area, msg->clear_dirty_region,
                            &qxl_dirty_rects, &num_dirty_rects);
 
-    worker->qxl->st->qif->update_area_complete(worker->qxl, msg->surface_id,
-                                                qxl_dirty_rects, num_dirty_rects);
+    qxl_get_interface(worker->qxl)->update_area_complete(worker->qxl, msg->surface_id,
+                                                         qxl_dirty_rects, num_dirty_rects);
     free(qxl_dirty_rects);
 }
 
@@ -823,7 +824,7 @@ static void handle_dev_wakeup(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     stat_inc_counter(reds, worker->wakeup_counter, 1);
-    red_qxl_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_WAKEUP);
+    red_qxl_clear_pending(worker->qxl_state, RED_DISPATCHER_PENDING_WAKEUP);
 }
 
 static void handle_dev_oom(void *opaque, void *payload)
@@ -844,16 +845,16 @@ static void handle_dev_oom(void *opaque, void *payload)
     while (red_process_display(worker, &ring_is_empty)) {
         red_channel_push(display_red_channel);
     }
-    if (worker->qxl->st->qif->flush_resources(worker->qxl) == 0) {
+    if (qxl_get_interface(worker->qxl)->flush_resources(worker->qxl) == 0) {
         display_channel_free_some(worker->display_channel);
-        worker->qxl->st->qif->flush_resources(worker->qxl);
+        qxl_get_interface(worker->qxl)->flush_resources(worker->qxl);
     }
     spice_debug("OOM2 #draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
                 display->glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
-    red_qxl_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_OOM);
+    red_qxl_clear_pending(worker->qxl_state, RED_DISPATCHER_PENDING_OOM);
 }
 
 static void handle_dev_reset_cursor(void *opaque, void *payload)
@@ -1194,7 +1195,7 @@ static void worker_handle_dispatcher_async_done(void *opaque,
     RedWorkerMessageAsync *msg_async = payload;
 
     spice_debug(NULL);
-    red_qxl_async_complete(worker->red_dispatcher, msg_async->cmd);
+    red_qxl_async_complete(worker->qxl_state, msg_async->cmd);
 }
 
 static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *payload)
@@ -1462,14 +1463,14 @@ static GSourceFuncs worker_source_funcs = {
     .dispatch = worker_source_dispatch,
 };
 
-RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
+RedWorker* red_worker_new(QXLInstance *qxl, QXLState *qxl_state)
 {
     QXLDevInitInfo init_info;
     RedWorker *worker;
     Dispatcher *dispatcher;
     const char *record_filename;
 
-    qxl->st->qif->get_init_info(qxl, &init_info);
+    qxl_get_interface(qxl)->get_init_info(qxl, &init_info);
 
     worker = spice_new0(RedWorker, 1);
     worker->core = event_loop_core;
@@ -1487,10 +1488,10 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
             spice_error("failed to write replay header");
         }
     }
-    dispatcher = red_qxl_get_dispatcher(red_dispatcher);
+    dispatcher = red_qxl_get_dispatcher(qxl_state);
     dispatcher_set_opaque(dispatcher, worker);
 
-    worker->red_dispatcher = red_dispatcher;
+    worker->qxl_state = qxl_state;
     worker->qxl = qxl;
     register_callbacks(dispatcher);
     if (worker->record_fd) {
