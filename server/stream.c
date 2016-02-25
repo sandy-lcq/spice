@@ -84,8 +84,8 @@ void stream_stop(DisplayChannel *display, Stream *stream)
 
             if (stream_bit_rate > dcc->streams_max_bit_rate) {
                 spice_debug("old max-bit-rate=%.2f new=%.2f",
-                dcc->streams_max_bit_rate / 8.0 / 1024.0 / 1024.0,
-                stream_bit_rate / 8.0 / 1024.0 / 1024.0);
+                            dcc->streams_max_bit_rate / 8.0 / 1024.0 / 1024.0,
+                            stream_bit_rate / 8.0 / 1024.0 / 1024.0);
                 dcc->streams_max_bit_rate = stream_bit_rate;
             }
         }
