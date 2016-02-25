@@ -2164,7 +2164,7 @@ static void set_gl_draw_async_count(DisplayChannel *display, int num)
     if (num == 0) {
         struct AsyncCommand *async = qxl->st->gl_draw_async;
         qxl->st->gl_draw_async = NULL;
-        red_dispatcher_async_complete(qxl->st->dispatcher, async);
+        red_qxl_async_complete(qxl->st->dispatcher, async);
     }
 }
 

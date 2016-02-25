@@ -571,7 +571,7 @@ static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
     reds->mouse_mode = mode;
 
     for (l = reds->dispatchers; l != NULL; l = l->next)
-        red_dispatcher_set_mouse_mode(l->data, mode);
+        red_qxl_set_mouse_mode(l->data, mode);
 
     main_channel_push_mouse_mode(reds->main_channel, reds->mouse_mode, reds->is_client_mouse_allowed);
 }
@@ -3213,7 +3213,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         pthread_mutex_init(&qxl->st->scanout_mutex, NULL);
         qxl->st->scanout.drm_dma_buf_fd = -1;
         qxl->st->qif = SPICE_CONTAINEROF(interface, QXLInterface, base);
-        red_dispatcher_init(qxl);
+        red_qxl_init(qxl);
         dispatcher = qxl->st->dispatcher;
         reds->dispatchers = g_list_prepend(reds->dispatchers, dispatcher);
 
@@ -3222,8 +3222,8 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
          * this callback is called. This as clients assume they can start the
          * dispatchers. Also note that this should be the first callback to
          * be called. */
-        red_dispatcher_attach_worker(dispatcher);
-        red_dispatcher_set_compression_level(dispatcher, calc_compression_level(reds));
+        red_qxl_attach_worker(dispatcher);
+        red_qxl_set_compression_level(dispatcher, calc_compression_level(reds));
     } else if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
         SpiceTabletInstance *tablet = SPICE_CONTAINEROF(sin, SpiceTabletInstance, base);
         spice_info("SPICE_INTERFACE_TABLET");
@@ -4157,8 +4157,8 @@ void reds_update_client_mouse_allowed(RedsState *reds)
         for (l = reds->dispatchers; l != NULL && allow_now; l = l->next) {
 
             RedDispatcher *now = l->data;
-            if (red_dispatcher_get_primary_active(now)) {
-                allow_now = red_dispatcher_get_allow_client_mouse(now, &x_res, &y_res);
+            if (red_qxl_get_primary_active(now)) {
+                allow_now = red_qxl_get_allow_client_mouse(now, &x_res, &y_res);
                 break;
             }
         }
@@ -4181,7 +4181,7 @@ gboolean reds_use_client_monitors_config(RedsState *reds)
     for (l = reds->dispatchers; l != NULL ; l = l->next) {
         RedDispatcher *now = l->data;
 
-        if (!red_dispatcher_use_client_monitors_config(now))
+        if (!red_qxl_use_client_monitors_config(now))
             return FALSE;
     }
     return TRUE;
@@ -4193,7 +4193,7 @@ void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitor
 
     for (l = reds->dispatchers; l != NULL; l = l->next) {
         RedDispatcher *now = l->data;
-        if (!red_dispatcher_client_monitors_config(now, monitors_config)) {
+        if (!red_qxl_client_monitors_config(now, monitors_config)) {
             /* this is a normal condition, some qemu devices might not implement it */
             spice_debug("QXLInterface::client_monitors_config failed\n");
         }
@@ -4206,7 +4206,7 @@ void reds_set_mm_time(RedsState *reds, uint32_t mm_time)
 
     for (l = reds->dispatchers; l != NULL; l = l->next) {
         RedDispatcher *now = l->data;
-        red_dispatcher_set_mm_time(now, mm_time);
+        red_qxl_set_mm_time(now, mm_time);
     }
 }
 
@@ -4229,8 +4229,8 @@ void reds_on_ic_change(RedsState *reds)
 
     for (l = reds->dispatchers; l != NULL; l = l->next) {
         RedDispatcher *d = l->data;
-        red_dispatcher_set_compression_level(d, compression_level);
-        red_dispatcher_on_ic_change(d, spice_server_get_image_compression(reds));
+        red_qxl_set_compression_level(d, compression_level);
+        red_qxl_on_ic_change(d, spice_server_get_image_compression(reds));
     }
 }
 
@@ -4241,8 +4241,8 @@ void reds_on_sv_change(RedsState *reds)
 
     for (l = reds->dispatchers; l != NULL; l = l->next) {
         RedDispatcher *d = l->data;
-        red_dispatcher_set_compression_level(d, compression_level);
-        red_dispatcher_on_sv_change(d, reds_get_streaming_video(reds));
+        red_qxl_set_compression_level(d, compression_level);
+        red_qxl_on_sv_change(d, reds_get_streaming_video(reds));
     }
 }
 
@@ -4251,7 +4251,7 @@ void reds_on_vm_stop(RedsState *reds)
     GList *l;
 
     for (l = reds->dispatchers; l != NULL; l = l->next)
-        red_dispatcher_stop(l->data);
+        red_qxl_stop(l->data);
 }
 
 void reds_on_vm_start(RedsState *reds)
@@ -4259,7 +4259,7 @@ void reds_on_vm_start(RedsState *reds)
     GList *l;
 
     for (l = reds->dispatchers; l != NULL; l = l->next)
-        red_dispatcher_start(l->data);
+        red_qxl_start(l->data);
 }
 
 uint32_t reds_qxl_ram_size(RedsState *reds)
@@ -4270,7 +4270,7 @@ uint32_t reds_qxl_ram_size(RedsState *reds)
     }
 
     first = reds->dispatchers->data;
-    return red_dispatcher_qxl_ram_size(first);
+    return red_qxl_get_ram_size(first);
 }
 
 MainDispatcher* reds_get_main_dispatcher(RedsState *reds)

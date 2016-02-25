@@ -24,23 +24,23 @@ typedef struct RedDispatcher RedDispatcher;
 
 typedef struct AsyncCommand AsyncCommand;
 
-void red_dispatcher_init(QXLInstance *qxl);
+void red_qxl_init(QXLInstance *qxl);
 
-void red_dispatcher_set_mm_time(RedDispatcher *dispatcher, uint32_t);
-void red_dispatcher_on_ic_change(RedDispatcher *dispatcher, SpiceImageCompression ic);
-void red_dispatcher_on_sv_change(RedDispatcher *dispatcher, int sv);
-void red_dispatcher_set_mouse_mode(RedDispatcher *dispatcher, uint32_t mode);
-void red_dispatcher_attach_worker(RedDispatcher *dispatcher);
-void red_dispatcher_set_compression_level(RedDispatcher *dispatcher, int level);
-void red_dispatcher_stop(RedDispatcher *dispatcher);
-void red_dispatcher_start(RedDispatcher *dispatcher);
-uint32_t red_dispatcher_qxl_ram_size(RedDispatcher *dispatcher);
-void red_dispatcher_async_complete(struct RedDispatcher *, AsyncCommand *);
-struct Dispatcher *red_dispatcher_get_dispatcher(struct RedDispatcher *);
-gboolean red_dispatcher_use_client_monitors_config(RedDispatcher *dispatcher);
-gboolean red_dispatcher_client_monitors_config(RedDispatcher *dispatcher, VDAgentMonitorsConfig *monitors_config);
-gboolean red_dispatcher_get_primary_active(RedDispatcher *dispatcher);
-gboolean red_dispatcher_get_allow_client_mouse(RedDispatcher *dispatcher, gint *x_res, gint *y_res);
+void red_qxl_set_mm_time(RedDispatcher *dispatcher, uint32_t);
+void red_qxl_on_ic_change(RedDispatcher *dispatcher, SpiceImageCompression ic);
+void red_qxl_on_sv_change(RedDispatcher *dispatcher, int sv);
+void red_qxl_set_mouse_mode(RedDispatcher *dispatcher, uint32_t mode);
+void red_qxl_attach_worker(RedDispatcher *dispatcher);
+void red_qxl_set_compression_level(RedDispatcher *dispatcher, int level);
+void red_qxl_stop(RedDispatcher *dispatcher);
+void red_qxl_start(RedDispatcher *dispatcher);
+uint32_t red_qxl_get_ram_size(RedDispatcher *dispatcher);
+void red_qxl_async_complete(struct RedDispatcher *, AsyncCommand *);
+struct Dispatcher *red_qxl_get_dispatcher(struct RedDispatcher *);
+gboolean red_qxl_use_client_monitors_config(RedDispatcher *dispatcher);
+gboolean red_qxl_client_monitors_config(RedDispatcher *dispatcher, VDAgentMonitorsConfig *monitors_config);
+gboolean red_qxl_get_primary_active(RedDispatcher *dispatcher);
+gboolean red_qxl_get_allow_client_mouse(RedDispatcher *dispatcher, gint *x_res, gint *y_res);
 
 typedef uint32_t RedWorkerMessage;
 
@@ -267,6 +267,6 @@ enum {
     RED_DISPATCHER_PENDING_OOM,
 };
 
-void red_dispatcher_clear_pending(RedDispatcher *red_dispatcher, int pending);
+void red_qxl_clear_pending(RedDispatcher *red_dispatcher, int pending);
 
 #endif

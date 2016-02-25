@@ -823,7 +823,7 @@ static void handle_dev_wakeup(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     stat_inc_counter(reds, worker->wakeup_counter, 1);
-    red_dispatcher_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_WAKEUP);
+    red_qxl_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_WAKEUP);
 }
 
 static void handle_dev_oom(void *opaque, void *payload)
@@ -853,7 +853,7 @@ static void handle_dev_oom(void *opaque, void *payload)
                 display->glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
-    red_dispatcher_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_OOM);
+    red_qxl_clear_pending(worker->red_dispatcher, RED_DISPATCHER_PENDING_OOM);
 }
 
 static void handle_dev_reset_cursor(void *opaque, void *payload)
@@ -1194,7 +1194,7 @@ static void worker_handle_dispatcher_async_done(void *opaque,
     RedWorkerMessageAsync *msg_async = payload;
 
     spice_debug(NULL);
-    red_dispatcher_async_complete(worker->red_dispatcher, msg_async->cmd);
+    red_qxl_async_complete(worker->red_dispatcher, msg_async->cmd);
 }
 
 static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *payload)
@@ -1487,7 +1487,7 @@ RedWorker* red_worker_new(QXLInstance *qxl, RedDispatcher *red_dispatcher)
             spice_error("failed to write replay header");
         }
     }
-    dispatcher = red_dispatcher_get_dispatcher(red_dispatcher);
+    dispatcher = red_qxl_get_dispatcher(red_dispatcher);
     dispatcher_set_opaque(dispatcher, worker);
 
     worker->red_dispatcher = red_dispatcher;
