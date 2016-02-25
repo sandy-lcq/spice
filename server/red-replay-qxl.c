@@ -1156,7 +1156,7 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
     case QXL_CMD_UPDATE:
     case QXL_CMD_SURFACE:
         info = QXLPHYSICAL_TO_PTR(cmd->cmd.data);
-        info->id = (uint64_t)(uintptr_t)cmd;
+        info->id = (uintptr_t)cmd;
     }
 
     replay->counter++;
