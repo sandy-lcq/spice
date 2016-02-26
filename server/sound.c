@@ -255,7 +255,6 @@ static void snd_record_on_message_done(SndChannel *channel)
 
 static int snd_send_data(SndChannel *channel)
 {
-    RedsState *reds = snd_channel_get_server(channel);
     uint32_t n;
 
     if (!channel) {
@@ -266,6 +265,7 @@ static int snd_send_data(SndChannel *channel)
         return TRUE;
     }
 
+    RedsState *reds = snd_channel_get_server(channel);
     for (;;) {
         struct iovec vec[IOV_MAX];
         int vec_size;
@@ -1047,13 +1047,12 @@ SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
 {
     SndChannel *channel = sin->st->worker.connection;
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
-    RedsState *reds = snd_channel_get_server(channel);
 
     sin->st->worker.active = 1;
     if (!channel)
         return;
     spice_assert(!playback_channel->base.active);
-    reds_disable_mm_time(reds);
+    reds_disable_mm_time(snd_channel_get_server(channel));
     playback_channel->base.active = TRUE;
     if (!playback_channel->base.client_active) {
         snd_set_command(&playback_channel->base, SND_PLAYBACK_CTRL_MASK);
@@ -1067,13 +1066,12 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
 {
     SndChannel *channel = sin->st->worker.connection;
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
-    RedsState *reds = snd_channel_get_server(channel);
 
     sin->st->worker.active = 0;
     if (!channel)
         return;
     spice_assert(playback_channel->base.active);
-    reds_enable_mm_time(reds);
+    reds_enable_mm_time(snd_channel_get_server(channel));
     playback_channel->base.active = FALSE;
     if (playback_channel->base.client_active) {
         snd_set_command(&playback_channel->base, SND_PLAYBACK_CTRL_MASK);
@@ -1194,11 +1192,10 @@ static void on_new_playback_channel(SndWorker *worker)
 
 static void snd_playback_cleanup(SndChannel *channel)
 {
-    RedsState *reds = snd_channel_get_server(channel);
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
 
     if (playback_channel->base.active) {
-        reds_enable_mm_time(reds);
+        reds_enable_mm_time(snd_channel_get_server(channel));
     }
 
     snd_codec_destroy(&playback_channel->codec);
