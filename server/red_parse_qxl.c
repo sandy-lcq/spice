@@ -1303,13 +1303,41 @@ static unsigned int surface_format_to_bpp(uint32_t format)
     return 0;
 }
 
+bool red_validate_surface(uint32_t width, uint32_t height,
+                          int32_t stride, uint32_t format)
+{
+    unsigned int bpp;
+    uint64_t size;
+
+    bpp = surface_format_to_bpp(format);
+
+    /* check if format is valid */
+    if (!bpp) {
+        return false;
+    }
+
+    /* check stride is larger than required bytes */
+    size = ((uint64_t) width * bpp + 7u) / 8u;
+    /* the uint32_t conversion is here to avoid problems with -2^31 value */
+    if (stride == G_MININT32 || size > (uint32_t) abs(stride)) {
+        return false;
+    }
+
+    /* the multiplication can overflow, also abs(-2^31) may return a negative value */
+    size = (uint64_t) height * abs(stride);
+    if (size > MAX_DATA_CHUNK) {
+        return false;
+    }
+
+    return true;
+}
+
 int red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
                         RedSurfaceCmd *red, QXLPHYSICAL addr)
 {
     QXLSurfaceCmd *qxl;
     uint64_t size;
     int error;
-    unsigned int bpp;
 
     qxl = (QXLSurfaceCmd *)get_virt(slots, addr, sizeof(*qxl), group_id,
                                     &error);
@@ -1328,26 +1356,13 @@ int red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
         red->u.surface_create.width  = qxl->u.surface_create.width;
         red->u.surface_create.height = qxl->u.surface_create.height;
         red->u.surface_create.stride = qxl->u.surface_create.stride;
-        bpp = surface_format_to_bpp(red->u.surface_create.format);
 
-        /* check if format is valid */
-        if (!bpp) {
+        if (!red_validate_surface(red->u.surface_create.width, red->u.surface_create.height,
+                                  red->u.surface_create.stride, red->u.surface_create.format)) {
             return 1;
         }
 
-        /* check stride is larger than required bytes */
-        size = ((uint64_t) red->u.surface_create.width * bpp + 7u) / 8u;
-        /* the uint32_t conversion is here to avoid problems with -2^31 value */
-        if (red->u.surface_create.stride == G_MININT32
-            || size > (uint32_t) abs(red->u.surface_create.stride)) {
-            return 1;
-        }
-
-        /* the multiplication can overflow, also abs(-2^31) may return a negative value */
-        size = (uint64_t) red->u.surface_create.height * abs(red->u.surface_create.stride);
-        if (size > MAX_DATA_CHUNK) {
-            return 1;
-        }
+        size = red->u.surface_create.height * abs(red->u.surface_create.stride);
         red->u.surface_create.data =
             (uint8_t*)get_virt(slots, qxl->u.surface_create.data, size, group_id, &error);
         if (error) {

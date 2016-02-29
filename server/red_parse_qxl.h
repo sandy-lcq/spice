@@ -128,6 +128,9 @@ int red_get_message(RedMemSlotInfo *slots, int group_id,
                     RedMessage *red, QXLPHYSICAL addr);
 void red_put_message(RedMessage *red);
 
+bool red_validate_surface(uint32_t width, uint32_t height,
+                          int32_t stride, uint32_t format);
+
 int red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
                         RedSurfaceCmd *red, QXLPHYSICAL addr);
 void red_put_surface_cmd(RedSurfaceCmd *red);
