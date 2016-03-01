@@ -719,14 +719,15 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
         MJpegEncoderRateControlCbs mjpeg_cbs;
         uint64_t initial_bit_rate;
 
+        mjpeg_cbs.opaque = agent;
         mjpeg_cbs.get_roundtrip_ms = get_roundtrip_ms;
         mjpeg_cbs.get_source_fps = get_source_fps;
         mjpeg_cbs.update_client_playback_delay = update_client_playback_delay;
 
         initial_bit_rate = get_initial_bit_rate(dcc, stream);
-        agent->mjpeg_encoder = mjpeg_encoder_new(initial_bit_rate, &mjpeg_cbs, agent);
+        agent->mjpeg_encoder = mjpeg_encoder_new(initial_bit_rate, &mjpeg_cbs);
     } else {
-        agent->mjpeg_encoder = mjpeg_encoder_new(0, NULL, NULL);
+        agent->mjpeg_encoder = mjpeg_encoder_new(0, NULL);
     }
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &agent->create_item);
 

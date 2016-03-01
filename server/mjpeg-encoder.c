@@ -167,7 +167,6 @@ struct MJpegEncoder {
 
     MJpegEncoderRateControl rate_control;
     MJpegEncoderRateControlCbs cbs;
-    void *cbs_opaque;
 
     /* stats */
     uint64_t starting_bit_rate;
@@ -330,13 +329,13 @@ spice_jpeg_mem_dest(j_compress_ptr cinfo,
 static inline uint32_t mjpeg_encoder_get_source_fps(MJpegEncoder *encoder)
 {
     return encoder->cbs.get_source_fps ?
-        encoder->cbs.get_source_fps(encoder->cbs_opaque) : MJPEG_MAX_FPS;
+        encoder->cbs.get_source_fps(encoder->cbs.opaque) : MJPEG_MAX_FPS;
 }
 
 static inline uint32_t mjpeg_encoder_get_latency(MJpegEncoder *encoder)
 {
     return encoder->cbs.get_roundtrip_ms ?
-        encoder->cbs.get_roundtrip_ms(encoder->cbs_opaque) / 2 : 0;
+        encoder->cbs.get_roundtrip_ms(encoder->cbs.opaque) / 2 : 0;
 }
 
 static uint32_t get_max_fps(uint64_t frame_size, uint64_t bytes_per_sec)
@@ -531,7 +530,7 @@ complete_sample:
                                                              rate_control->byte_rate,
                                                              latency);
 
-        encoder->cbs.update_client_playback_delay(encoder->cbs_opaque, min_delay);
+        encoder->cbs.update_client_playback_delay(encoder->cbs.opaque, min_delay);
     }
 }
 
@@ -1225,7 +1224,7 @@ void mjpeg_encoder_client_stream_report(MJpegEncoder *encoder,
             rate_control->fps < MIN(src_fps, MJPEG_MAX_FPS) || end_frame_delay < 0) {
             is_video_delay_small = TRUE;
             if (encoder->cbs.update_client_playback_delay) {
-                encoder->cbs.update_client_playback_delay(encoder->cbs_opaque,
+                encoder->cbs.update_client_playback_delay(encoder->cbs.opaque,
                                                           min_playback_delay);
             }
         }
@@ -1335,8 +1334,7 @@ void mjpeg_encoder_get_stats(MJpegEncoder *encoder, MJpegEncoderStats *stats)
 }
 
 MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
-                                MJpegEncoderRateControlCbs *cbs,
-                                void *cbs_opaque)
+                                MJpegEncoderRateControlCbs *cbs)
 {
     MJpegEncoder *encoder = spice_new0(MJpegEncoder, 1);
 
@@ -1346,7 +1344,6 @@ MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
 
     if (cbs) {
         encoder->cbs = *cbs;
-        encoder->cbs_opaque = cbs_opaque;
         mjpeg_encoder_reset_quality(encoder, MJPEG_QUALITY_SAMPLE_NUM / 2, 5, 0);
         encoder->rate_control.during_quality_eval = TRUE;
         encoder->rate_control.quality_eval_data.type = MJPEG_QUALITY_EVAL_TYPE_SET;
