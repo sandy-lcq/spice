@@ -175,7 +175,6 @@ typedef struct RedsState {
     int vm_running;
     Ring char_devs_states; /* list of SpiceCharDeviceStateItem */
     int seamless_migration_enabled; /* command line arg */
-    int keepalive_timeout;
 
     SSL_CTX *ctx;
 

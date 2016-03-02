@@ -162,8 +162,3 @@ global:
     spice_replay_next_cmd;
     spice_replay_free_cmd;
 } SPICE_SERVER_0.12.5;
-
-SPICE_SERVER_0.12.7 {
-global:
-    spice_server_set_keepalive_timeout;
-} SPICE_SERVER_0.12.6;
