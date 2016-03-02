@@ -180,7 +180,6 @@ struct RedsState {
     int vm_running;
     GList *char_devices; /* list of SpiceCharDeviceState */
     int seamless_migration_enabled; /* command line arg */
-    int keepalive_timeout;
 
     SSL_CTX *ctx;
 
