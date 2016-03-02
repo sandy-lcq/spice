@@ -657,8 +657,15 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
     spice_debug(NULL);
     spice_warn_if_fail(surface_id == 0);
     spice_warn_if_fail(surface.height != 0);
-    spice_warn_if_fail(((uint64_t)abs(surface.stride) * (uint64_t)surface.height) ==
-             abs(surface.stride) * surface.height);
+
+    /* surface can arrive from guest unchecked so make sure
+     * guest is not a malicious one and drop invalid requests
+     */
+    if (!red_validate_surface(surface.width, surface.height,
+                              surface.stride, surface.format)) {
+        spice_warning("wrong primary surface creation request");
+        return;
+    }
 
     line_0 = (uint8_t*)memslot_get_virt(&worker->mem_slots, surface.mem,
                                         surface.height * abs(surface.stride),
