@@ -2287,6 +2287,31 @@ static void reds_handle_ssl_accept(int fd, int event, void *data)
     }
 }
 
+#define KEEPALIVE_TIMEOUT (10*60)
+
+static bool reds_init_keepalive(int socket)
+{
+    int keepalive = 1;
+    int keepalive_timeout = KEEPALIVE_TIMEOUT;
+
+    if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) == -1) {
+        if (errno != ENOTSUP) {
+            spice_printerr("setsockopt for keepalive failed, %s", strerror(errno));
+            return false;
+        }
+    }
+
+    if (setsockopt(socket, SOL_TCP, TCP_KEEPIDLE,
+                   &keepalive_timeout, sizeof(keepalive_timeout)) == -1) {
+        if (errno != ENOTSUP) {
+            spice_printerr("setsockopt for keepalive timeout failed, %s", strerror(errno));
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
 {
     RedLinkInfo *link;
@@ -2309,20 +2334,7 @@ static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
         }
     }
 
-    if (reds->keepalive_timeout > 0) {
-        int keepalive = 1;
-        if (setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) == -1) {
-            if (errno != ENOTSUP) {
-                spice_printerr("setsockopt for keepalive failed, %s", strerror(errno));
-            }
-        }
-        if (setsockopt(socket, SOL_TCP, TCP_KEEPIDLE,
-                       &reds->keepalive_timeout, sizeof(reds->keepalive_timeout)) == -1) {
-            if (errno != ENOTSUP) {
-                spice_printerr("setsockopt for keepalive timeout failed, %s", strerror(errno));
-            }
-        }
-    }
+    reds_init_keepalive(socket);
 
     link = spice_new0(RedLinkInfo, 1);
     link->reds = reds;
