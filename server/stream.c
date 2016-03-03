@@ -263,8 +263,8 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *s
     DisplayChannelClient *dcc;
     RingItem *item, *next;
 
-    spice_assert(!drawable->stream && !stream->current);
     spice_assert(drawable && stream);
+    spice_assert(!drawable->stream && !stream->current);
     stream->current = drawable;
     drawable->stream = stream;
     stream->last_time = drawable->creation_time;
