@@ -350,12 +350,12 @@ int main(int argc, char **argv)
     } else {
         fd = fopen(file[0], "r");
     }
+    if (fd == NULL) {
+        g_printerr("error opening %s\n", file[0]);
+        exit(1);
+    }
     g_strfreev(file);
     file = NULL;
-    if (fd == NULL) {
-        g_printerr("error opening %s\n", argv[1]);
-        return 1;
-    }
     if (fcntl(fileno(fd), FD_CLOEXEC) < 0) {
         perror("fcntl failed");
         exit(1);
