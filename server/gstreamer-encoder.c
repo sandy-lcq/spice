@@ -48,6 +48,7 @@ typedef struct SpiceGstVideoBuffer {
 
 typedef struct {
     uint32_t mm_time;
+    uint64_t duration;
     uint32_t size;
 } SpiceGstFrameInformation;
 
@@ -133,6 +134,9 @@ typedef struct SpiceGstEncoder {
 
     /* The index of the oldest frame taken into account for the statistics. */
     uint32_t stat_first;
+
+    /* Used to compute the average frame encoding time. */
+    uint64_t stat_duration_sum;
 
     /* Used to compute the average frame size. */
     uint64_t stat_size_sum;
@@ -353,6 +357,14 @@ static uint64_t get_effective_bit_rate(SpiceGstEncoder *encoder)
     return elapsed ? encoder->stat_size_sum * 8 * MSEC_PER_SEC / elapsed : 0;
 }
 
+static uint64_t get_average_encoding_time(SpiceGstEncoder *encoder)
+{
+    uint32_t count = encoder->history_last +
+        (encoder->history_last < encoder->stat_first ? SPICE_GST_HISTORY_SIZE : 0) -
+        encoder->stat_first + 1;
+    return encoder->stat_duration_sum / count;
+}
+
 static uint64_t get_average_frame_size(SpiceGstEncoder *encoder)
 {
     uint32_t count = encoder->history_last +
@@ -422,19 +434,21 @@ static uint64_t get_period_bit_rate(SpiceGstEncoder *encoder, uint32_t from,
 }
 
 static void add_frame(SpiceGstEncoder *encoder, uint32_t frame_mm_time,
-                      uint32_t size)
+                      uint64_t duration, uint32_t size)
 {
     /* Update the statistics */
     uint32_t count = encoder->history_last +
         (encoder->history_last < encoder->stat_first ? SPICE_GST_HISTORY_SIZE : 0) -
         encoder->stat_first + 1;
     if (count == SPICE_GST_FRAME_STATISTICS_COUNT) {
+        encoder->stat_duration_sum -= encoder->history[encoder->stat_first].duration;
         encoder->stat_size_sum -= encoder->history[encoder->stat_first].size;
         if (encoder->stat_size_max == encoder->history[encoder->stat_first].size) {
             encoder->stat_size_max = 0;
         }
         encoder->stat_first = (encoder->stat_first + 1) % SPICE_GST_HISTORY_SIZE;
     }
+    encoder->stat_duration_sum += duration;
     encoder->stat_size_sum += size;
     if (encoder->stat_size_max > 0 && size > encoder->stat_size_max) {
         encoder->stat_size_max = size;
@@ -446,6 +460,7 @@ static void add_frame(SpiceGstEncoder *encoder, uint32_t frame_mm_time,
         encoder->history_first = (encoder->history_first + 1) % SPICE_GST_HISTORY_SIZE;
     }
     encoder->history[encoder->history_last].mm_time = frame_mm_time;
+    encoder->history[encoder->history_last].duration = duration;
     encoder->history[encoder->history_last].size = size;
 }
 
@@ -478,15 +493,23 @@ static uint32_t get_min_playback_delay(SpiceGstEncoder *encoder)
 static void update_client_playback_delay(SpiceGstEncoder *encoder)
 {
     if (encoder->cbs.update_client_playback_delay) {
-        uint32_t min_delay = get_min_playback_delay(encoder);
+        uint32_t min_delay = get_min_playback_delay(encoder) + get_average_encoding_time(encoder) / NSEC_PER_MILLISEC;
         encoder->cbs.update_client_playback_delay(encoder->cbs.opaque, min_delay);
     }
 }
 
 static void update_next_frame_mm_time(SpiceGstEncoder *encoder)
 {
+    uint64_t period_ns = NSEC_PER_SEC / get_source_fps(encoder);
+    uint64_t min_delay_ns = get_average_encoding_time(encoder);
+    if (min_delay_ns > period_ns) {
+        spice_warning("your system seems to be too slow to encode this %dx%d video in real time", encoder->width, encoder->height);
+    }
+
+    min_delay_ns = MIN(min_delay_ns, SPICE_GST_MAX_PERIOD);
     if (encoder->vbuffer_free >= 0) {
-        encoder->next_frame_mm_time = 0;
+        encoder->next_frame_mm_time = get_last_frame_mm_time(encoder) +
+                                      min_delay_ns / NSEC_PER_MILLISEC;
         return;
     }
 
@@ -494,7 +517,6 @@ static void update_next_frame_mm_time(SpiceGstEncoder *encoder)
      * Use nanoseconds to avoid precision loss.
      */
     uint64_t delay_ns = -encoder->vbuffer_free * 8 * NSEC_PER_SEC / encoder->bit_rate;
-    uint64_t period_ns = NSEC_PER_SEC / get_source_fps(encoder);
     uint32_t drops = (delay_ns + period_ns - 1) / period_ns; /* round up */
     spice_debug("drops=%u vbuffer %d/%d", drops, encoder->vbuffer_free,
                 encoder->vbuffer_size);
@@ -509,7 +531,8 @@ static void update_next_frame_mm_time(SpiceGstEncoder *encoder)
         }
         delay_ns = SPICE_GST_MAX_PERIOD;
     }
-    encoder->next_frame_mm_time = get_last_frame_mm_time(encoder) + delay_ns / NSEC_PER_MILLISEC;
+    encoder->next_frame_mm_time = get_last_frame_mm_time(encoder) +
+                                  MAX(delay_ns, min_delay_ns) / NSEC_PER_MILLISEC;
 
     /* Drops mean a higher delay between encoded frames so update the
      * playback delay.
@@ -600,6 +623,7 @@ static void set_bit_rate(SpiceGstEncoder *encoder, uint64_t bit_rate)
      * situation anymore.
      */
     encoder->stat_first = encoder->history_last;
+    encoder->stat_duration_sum = encoder->history[encoder->history_last].duration;
     encoder->stat_size_sum = encoder->stat_size_max = encoder->history[encoder->history_last].size;
 
     if (bit_rate > encoder->video_bit_rate) {
@@ -659,7 +683,7 @@ static inline gboolean handle_server_drops(SpiceGstEncoder *encoder,
      * time during which the buffer was refilling. This implies dropping this
      * frame.
      */
-    add_frame(encoder, frame_mm_time, 0);
+    add_frame(encoder, frame_mm_time, 0, 0);
 
     if (encoder->server_drops >= get_source_fps(encoder)) {
         spice_debug("cut the bit rate");
@@ -1305,6 +1329,7 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
         return VIDEO_ENCODER_FRAME_UNSUPPORTED;
     }
 
+    uint64_t start = spice_get_monotonic_time_ns();
     int rc = push_raw_frame(encoder, bitmap, src, top_down, bitmap_opaque);
     if (rc == VIDEO_ENCODER_FRAME_ENCODE_DONE) {
         rc = pull_compressed_buffer(encoder, outbuf);
@@ -1325,7 +1350,8 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
         return rc;
     }
     uint32_t last_mm_time = get_last_frame_mm_time(encoder);
-    add_frame(encoder, frame_mm_time, (*outbuf)->size);
+    add_frame(encoder, frame_mm_time, spice_get_monotonic_time_ns() - start,
+              (*outbuf)->size);
 
     int32_t refill = encoder->bit_rate * (frame_mm_time - last_mm_time) / MSEC_PER_SEC / 8;
     encoder->vbuffer_free = MIN(encoder->vbuffer_free + refill,
