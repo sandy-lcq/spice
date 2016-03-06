@@ -47,6 +47,7 @@ static QXLWorker *qxl_worker = NULL;
 static gboolean started = FALSE;
 static QXLInstance display_sin = { 0, };
 static gint slow = 0;
+static gint skip = 0;
 static gboolean print_count = FALSE;
 static guint ncommands = 0;
 static pid_t client_pid;
@@ -121,8 +122,9 @@ static gboolean fill_queue_idle(gpointer user_data)
 
         ++ncommands;
 
-        if (slow)
+        if (slow && (ncommands > skip)) {
             g_usleep(slow);
+        }
 
         wakeup = TRUE;
         g_async_queue_push(aqueue, cmd);
@@ -301,6 +303,7 @@ int main(int argc, char **argv)
         { "port", 'p', 0, G_OPTION_ARG_INT, &port, "Server port (default 5000)", "PORT" },
         { "wait", 'w', 0, G_OPTION_ARG_NONE, &wait, "Wait for client", NULL },
         { "slow", 's', 0, G_OPTION_ARG_INT, &slow, "Slow down replay. Delays USEC microseconds before each command", "USEC" },
+        { "skip", 0, 0, G_OPTION_ARG_INT, &skip, "skip 'slow' for the first n commands", NULL },
         { "count", 0, 0, G_OPTION_ARG_NONE, &print_count, "Print the number of commands processed", NULL },
         { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &file, "replay file", "FILE" },
         { NULL }
