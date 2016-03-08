@@ -446,7 +446,6 @@ void dcc_start(DisplayChannelClient *dcc)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
-    QXLInstance *qxl = display->common.qxl;
 
     red_channel_client_push_set_ack(RED_CHANNEL_CLIENT(dcc));
 
@@ -467,17 +466,11 @@ void dcc_start(DisplayChannelClient *dcc)
         dcc_create_all_streams(dcc);
     }
 
-    SpiceMsgDisplayGlScanoutUnix *scanout = red_qxl_get_gl_scanout(qxl->st);
-    if (scanout) {
-        if (reds_stream_is_plain_unix(rcc->stream) &&
-            red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
-            red_channel_client_pipe_add(rcc, dcc_gl_scanout_item_new(rcc, NULL, 0));
-            dcc_push_monitors_config(dcc);
-        } else {
-            spice_printerr("FIXME: GL not supported on this kind of connection");
-        }
+    if (reds_stream_is_plain_unix(rcc->stream) &&
+        red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
+        red_channel_client_pipe_add(rcc, dcc_gl_scanout_item_new(rcc, NULL, 0));
+        dcc_push_monitors_config(dcc);
     }
-    red_qxl_put_gl_scanout(qxl->st, scanout);
 }
 
 static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
