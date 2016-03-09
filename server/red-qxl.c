@@ -941,7 +941,6 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     ClientCbs client_cbs = { NULL, };
 
     spice_return_if_fail(qxl != NULL);
-    spice_return_if_fail(qxl->st == NULL);
 
     static gsize initialized = FALSE;
     if (g_once_init_enter(&initialized)) {
