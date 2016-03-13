@@ -885,16 +885,14 @@ SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *reds)
     return reds_get_n_clients(reds);
 }
 
-static const int secondary_channels[] = {
-    SPICE_CHANNEL_MAIN, SPICE_CHANNEL_DISPLAY, SPICE_CHANNEL_CURSOR, SPICE_CHANNEL_INPUTS};
-
-static int channel_is_secondary(RedChannel *channel)
+static int channel_supports_multiple_clients(RedChannel *channel)
 {
-    int i;
-    for (i = 0 ; i < G_N_ELEMENTS(secondary_channels); ++i) {
-        if (channel->type == secondary_channels[i]) {
-            return TRUE;
-        }
+    switch (channel->type) {
+    case SPICE_CHANNEL_MAIN:
+    case SPICE_CHANNEL_DISPLAY:
+    case SPICE_CHANNEL_CURSOR:
+    case SPICE_CHANNEL_INPUTS:
+        return TRUE;
     }
     return FALSE;
 }
@@ -907,7 +905,8 @@ void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
     channels_info->num_of_channels = reds->num_of_channels;
     RING_FOREACH(now, &reds->channels) {
         RedChannel *channel = SPICE_CONTAINEROF(now, RedChannel, link);
-        if (reds->num_clients > 1 && !channel_is_secondary(channel)) {
+        if (reds->num_clients > 1 &&
+            !channel_supports_multiple_clients(channel)) {
             continue;
         }
         channels_info->channels[used_channels].type = channel->type;
