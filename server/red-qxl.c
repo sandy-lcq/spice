@@ -63,10 +63,10 @@ struct QXLState {
     struct AsyncCommand *gl_draw_async;
 };
 
-static int red_qxl_check_qxl_version(QXLState *rq, int major, int minor)
+static int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor)
 {
-    int qxl_major = qxl_get_interface(rq->qxl)->base.major_version;
-    int qxl_minor = qxl_get_interface(rq->qxl)->base.minor_version;
+    int qxl_major = qxl_get_interface(qxl)->base.major_version;
+    int qxl_minor = qxl_get_interface(qxl)->base.minor_version;
 
     return ((qxl_major > major) ||
             ((qxl_major == major) && (qxl_minor >= minor)));
@@ -208,19 +208,18 @@ static void red_qxl_update_area(QXLState *qxl_state, uint32_t surface_id,
                             &payload);
 }
 
-gboolean red_qxl_use_client_monitors_config(QXLState *qxl_state)
+gboolean red_qxl_use_client_monitors_config(QXLInstance *qxl)
 {
-    return (red_qxl_check_qxl_version(qxl_state, 3, 3) &&
-        qxl_get_interface(qxl_state->qxl)->client_monitors_config &&
-        qxl_get_interface(qxl_state->qxl)->client_monitors_config(qxl_state->qxl, NULL));
+    return (red_qxl_check_qxl_version(qxl, 3, 3) &&
+        qxl_get_interface(qxl)->client_monitors_config &&
+        qxl_get_interface(qxl)->client_monitors_config(qxl, NULL));
 }
 
-gboolean red_qxl_client_monitors_config(QXLState *qxl_state,
+gboolean red_qxl_client_monitors_config(QXLInstance *qxl,
                                         VDAgentMonitorsConfig *monitors_config)
 {
-    return (qxl_get_interface(qxl_state->qxl)->client_monitors_config &&
-        qxl_get_interface(qxl_state->qxl)->client_monitors_config(qxl_state->qxl,
-                                                                  monitors_config));
+    return (qxl_get_interface(qxl)->client_monitors_config &&
+        qxl_get_interface(qxl)->client_monitors_config(qxl, monitors_config));
 }
 
 static AsyncCommand *async_command_alloc(QXLState *qxl_state,
@@ -560,18 +559,19 @@ static void qxl_worker_oom(QXLWorker *qxl_worker)
     red_qxl_oom((QXLState*)qxl_worker);
 }
 
-void red_qxl_start(QXLState *qxl_state)
+void red_qxl_start(QXLInstance *qxl)
 {
     RedWorkerMessageStart payload;
 
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(&qxl->st->dispatcher,
                             RED_WORKER_MESSAGE_START,
                             &payload);
 }
 
 static void qxl_worker_start(QXLWorker *qxl_worker)
 {
-    red_qxl_start((QXLState*)qxl_worker);
+    QXLState *state = (QXLState *)qxl_worker;
+    red_qxl_start(state->qxl);
 }
 
 static void red_qxl_flush_surfaces_async(QXLState *qxl_state, uint64_t cookie)
@@ -608,18 +608,19 @@ static void red_qxl_driver_unload(QXLState *qxl_state)
                             &payload);
 }
 
-void red_qxl_stop(QXLState *qxl_state)
+void red_qxl_stop(QXLInstance *qxl)
 {
     RedWorkerMessageStop payload;
 
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(&qxl->st->dispatcher,
                             RED_WORKER_MESSAGE_STOP,
                             &payload);
 }
 
 static void qxl_worker_stop(QXLWorker *qxl_worker)
 {
-    red_qxl_stop((QXLState*)qxl_worker);
+    QXLState *state = (QXLState *)qxl_worker;
+    red_qxl_stop(state->qxl);
 }
 
 static void red_qxl_loadvm_commands(QXLState *qxl_state,
@@ -643,26 +644,28 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_qxl_loadvm_commands((QXLState*)qxl_worker, ext, count);
 }
 
-void red_qxl_set_mm_time(QXLState *qxl_state, uint32_t mm_time)
+void red_qxl_set_mm_time(QXLInstance *qxl, uint32_t mm_time)
 {
-    qxl_get_interface(qxl_state->qxl)->set_mm_time(qxl_state->qxl, mm_time);
+    QXLInterface *interface = qxl_get_interface(qxl);
+    interface->set_mm_time(qxl, mm_time);
 }
 
-void red_qxl_attach_worker(QXLState *qxl_state)
+void red_qxl_attach_worker(QXLInstance *qxl)
 {
-    QXLInstance *qxl = qxl_state->qxl;
-    qxl_get_interface(qxl_state->qxl)->attache_worker(qxl, &qxl_state->base);
+    QXLInterface *interface = qxl_get_interface(qxl);
+    interface->attache_worker(qxl, &qxl->st->base);
 }
 
-void red_qxl_set_compression_level(QXLState *qxl_state, int level)
+void red_qxl_set_compression_level(QXLInstance *qxl, int level)
 {
-    qxl_get_interface(qxl_state->qxl)->set_compression_level(qxl_state->qxl, level);
+    QXLInterface *interface = qxl_get_interface(qxl);
+    interface->set_compression_level(qxl, level);
 }
 
-uint32_t red_qxl_get_ram_size(QXLState *qxl_state)
+uint32_t red_qxl_get_ram_size(QXLInstance *qxl)
 {
     QXLDevInitInfo qxl_info;
-    qxl_get_interface(qxl_state->qxl)->get_init_info(qxl_state->qxl, &qxl_info);
+    qxl_get_interface(qxl)->get_init_info(qxl, &qxl_info);
     return qxl_info.qxl_ram_size;
 }
 
@@ -681,13 +684,13 @@ void spice_qxl_oom(QXLInstance *instance)
 SPICE_GNUC_VISIBLE
 void spice_qxl_start(QXLInstance *instance)
 {
-    red_qxl_start(instance->st);
+    red_qxl_start(instance);
 }
 
 SPICE_GNUC_VISIBLE
 void spice_qxl_stop(QXLInstance *instance)
 {
-    red_qxl_stop(instance->st);
+    red_qxl_stop(instance);
 }
 
 SPICE_GNUC_VISIBLE
@@ -824,20 +827,20 @@ void spice_qxl_driver_unload(QXLInstance *instance)
     red_qxl_driver_unload(instance->st);
 }
 
-SpiceMsgDisplayGlScanoutUnix *red_qxl_get_gl_scanout(QXLState *qxl_state)
+SpiceMsgDisplayGlScanoutUnix *red_qxl_get_gl_scanout(QXLInstance *qxl)
 {
-    pthread_mutex_lock(&qxl_state->scanout_mutex);
-    if (qxl_state->scanout.drm_dma_buf_fd >= 0) {
-        return &qxl_state->scanout;
+    pthread_mutex_lock(&qxl->st->scanout_mutex);
+    if (qxl->st->scanout.drm_dma_buf_fd >= 0) {
+        return &qxl->st->scanout;
     }
-    pthread_mutex_unlock(&qxl_state->scanout_mutex);
+    pthread_mutex_unlock(&qxl->st->scanout_mutex);
     return NULL;
 }
 
-void red_qxl_put_gl_scanout(QXLState *qxl_state, SpiceMsgDisplayGlScanoutUnix *scanout)
+void red_qxl_put_gl_scanout(QXLInstance *qxl, SpiceMsgDisplayGlScanoutUnix *scanout)
 {
     if (scanout) {
-        pthread_mutex_unlock(&qxl_state->scanout_mutex);
+        pthread_mutex_unlock(&qxl->st->scanout_mutex);
     }
 }
 
@@ -899,9 +902,10 @@ void spice_qxl_gl_draw_async(QXLInstance *qxl,
     dispatcher_send_message(&qxl_state->dispatcher, message, &draw);
 }
 
-void red_qxl_async_complete(QXLState *qxl_state,
-                            AsyncCommand *async_command)
+void red_qxl_async_complete(QXLInstance *qxl, AsyncCommand *async_command)
 {
+    QXLInterface *interface = qxl_get_interface(qxl);
+
     spice_debug("%p: cookie %" PRId64, async_command, async_command->cookie);
     switch (async_command->message) {
     case RED_WORKER_MESSAGE_UPDATE_ASYNC:
@@ -913,25 +917,24 @@ void red_qxl_async_complete(QXLState *qxl_state,
     case RED_WORKER_MESSAGE_GL_DRAW_ASYNC:
         break;
     case RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC:
-        red_qxl_create_primary_surface_complete(qxl_state);
+        red_qxl_create_primary_surface_complete(qxl->st);
         break;
     case RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE_ASYNC:
-        red_qxl_destroy_primary_surface_complete(qxl_state);
+        red_qxl_destroy_primary_surface_complete(qxl->st);
         break;
     default:
         spice_warning("unexpected message %d", async_command->message);
     }
-    qxl_get_interface(qxl_state->qxl)->async_complete(qxl_state->qxl,
-                                                      async_command->cookie);
+    interface->async_complete(qxl, async_command->cookie);
     free(async_command);
 }
 
-void red_qxl_gl_draw_async_complete(QXLState *qxl_state)
+void red_qxl_gl_draw_async_complete(QXLInstance *qxl)
 {
     /* this reset before usage prevent a possible race condition */
-    struct AsyncCommand *async = qxl_state->gl_draw_async;
-    qxl_state->gl_draw_async = NULL;
-    red_qxl_async_complete(qxl_state, async);
+    struct AsyncCommand *async = qxl->st->gl_draw_async;
+    qxl->st->gl_draw_async = NULL;
+    red_qxl_async_complete(qxl, async);
 }
 
 void red_qxl_init(RedsState *reds, QXLInstance *qxl)
@@ -1003,9 +1006,9 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     red_worker_run(worker);
 }
 
-struct Dispatcher *red_qxl_get_dispatcher(QXLState *qxl_state)
+struct Dispatcher *red_qxl_get_dispatcher(QXLInstance *qxl)
 {
-    return &qxl_state->dispatcher;
+    return &qxl->st->dispatcher;
 }
 
 void red_qxl_clear_pending(QXLState *qxl_state, int pending)
@@ -1015,45 +1018,45 @@ void red_qxl_clear_pending(QXLState *qxl_state, int pending)
     clear_bit(pending, &qxl_state->pending);
 }
 
-gboolean red_qxl_get_primary_active(QXLState *qxl_state)
+gboolean red_qxl_get_primary_active(QXLInstance *qxl)
 {
-    return qxl_state->primary_active;
+    return qxl->st->primary_active;
 }
 
-gboolean red_qxl_get_allow_client_mouse(QXLState *qxl_state, gint *x_res, gint *y_res)
+gboolean red_qxl_get_allow_client_mouse(QXLInstance *qxl, gint *x_res, gint *y_res)
 {
-    if (qxl_state->use_hardware_cursor) {
+    if (qxl->st->use_hardware_cursor) {
         if (x_res)
-            *x_res = qxl_state->x_res;
+            *x_res = qxl->st->x_res;
         if (y_res)
-            *y_res = qxl_state->y_res;
+            *y_res = qxl->st->y_res;
     }
-    return qxl_state->use_hardware_cursor;
+    return qxl->st->use_hardware_cursor;
 }
 
-void red_qxl_on_ic_change(QXLState *qxl_state, SpiceImageCompression ic)
+void red_qxl_on_ic_change(QXLInstance *qxl, SpiceImageCompression ic)
 {
     RedWorkerMessageSetCompression payload;
     payload.image_compression = ic;
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(&qxl->st->dispatcher,
                             RED_WORKER_MESSAGE_SET_COMPRESSION,
                             &payload);
 }
 
-void red_qxl_on_sv_change(QXLState *qxl_state, int sv)
+void red_qxl_on_sv_change(QXLInstance *qxl, int sv)
 {
     RedWorkerMessageSetStreamingVideo payload;
     payload.streaming_video = sv;
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(&qxl->st->dispatcher,
                             RED_WORKER_MESSAGE_SET_STREAMING_VIDEO,
                             &payload);
 }
 
-void red_qxl_set_mouse_mode(QXLState *qxl_state, uint32_t mode)
+void red_qxl_set_mouse_mode(QXLInstance *qxl, uint32_t mode)
 {
     RedWorkerMessageSetMouseMode payload;
     payload.mode = mode;
-    dispatcher_send_message(&qxl_state->dispatcher,
+    dispatcher_send_message(&qxl->st->dispatcher,
                             RED_WORKER_MESSAGE_SET_MOUSE_MODE,
                             &payload);
 }

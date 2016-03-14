@@ -1197,7 +1197,7 @@ static void worker_handle_dispatcher_async_done(void *opaque,
     RedWorkerMessageAsync *msg_async = payload;
 
     spice_debug(NULL);
-    red_qxl_async_complete(worker->qxl->st, msg_async->cmd);
+    red_qxl_async_complete(worker->qxl, msg_async->cmd);
 }
 
 static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *payload)
@@ -1491,7 +1491,7 @@ RedWorker* red_worker_new(QXLInstance *qxl)
             spice_error("failed to write replay header");
         }
     }
-    dispatcher = red_qxl_get_dispatcher(qxl->st);
+    dispatcher = red_qxl_get_dispatcher(qxl);
     dispatcher_set_opaque(dispatcher, worker);
 
     worker->qxl = qxl;

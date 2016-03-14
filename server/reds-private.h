@@ -231,7 +231,7 @@ struct RedsState {
 
     RedSSLParameters ssl_parameters;
     SpiceCoreInterfaceInternal *core;
-    GList *qxl_states;
+    GList *qxl_instances;
     MainDispatcher *main_dispatcher;
 };
 

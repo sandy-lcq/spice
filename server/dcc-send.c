@@ -2307,12 +2307,12 @@ static void marshall_gl_scanout(RedChannelClient *rcc,
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     QXLInstance* qxl = display_channel->common.qxl;
 
-    SpiceMsgDisplayGlScanoutUnix *scanout = red_qxl_get_gl_scanout(qxl->st);
+    SpiceMsgDisplayGlScanoutUnix *scanout = red_qxl_get_gl_scanout(qxl);
     if (scanout != NULL) {
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_GL_SCANOUT_UNIX, NULL);
         spice_marshall_msg_display_gl_scanout_unix(m, scanout);
     }
-    red_qxl_put_gl_scanout(qxl->st, scanout);
+    red_qxl_put_gl_scanout(qxl, scanout);
 }
 
 static void marshall_gl_draw(RedChannelClient *rcc,

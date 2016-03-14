@@ -2163,7 +2163,7 @@ static void set_gl_draw_async_count(DisplayChannel *display, int num)
     display->gl_draw_async_count = num;
 
     if (num == 0) {
-        red_qxl_gl_draw_async_complete(qxl->st);
+        red_qxl_gl_draw_async_complete(qxl);
     }
 }
 
