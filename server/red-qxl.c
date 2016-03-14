@@ -1008,12 +1008,6 @@ struct Dispatcher *red_qxl_get_dispatcher(QXLState *qxl_state)
     return &qxl_state->dispatcher;
 }
 
-void red_qxl_set_dispatcher_opaque(QXLState *qxl_state,
-                                   void *opaque)
-{
-    dispatcher_set_opaque(&qxl_state->dispatcher, opaque);
-}
-
 void red_qxl_clear_pending(QXLState *qxl_state, int pending)
 {
     spice_return_if_fail(qxl_state != NULL);
