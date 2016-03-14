@@ -183,13 +183,13 @@ static uint32_t playback_compression = TRUE;
 
 static void snd_receive(void* data);
 
-static SndChannel *snd_channel_get(SndChannel *channel)
+static SndChannel *snd_channel_ref(SndChannel *channel)
 {
     channel->refs++;
     return channel;
 }
 
-static SndChannel *snd_channel_put(SndChannel *channel)
+static SndChannel *snd_channel_unref(SndChannel *channel)
 {
     if (!--channel->refs) {
         spice_printerr("SndChannel=%p freed", channel);
@@ -226,7 +226,7 @@ static void snd_disconnect_channel(SndChannel *channel)
     reds_stream_free(channel->stream);
     channel->stream = NULL;
     spice_marshaller_destroy(channel->send_data.marshaller);
-    snd_channel_put(channel);
+    snd_channel_unref(channel);
     worker->connection = NULL;
 }
 
@@ -1100,7 +1100,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_get_buffer(SpicePlaybackInstance *
         return;
     }
     spice_assert(playback_channel->base.active);
-    snd_channel_get(channel);
+    snd_channel_ref(channel);
 
     *frame = playback_channel->free_frames->samples;
     playback_channel->free_frames = playback_channel->free_frames->next;
@@ -1115,7 +1115,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
     frame = SPICE_CONTAINEROF(samples, AudioFrame, samples[0]);
     playback_channel = frame->channel;
     spice_assert(playback_channel);
-    if (!snd_channel_put(&playback_channel->base) ||
+    if (!snd_channel_unref(&playback_channel->base) ||
         sin->st->worker.connection != &playback_channel->base) {
         /* lost last reference, channel has been destroyed previously */
         spice_info("audio samples belong to a disconnected channel");
