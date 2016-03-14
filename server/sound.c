@@ -79,6 +79,7 @@ typedef void (*snd_channel_cleanup_channel_proc)(SndChannel *channel);
 
 typedef struct SndWorker SndWorker;
 
+/* Connects an audio channel to a Spice client */
 struct SndChannel {
     RedsStream *stream;
     SndWorker *worker;
@@ -131,18 +132,20 @@ struct PlaybackChannel {
     SndChannel base;
     AudioFrame frames[3];
     AudioFrame *free_frames;
-    AudioFrame *in_progress;
-    AudioFrame *pending_frame;
+    AudioFrame *in_progress;   /* Frame being sent to the client */
+    AudioFrame *pending_frame; /* Next frame to send to the client */
     uint32_t mode;
     uint32_t latency;
     SndCodec codec;
     uint8_t  encode_buf[SND_CODEC_MAX_COMPRESSED_BYTES];
 };
 
+/* Base class for SpicePlaybackState and SpiceRecordState */
 struct SndWorker {
     RedChannel *base_channel;
-    SndChannel *connection;
-    SndWorker *next;
+    SndChannel *connection; /* Only one client is supported */
+    SndWorker *next; /* For the global SndWorker list */
+
     int active;
 };
 
@@ -178,6 +181,7 @@ typedef struct RecordChannel {
     uint8_t  decode_buf[SND_CODEC_MAX_FRAME_BYTES];
 } RecordChannel;
 
+/* A list of all Spice{Playback,Record}State objects */
 static SndWorker *workers;
 static uint32_t playback_compression = TRUE;
 
