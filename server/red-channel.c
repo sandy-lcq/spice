@@ -1064,7 +1064,7 @@ RedChannel *red_channel_create(int size,
     client_cbs.disconnect = red_channel_client_default_disconnect;
     client_cbs.migrate = red_channel_client_default_migrate;
 
-    red_channel_register_client_cbs(channel, &client_cbs);
+    red_channel_register_client_cbs(channel, &client_cbs, NULL);
     red_channel_set_common_cap(channel, SPICE_COMMON_CAP_MINI_HEADER);
 
     channel->thread_id = pthread_self();
@@ -1115,7 +1115,7 @@ RedChannel *red_channel_create_dummy(int size, RedsState *reds, uint32_t type, u
     client_cbs.disconnect = red_channel_client_default_disconnect;
     client_cbs.migrate = red_channel_client_default_migrate;
 
-    red_channel_register_client_cbs(channel, &client_cbs);
+    red_channel_register_client_cbs(channel, &client_cbs, NULL);
     red_channel_set_common_cap(channel, SPICE_COMMON_CAP_MINI_HEADER);
 
     channel->thread_id = pthread_self();
@@ -1171,7 +1171,7 @@ void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat)
 #endif
 }
 
-void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs)
+void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs, gpointer cbs_data)
 {
     spice_assert(client_cbs->connect || channel->type == SPICE_CHANNEL_MAIN);
     channel->client_cbs.connect = client_cbs->connect;
@@ -1183,6 +1183,7 @@ void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *clien
     if (client_cbs->migrate) {
         channel->client_cbs.migrate = client_cbs->migrate;
     }
+    channel->data = cbs_data;
 }
 
 int test_capability(const uint32_t *caps, int num_caps, uint32_t cap)
@@ -1215,12 +1216,6 @@ void red_channel_set_common_cap(RedChannel *channel, uint32_t cap)
 void red_channel_set_cap(RedChannel *channel, uint32_t cap)
 {
     add_capability(&channel->local_caps.caps, &channel->local_caps.num_caps, cap);
-}
-
-void red_channel_set_data(RedChannel *channel, void *data)
-{
-    spice_assert(channel);
-    channel->data = data;
 }
 
 static void red_channel_ref(RedChannel *channel)

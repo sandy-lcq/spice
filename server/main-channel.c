@@ -1184,7 +1184,7 @@ MainChannel* main_channel_new(RedsState *reds)
     red_channel_set_cap(channel, SPICE_MAIN_CAP_SEAMLESS_MIGRATE);
 
     client_cbs.migrate = main_channel_client_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs);
+    red_channel_register_client_cbs(channel, &client_cbs, NULL);
 
     return (MainChannel *)channel;
 }

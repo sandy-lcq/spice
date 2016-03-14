@@ -990,16 +990,14 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     client_cbs.connect = red_qxl_set_cursor_peer;
     client_cbs.disconnect = red_qxl_disconnect_cursor_peer;
     client_cbs.migrate = red_qxl_cursor_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs);
-    red_channel_set_data(channel, qxl_state);
+    red_channel_register_client_cbs(channel, &client_cbs, qxl_state);
     reds_register_channel(reds, channel);
 
     channel = red_worker_get_display_channel(worker);
     client_cbs.connect = red_qxl_set_display_peer;
     client_cbs.disconnect = red_qxl_disconnect_display_peer;
     client_cbs.migrate = red_qxl_display_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs);
-    red_channel_set_data(channel, qxl_state);
+    red_channel_register_client_cbs(channel, &client_cbs, qxl_state);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);

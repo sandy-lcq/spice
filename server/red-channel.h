@@ -383,11 +383,10 @@ RedChannel *red_channel_create_parser(int size,
                                       uint32_t migration_flags);
 void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat);
 
-void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs);
+void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs, gpointer cbs_data);
 // caps are freed when the channel is destroyed
 void red_channel_set_common_cap(RedChannel *channel, uint32_t cap);
 void red_channel_set_cap(RedChannel *channel, uint32_t cap);
-void red_channel_set_data(RedChannel *channel, void *data);
 
 RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedClient *client,
                                             RedsStream *stream,

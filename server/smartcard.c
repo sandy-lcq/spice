@@ -863,7 +863,7 @@ static void smartcard_init(void)
     }
 
     client_cbs.connect = smartcard_connect_client;
-    red_channel_register_client_cbs(&g_smartcard_channel->base, &client_cbs);
+    red_channel_register_client_cbs(&g_smartcard_channel->base, &client_cbs, NULL);
 
     reds_register_channel(reds, &g_smartcard_channel->base);
 }

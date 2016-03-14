@@ -528,7 +528,7 @@ SpiceCharDeviceState *spicevmc_device_connect(RedsState *reds,
     red_channel_init_outgoing_messages_window(&state->channel);
 
     client_cbs.connect = spicevmc_connect;
-    red_channel_register_client_cbs(&state->channel, &client_cbs);
+    red_channel_register_client_cbs(&state->channel, &client_cbs, NULL);
 
     char_dev_cbs.read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev;
     char_dev_cbs.ref_msg_to_client = spicevmc_chardev_ref_msg_to_client;

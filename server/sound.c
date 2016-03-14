@@ -1538,8 +1538,7 @@ void snd_attach_playback(RedsState *reds, SpicePlaybackInstance *sin)
     client_cbs.connect = snd_set_playback_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_playback_migrate_channel_client;
-    red_channel_register_client_cbs(channel, &client_cbs);
-    red_channel_set_data(channel, playback_worker);
+    red_channel_register_client_cbs(channel, &client_cbs, playback_worker);
 
     if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY))
         red_channel_set_cap(channel, SPICE_PLAYBACK_CAP_CELT_0_5_1);
@@ -1568,8 +1567,7 @@ void snd_attach_record(RedsState *reds, SpiceRecordInstance *sin)
     client_cbs.connect = snd_set_record_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_record_migrate_channel_client;
-    red_channel_register_client_cbs(channel, &client_cbs);
-    red_channel_set_data(channel, record_worker);
+    red_channel_register_client_cbs(channel, &client_cbs, record_worker);
     if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY))
         red_channel_set_cap(channel, SPICE_RECORD_CAP_CELT_0_5_1);
     red_channel_set_cap(channel, SPICE_RECORD_CAP_VOLUME);

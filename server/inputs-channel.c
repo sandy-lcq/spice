@@ -650,7 +650,7 @@ InputsChannel* inputs_channel_new(RedsState *reds)
 
     client_cbs.connect = inputs_connect;
     client_cbs.migrate = inputs_migrate;
-    red_channel_register_client_cbs(&inputs->base, &client_cbs);
+    red_channel_register_client_cbs(&inputs->base, &client_cbs, NULL);
 
     red_channel_set_cap(&inputs->base, SPICE_INPUTS_CAP_KEY_SCANCODE);
     reds_register_channel(reds, &inputs->base);
