@@ -184,7 +184,7 @@ typedef uint64_t (*channel_handle_migrate_data_get_serial_proc)(RedChannelClient
 
 
 typedef void (*channel_client_connect_proc)(RedChannel *channel, RedClient *client, RedsStream *stream,
-                                            int migration, int num_common_cap, uint32_t *common_caps,
+                                            int migration, int num_common_caps, uint32_t *common_caps,
                                             int num_caps, uint32_t *caps);
 typedef void (*channel_client_disconnect_proc)(RedChannelClient *base);
 typedef void (*channel_client_migrate_proc)(RedChannelClient *base);
