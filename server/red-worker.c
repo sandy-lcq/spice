@@ -510,10 +510,10 @@ static void guest_set_client_capabilities(RedWorker *worker)
     };
     QXLInterface *qif = qxl_get_interface(worker->qxl);
 
-    if (qif->base.major_version < 3 ||
-        (qif->base.major_version == 3 &&
-        qif->base.minor_version < 2) ||
-        !qif->set_client_capabilities) {
+    if (!red_qxl_check_qxl_version(worker->qxl, 3, 2)) {
+        return;
+    }
+    if (!qif->set_client_capabilities) {
         return;
     }
 #define SET_CAP(a,c)                                                    \

@@ -63,7 +63,7 @@ struct QXLState {
     struct AsyncCommand *gl_draw_async;
 };
 
-static int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor)
+int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor)
 {
     int qxl_major = qxl_get_interface(qxl)->base.major_version;
     int qxl_minor = qxl_get_interface(qxl)->base.minor_version;

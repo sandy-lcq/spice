@@ -44,6 +44,7 @@ gboolean red_qxl_get_allow_client_mouse(QXLInstance *qxl, gint *x_res, gint *y_r
 SpiceMsgDisplayGlScanoutUnix *red_qxl_get_gl_scanout(QXLInstance *qxl);
 void red_qxl_put_gl_scanout(QXLInstance *qxl, SpiceMsgDisplayGlScanoutUnix *scanout);
 void red_qxl_gl_draw_async_complete(QXLInstance *qxl);
+int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor);
 SpiceServer* red_qxl_get_server(QXLState *qxl);
 
 /* Wrappers around QXLInterface vfuncs */
