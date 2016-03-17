@@ -901,6 +901,62 @@ folder will show up in GNOME Files network places (or Nautilus). It
 can then be mounted and browsed in traditional applications thanks to
 `gvfs-fuse`.
 
+GL acceleration (virgl)
+=======================
+
+OpenGL acceleration is currently local only (it has to go through a Unix socket)
+and it needs guest support. It's currently limited to recent linux
+distributions (for example up to date Fedora 23 + updated mesa packages from
+https://copr.fedorainfracloud.org/coprs/kraxel/virgl/[copr:kraxel]).
+
+Configuration
+-------------
+
+.Using libvirt
+
+You need to add a virtio-gpu video device to your virtual machine instead of QXL.
+[source,xml]
+<video>
+  <model type='virtio' heads='1'>
+    <acceleration accel3d='yes'/>
+  </model>
+</video>
+
+Then you need to enable OpenGL on your SPICE graphics node:
+[source,xml]
+<graphics type='spice' autoport='no'>
+  <gl enable='yes'/>
+</graphics>
+
+You don't need any port/address as they won't be usable with
+GL.
+
+.Using QEMU
+
+You need to add a virtio-gpu device on QEMU command line,
+as well as enable GL with SPICE. port/tls-port/addr arguments
+won't be used in this setup. You need to configure a Unix socket to
+connect to the VM display.
+
+[source,sh]
+-device virtio-vga,virgl=on -spice gl=on,unix,addr=/run/user/1000/spice.sock
+
+Connecting to the guest
+-----------------------
+
+Connecting to the guest when virgl is in use is slightly different
+than usual
+
+.If libvirt is being used
+
+[source,sh]
+client$ virt-viewer -a $vmname
+
+.If a Unix socket has been set on QEMU command line
+
+[source,sh]
+client$ remote-viewer spice+unix:///run/user/1000/spice.sock
+
 QEMU Spice reference
 ====================
 
