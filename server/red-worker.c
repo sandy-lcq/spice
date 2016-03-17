@@ -128,8 +128,7 @@ void red_drawable_unref(RedDrawable *red_drawable)
     if (--red_drawable->refs) {
         return;
     }
-    qxl_get_interface(red_drawable->qxl)->release_resource(red_drawable->qxl,
-                                                           red_drawable->release_info_ext);
+    red_qxl_release_resource(red_drawable->qxl, red_drawable->release_info_ext);
     red_put_drawable(red_drawable);
     free(red_drawable);
 }
@@ -146,12 +145,12 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
 
     *ring_is_empty = FALSE;
     while (red_channel_max_pipe_size(RED_CHANNEL(worker->cursor_channel)) <= MAX_PIPE_SIZE) {
-        if (!qxl_get_interface(worker->qxl)->get_cursor_command(worker->qxl, &ext_cmd)) {
+        if (!red_qxl_get_cursor_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->cursor_poll_tries < CMD_RING_POLL_RETRIES) {
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
             } else if (worker->cursor_poll_tries == CMD_RING_POLL_RETRIES &&
-                       !qxl_get_interface(worker->qxl)->req_cursor_notification(worker->qxl)) {
+                       !red_qxl_req_cursor_notification(worker->qxl)) {
                 continue;
             }
             worker->cursor_poll_tries++;
@@ -204,12 +203,12 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
     worker->process_display_generation++;
     *ring_is_empty = FALSE;
     while (red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) <= MAX_PIPE_SIZE) {
-        if (!qxl_get_interface(worker->qxl)->get_command(worker->qxl, &ext_cmd)) {
+        if (!red_qxl_get_command(worker->qxl, &ext_cmd)) {
             *ring_is_empty = TRUE;
             if (worker->display_poll_tries < CMD_RING_POLL_RETRIES) {
                 worker->event_timeout = MIN(worker->event_timeout, CMD_RING_POLL_TIMEOUT);
             } else if (worker->display_poll_tries == CMD_RING_POLL_RETRIES &&
-                       !qxl_get_interface(worker->qxl)->req_cmd_notification(worker->qxl)) {
+                       !red_qxl_req_cmd_notification(worker->qxl)) {
                 continue;
             }
             worker->display_poll_tries++;
@@ -246,9 +245,9 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                 spice_warning("Invalid surface in QXL_CMD_UPDATE");
             } else {
                 display_channel_draw(worker->display_channel, &update.area, update.surface_id);
-                qxl_get_interface(worker->qxl)->notify_update(worker->qxl, update.update_id);
+                red_qxl_notify_update(worker->qxl, update.update_id);
             }
-            qxl_get_interface(worker->qxl)->release_resource(worker->qxl, update.release_info_ext);
+            red_qxl_release_resource(worker->qxl, update.release_info_ext);
             red_put_update_cmd(&update);
             break;
         }
@@ -263,7 +262,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             /* alert: accessing message.data is insecure */
             spice_warning("MESSAGE: %s", message.data);
 #endif
-            qxl_get_interface(worker->qxl)->release_resource(worker->qxl, message.release_info_ext);
+            red_qxl_release_resource(worker->qxl, message.release_info_ext);
             red_put_message(&message);
             break;
         }
@@ -528,7 +527,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
     }
     if ((worker->display_channel == NULL) ||
         (RED_CHANNEL(worker->display_channel)->clients_num == 0)) {
-        qif->set_client_capabilities(worker->qxl, FALSE, caps);
+        red_qxl_set_client_capabilities(worker->qxl, FALSE, caps);
     } else {
         // Take least common denominator
         for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
@@ -541,7 +540,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
                     CLEAR_CAP(caps, caps_available[i]);
             }
         }
-        qif->set_client_capabilities(worker->qxl, TRUE, caps);
+        red_qxl_set_client_capabilities(worker->qxl, TRUE, caps);
     }
 }
 
@@ -587,8 +586,8 @@ static void handle_dev_update_async(void *opaque, void *payload)
                            msg->surface_id, &msg->qxl_area, msg->clear_dirty_region,
                            &qxl_dirty_rects, &num_dirty_rects);
 
-    qxl_get_interface(worker->qxl)->update_area_complete(worker->qxl, msg->surface_id,
-                                                         qxl_dirty_rects, num_dirty_rects);
+    red_qxl_update_area_complete(worker->qxl, msg->surface_id,
+                                 qxl_dirty_rects, num_dirty_rects);
     free(qxl_dirty_rects);
 }
 
@@ -847,9 +846,9 @@ static void handle_dev_oom(void *opaque, void *payload)
     while (red_process_display(worker, &ring_is_empty)) {
         red_channel_push(display_red_channel);
     }
-    if (qxl_get_interface(worker->qxl)->flush_resources(worker->qxl) == 0) {
+    if (red_qxl_flush_resources(worker->qxl) == 0) {
         display_channel_free_some(worker->display_channel);
-        qxl_get_interface(worker->qxl)->flush_resources(worker->qxl);
+        red_qxl_flush_resources(worker->qxl);
     }
     spice_debug("OOM2 #draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
@@ -1473,7 +1472,7 @@ RedWorker* red_worker_new(QXLInstance *qxl)
     const char *record_filename;
     RedsState *reds = red_qxl_get_server(qxl->st);
 
-    qxl_get_interface(qxl)->get_init_info(qxl, &init_info);
+    red_qxl_get_init_info(qxl, &init_info);
 
     worker = spice_new0(RedWorker, 1);
     worker->core = event_loop_core;

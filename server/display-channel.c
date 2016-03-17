@@ -268,10 +268,10 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 
     surface->context.canvas->ops->destroy(surface->context.canvas);
     if (surface->create.info) {
-        qxl_get_interface(qxl)->release_resource(qxl, surface->create);
+        red_qxl_release_resource(qxl, surface->create);
     }
     if (surface->destroy.info) {
-        qxl_get_interface(qxl)->release_resource(qxl, surface->destroy);
+        red_qxl_release_resource(qxl, surface->destroy);
     }
 
     region_destroy(&surface->draw_dirty_region);

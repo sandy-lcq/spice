@@ -46,6 +46,23 @@ void red_qxl_put_gl_scanout(QXLInstance *qxl, SpiceMsgDisplayGlScanoutUnix *scan
 void red_qxl_gl_draw_async_complete(QXLInstance *qxl);
 SpiceServer* red_qxl_get_server(QXLState *qxl);
 
+/* Wrappers around QXLInterface vfuncs */
+void red_qxl_get_init_info(QXLInstance *qxl, QXLDevInitInfo *info);;
+int red_qxl_get_command(QXLInstance *qxl, struct QXLCommandExt *cmd);
+int red_qxl_req_cmd_notification(QXLInstance *qxl);
+void red_qxl_release_resource(QXLInstance *qxl, struct QXLReleaseInfoExt release_info);
+int red_qxl_get_cursor_command(QXLInstance *qxl, struct QXLCommandExt *cmd);
+int red_qxl_req_cursor_notification(QXLInstance *qxl);
+void red_qxl_notify_update(QXLInstance *qxl, uint32_t update_id);
+int red_qxl_flush_resources(QXLInstance *qxl);
+void red_qxl_async_complete(QXLInstance *qxl, AsyncCommand *cmd);
+void red_qxl_update_area_complete(QXLInstance *qxl, uint32_t surface_id,
+                                  struct QXLRect *updated_rects,
+                                  uint32_t num_updated_rects);
+void red_qxl_set_client_capabilities(QXLInstance *qxl,
+                                     uint8_t client_present,
+                                     uint8_t caps[SPICE_CAPABILITIES_SIZE]);
+
 typedef uint32_t RedWorkerMessage;
 
 /* Keep message order, only append new messages!

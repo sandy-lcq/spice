@@ -116,7 +116,7 @@ static void cursor_item_unref(CursorItem *item)
         return;
 
     cursor_cmd = item->red_cursor;
-    qxl_get_interface(item->qxl)->release_resource(item->qxl, cursor_cmd->release_info_ext);
+    red_qxl_release_resource(item->qxl, cursor_cmd->release_info_ext);
     red_put_cursor_cmd(cursor_cmd);
     free(cursor_cmd);
 
