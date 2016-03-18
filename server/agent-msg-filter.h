@@ -37,14 +37,15 @@ typedef struct AgentMsgFilter {
     int result;
     gboolean copy_paste_enabled;
     gboolean file_xfer_enabled;
+    gboolean use_client_monitors_config;
     gboolean discard_all;
 } AgentMsgFilter;
 
 void agent_msg_filter_init(struct AgentMsgFilter *filter,
                            gboolean copy_paste, gboolean file_xfer,
+                           gboolean use_client_monitors_config,
                            gboolean discard_all);
 int agent_msg_filter_process_data(struct AgentMsgFilter *filter,
-                                  SpiceServer *reds,
                                   uint8_t *data, uint32_t len);
 
 #endif
