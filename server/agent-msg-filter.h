@@ -45,6 +45,9 @@ void agent_msg_filter_init(struct AgentMsgFilter *filter,
                            gboolean copy_paste, gboolean file_xfer,
                            gboolean use_client_monitors_config,
                            gboolean discard_all);
+void agent_msg_filter_config(struct AgentMsgFilter *filter,
+                             gboolean copy_paste, gboolean file_xfer,
+                             gboolean use_client_monitors_config);
 int agent_msg_filter_process_data(struct AgentMsgFilter *filter,
                                   uint8_t *data, uint32_t len);
 

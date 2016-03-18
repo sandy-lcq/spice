@@ -953,6 +953,10 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
                                                     rcc->client,
                                                     num_tokens);
     }
+
+    agent_msg_filter_config(&reds->agent_state.write_filter, reds->agent_copypaste,
+                            reds->agent_file_xfer,
+                            reds_use_client_monitors_config(reds));
     reds->agent_state.write_filter.discard_all = FALSE;
 }
 
@@ -1680,6 +1684,10 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
         if (mig_target) {
             spice_warning("unexpected: vdagent attached to destination during migration");
         }
+        agent_msg_filter_config(&reds->agent_state.read_filter,
+                                reds->agent_copypaste,
+                                reds->agent_file_xfer,
+                                reds_use_client_monitors_config(reds));
         reds->agent_state.read_filter.discard_all = FALSE;
         reds->agent_state.plug_generation++;
     }
@@ -3190,8 +3198,6 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *s,
         qxl = SPICE_CONTAINEROF(sin, QXLInstance, base);
         red_qxl_init(reds, qxl);
         reds->qxl_instances = g_list_prepend(reds->qxl_instances, qxl);
-        reds->agent_state.write_filter.use_client_monitors_config = reds_use_client_monitors_config(reds);
-        reds->agent_state.read_filter.use_client_monitors_config = reds_use_client_monitors_config(reds);
 
         /* this function has to be called after the qxl is on the list
          * as QXLInstance clients expect the qxl to be on the list when

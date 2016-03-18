@@ -27,15 +27,23 @@
 #include "reds.h"
 #include "red-qxl.h"
 
+void agent_msg_filter_config(struct AgentMsgFilter *filter,
+                             gboolean copy_paste, gboolean file_xfer,
+                             gboolean use_client_monitors_config)
+{
+    filter->copy_paste_enabled = copy_paste;
+    filter->file_xfer_enabled = file_xfer;
+    filter->use_client_monitors_config = use_client_monitors_config;
+}
+
 void agent_msg_filter_init(struct AgentMsgFilter *filter,
                            gboolean copy_paste, gboolean file_xfer,
                            gboolean use_client_monitors_config,
                            int discard_all)
 {
     memset(filter, 0, sizeof(*filter));
-    filter->copy_paste_enabled = copy_paste;
-    filter->file_xfer_enabled = file_xfer;
-    filter->use_client_monitors_config = use_client_monitors_config;
+    agent_msg_filter_config(filter, copy_paste, file_xfer,
+                            use_client_monitors_config);
     filter->discard_all = discard_all;
 }
 
