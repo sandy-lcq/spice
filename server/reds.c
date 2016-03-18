@@ -634,10 +634,11 @@ static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 }
 
 /* returns TRUE if the buffer can be forwarded */
-static int vdi_port_read_buf_process(RedsState *reds, VDIReadBuf *buf)
+static gboolean vdi_port_read_buf_process(VDIPortState *state, VDIReadBuf *buf, gboolean *error)
 {
-    VDIPortState *state = &reds->agent_state;
     int res;
+
+    *error = FALSE;
 
     switch (state->vdi_chunk_header.port) {
     case VDP_CLIENT_PORT: {
@@ -649,7 +650,7 @@ static int vdi_port_read_buf_process(RedsState *reds, VDIReadBuf *buf)
         case AGENT_MSG_FILTER_DISCARD:
             return FALSE;
         case AGENT_MSG_FILTER_PROTO_ERROR:
-            reds_agent_remove(reds);
+            *error = TRUE;
             return FALSE;
         }
     }
@@ -657,7 +658,7 @@ static int vdi_port_read_buf_process(RedsState *reds, VDIReadBuf *buf)
         return FALSE;
     default:
         spice_warning("invalid port");
-        reds_agent_remove(reds);
+        *error = TRUE;
         return FALSE;
     }
 }
@@ -741,7 +742,8 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
             state->message_receive_len -= state->receive_len;
             state->read_state = VDI_PORT_READ_STATE_READ_DATA;
         }
-        case VDI_PORT_READ_STATE_READ_DATA:
+        case VDI_PORT_READ_STATE_READ_DATA: {
+            gboolean error = FALSE;
             n = sif->read(reds->vdagent, state->receive_pos, state->receive_len);
             if (!n) {
                 return NULL;
@@ -760,11 +762,15 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
             } else {
                 state->read_state = VDI_PORT_READ_STATE_GET_BUFF;
             }
-            if (vdi_port_read_buf_process(reds, dispatch_buf)) {
+            if (vdi_port_read_buf_process(&reds->agent_state, dispatch_buf, &error)) {
                 return dispatch_buf;
             } else {
+                if (error) {
+                    reds_agent_remove(reds);
+                }
                 vdi_port_read_buf_unref(dispatch_buf);
             }
+        }
         } /* END switch */
     } /* END while */
     return NULL;
@@ -1129,18 +1135,22 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
     if (agent_state->read_filter.msg_data_to_read ||
         read_data_len > sizeof(VDAgentMessage)) { /* msg header has been read */
         VDIReadBuf *read_buf = agent_state->current_read_buf;
+        gboolean error = FALSE;
 
         spice_debug("push partial read %u (msg first chunk? %d)", read_data_len,
                     !agent_state->read_filter.msg_data_to_read);
 
         read_buf->len = read_data_len;
-        if (vdi_port_read_buf_process(reds, read_buf)) {
+        if (vdi_port_read_buf_process(&reds->agent_state, read_buf, &error)) {
             main_channel_client_push_agent_data(mcc,
                                                 read_buf->data,
                                                 read_buf->len,
                                                 vdi_port_read_buf_release,
                                                 read_buf);
         } else {
+            if (error) {
+               reds_agent_remove(reds);
+            }
             vdi_port_read_buf_unref(read_buf);
         }
 
