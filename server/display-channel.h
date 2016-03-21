@@ -283,8 +283,6 @@ Drawable *                 display_channel_drawable_try_new          (DisplayCha
 void                       display_channel_drawable_unref            (DisplayChannel *display, Drawable *drawable);
 void                       display_channel_surface_unref             (DisplayChannel *display,
                                                                       uint32_t surface_id);
-bool                       display_channel_surface_has_canvas        (DisplayChannel *display,
-                                                                      uint32_t surface_id);
 void                       display_channel_current_flush             (DisplayChannel *display,
                                                                       int surface_id);
 int                        display_channel_wait_for_migrate_data     (DisplayChannel *display);

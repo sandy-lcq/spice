@@ -283,13 +283,6 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
     spice_warn_if_fail(ring_is_empty(&surface->depend_on_me));
 }
 
-/* TODO: perhaps rename to "ready" or "realized" ? */
-bool display_channel_surface_has_canvas(DisplayChannel *display,
-                                        uint32_t surface_id)
-{
-    return display->surfaces[surface_id].context.canvas != NULL;
-}
-
 static void streams_update_visible_region(DisplayChannel *display, Drawable *drawable)
 {
     Ring *ring;

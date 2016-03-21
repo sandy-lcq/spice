@@ -565,10 +565,7 @@ static void cursor_connect(RedWorker *worker, RedClient *client, RedsStream *str
     red_channel_client_ack_zero_messages_window(rcc);
     red_channel_client_push_set_ack(rcc);
 
-    // TODO: why do we check for context.canvas? defer this to after display cc is connected
-    // and test it's canvas? this is just a test to see if there is an active renderer?
-    if (display_channel_surface_has_canvas(worker->display_channel, 0))
-        cursor_channel_init(channel, ccc);
+    cursor_channel_init(channel, ccc);
 }
 
 static void handle_dev_update_async(void *opaque, void *payload)
