@@ -1381,7 +1381,7 @@ static void register_callbacks(Dispatcher *dispatcher)
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_GL_SCANOUT,
                                 handle_dev_gl_scanout,
-                                0,
+                                sizeof(RedWorkerMessageGlScanout),
                                 DISPATCHER_NONE);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_GL_DRAW_ASYNC,

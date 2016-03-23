@@ -284,6 +284,9 @@ typedef struct RedWorkerMessageMonitorsConfigAsync {
 typedef struct RedWorkerMessageDriverUnload {
 } RedWorkerMessageDriverUnload;
 
+typedef struct RedWorkerMessageGlScanout {
+} RedWorkerMessageGlScanout;
+
 enum {
     RED_DISPATCHER_PENDING_WAKEUP,
     RED_DISPATCHER_PENDING_OOM,

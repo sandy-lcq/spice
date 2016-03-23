@@ -853,6 +853,7 @@ void spice_qxl_gl_scanout(QXLInstance *qxl,
                           uint32_t stride, uint32_t format,
                           int y_0_top)
 {
+    RedWorkerMessageGlScanout payload = { /* empty */ };
     spice_return_if_fail(qxl != NULL);
 
     QXLState *qxl_state = qxl->st;
@@ -877,7 +878,7 @@ void spice_qxl_gl_scanout(QXLInstance *qxl,
 
     /* FIXME: find a way to coallesce all pending SCANOUTs */
     dispatcher_send_message(&qxl_state->dispatcher,
-                            RED_WORKER_MESSAGE_GL_SCANOUT, NULL);
+                            RED_WORKER_MESSAGE_GL_SCANOUT, &payload);
 }
 
 SPICE_GNUC_VISIBLE
