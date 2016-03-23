@@ -961,13 +961,6 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
 
     spice_return_if_fail(qxl != NULL);
 
-    static gsize initialized = FALSE;
-    if (g_once_init_enter(&initialized)) {
-        quic_init();
-        sw_canvas_init();
-        g_once_init_leave(&initialized, TRUE);
-    }
-
     qxl_state = spice_new0(QXLState, 1);
     qxl_state->reds = reds;
     qxl_state->qxl = qxl;

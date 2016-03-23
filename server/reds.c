@@ -2801,7 +2801,7 @@ static void reds_cleanup(RedsState *reds)
 #endif
 }
 
-static void reds_exit(void)
+SPICE_DESTRUCTOR_FUNC(reds_exit)
 {
     GList *l;
 
@@ -3335,7 +3335,6 @@ static void reds_init_vd_agent_resources(RedsState *reds)
 
 static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 {
-    static gboolean first = TRUE;
     spice_info("starting %s", VERSION);
 
     if (core_interface->base.major_version != SPICE_INTERFACE_CORE_MAJOR) {
@@ -3415,10 +3414,6 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     reds->allow_multiple_clients = getenv(SPICE_DEBUG_ALLOW_MC_ENV) != NULL;
     if (reds->allow_multiple_clients) {
         spice_warning("spice: allowing multiple client connections");
-    }
-    if (first) {
-        atexit(reds_exit);
-        first = FALSE;
     }
     servers = g_list_prepend(servers, reds);
     return 0;
