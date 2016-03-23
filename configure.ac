@@ -212,6 +212,8 @@ AC_CACHE_CHECK([if -Wl,--version-script works], [spice_cv_ld_version_script],
 AM_CONDITIONAL([HAVE_LD_VERSION_SCRIPT],
     [test x"$spice_cv_ld_version_script" = xyes])
 
+AC_DEFINE([SPICE_USE_SAFER_CONTAINEROF], [1], [Enable more type safe version of SPICE_CONTAINEROF])
+
 AC_SUBST(SPICE_REQUIRES)
 AC_SUBST(SPICE_NONPKGCONFIG_CFLAGS)
 AC_SUBST(SPICE_NONPKGCONFIG_LIBS)
