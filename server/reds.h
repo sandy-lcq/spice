@@ -111,7 +111,6 @@ SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds);
 void reds_update_client_mouse_allowed(RedsState *reds);
 gboolean reds_use_client_monitors_config(RedsState *reds);
 void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
-void reds_set_mm_time(RedsState *reds, uint32_t mm_time);
 MainDispatcher* reds_get_main_dispatcher(RedsState *reds);
 
 /* fd watches/timers */

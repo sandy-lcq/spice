@@ -4151,16 +4151,6 @@ void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitor
     }
 }
 
-void reds_set_mm_time(RedsState *reds, uint32_t mm_time)
-{
-    GList *l;
-
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        QXLInstance *qxl = l->data;
-        red_qxl_set_mm_time(qxl, mm_time);
-    }
-}
-
 static int calc_compression_level(RedsState *reds)
 {
     spice_assert(reds_get_streaming_video(reds) != SPICE_STREAM_VIDEO_INVALID);
