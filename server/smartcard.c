@@ -132,8 +132,8 @@ static void smartcard_read_buf_prepare(SmartCardDeviceState *state, VSCMsgHeader
     }
 }
 
-SpiceCharDeviceMsgToClient *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
-                                                           void *opaque)
+static SpiceCharDeviceMsgToClient *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
+                                                                  void *opaque)
 {
     SmartCardDeviceState *state = opaque;
     SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);

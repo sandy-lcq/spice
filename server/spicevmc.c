@@ -92,8 +92,8 @@ static void spicevmc_pipe_item_unref(SpiceVmcPipeItem *item)
     }
 }
 
-SpiceCharDeviceMsgToClient *spicevmc_chardev_ref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
-                                                               void *opaque)
+static SpiceCharDeviceMsgToClient *spicevmc_chardev_ref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
+                                                                      void *opaque)
 {
     return spicevmc_pipe_item_ref((SpiceVmcPipeItem *)msg);
 }
