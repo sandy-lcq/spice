@@ -657,12 +657,6 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_qxl_loadvm_commands(qxl_state, ext, count);
 }
 
-void red_qxl_set_mm_time(QXLInstance *qxl, uint32_t mm_time)
-{
-    QXLInterface *interface = qxl_get_interface(qxl);
-    interface->set_mm_time(qxl, mm_time);
-}
-
 void red_qxl_attach_worker(QXLInstance *qxl)
 {
     QXLInterface *interface = qxl_get_interface(qxl);

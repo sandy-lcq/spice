@@ -26,7 +26,6 @@ typedef struct AsyncCommand AsyncCommand;
 
 void red_qxl_init(SpiceServer *reds, QXLInstance *qxl);
 
-void red_qxl_set_mm_time(QXLInstance *qxl, uint32_t);
 void red_qxl_on_ic_change(QXLInstance *qxl, SpiceImageCompression ic);
 void red_qxl_on_sv_change(QXLInstance *qxl, int sv);
 void red_qxl_set_mouse_mode(QXLInstance *qxl, uint32_t mode);
