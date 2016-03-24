@@ -135,6 +135,7 @@ int spice_bitmap_from_surface_type(uint32_t surface_format)
     return 0;
 }
 
+#ifdef DUMP_BITMAP
 #define RAM_PATH "/tmp/tmpfs"
 
 static void put_16le(uint8_t **ptr, uint16_t val)
@@ -303,3 +304,4 @@ write_err:
     fclose(f);
     remove(file_str);
 }
+#endif
