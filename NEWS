@@ -1,10 +1,22 @@
-Major changes in 0.13.0:
+Major changes in 0.13.1:
 ========================
 
 *** IMPORTANT ***
 The 0.13.x release series is an unstable release series, if you are looking for
 stability for daily use, please use the latest 0.12.x release. We are trying to
 keep the code as functional as 0.12, but regressions or bugs could still happen.
+
+* add spice_qxl_gl_scanout() spice_qxl_gl_draw_async() for local virgl support
+* spice_server_set_keepalive_timeout() has been removed in favour of
+  unconditionally sending keepalive probes every 10 minutes
+* the rework started in 0.13.0 has moved forward. The global RedsState *reds
+  variable has now been removed, GLib mainloop is now used for the RedWorker thread
+  rather than an adhoc implementation, some core classes have been ported to
+  GObject, ...
+* some crash/leak fixes in corner cases
+
+Major changes in 0.13.0:
+========================
 
 * Start of a large code rework to attempt to make the codebase more
   maintainable. With this first release, the huge red_worker.c file has been split
