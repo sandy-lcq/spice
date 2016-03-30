@@ -211,6 +211,7 @@ static void spice_char_device_client_free(SpiceCharDeviceState *dev,
 
     if (dev_client->wait_for_tokens_timer) {
         reds_core_timer_remove(dev->priv->reds, dev_client->wait_for_tokens_timer);
+        dev_client->wait_for_tokens_timer = NULL;
     }
 
     spice_char_device_client_send_queue_free(dev, dev_client);
