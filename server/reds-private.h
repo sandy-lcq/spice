@@ -40,58 +40,6 @@ typedef struct MonitorMode {
     uint32_t y_res;
 } MonitorMode;
 
-typedef struct VDIPortState VDIPortState;
-
-typedef struct VDIReadBuf {
-    VDIPortState *state;
-    RingItem link;
-    uint32_t refs;
-
-    int len;
-    uint8_t data[SPICE_AGENT_MAX_DATA_SIZE];
-} VDIReadBuf;
-
-enum {
-    VDI_PORT_READ_STATE_READ_HEADER,
-    VDI_PORT_READ_STATE_GET_BUFF,
-    VDI_PORT_READ_STATE_READ_DATA,
-};
-
-struct VDIPortState {
-    RedCharDevice *base;
-    uint32_t plug_generation;
-    int client_agent_started;
-
-    /* write to agent */
-    RedCharDeviceWriteBuffer *recv_from_client_buf;
-    int recv_from_client_buf_pushed;
-    AgentMsgFilter write_filter;
-
-    /* read from agent */
-    Ring read_bufs;
-    uint32_t read_state;
-    uint32_t message_receive_len;
-    uint8_t *receive_pos;
-    uint32_t receive_len;
-    VDIReadBuf *current_read_buf;
-    AgentMsgFilter read_filter;
-
-    VDIChunkHeader vdi_chunk_header;
-
-    SpiceMigrateDataMain *mig_data; /* storing it when migration data arrives
-                                       before agent is attached */
-};
-
-/* messages that are addressed to the agent and are created in the server */
-typedef struct __attribute__ ((__packed__)) VDInternalBuf {
-    VDIChunkHeader chunk_header;
-    VDAgentMessage header;
-    union {
-        VDAgentMouseState mouse_state;
-    }
-    u;
-} VDInternalBuf;
-
 #ifdef RED_STATISTICS
 
 #define REDS_MAX_STAT_NODES 100
@@ -140,12 +88,14 @@ typedef struct RedSSLParameters {
     char ciphersuite[256];
 } RedSSLParameters;
 
+typedef struct VDIPortState VDIPortState;
+
 struct RedsState {
     int listen_socket;
     int secure_listen_socket;
     SpiceWatch *listen_watch;
     SpiceWatch *secure_listen_watch;
-    VDIPortState agent_state;
+    VDIPortState *agent_state;
     int pending_mouse_event;
     Ring clients;
     int num_clients;
