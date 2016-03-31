@@ -1,6 +1,6 @@
 /* spice-server char device flow control code
 
-   Copyright (C) 2012 Red Hat, Inc.
+   Copyright (C) 2012-2015 Red Hat, Inc.
 
    Red Hat Authors:
    Yonit Halperin <yhalperi@redhat.com>
@@ -74,11 +74,6 @@ struct RedCharDevicePrivate {
     SpiceServer *reds;
 };
 
-/* typedef'ed as RedCharDevice */
-struct SpiceCharDeviceState {
-    struct RedCharDevicePrivate priv[1];
-};
-
 enum {
     WRITE_BUFFER_ORIGIN_NONE,
     WRITE_BUFFER_ORIGIN_CLIENT,
@@ -86,18 +81,34 @@ enum {
     WRITE_BUFFER_ORIGIN_SERVER_NO_TOKEN,
 };
 
-/* Holding references for avoiding access violation if the char device was
- * destroyed during a callback */
-static void red_char_device_ref(RedCharDevice *char_dev);
-static void red_char_device_unref(RedCharDevice *char_dev);
-static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
 
+G_DEFINE_TYPE(RedCharDevice, red_char_device, G_TYPE_OBJECT)
+
+#define RED_CHAR_DEVICE_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), RED_TYPE_CHAR_DEVICE, RedCharDevicePrivate))
+
+enum {
+    PROP_0,
+    PROP_CHAR_DEV_INSTANCE,
+    PROP_SPICE_SERVER,
+    PROP_CLIENT_TOKENS_INTERVAL,
+    PROP_SELF_TOKENS,
+    PROP_OPAQUE
+};
+
+static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
 static void red_char_device_write_retry(void *opaque);
 
 typedef struct RedCharDeviceMsgToClientItem {
     RingItem link;
     RedCharDeviceMsgToClient *msg;
 } RedCharDeviceMsgToClientItem;
+
+static RedCharDevice *red_char_device_new(SpiceCharDeviceInstance *sin,
+                                          RedsState *reds,
+                                          uint32_t client_tokens_interval,
+                                          uint32_t self_tokens,
+                                          RedCharDeviceCallbacks *cbs,
+                                          void *opaque);
 
 static RedCharDeviceMsgToClient *
 red_char_device_read_one_msg_from_device(RedCharDevice *dev)
@@ -365,7 +376,7 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
     }
 
     max_send_tokens = red_char_device_max_send_tokens(dev);
-    red_char_device_ref(dev);
+    g_object_ref(dev);
     /*
      * Reading from the device only in case at least one of the clients have a free token.
      * All messages will be discarded if no client is attached to the device
@@ -391,7 +402,7 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
     if (dev->priv->running) {
         dev->priv->active = dev->priv->active || did_read;
     }
-    red_char_device_unref(dev);
+    g_object_unref(dev);
     return did_read;
 }
 
@@ -508,7 +519,7 @@ static int red_char_device_write_to_device(RedCharDevice *dev)
         return 0;
     }
 
-    red_char_device_ref(dev);
+    g_object_ref(dev);
 
     if (dev->priv->write_to_dev_timer) {
         reds_core_timer_cancel(dev->priv->reds, dev->priv->write_to_dev_timer);
@@ -562,7 +573,7 @@ static int red_char_device_write_to_device(RedCharDevice *dev)
         dev->priv->active = dev->priv->active || total;
     }
     dev->priv->during_write_to_device = 0;
-    red_char_device_unref(dev);
+    g_object_unref(dev);
     return total;
 }
 
@@ -727,39 +738,8 @@ RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
                                       RedCharDeviceCallbacks *cbs,
                                       void *opaque)
 {
-    RedCharDevice *char_dev;
-    SpiceCharDeviceInterface *sif;
-
-    spice_assert(sin);
-    spice_assert(cbs->read_one_msg_from_device && cbs->ref_msg_to_client &&
-                 cbs->unref_msg_to_client && cbs->send_msg_to_client &&
-                 cbs->send_tokens_to_client && cbs->remove_client);
-
-    char_dev = spice_new0(RedCharDevice, 1);
-    char_dev->priv->sin = sin;
-    char_dev->priv->reds = reds;
-    char_dev->priv->cbs = *cbs;
-    char_dev->priv->opaque = opaque;
-    char_dev->priv->client_tokens_interval = client_tokens_interval;
-    char_dev->priv->num_self_tokens = self_tokens;
-
-    ring_init(&char_dev->priv->write_queue);
-    ring_init(&char_dev->priv->write_bufs_pool);
-    ring_init(&char_dev->priv->clients);
-
-    sif = spice_char_device_get_interface(char_dev->priv->sin);
-    if (sif->base.minor_version <= 2 ||
-        !(sif->flags & SPICE_CHAR_DEVICE_NOTIFY_WRITABLE)) {
-        char_dev->priv->write_to_dev_timer = reds_core_timer_add(reds, red_char_device_write_retry, char_dev);
-        if (!char_dev->priv->write_to_dev_timer) {
-            spice_error("failed creating char dev write timer");
-        }
-    }
-
-    char_dev->priv->refs = 1;
-    sin->st = char_dev;
-    spice_debug("sin %p dev_state %p", sin, char_dev);
-    return char_dev;
+    return red_char_device_new(sin, reds, client_tokens_interval,
+                               self_tokens, cbs, opaque);
 }
 
 void red_char_device_reset_dev_instance(RedCharDevice *state,
@@ -775,48 +755,10 @@ void *red_char_device_opaque_get(RedCharDevice *dev)
     return dev->priv->opaque;
 }
 
-static void red_char_device_ref(RedCharDevice *char_dev)
-{
-    char_dev->priv->refs++;
-}
-
-static void red_char_device_unref(RedCharDevice *char_dev)
-{
-    /* The refs field protects the char_dev from being deallocated in
-     * case red_char_device_destroy has been called
-     * during a callabck, and we might still access the char_dev afterwards.
-     * red_char_device_unref is always coupled with a preceding
-     * red_char_device_ref. Here, refs can turn 0
-     * only when red_char_device_destroy is called in between
-     * the calls to red_char_device_ref and red_char_device_unref.*/
-    if (!--char_dev->priv->refs) {
-        free(char_dev);
-    }
-}
-
 void red_char_device_destroy(RedCharDevice *char_dev)
 {
-    reds_on_char_device_state_destroy(char_dev->priv->reds, char_dev);
-    if (char_dev->priv->write_to_dev_timer) {
-        reds_core_timer_remove(char_dev->priv->reds, char_dev->priv->write_to_dev_timer);
-        char_dev->priv->write_to_dev_timer = NULL;
-    }
-    write_buffers_queue_free(&char_dev->priv->write_queue);
-    write_buffers_queue_free(&char_dev->priv->write_bufs_pool);
-    char_dev->priv->cur_pool_size = 0;
-    red_char_device_write_buffer_free(char_dev->priv->cur_write_buf);
-    char_dev->priv->cur_write_buf = NULL;
-
-    while (!ring_is_empty(&char_dev->priv->clients)) {
-        RingItem *item = ring_get_tail(&char_dev->priv->clients);
-        RedCharDeviceClient *dev_client;
-
-        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
-        red_char_device_client_free(char_dev, dev_client);
-    }
-    char_dev->priv->running = FALSE;
-
-    red_char_device_unref(char_dev);
+    g_return_if_fail(RED_IS_CHAR_DEVICE(char_dev));
+    g_object_unref(char_dev);
 }
 
 static RedCharDeviceClient *red_char_device_client_new(RedClient *client,
@@ -920,10 +862,10 @@ void red_char_device_start(RedCharDevice *dev)
 {
     spice_debug("dev_state %p", dev);
     dev->priv->running = TRUE;
-    red_char_device_ref(dev);
+    g_object_ref(dev);
     while (red_char_device_write_to_device(dev) ||
            red_char_device_read_from_device(dev));
-    red_char_device_unref(dev);
+    g_object_unref(dev);
 }
 
 void red_char_device_stop(RedCharDevice *dev)
@@ -1116,4 +1058,235 @@ SpiceServer* red_char_device_get_server(RedCharDevice *dev)
 SpiceCharDeviceInterface *spice_char_device_get_interface(SpiceCharDeviceInstance *instance)
 {
    return SPICE_CONTAINEROF(instance->base.sif, SpiceCharDeviceInterface, base);
+}
+
+
+static void red_char_device_init_device_instance(RedCharDevice *self)
+{
+    SpiceCharDeviceInterface *sif;
+
+    g_return_if_fail(self->priv->reds);
+
+    if (self->priv->write_to_dev_timer) {
+        reds_core_timer_remove(self->priv->reds, self->priv->write_to_dev_timer);
+        self->priv->write_to_dev_timer = NULL;
+    }
+    if (self->priv->sin == NULL) {
+       return;
+    }
+
+    sif = spice_char_device_get_interface(self->priv->sin);
+    if (sif->base.minor_version <= 2 ||
+        !(sif->flags & SPICE_CHAR_DEVICE_NOTIFY_WRITABLE)) {
+        self->priv->write_to_dev_timer = reds_core_timer_add(self->priv->reds,
+                                                             red_char_device_write_retry,
+                                                             self);
+        if (!self->priv->write_to_dev_timer) {
+            spice_error("failed creating char dev write timer");
+        }
+    }
+
+    self->priv->sin->st = self;
+}
+
+static void
+red_char_device_get_property(GObject    *object,
+                             guint       property_id,
+                             GValue     *value,
+                             GParamSpec *pspec)
+{
+    RedCharDevice *self = RED_CHAR_DEVICE(object);
+
+    switch (property_id)
+    {
+        case PROP_CHAR_DEV_INSTANCE:
+            g_value_set_pointer(value, self->priv->sin);
+            break;
+        case PROP_SPICE_SERVER:
+            g_value_set_pointer(value, self->priv->reds);
+            break;
+        case PROP_CLIENT_TOKENS_INTERVAL:
+            g_value_set_uint64(value, self->priv->client_tokens_interval);
+            break;
+        case PROP_SELF_TOKENS:
+            g_value_set_uint64(value, self->priv->num_self_tokens);
+            break;
+        case PROP_OPAQUE:
+            g_value_set_pointer(value, self->priv->opaque);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+red_char_device_set_property(GObject      *object,
+                             guint         property_id,
+                             const GValue *value,
+                             GParamSpec   *pspec)
+{
+    RedCharDevice *self = RED_CHAR_DEVICE(object);
+
+    switch (property_id)
+    {
+        case PROP_CHAR_DEV_INSTANCE:
+            self->priv->sin = g_value_get_pointer(value);
+            break;
+        case PROP_SPICE_SERVER:
+            self->priv->reds = g_value_get_pointer(value);
+            break;
+        case PROP_CLIENT_TOKENS_INTERVAL:
+            self->priv->client_tokens_interval = g_value_get_uint64(value);
+            break;
+        case PROP_SELF_TOKENS:
+            self->priv->num_self_tokens = g_value_get_uint64(value);
+            break;
+        case PROP_OPAQUE:
+            self->priv->opaque = g_value_get_pointer(value);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+red_char_device_on_sin_changed(GObject *object,
+                               GParamSpec *pspec G_GNUC_UNUSED,
+                               gpointer user_data G_GNUC_UNUSED)
+{
+    RedCharDevice *self = RED_CHAR_DEVICE(object);
+
+    red_char_device_init_device_instance(self);
+}
+
+static void
+red_char_device_finalize(GObject *object)
+{
+    RedCharDevice *self = RED_CHAR_DEVICE(object);
+
+    /* FIXME: replace with g_object_weak_ref () */
+    reds_on_char_device_state_destroy(self->priv->reds, self);
+    if (self->priv->write_to_dev_timer) {
+        reds_core_timer_remove(self->priv->reds, self->priv->write_to_dev_timer);
+        self->priv->write_to_dev_timer = NULL;
+    }
+    write_buffers_queue_free(&self->priv->write_queue);
+    write_buffers_queue_free(&self->priv->write_bufs_pool);
+    self->priv->cur_pool_size = 0;
+    red_char_device_write_buffer_free(self->priv->cur_write_buf);
+    self->priv->cur_write_buf = NULL;
+
+    while (!ring_is_empty(&self->priv->clients)) {
+        RingItem *item = ring_get_tail(&self->priv->clients);
+        RedCharDeviceClient *dev_client;
+
+        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
+        red_char_device_client_free(self, dev_client);
+    }
+    self->priv->running = FALSE;
+
+    G_OBJECT_CLASS(red_char_device_parent_class)->finalize(object);
+}
+
+static void
+red_char_device_class_init(RedCharDeviceClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+    g_type_class_add_private(klass, sizeof (RedCharDevicePrivate));
+
+    object_class->get_property = red_char_device_get_property;
+    object_class->set_property = red_char_device_set_property;
+    object_class->finalize = red_char_device_finalize;
+
+    g_object_class_install_property(object_class,
+                                    PROP_CHAR_DEV_INSTANCE,
+                                    g_param_spec_pointer("sin",
+                                                         "sin",
+                                                         "Char device instance",
+                                                         G_PARAM_STATIC_STRINGS |
+                                                         G_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT));
+    g_object_class_install_property(object_class,
+                                    PROP_SPICE_SERVER,
+                                    g_param_spec_pointer("spice-server",
+                                                         "spice-server",
+                                                         "RedsState instance",
+                                                         G_PARAM_STATIC_STRINGS |
+                                                         G_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT));
+    g_object_class_install_property(object_class,
+                                    PROP_CLIENT_TOKENS_INTERVAL,
+                                    g_param_spec_uint64("client-tokens-interval",
+                                                        "client-tokens-interval",
+                                                        "Client token interval",
+                                                        0, G_MAXUINT64, 0,
+                                                        G_PARAM_STATIC_STRINGS |
+                                                        G_PARAM_READWRITE));
+    g_object_class_install_property(object_class,
+                                    PROP_SELF_TOKENS,
+                                    g_param_spec_uint64("self-tokens",
+                                                        "self-tokens",
+                                                        "Self tokens",
+                                                        0, G_MAXUINT64, 0,
+                                                        G_PARAM_STATIC_STRINGS |
+                                                        G_PARAM_READWRITE));
+    g_object_class_install_property(object_class,
+                                    PROP_OPAQUE,
+                                    g_param_spec_pointer("opaque",
+                                                         "opaque",
+                                                         "User data to pass to callbacks",
+                                                      G_PARAM_STATIC_STRINGS |
+                                                      G_PARAM_READWRITE));
+
+}
+
+static void
+red_char_device_init(RedCharDevice *self)
+{
+    self->priv = RED_CHAR_DEVICE_PRIVATE(self);
+
+    ring_init(&self->priv->write_queue);
+    ring_init(&self->priv->write_bufs_pool);
+    ring_init(&self->priv->clients);
+
+    g_signal_connect(self, "notify::sin", G_CALLBACK(red_char_device_on_sin_changed), NULL);
+}
+
+static RedCharDevice *
+red_char_device_new(SpiceCharDeviceInstance *sin,
+                    RedsState *reds,
+                    uint32_t client_tokens_interval,
+                    uint32_t self_tokens,
+                    RedCharDeviceCallbacks *cbs,
+                    void *opaque)
+{
+    RedCharDevice *char_dev;
+
+    char_dev = g_object_new(RED_TYPE_CHAR_DEVICE,
+                            "sin", sin,
+                            "reds", reds,
+                            "client-tokens-interval", (guint64) client_tokens_interval,
+                            "self-tokens", (guint64) self_tokens,
+                            "opaque", opaque,
+                            NULL);
+
+    /* TODO: redundant with the "opaque" property in g_object_new */
+    red_char_device_set_callbacks(char_dev, cbs, opaque);
+
+    return char_dev;
+}
+
+/* TODO: needs to be moved to class vfuncs once all child classes are gobjects */
+void
+red_char_device_set_callbacks(RedCharDevice *dev,
+                              RedCharDeviceCallbacks *cbs,
+                              gpointer opaque)
+{
+    g_assert(cbs->read_one_msg_from_device && cbs->ref_msg_to_client &&
+             cbs->unref_msg_to_client && cbs->send_msg_to_client &&
+             cbs->send_tokens_to_client && cbs->remove_client);
+
+    dev->priv->cbs = *cbs;
+    dev->priv->opaque = opaque;
 }

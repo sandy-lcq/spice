@@ -18,9 +18,43 @@
 #ifndef CHAR_DEVICE_H_
 #define CHAR_DEVICE_H_
 
+#include <glib-object.h>
+
 #include "spice.h"
 #include "red-channel.h"
 #include "migration-protocol.h"
+
+#define RED_TYPE_CHAR_DEVICE red_char_device_get_type()
+
+#define RED_CHAR_DEVICE(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHAR_DEVICE, RedCharDevice))
+#define RED_CHAR_DEVICE_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_CHAR_DEVICE, RedCharDeviceClass))
+#define RED_IS_CHAR_DEVICE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_CHAR_DEVICE))
+#define RED_IS_CHAR_DEVICE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_CHAR_DEVICE))
+#define RED_CHAR_DEVICE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHAR_DEVICE, RedCharDeviceClass))
+
+typedef struct SpiceCharDeviceState RedCharDevice;
+typedef struct RedCharDeviceClass RedCharDeviceClass;
+typedef struct RedCharDevicePrivate RedCharDevicePrivate;
+
+/* 'SpiceCharDeviceState' name is used for consistency with what spice-char.h exports */
+struct SpiceCharDeviceState
+{
+    GObject parent;
+
+    RedCharDevicePrivate *priv;
+};
+
+struct RedCharDeviceClass
+{
+    GObjectClass parent_class;
+};
+
+GType red_char_device_get_type(void) G_GNUC_CONST;
+
+typedef struct RedCharDeviceCallbacks RedCharDeviceCallbacks;
+void red_char_device_set_callbacks(RedCharDevice *dev,
+                                   RedCharDeviceCallbacks *cbs,
+                                   gpointer opaque);
 
 /*
  * Shared code for char devices, mainly for flow control.
@@ -55,6 +89,11 @@
  * red_char_device_stop
  * red_char_device_wakeup (for reading from the device)
  */
+/* refcounting is used to protect the char_dev from being deallocated in
+ * case red_char_device_destroy has been called
+ * during a callback, and we might still access the char_dev afterwards.
+ */
+
 
 /*
  * Note about multiple-clients:
@@ -99,7 +138,7 @@ typedef struct RedCharDeviceWriteBuffer {
 
 typedef void RedCharDeviceMsgToClient;
 
-typedef struct RedCharDeviceCallbacks {
+struct RedCharDeviceCallbacks {
     /*
      * Messages that are addressed to the client can be queued in case we have
      * multiple clients and some of them don't have enough tokens.
@@ -129,7 +168,7 @@ typedef struct RedCharDeviceCallbacks {
      * due to slow flow or due to some other error.
      * The called instance should disconnect the client, or at least the corresponding channel */
     void (*remove_client)(RedClient *client, void *opaque);
-} RedCharDeviceCallbacks;
+};
 
 RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
                                       struct RedsState *reds,
