@@ -27,19 +27,19 @@
  *
  * How to use the api:
  * ==================
- * device attached: call spice_char_device_state_create
- * device detached: call spice_char_device_state_destroy/reset
+ * device attached: call red_char_device_create
+ * device detached: call red_char_device_destroy/reset
  *
- * client connected and associated with a device: spice_char_device_client_add
- * client disconnected: spice_char_device_client_remove
+ * client connected and associated with a device: red_char_device__add
+ * client disconnected: red_char_device__remove
  *
  * Writing to the device
  * ---------------------
  * Write the data into RedCharDeviceWriteBuffer:
- * call spice_char_device_write_buffer_get in order to get an appropriate buffer.
- * call spice_char_device_write_buffer_add in order to push the buffer to the write queue.
+ * call red_char_device_buffer_get in order to get an appropriate buffer.
+ * call red_char_device_buffer_add in order to push the buffer to the write queue.
  * If you choose not to push the buffer to the device, call
- * spice_char_device_write_buffer_release
+ * red_char_device_buffer_release
  *
  * reading from the device
  * -----------------------
@@ -51,9 +51,9 @@
  *
  * calls triggered from the device (qemu):
  * --------------------------------------
- * spice_char_device_start
- * spice_char_device_stop
- * spice_char_device_wakeup (for reading from the device)
+ * red_char_device_start
+ * red_char_device_stop
+ * red_char_device_wakeup (for reading from the device)
  */
 
 /*
@@ -131,26 +131,26 @@ typedef struct SpiceCharDeviceCallbacks {
     void (*remove_client)(RedClient *client, void *opaque);
 } SpiceCharDeviceCallbacks;
 
-RedCharDevice *spice_char_device_state_create(SpiceCharDeviceInstance *sin,
-                                              struct RedsState *reds,
-                                              uint32_t client_tokens_interval,
-                                              uint32_t self_tokens,
-                                              SpiceCharDeviceCallbacks *cbs,
-                                              void *opaque);
+RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
+                                      struct RedsState *reds,
+                                      uint32_t client_tokens_interval,
+                                      uint32_t self_tokens,
+                                      SpiceCharDeviceCallbacks *cbs,
+                                      void *opaque);
 
-void spice_char_device_state_reset_dev_instance(RedCharDevice *dev,
-                                                SpiceCharDeviceInstance *sin);
-void spice_char_device_state_destroy(RedCharDevice *dev);
+void red_char_device_reset_dev_instance(RedCharDevice *dev,
+                                        SpiceCharDeviceInstance *sin);
+void red_char_device_destroy(RedCharDevice *dev);
 
-void *spice_char_device_state_opaque_get(RedCharDevice *dev);
+void *red_char_device_opaque_get(RedCharDevice *dev);
 
 /* only one client is supported */
-void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
-                                                  SpiceMarshaller *m);
-void spice_char_device_state_migrate_data_marshall_empty(SpiceMarshaller *m);
+void red_char_device_migrate_data_marshall(RedCharDevice *dev,
+                                           SpiceMarshaller *m);
+void red_char_device_migrate_data_marshall_empty(SpiceMarshaller *m);
 
-int spice_char_device_state_restore(RedCharDevice *dev,
-                                    SpiceMigrateDataCharDevice *mig_data);
+int red_char_device_restore(RedCharDevice *dev,
+                            SpiceMigrateDataCharDevice *mig_data);
 
 /*
  * Resets write/read queues, and moves that state to being stopped.
@@ -167,50 +167,50 @@ int spice_char_device_state_restore(RedCharDevice *dev,
  *
  *  todo: change AGENT_CONNECT msg to contain tokens count.
  */
-void spice_char_device_reset(RedCharDevice *dev);
+void red_char_device_reset(RedCharDevice *dev);
 
 /* max_send_queue_size = how many messages we can read from the device and enqueue for this client,
  * when we have tokens for other clients and no tokens for this one */
-int spice_char_device_client_add(RedCharDevice *dev,
-                                 RedClient *client,
-                                 int do_flow_control,
-                                 uint32_t max_send_queue_size,
-                                 uint32_t num_client_tokens,
-                                 uint32_t num_send_tokens,
-                                 int wait_for_migrate_data);
+int red_char_device_client_add(RedCharDevice *dev,
+                               RedClient *client,
+                               int do_flow_control,
+                               uint32_t max_send_queue_size,
+                               uint32_t num_client_tokens,
+                               uint32_t num_send_tokens,
+                               int wait_for_migrate_data);
 
-void spice_char_device_client_remove(RedCharDevice *dev,
-                                     RedClient *client);
-int spice_char_device_client_exists(RedCharDevice *dev,
-                                    RedClient *client);
+void red_char_device_client_remove(RedCharDevice *dev,
+                                   RedClient *client);
+int red_char_device_client_exists(RedCharDevice *dev,
+                                  RedClient *client);
 
-void spice_char_device_start(RedCharDevice *dev);
-void spice_char_device_stop(RedCharDevice *dev);
-SpiceServer* spice_char_device_get_server(RedCharDevice *dev);
+void red_char_device_start(RedCharDevice *dev);
+void red_char_device_stop(RedCharDevice *dev);
+SpiceServer* red_char_device_get_server(RedCharDevice *dev);
 
 /** Read from device **/
 
-void spice_char_device_wakeup(RedCharDevice *dev);
+void red_char_device_wakeup(RedCharDevice *dev);
 
-void spice_char_device_send_to_client_tokens_add(RedCharDevice *dev,
-                                                 RedClient *client,
-                                                 uint32_t tokens);
+void red_char_device_send_to_client_tokens_add(RedCharDevice *dev,
+                                               RedClient *client,
+                                               uint32_t tokens);
 
 
-void spice_char_device_send_to_client_tokens_set(RedCharDevice *dev,
-                                                 RedClient *client,
-                                                 uint32_t tokens);
+void red_char_device_send_to_client_tokens_set(RedCharDevice *dev,
+                                               RedClient *client,
+                                               uint32_t tokens);
 /** Write to device **/
 
-RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(RedCharDevice *dev,
-                                                             RedClient *client, int size);
-RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get_server_no_token(
+RedCharDeviceWriteBuffer *red_char_device_write_buffer_get(RedCharDevice *dev,
+                                                           RedClient *client, int size);
+RedCharDeviceWriteBuffer *red_char_device_write_buffer_get_server_no_token(
     RedCharDevice *dev, int size);
 
 /* Either add the buffer to the write queue or release it */
-void spice_char_device_write_buffer_add(RedCharDevice *dev,
+void red_char_device_write_buffer_add(RedCharDevice *dev,
                                         RedCharDeviceWriteBuffer *write_buf);
-void spice_char_device_write_buffer_release(RedCharDevice *dev,
+void red_char_device_write_buffer_release(RedCharDevice *dev,
                                             RedCharDeviceWriteBuffer *write_buf);
 
 /* api for specific char devices */
