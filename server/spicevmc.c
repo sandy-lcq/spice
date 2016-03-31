@@ -61,6 +61,33 @@ typedef struct SpiceVmcState {
     uint8_t port_opened;
 } SpiceVmcState;
 
+#define RED_TYPE_CHAR_DEVICE_SPICEVMC red_char_device_spicevmc_get_type()
+
+#define RED_CHAR_DEVICE_SPICEVMC(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHAR_DEVICE_SPICEVMC, RedCharDeviceSpiceVmc))
+#define RED_CHAR_DEVICE_SPICEVMC_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_CHAR_DEVICE_SPICEVMC, RedCharDeviceSpiceVmcClass))
+#define RED_IS_CHAR_DEVICE_SPICEVMC(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_CHAR_DEVICE_SPICEVMC))
+#define RED_IS_CHAR_DEVICE_SPICEVMC_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_CHAR_DEVICE_SPICEVMC))
+#define RED_CHAR_DEVICE_SPICEVMC_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHAR_DEVICE_SPICEVMC, RedCharDeviceSpiceVmcClass))
+
+typedef struct RedCharDeviceSpiceVmc RedCharDeviceSpiceVmc;
+typedef struct RedCharDeviceSpiceVmcClass RedCharDeviceSpiceVmcClass;
+
+struct RedCharDeviceSpiceVmc {
+    RedCharDevice parent;
+};
+
+struct RedCharDeviceSpiceVmcClass
+{
+    RedCharDeviceClass parent_class;
+};
+
+static GType red_char_device_spicevmc_get_type(void) G_GNUC_CONST;
+static RedCharDevice *red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
+                                                   RedsState *reds,
+                                                   void *opaque);
+
+G_DEFINE_TYPE(RedCharDeviceSpiceVmc, red_char_device_spicevmc, RED_TYPE_CHAR_DEVICE)
+
 typedef struct PortInitPipeItem {
     PipeItem base;
     char* name;
@@ -507,7 +534,6 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
     SpiceVmcState *state;
     ChannelCbs channel_cbs = { NULL, };
     ClientCbs client_cbs = { NULL, };
-    RedCharDeviceCallbacks char_dev_cbs = {NULL, };
 
     channel_cbs.config_socket = spicevmc_red_channel_client_config_socket;
     channel_cbs.on_disconnect = spicevmc_red_channel_client_on_disconnect;
@@ -530,19 +556,7 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
     client_cbs.connect = spicevmc_connect;
     red_channel_register_client_cbs(&state->channel, &client_cbs, NULL);
 
-    char_dev_cbs.read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev;
-    char_dev_cbs.ref_msg_to_client = spicevmc_chardev_ref_msg_to_client;
-    char_dev_cbs.unref_msg_to_client = spicevmc_chardev_unref_msg_to_client;
-    char_dev_cbs.send_msg_to_client = spicevmc_chardev_send_msg_to_client;
-    char_dev_cbs.send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client;
-    char_dev_cbs.remove_client = spicevmc_char_dev_remove_client;
-
-    state->chardev = red_char_device_create(sin,
-                                            reds,
-                                            0, /* tokens interval */
-                                            ~0, /* self tokens */
-                                            &char_dev_cbs,
-                                            state);
+    state->chardev = red_char_device_spicevmc_new(sin, reds, state);
     state->chardev_sin = sin;
 
     reds_register_channel(reds, &state->channel);
@@ -592,4 +606,42 @@ SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, ui
     }
 
     spicevmc_port_send_event(state->rcc, event);
+}
+
+static void
+red_char_device_spicevmc_class_init(RedCharDeviceSpiceVmcClass *klass)
+{
+}
+
+static void
+red_char_device_spicevmc_init(RedCharDeviceSpiceVmc *self)
+{
+}
+
+static RedCharDevice *
+red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
+                             RedsState *reds,
+                             void *opaque)
+{
+    RedCharDevice *char_dev;
+    RedCharDeviceCallbacks char_dev_cbs = {
+        .read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev,
+        .ref_msg_to_client = spicevmc_chardev_ref_msg_to_client,
+        .unref_msg_to_client = spicevmc_chardev_unref_msg_to_client,
+        .send_msg_to_client = spicevmc_chardev_send_msg_to_client,
+        .send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client,
+        .remove_client = spicevmc_char_dev_remove_client,
+    };
+
+    char_dev = g_object_new(RED_TYPE_CHAR_DEVICE_SPICEVMC,
+                            "sin", sin,
+                            "spice-server", reds,
+                            "client-tokens-interval", 0ULL,
+                            "self-tokens", ~0ULL,
+                            "opaque", opaque,
+                            NULL);
+
+    red_char_device_set_callbacks(RED_CHAR_DEVICE(char_dev),
+                                  &char_dev_cbs, opaque);
+    return char_dev;
 }
