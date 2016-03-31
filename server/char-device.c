@@ -93,34 +93,34 @@ static void spice_char_device_write_buffer_unref(SpiceCharDeviceWriteBuffer *wri
 
 static void spice_char_dev_write_retry(void *opaque);
 
-typedef struct SpiceCharDeviceMsgToClientItem {
+typedef struct RedCharDeviceMsgToClientItem {
     RingItem link;
-    SpiceCharDeviceMsgToClient *msg;
-} SpiceCharDeviceMsgToClientItem;
+    RedCharDeviceMsgToClient *msg;
+} RedCharDeviceMsgToClientItem;
 
-static SpiceCharDeviceMsgToClient *
+static RedCharDeviceMsgToClient *
 spice_char_device_read_one_msg_from_device(SpiceCharDeviceState *dev)
 {
    return dev->priv->cbs.read_one_msg_from_device(dev->priv->sin, dev->priv->opaque);
 }
 
-static SpiceCharDeviceMsgToClient *
+static RedCharDeviceMsgToClient *
 spice_char_device_ref_msg_to_client(SpiceCharDeviceState *dev,
-                                    SpiceCharDeviceMsgToClient *msg)
+                                    RedCharDeviceMsgToClient *msg)
 {
    return dev->priv->cbs.ref_msg_to_client(msg, dev->priv->opaque);
 }
 
 static void
 spice_char_device_unref_msg_to_client(SpiceCharDeviceState *dev,
-                                      SpiceCharDeviceMsgToClient *msg)
+                                      RedCharDeviceMsgToClient *msg)
 {
    dev->priv->cbs.unref_msg_to_client(msg, dev->priv->opaque);
 }
 
 static void
 spice_char_device_send_msg_to_client(SpiceCharDeviceState *dev,
-                                     SpiceCharDeviceMsgToClient *msg,
+                                     RedCharDeviceMsgToClient *msg,
                                      RedClient *client)
 {
    dev->priv->cbs.send_msg_to_client(msg, client, dev->priv->opaque);
@@ -192,9 +192,9 @@ static void spice_char_device_client_send_queue_free(SpiceCharDeviceState *dev,
     spice_debug("send_queue_empty %d", ring_is_empty(&dev_client->send_queue));
     while (!ring_is_empty(&dev_client->send_queue)) {
         RingItem *item = ring_get_tail(&dev_client->send_queue);
-        SpiceCharDeviceMsgToClientItem *msg_item = SPICE_CONTAINEROF(item,
-                                                                     SpiceCharDeviceMsgToClientItem,
-                                                                     link);
+        RedCharDeviceMsgToClientItem *msg_item = SPICE_CONTAINEROF(item,
+                                                                   RedCharDeviceMsgToClientItem,
+                                                                   link);
 
         ring_remove(item);
         spice_char_device_unref_msg_to_client(dev, msg_item->msg);
@@ -302,17 +302,17 @@ static uint64_t spice_char_device_max_send_tokens(SpiceCharDeviceState *dev)
 }
 
 static void spice_char_device_add_msg_to_client_queue(SpiceCharDeviceClientState *dev_client,
-                                                      SpiceCharDeviceMsgToClient *msg)
+                                                      RedCharDeviceMsgToClient *msg)
 {
     SpiceCharDeviceState *dev = dev_client->dev;
-    SpiceCharDeviceMsgToClientItem *msg_item;
+    RedCharDeviceMsgToClientItem *msg_item;
 
     if (dev_client->send_queue_size >= dev_client->max_send_queue_size) {
         spice_char_device_handle_client_overflow(dev_client);
         return;
     }
 
-    msg_item = spice_new0(SpiceCharDeviceMsgToClientItem, 1);
+    msg_item = spice_new0(RedCharDeviceMsgToClientItem, 1);
     msg_item->msg = spice_char_device_ref_msg_to_client(dev, msg);
     ring_add(&dev_client->send_queue, &msg_item->link);
     dev_client->send_queue_size++;
@@ -324,7 +324,7 @@ static void spice_char_device_add_msg_to_client_queue(SpiceCharDeviceClientState
 }
 
 static void spice_char_device_send_msg_to_clients(SpiceCharDeviceState *dev,
-                                                  SpiceCharDeviceMsgToClient *msg)
+                                                  RedCharDeviceMsgToClient *msg)
 {
     RingItem *item, *next;
 
@@ -370,7 +370,7 @@ static int spice_char_device_read_from_device(SpiceCharDeviceState *dev)
      * All messages will be discarded if no client is attached to the device
      */
     while ((max_send_tokens || ring_is_empty(&dev->priv->clients)) && dev->priv->running) {
-        SpiceCharDeviceMsgToClient *msg;
+        RedCharDeviceMsgToClient *msg;
 
         msg = spice_char_device_read_one_msg_from_device(dev);
         if (!msg) {
@@ -399,9 +399,9 @@ static void spice_char_device_client_send_queue_push(SpiceCharDeviceClientState 
     RingItem *item;
     while ((item = ring_get_tail(&dev_client->send_queue)) &&
            spice_char_device_can_send_to_client(dev_client)) {
-        SpiceCharDeviceMsgToClientItem *msg_item;
+        RedCharDeviceMsgToClientItem *msg_item;
 
-        msg_item = SPICE_CONTAINEROF(item, SpiceCharDeviceMsgToClientItem, link);
+        msg_item = SPICE_CONTAINEROF(item, RedCharDeviceMsgToClientItem, link);
         ring_remove(item);
 
         dev_client->num_send_tokens--;

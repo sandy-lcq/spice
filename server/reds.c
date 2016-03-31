@@ -706,8 +706,8 @@ static void vdi_port_read_buf_unref(VDIReadBuf *buf)
 
 /* reads from the device till completes reading a message that is addressed to the client,
  * or otherwise, when reading from the device fails */
-static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
-                                                                     void *opaque)
+static RedCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
+                                                                   void *opaque)
 {
     RedsState *reds = opaque;
     VDIPortState *state = &reds->agent_state;
@@ -778,20 +778,20 @@ static SpiceCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDe
     return NULL;
 }
 
-static SpiceCharDeviceMsgToClient *vdi_port_ref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
-                                                              void *opaque)
+static RedCharDeviceMsgToClient *vdi_port_ref_msg_to_client(RedCharDeviceMsgToClient *msg,
+                                                            void *opaque)
 {
     return vdi_port_read_buf_ref(msg);
 }
 
-static void vdi_port_unref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
+static void vdi_port_unref_msg_to_client(RedCharDeviceMsgToClient *msg,
                                          void *opaque)
 {
     vdi_port_read_buf_unref(msg);
 }
 
 /* after calling this, we unref the message, and the ref is in the instance side */
-static void vdi_port_send_msg_to_client(SpiceCharDeviceMsgToClient *msg,
+static void vdi_port_send_msg_to_client(RedCharDeviceMsgToClient *msg,
                                         RedClient *client,
                                         void *opaque)
 {

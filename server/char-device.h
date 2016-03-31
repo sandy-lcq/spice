@@ -95,7 +95,7 @@ typedef struct SpiceCharDeviceWriteBuffer {
     uint32_t refs;
 } SpiceCharDeviceWriteBuffer;
 
-typedef void SpiceCharDeviceMsgToClient;
+typedef void RedCharDeviceMsgToClient;
 
 typedef struct SpiceCharDeviceCallbacks {
     /*
@@ -105,13 +105,13 @@ typedef struct SpiceCharDeviceCallbacks {
 
     /* reads from the device till reaching a msg that should be sent to the client,
      * or till the reading fails */
-    SpiceCharDeviceMsgToClient* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
+    RedCharDeviceMsgToClient* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
                                                             void *opaque);
-    SpiceCharDeviceMsgToClient* (*ref_msg_to_client)(SpiceCharDeviceMsgToClient *msg,
-                                                     void *opaque);
-    void (*unref_msg_to_client)(SpiceCharDeviceMsgToClient *msg,
+    RedCharDeviceMsgToClient* (*ref_msg_to_client)(RedCharDeviceMsgToClient *msg,
+                                                   void *opaque);
+    void (*unref_msg_to_client)(RedCharDeviceMsgToClient *msg,
                                 void *opaque);
-    void (*send_msg_to_client)(SpiceCharDeviceMsgToClient *msg,
+    void (*send_msg_to_client)(RedCharDeviceMsgToClient *msg,
                                RedClient *client,
                                void *opaque); /* after this call, the message is unreferenced */
 

@@ -92,20 +92,20 @@ static void spicevmc_pipe_item_unref(SpiceVmcPipeItem *item)
     }
 }
 
-static SpiceCharDeviceMsgToClient *spicevmc_chardev_ref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
-                                                                      void *opaque)
+static RedCharDeviceMsgToClient *spicevmc_chardev_ref_msg_to_client(RedCharDeviceMsgToClient *msg,
+                                                                    void *opaque)
 {
     return spicevmc_pipe_item_ref((SpiceVmcPipeItem *)msg);
 }
 
-static void spicevmc_chardev_unref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
+static void spicevmc_chardev_unref_msg_to_client(RedCharDeviceMsgToClient *msg,
                                                  void *opaque)
 {
     spicevmc_pipe_item_unref((SpiceVmcPipeItem *)msg);
 }
 
-static SpiceCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
-                                                                      void *opaque)
+static RedCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
+                                                                    void *opaque)
 {
     SpiceVmcState *state = opaque;
     SpiceCharDeviceInterface *sif;
@@ -140,9 +140,9 @@ static SpiceCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharD
     }
 }
 
-static void spicevmc_chardev_send_msg_to_client(SpiceCharDeviceMsgToClient *msg,
-                                                 RedClient *client,
-                                                 void *opaque)
+static void spicevmc_chardev_send_msg_to_client(RedCharDeviceMsgToClient *msg,
+                                                RedClient *client,
+                                                void *opaque)
 {
     SpiceVmcState *state = opaque;
     SpiceVmcPipeItem *vmc_msg = msg;

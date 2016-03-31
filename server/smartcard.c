@@ -136,8 +136,8 @@ static void smartcard_read_buf_prepare(SmartCardDeviceState *state, VSCMsgHeader
     }
 }
 
-static SpiceCharDeviceMsgToClient *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
-                                                                  void *opaque)
+static RedCharDeviceMsgToClient *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
+                                                                void *opaque)
 {
     SmartCardDeviceState *state = opaque;
     SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
@@ -173,19 +173,19 @@ static SpiceCharDeviceMsgToClient *smartcard_read_msg_from_device(SpiceCharDevic
     return NULL;
 }
 
-static SpiceCharDeviceMsgToClient *smartcard_ref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
-                                                               void *opaque)
+static RedCharDeviceMsgToClient *smartcard_ref_msg_to_client(RedCharDeviceMsgToClient *msg,
+                                                             void *opaque)
 {
     return smartcard_ref_vsc_msg_item((MsgItem *)msg);
 }
 
-static void smartcard_unref_msg_to_client(SpiceCharDeviceMsgToClient *msg,
+static void smartcard_unref_msg_to_client(RedCharDeviceMsgToClient *msg,
                                           void *opaque)
 {
     smartcard_unref_vsc_msg_item((MsgItem *)msg);
 }
 
-static void smartcard_send_msg_to_client(SpiceCharDeviceMsgToClient *msg,
+static void smartcard_send_msg_to_client(RedCharDeviceMsgToClient *msg,
                                          RedClient *client,
                                          void *opaque)
 {
