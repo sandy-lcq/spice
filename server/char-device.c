@@ -55,7 +55,7 @@ struct RedCharDevicePrivate {
     Ring write_queue;
     Ring write_bufs_pool;
     uint64_t cur_pool_size;
-    SpiceCharDeviceWriteBuffer *cur_write_buf;
+    RedCharDeviceWriteBuffer *cur_write_buf;
     uint8_t *cur_write_buf_pos;
     SpiceTimer *write_to_dev_timer;
     uint64_t num_self_tokens;
@@ -89,7 +89,7 @@ enum {
  * destroyed during a callback */
 static void spice_char_device_state_ref(SpiceCharDeviceState *char_dev);
 static void spice_char_device_state_unref(SpiceCharDeviceState *char_dev);
-static void spice_char_device_write_buffer_unref(SpiceCharDeviceWriteBuffer *write_buf);
+static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
 
 static void spice_char_dev_write_retry(void *opaque);
 
@@ -148,7 +148,7 @@ spice_char_device_remove_client(SpiceCharDeviceState *dev, RedClient *client)
    dev->priv->cbs.remove_client(client, dev->priv->opaque);
 }
 
-static void spice_char_device_write_buffer_free(SpiceCharDeviceWriteBuffer *buf)
+static void red_char_device_write_buffer_free(RedCharDeviceWriteBuffer *buf)
 {
     if (buf == NULL)
         return;
@@ -161,16 +161,16 @@ static void write_buffers_queue_free(Ring *write_queue)
 {
     while (!ring_is_empty(write_queue)) {
         RingItem *item = ring_get_tail(write_queue);
-        SpiceCharDeviceWriteBuffer *buf;
+        RedCharDeviceWriteBuffer *buf;
 
         ring_remove(item);
-        buf = SPICE_CONTAINEROF(item, SpiceCharDeviceWriteBuffer, link);
-        spice_char_device_write_buffer_free(buf);
+        buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
+        red_char_device_write_buffer_free(buf);
     }
 }
 
 static void spice_char_device_write_buffer_pool_add(SpiceCharDeviceState *dev,
-                                                    SpiceCharDeviceWriteBuffer *buf)
+                                                    RedCharDeviceWriteBuffer *buf)
 {
     if (buf->refs == 1 &&
         dev->priv->cur_pool_size < MAX_POOL_SIZE) {
@@ -183,7 +183,7 @@ static void spice_char_device_write_buffer_pool_add(SpiceCharDeviceState *dev,
     }
 
     /* Buffer still being used - just unref for the caller */
-    spice_char_device_write_buffer_unref(buf);
+    red_char_device_write_buffer_unref(buf);
 }
 
 static void spice_char_device_client_send_queue_free(SpiceCharDeviceState *dev,
@@ -219,9 +219,9 @@ static void spice_char_device_client_free(SpiceCharDeviceState *dev,
     /* remove write buffers that are associated with the client */
     spice_debug("write_queue_is_empty %d", ring_is_empty(&dev->priv->write_queue) && !dev->priv->cur_write_buf);
     RING_FOREACH_SAFE(item, next, &dev->priv->write_queue) {
-        SpiceCharDeviceWriteBuffer *write_buf;
+        RedCharDeviceWriteBuffer *write_buf;
 
-        write_buf = SPICE_CONTAINEROF(item, SpiceCharDeviceWriteBuffer, link);
+        write_buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
         if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
             write_buf->client == dev_client->client) {
             ring_remove(item);
@@ -522,7 +522,7 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
             if (!item) {
                 break;
             }
-            dev->priv->cur_write_buf = SPICE_CONTAINEROF(item, SpiceCharDeviceWriteBuffer, link);
+            dev->priv->cur_write_buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
             dev->priv->cur_write_buf_pos = dev->priv->cur_write_buf->buf;
             ring_remove(item);
         }
@@ -541,7 +541,7 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
         total += n;
         write_len -= n;
         if (!write_len) {
-            SpiceCharDeviceWriteBuffer *release_buf = dev->priv->cur_write_buf;
+            RedCharDeviceWriteBuffer *release_buf = dev->priv->cur_write_buf;
             dev->priv->cur_write_buf = NULL;
             spice_char_device_write_buffer_release(dev, release_buf);
             continue;
@@ -575,23 +575,23 @@ static void spice_char_dev_write_retry(void *opaque)
     spice_char_device_write_to_device(dev);
 }
 
-static SpiceCharDeviceWriteBuffer *__spice_char_device_write_buffer_get(
+static RedCharDeviceWriteBuffer *__spice_char_device_write_buffer_get(
     SpiceCharDeviceState *dev, RedClient *client,
     int size, int origin, int migrated_data_tokens)
 {
     RingItem *item;
-    SpiceCharDeviceWriteBuffer *ret;
+    RedCharDeviceWriteBuffer *ret;
 
     if (origin == WRITE_BUFFER_ORIGIN_SERVER && !dev->priv->num_self_tokens) {
         return NULL;
     }
 
     if ((item = ring_get_tail(&dev->priv->write_bufs_pool))) {
-        ret = SPICE_CONTAINEROF(item, SpiceCharDeviceWriteBuffer, link);
+        ret = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
         ring_remove(item);
         dev->priv->cur_pool_size -= ret->buf_size;
     } else {
-        ret = spice_new0(SpiceCharDeviceWriteBuffer, 1);
+        ret = spice_new0(RedCharDeviceWriteBuffer, 1);
     }
 
     spice_assert(!ret->buf_used);
@@ -635,23 +635,23 @@ error:
     return NULL;
 }
 
-SpiceCharDeviceWriteBuffer *spice_char_device_write_buffer_get(SpiceCharDeviceState *dev,
-                                                               RedClient *client,
-                                                               int size)
+RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(SpiceCharDeviceState *dev,
+                                                             RedClient *client,
+                                                             int size)
 {
    return  __spice_char_device_write_buffer_get(dev, client, size,
              client ? WRITE_BUFFER_ORIGIN_CLIENT : WRITE_BUFFER_ORIGIN_SERVER,
              0);
 }
 
-SpiceCharDeviceWriteBuffer *spice_char_device_write_buffer_get_server_no_token(
+RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get_server_no_token(
     SpiceCharDeviceState *dev, int size)
 {
    return  __spice_char_device_write_buffer_get(dev, NULL, size,
              WRITE_BUFFER_ORIGIN_SERVER_NO_TOKEN, 0);
 }
 
-static SpiceCharDeviceWriteBuffer *spice_char_device_write_buffer_ref(SpiceCharDeviceWriteBuffer *write_buf)
+static RedCharDeviceWriteBuffer *red_char_device_write_buffer_ref(RedCharDeviceWriteBuffer *write_buf)
 {
     spice_assert(write_buf);
 
@@ -659,17 +659,17 @@ static SpiceCharDeviceWriteBuffer *spice_char_device_write_buffer_ref(SpiceCharD
     return write_buf;
 }
 
-static void spice_char_device_write_buffer_unref(SpiceCharDeviceWriteBuffer *write_buf)
+static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf)
 {
     spice_assert(write_buf);
 
     write_buf->refs--;
     if (write_buf->refs == 0)
-        spice_char_device_write_buffer_free(write_buf);
+        red_char_device_write_buffer_free(write_buf);
 }
 
 void spice_char_device_write_buffer_add(SpiceCharDeviceState *dev,
-                                        SpiceCharDeviceWriteBuffer *write_buf)
+                                        RedCharDeviceWriteBuffer *write_buf)
 {
     spice_assert(dev);
     /* caller shouldn't add buffers for client that was removed */
@@ -685,7 +685,7 @@ void spice_char_device_write_buffer_add(SpiceCharDeviceState *dev,
 }
 
 void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
-                                            SpiceCharDeviceWriteBuffer *write_buf)
+                                            RedCharDeviceWriteBuffer *write_buf)
 {
     int buf_origin = write_buf->origin;
     uint32_t buf_token_price = write_buf->token_price;
@@ -694,7 +694,7 @@ void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
     spice_assert(!ring_item_is_linked(&write_buf->link));
     if (!dev) {
         spice_printerr("no device. write buffer is freed");
-        spice_char_device_write_buffer_free(write_buf);
+        red_char_device_write_buffer_free(write_buf);
         return;
     }
 
@@ -803,7 +803,7 @@ void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
     write_buffers_queue_free(&char_dev->priv->write_queue);
     write_buffers_queue_free(&char_dev->priv->write_bufs_pool);
     char_dev->priv->cur_pool_size = 0;
-    spice_char_device_write_buffer_free(char_dev->priv->cur_write_buf);
+    red_char_device_write_buffer_free(char_dev->priv->cur_write_buf);
     char_dev->priv->cur_write_buf = NULL;
 
     while (!ring_is_empty(&char_dev->priv->clients)) {
@@ -944,15 +944,15 @@ void spice_char_device_reset(SpiceCharDeviceState *dev)
     spice_debug("dev_state %p", dev);
     while (!ring_is_empty(&dev->priv->write_queue)) {
         RingItem *item = ring_get_tail(&dev->priv->write_queue);
-        SpiceCharDeviceWriteBuffer *buf;
+        RedCharDeviceWriteBuffer *buf;
 
         ring_remove(item);
-        buf = SPICE_CONTAINEROF(item, SpiceCharDeviceWriteBuffer, link);
+        buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
         /* tracking the tokens */
         spice_char_device_write_buffer_release(dev, buf);
     }
     if (dev->priv->cur_write_buf) {
-        SpiceCharDeviceWriteBuffer *release_buf = dev->priv->cur_write_buf;
+        RedCharDeviceWriteBuffer *release_buf = dev->priv->cur_write_buf;
 
         dev->priv->cur_write_buf = NULL;
         spice_char_device_write_buffer_release(dev, release_buf);
@@ -991,9 +991,9 @@ void spice_char_device_state_migrate_data_marshall_empty(SpiceMarshaller *m)
 
 static void migrate_data_marshaller_write_buffer_free(uint8_t *data, void *opaque)
 {
-    SpiceCharDeviceWriteBuffer *write_buf = (SpiceCharDeviceWriteBuffer *)opaque;
+    RedCharDeviceWriteBuffer *write_buf = (RedCharDeviceWriteBuffer *)opaque;
 
-    spice_char_device_write_buffer_unref(write_buf);
+    red_char_device_write_buffer_unref(write_buf);
 }
 
 void spice_char_device_state_migrate_data_marshall(SpiceCharDeviceState *dev,
@@ -1029,7 +1029,7 @@ void spice_char_device_state_migrate_data_marshall(SpiceCharDeviceState *dev,
                                  dev->priv->cur_write_buf_pos;
         spice_marshaller_add_ref_full(m2, dev->priv->cur_write_buf_pos, buf_remaining,
                                       migrate_data_marshaller_write_buffer_free,
-                                      spice_char_device_write_buffer_ref(dev->priv->cur_write_buf)
+                                      red_char_device_write_buffer_ref(dev->priv->cur_write_buf)
                                       );
         *write_to_dev_size_ptr += buf_remaining;
         if (dev->priv->cur_write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
@@ -1039,12 +1039,12 @@ void spice_char_device_state_migrate_data_marshall(SpiceCharDeviceState *dev,
     }
 
     RING_FOREACH_REVERSED(item, &dev->priv->write_queue) {
-        SpiceCharDeviceWriteBuffer *write_buf;
+        RedCharDeviceWriteBuffer *write_buf;
 
-        write_buf = SPICE_CONTAINEROF(item, SpiceCharDeviceWriteBuffer, link);
+        write_buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
         spice_marshaller_add_ref_full(m2, write_buf->buf, write_buf->buf_used,
                                       migrate_data_marshaller_write_buffer_free,
-                                      spice_char_device_write_buffer_ref(write_buf)
+                                      red_char_device_write_buffer_ref(write_buf)
                                       );
         *write_to_dev_size_ptr += write_buf->buf_used;
         if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {

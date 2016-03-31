@@ -63,7 +63,7 @@ struct VDIPortState {
     int client_agent_started;
 
     /* write to agent */
-    SpiceCharDeviceWriteBuffer *recv_from_client_buf;
+    RedCharDeviceWriteBuffer *recv_from_client_buf;
     int recv_from_client_buf_pushed;
     AgentMsgFilter write_filter;
 

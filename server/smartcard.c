@@ -57,8 +57,8 @@ typedef struct SmartCardChannelClient {
 
     /* read_from_client/write_to_device buffer.
      * The beginning of the buffer should always be VSCMsgHeader*/
-    SpiceCharDeviceWriteBuffer *write_buf;
-    int msg_in_write_buf; /* was the client msg received into a SpiceCharDeviceWriteBuffer
+    RedCharDeviceWriteBuffer *write_buf;
+    int msg_in_write_buf; /* was the client msg received into a RedCharDeviceWriteBuffer
                            * or was it explicitly malloced */
 } SmartCardChannelClient;
 
@@ -117,7 +117,7 @@ static SpiceCharDeviceInstance* smartcard_readers_get(uint32_t reader_id);
 static int smartcard_char_device_add_to_readers(RedsState *reds, SpiceCharDeviceInstance *sin);
 static void smartcard_char_device_attach_client(
     SpiceCharDeviceInstance *char_device, SmartCardChannelClient *scc);
-static void smartcard_channel_write_to_reader(SpiceCharDeviceWriteBuffer *write_buf);
+static void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_buf);
 
 static MsgItem *smartcard_char_device_on_message_from_device(
     SmartCardDeviceState *state, VSCMsgHeader *header);
@@ -333,7 +333,7 @@ SpiceCharDeviceState *smartcard_device_connect(RedsState *reds, SpiceCharDeviceI
 
 static void smartcard_char_device_notify_reader_add(SmartCardDeviceState *st)
 {
-    SpiceCharDeviceWriteBuffer *write_buf;
+    RedCharDeviceWriteBuffer *write_buf;
     VSCMsgHeader *vheader;
 
     write_buf = spice_char_device_write_buffer_get(st->priv->chardev_st, NULL, sizeof(vheader));
@@ -376,7 +376,7 @@ static void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_de
 
 static void smartcard_char_device_notify_reader_remove(SmartCardDeviceState *st)
 {
-    SpiceCharDeviceWriteBuffer *write_buf;
+    RedCharDeviceWriteBuffer *write_buf;
     VSCMsgHeader *vheader;
 
     if (!st->priv->reader_added) {
@@ -657,7 +657,7 @@ static void smartcard_add_reader(SmartCardChannelClient *scc, uint8_t *name)
     // our SmartCardDeviceState.
 }
 
-static void smartcard_channel_write_to_reader(SpiceCharDeviceWriteBuffer *write_buf)
+static void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_buf)
 {
     SpiceCharDeviceInstance *sin;
     SmartCardDeviceState *st;

@@ -35,7 +35,7 @@
  *
  * Writing to the device
  * ---------------------
- * Write the data into SpiceCharDeviceWriteBuffer:
+ * Write the data into RedCharDeviceWriteBuffer:
  * call spice_char_device_write_buffer_get in order to get an appropriate buffer.
  * call spice_char_device_write_buffer_add in order to push the buffer to the write queue.
  * If you choose not to push the buffer to the device, call
@@ -82,7 +82,7 @@
 struct RedsState;
 
 /* buffer that is used for writing to the device */
-typedef struct SpiceCharDeviceWriteBuffer {
+typedef struct RedCharDeviceWriteBuffer {
     RingItem link;
     int origin;
     RedClient *client; /* The client that sent the message to the device.
@@ -93,7 +93,7 @@ typedef struct SpiceCharDeviceWriteBuffer {
     uint32_t buf_used;
     uint32_t token_price;
     uint32_t refs;
-} SpiceCharDeviceWriteBuffer;
+} RedCharDeviceWriteBuffer;
 
 typedef void RedCharDeviceMsgToClient;
 
@@ -200,16 +200,16 @@ void spice_char_device_send_to_client_tokens_set(SpiceCharDeviceState *dev,
                                                  uint32_t tokens);
 /** Write to device **/
 
-SpiceCharDeviceWriteBuffer *spice_char_device_write_buffer_get(SpiceCharDeviceState *dev,
-                                                               RedClient *client, int size);
-SpiceCharDeviceWriteBuffer *spice_char_device_write_buffer_get_server_no_token(
+RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(SpiceCharDeviceState *dev,
+                                                             RedClient *client, int size);
+RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get_server_no_token(
     SpiceCharDeviceState *dev, int size);
 
 /* Either add the buffer to the write queue or release it */
 void spice_char_device_write_buffer_add(SpiceCharDeviceState *dev,
-                                        SpiceCharDeviceWriteBuffer *write_buf);
+                                        RedCharDeviceWriteBuffer *write_buf);
 void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
-                                            SpiceCharDeviceWriteBuffer *write_buf);
+                                            RedCharDeviceWriteBuffer *write_buf);
 
 /* api for specific char devices */
 

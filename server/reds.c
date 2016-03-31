@@ -502,7 +502,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
     if (reds->num_clients == 0) {
         /* Let the agent know the client is disconnected */
         if (reds->agent_state.base) {
-            SpiceCharDeviceWriteBuffer *char_dev_buf;
+            RedCharDeviceWriteBuffer *char_dev_buf;
             VDInternalBuf *internal_buf;
             uint32_t total_msg_size;
 
@@ -835,7 +835,7 @@ int reds_has_vdagent(RedsState *reds)
 
 void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mouse_state)
 {
-    SpiceCharDeviceWriteBuffer *char_dev_buf;
+    RedCharDeviceWriteBuffer *char_dev_buf;
     VDInternalBuf *internal_buf;
     uint32_t total_msg_size;
 

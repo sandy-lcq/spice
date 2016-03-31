@@ -57,7 +57,7 @@ typedef struct SpiceVmcState {
     SpiceCharDeviceState *chardev_st;
     SpiceCharDeviceInstance *chardev_sin;
     SpiceVmcPipeItem *pipe_item;
-    SpiceCharDeviceWriteBuffer *recv_from_client_buf;
+    RedCharDeviceWriteBuffer *recv_from_client_buf;
     uint8_t port_opened;
 } SpiceVmcState;
 
