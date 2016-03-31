@@ -80,6 +80,8 @@
  * */
 
 struct RedsState;
+/* SpiceCharDeviceState is public API, but internally we use RedCharDevice */
+typedef struct SpiceCharDeviceState RedCharDevice;
 
 /* buffer that is used for writing to the device */
 typedef struct RedCharDeviceWriteBuffer {
@@ -129,25 +131,25 @@ typedef struct SpiceCharDeviceCallbacks {
     void (*remove_client)(RedClient *client, void *opaque);
 } SpiceCharDeviceCallbacks;
 
-SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *sin,
-                                                     struct RedsState *reds,
-                                                     uint32_t client_tokens_interval,
-                                                     uint32_t self_tokens,
-                                                     SpiceCharDeviceCallbacks *cbs,
-                                                     void *opaque);
+RedCharDevice *spice_char_device_state_create(SpiceCharDeviceInstance *sin,
+                                              struct RedsState *reds,
+                                              uint32_t client_tokens_interval,
+                                              uint32_t self_tokens,
+                                              SpiceCharDeviceCallbacks *cbs,
+                                              void *opaque);
 
-void spice_char_device_state_reset_dev_instance(SpiceCharDeviceState *dev,
+void spice_char_device_state_reset_dev_instance(RedCharDevice *dev,
                                                 SpiceCharDeviceInstance *sin);
-void spice_char_device_state_destroy(SpiceCharDeviceState *dev);
+void spice_char_device_state_destroy(RedCharDevice *dev);
 
-void *spice_char_device_state_opaque_get(SpiceCharDeviceState *dev);
+void *spice_char_device_state_opaque_get(RedCharDevice *dev);
 
 /* only one client is supported */
-void spice_char_device_state_migrate_data_marshall(SpiceCharDeviceState *dev,
+void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
                                                   SpiceMarshaller *m);
 void spice_char_device_state_migrate_data_marshall_empty(SpiceMarshaller *m);
 
-int spice_char_device_state_restore(SpiceCharDeviceState *dev,
+int spice_char_device_state_restore(RedCharDevice *dev,
                                     SpiceMigrateDataCharDevice *mig_data);
 
 /*
@@ -165,11 +167,11 @@ int spice_char_device_state_restore(SpiceCharDeviceState *dev,
  *
  *  todo: change AGENT_CONNECT msg to contain tokens count.
  */
-void spice_char_device_reset(SpiceCharDeviceState *dev);
+void spice_char_device_reset(RedCharDevice *dev);
 
 /* max_send_queue_size = how many messages we can read from the device and enqueue for this client,
  * when we have tokens for other clients and no tokens for this one */
-int spice_char_device_client_add(SpiceCharDeviceState *dev,
+int spice_char_device_client_add(RedCharDevice *dev,
                                  RedClient *client,
                                  int do_flow_control,
                                  uint32_t max_send_queue_size,
@@ -177,45 +179,45 @@ int spice_char_device_client_add(SpiceCharDeviceState *dev,
                                  uint32_t num_send_tokens,
                                  int wait_for_migrate_data);
 
-void spice_char_device_client_remove(SpiceCharDeviceState *dev,
+void spice_char_device_client_remove(RedCharDevice *dev,
                                      RedClient *client);
-int spice_char_device_client_exists(SpiceCharDeviceState *dev,
+int spice_char_device_client_exists(RedCharDevice *dev,
                                     RedClient *client);
 
-void spice_char_device_start(SpiceCharDeviceState *dev);
-void spice_char_device_stop(SpiceCharDeviceState *dev);
-SpiceServer* spice_char_device_get_server(SpiceCharDeviceState *dev);
+void spice_char_device_start(RedCharDevice *dev);
+void spice_char_device_stop(RedCharDevice *dev);
+SpiceServer* spice_char_device_get_server(RedCharDevice *dev);
 
 /** Read from device **/
 
-void spice_char_device_wakeup(SpiceCharDeviceState *dev);
+void spice_char_device_wakeup(RedCharDevice *dev);
 
-void spice_char_device_send_to_client_tokens_add(SpiceCharDeviceState *dev,
+void spice_char_device_send_to_client_tokens_add(RedCharDevice *dev,
                                                  RedClient *client,
                                                  uint32_t tokens);
 
 
-void spice_char_device_send_to_client_tokens_set(SpiceCharDeviceState *dev,
+void spice_char_device_send_to_client_tokens_set(RedCharDevice *dev,
                                                  RedClient *client,
                                                  uint32_t tokens);
 /** Write to device **/
 
-RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(SpiceCharDeviceState *dev,
+RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(RedCharDevice *dev,
                                                              RedClient *client, int size);
 RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get_server_no_token(
-    SpiceCharDeviceState *dev, int size);
+    RedCharDevice *dev, int size);
 
 /* Either add the buffer to the write queue or release it */
-void spice_char_device_write_buffer_add(SpiceCharDeviceState *dev,
+void spice_char_device_write_buffer_add(RedCharDevice *dev,
                                         RedCharDeviceWriteBuffer *write_buf);
-void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
+void spice_char_device_write_buffer_release(RedCharDevice *dev,
                                             RedCharDeviceWriteBuffer *write_buf);
 
 /* api for specific char devices */
 
-SpiceCharDeviceState *spicevmc_device_connect(struct RedsState *reds,
-                                              SpiceCharDeviceInstance *sin,
-                                              uint8_t channel_type);
+RedCharDevice *spicevmc_device_connect(struct RedsState *reds,
+                                       SpiceCharDeviceInstance *sin,
+                                       uint8_t channel_type);
 void spicevmc_device_disconnect(struct RedsState *reds,
                                 SpiceCharDeviceInstance *char_device);
 

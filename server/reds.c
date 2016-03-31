@@ -171,8 +171,8 @@ static RedsMigTargetClient* reds_mig_target_client_find(RedsState *reds, RedClie
 static void reds_mig_target_client_free(RedsMigTargetClient *mig_client);
 static void reds_mig_cleanup_wait_disconnect(RedsState *reds);
 static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *client);
-static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st);
-static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState *st);
+static void reds_add_char_device(RedsState *reds, RedCharDevice *dev);
+static void reds_remove_char_device(RedsState *reds, RedCharDevice *dev);
 static void reds_send_mm_time(RedsState *reds);
 static void reds_on_ic_change(RedsState *reds);
 static void reds_on_sv_change(RedsState *reds);
@@ -922,7 +922,7 @@ void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
 
 void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens)
 {
-    SpiceCharDeviceState *dev_state = reds->agent_state.base;
+    RedCharDevice *dev_state = reds->agent_state.base;
     RedChannelClient *rcc;
 
     if (!reds->vdagent) {
@@ -1176,7 +1176,7 @@ void reds_marshall_migrate_data(RedsState *reds, SpiceMarshaller *m)
         uint8_t *null_agent_mig_data;
 
         spice_assert(!agent_state->base); /* MSG_AGENT_CONNECTED_TOKENS is supported by the client
-                                             (see spice_server_migrate_connect), so SpiceCharDeviceState
+                                             (see spice_server_migrate_connect), so RedCharDevice
                                              is destroyed when the agent is disconnected and
                                              there is no need to track the client tokens
                                              (see reds_reset_vdp) */
@@ -2968,7 +2968,7 @@ void reds_disable_mm_time(RedsState *reds)
     reds->mm_time_enabled = FALSE;
 }
 
-static SpiceCharDeviceState *attach_to_red_agent(RedsState *reds, SpiceCharDeviceInstance *sin)
+static RedCharDevice *attach_to_red_agent(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     VDIPortState *state = &reds->agent_state;
     SpiceCharDeviceInterface *sif;
@@ -3056,7 +3056,7 @@ static SpiceCharDeviceState *attach_to_red_agent(RedsState *reds, SpiceCharDevic
 SPICE_GNUC_VISIBLE void spice_server_char_device_wakeup(SpiceCharDeviceInstance* sin)
 {
     if (!sin->st) {
-        spice_warning("no SpiceCharDeviceState attached to instance %p", sin);
+        spice_warning("no RedCharDevice attached to instance %p", sin);
         return;
     }
     spice_char_device_wakeup(sin->st);
@@ -3081,20 +3081,20 @@ SPICE_GNUC_VISIBLE const char** spice_server_char_device_recognized_subtypes(voi
     return spice_server_char_device_recognized_subtypes_list;
 }
 
-static void reds_char_device_add_state(RedsState *reds, SpiceCharDeviceState *st)
+static void reds_add_char_device(RedsState *reds, RedCharDevice *dev)
 {
-    reds->char_devices = g_list_append(reds->char_devices, st);
+    reds->char_devices = g_list_append(reds->char_devices, dev);
 }
 
-static void reds_char_device_remove_state(RedsState *reds, SpiceCharDeviceState *st)
+static void reds_remove_char_device(RedsState *reds, RedCharDevice *dev)
 {
-    g_warn_if_fail(g_list_find(reds->char_devices, st) != NULL);
-    reds->char_devices = g_list_remove(reds->char_devices, st);
+    g_warn_if_fail(g_list_find(reds->char_devices, dev) != NULL);
+    reds->char_devices = g_list_remove(reds->char_devices, dev);
 }
 
-void reds_on_char_device_state_destroy(RedsState *reds, SpiceCharDeviceState *dev)
+void reds_on_char_device_state_destroy(RedsState *reds, RedCharDevice *dev)
 {
-    reds_char_device_remove_state(reds, dev);
+    reds_remove_char_device(reds, dev);
 }
 
 static int spice_server_char_device_add_interface(SpiceServer *reds,
@@ -3102,7 +3102,7 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
 {
     SpiceCharDeviceInstance* char_device =
             SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
-    SpiceCharDeviceState *dev_state = NULL;
+    RedCharDevice *dev_state = NULL;
 
     spice_info("CHAR_DEVICE %s", char_device->subtype);
     if (strcmp(char_device->subtype, SUBTYPE_VDAGENT) == 0) {
@@ -3137,7 +3137,7 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
         if (reds->vm_running) {
             spice_char_device_start(char_device->st);
         }
-        reds_char_device_add_state(reds, char_device->st);
+        reds_add_char_device(reds, char_device->st);
     } else {
         spice_warning("failed to create device state for %s", char_device->subtype);
         return -1;
@@ -3976,7 +3976,7 @@ SPICE_GNUC_VISIBLE void spice_server_vm_start(SpiceServer *reds)
 
     reds->vm_running = TRUE;
     for (it = reds->char_devices; it != NULL; it = it->next) {
-        spice_char_device_start((SpiceCharDeviceState *)it->data);
+        spice_char_device_start(it->data);
     }
     reds_on_vm_start(reds);
 }
@@ -3987,7 +3987,7 @@ SPICE_GNUC_VISIBLE void spice_server_vm_stop(SpiceServer *reds)
 
     reds->vm_running = FALSE;
     for (it = reds->char_devices; it != NULL; it = it->next) {
-        spice_char_device_stop((SpiceCharDeviceState *)it->data);
+        spice_char_device_stop(it->data);
     }
     reds_on_vm_stop(reds);
 }

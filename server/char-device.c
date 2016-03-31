@@ -33,7 +33,7 @@
 typedef struct SpiceCharDeviceClientState SpiceCharDeviceClientState;
 struct SpiceCharDeviceClientState {
     RingItem link;
-    SpiceCharDeviceState *dev;
+    RedCharDevice *dev;
     RedClient *client;
     int do_flow_control;
     uint64_t num_client_tokens;
@@ -74,6 +74,7 @@ struct RedCharDevicePrivate {
     SpiceServer *reds;
 };
 
+/* typedef'ed as RedCharDevice */
 struct SpiceCharDeviceState {
     struct RedCharDevicePrivate priv[1];
 };
@@ -87,8 +88,8 @@ enum {
 
 /* Holding references for avoiding access violation if the char device was
  * destroyed during a callback */
-static void spice_char_device_state_ref(SpiceCharDeviceState *char_dev);
-static void spice_char_device_state_unref(SpiceCharDeviceState *char_dev);
+static void spice_char_device_state_ref(RedCharDevice *char_dev);
+static void spice_char_device_state_unref(RedCharDevice *char_dev);
 static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
 
 static void spice_char_dev_write_retry(void *opaque);
@@ -99,27 +100,27 @@ typedef struct RedCharDeviceMsgToClientItem {
 } RedCharDeviceMsgToClientItem;
 
 static RedCharDeviceMsgToClient *
-spice_char_device_read_one_msg_from_device(SpiceCharDeviceState *dev)
+spice_char_device_read_one_msg_from_device(RedCharDevice *dev)
 {
    return dev->priv->cbs.read_one_msg_from_device(dev->priv->sin, dev->priv->opaque);
 }
 
 static RedCharDeviceMsgToClient *
-spice_char_device_ref_msg_to_client(SpiceCharDeviceState *dev,
+spice_char_device_ref_msg_to_client(RedCharDevice *dev,
                                     RedCharDeviceMsgToClient *msg)
 {
    return dev->priv->cbs.ref_msg_to_client(msg, dev->priv->opaque);
 }
 
 static void
-spice_char_device_unref_msg_to_client(SpiceCharDeviceState *dev,
+spice_char_device_unref_msg_to_client(RedCharDevice *dev,
                                       RedCharDeviceMsgToClient *msg)
 {
    dev->priv->cbs.unref_msg_to_client(msg, dev->priv->opaque);
 }
 
 static void
-spice_char_device_send_msg_to_client(SpiceCharDeviceState *dev,
+spice_char_device_send_msg_to_client(RedCharDevice *dev,
                                      RedCharDeviceMsgToClient *msg,
                                      RedClient *client)
 {
@@ -127,7 +128,7 @@ spice_char_device_send_msg_to_client(SpiceCharDeviceState *dev,
 }
 
 static void
-spice_char_device_send_tokens_to_client(SpiceCharDeviceState *dev,
+spice_char_device_send_tokens_to_client(RedCharDevice *dev,
                                         RedClient *client,
                                         uint32_t tokens)
 {
@@ -135,7 +136,7 @@ spice_char_device_send_tokens_to_client(SpiceCharDeviceState *dev,
 }
 
 static void
-spice_char_device_on_free_self_token(SpiceCharDeviceState *dev)
+spice_char_device_on_free_self_token(RedCharDevice *dev)
 {
    if (dev->priv->cbs.on_free_self_token != NULL) {
        dev->priv->cbs.on_free_self_token(dev->priv->opaque);
@@ -143,7 +144,7 @@ spice_char_device_on_free_self_token(SpiceCharDeviceState *dev)
 }
 
 static void
-spice_char_device_remove_client(SpiceCharDeviceState *dev, RedClient *client)
+spice_char_device_remove_client(RedCharDevice *dev, RedClient *client)
 {
    dev->priv->cbs.remove_client(client, dev->priv->opaque);
 }
@@ -169,7 +170,7 @@ static void write_buffers_queue_free(Ring *write_queue)
     }
 }
 
-static void spice_char_device_write_buffer_pool_add(SpiceCharDeviceState *dev,
+static void spice_char_device_write_buffer_pool_add(RedCharDevice *dev,
                                                     RedCharDeviceWriteBuffer *buf)
 {
     if (buf->refs == 1 &&
@@ -186,7 +187,7 @@ static void spice_char_device_write_buffer_pool_add(SpiceCharDeviceState *dev,
     red_char_device_write_buffer_unref(buf);
 }
 
-static void spice_char_device_client_send_queue_free(SpiceCharDeviceState *dev,
+static void spice_char_device_client_send_queue_free(RedCharDevice *dev,
                                                      SpiceCharDeviceClientState *dev_client)
 {
     spice_debug("send_queue_empty %d", ring_is_empty(&dev_client->send_queue));
@@ -204,7 +205,7 @@ static void spice_char_device_client_send_queue_free(SpiceCharDeviceState *dev,
     dev_client->send_queue_size = 0;
 }
 
-static void spice_char_device_client_free(SpiceCharDeviceState *dev,
+static void spice_char_device_client_free(RedCharDevice *dev,
                                           SpiceCharDeviceClientState *dev_client)
 {
     RingItem *item, *next;
@@ -242,12 +243,12 @@ static void spice_char_device_client_free(SpiceCharDeviceState *dev,
 
 static void spice_char_device_handle_client_overflow(SpiceCharDeviceClientState *dev_client)
 {
-    SpiceCharDeviceState *dev = dev_client->dev;
+    RedCharDevice *dev = dev_client->dev;
     spice_printerr("dev %p client %p ", dev, dev_client);
     spice_char_device_remove_client(dev, dev_client->client);
 }
 
-static SpiceCharDeviceClientState *spice_char_device_client_find(SpiceCharDeviceState *dev,
+static SpiceCharDeviceClientState *spice_char_device_client_find(RedCharDevice *dev,
                                                                  RedClient *client)
 {
     RingItem *item;
@@ -279,7 +280,7 @@ static int spice_char_device_can_send_to_client(SpiceCharDeviceClientState *dev_
     return !dev_client->do_flow_control || dev_client->num_send_tokens;
 }
 
-static uint64_t spice_char_device_max_send_tokens(SpiceCharDeviceState *dev)
+static uint64_t spice_char_device_max_send_tokens(RedCharDevice *dev)
 {
     RingItem *item;
     uint64_t max = 0;
@@ -304,7 +305,7 @@ static uint64_t spice_char_device_max_send_tokens(SpiceCharDeviceState *dev)
 static void spice_char_device_add_msg_to_client_queue(SpiceCharDeviceClientState *dev_client,
                                                       RedCharDeviceMsgToClient *msg)
 {
-    SpiceCharDeviceState *dev = dev_client->dev;
+    RedCharDevice *dev = dev_client->dev;
     RedCharDeviceMsgToClientItem *msg_item;
 
     if (dev_client->send_queue_size >= dev_client->max_send_queue_size) {
@@ -323,7 +324,7 @@ static void spice_char_device_add_msg_to_client_queue(SpiceCharDeviceClientState
     }
 }
 
-static void spice_char_device_send_msg_to_clients(SpiceCharDeviceState *dev,
+static void spice_char_device_send_msg_to_clients(RedCharDevice *dev,
                                                   RedCharDeviceMsgToClient *msg)
 {
     RingItem *item, *next;
@@ -344,7 +345,7 @@ static void spice_char_device_send_msg_to_clients(SpiceCharDeviceState *dev,
     }
 }
 
-static int spice_char_device_read_from_device(SpiceCharDeviceState *dev)
+static int spice_char_device_read_from_device(RedCharDevice *dev)
 {
     uint64_t max_send_tokens;
     int did_read = FALSE;
@@ -417,7 +418,7 @@ static void spice_char_device_client_send_queue_push(SpiceCharDeviceClientState 
 static void spice_char_device_send_to_client_tokens_absorb(SpiceCharDeviceClientState *dev_client,
                                                            uint32_t tokens)
 {
-    SpiceCharDeviceState *dev = dev_client->dev;
+    RedCharDevice *dev = dev_client->dev;
     dev_client->num_send_tokens += tokens;
 
     if (dev_client->send_queue_size) {
@@ -436,7 +437,7 @@ static void spice_char_device_send_to_client_tokens_absorb(SpiceCharDeviceClient
     }
 }
 
-void spice_char_device_send_to_client_tokens_add(SpiceCharDeviceState *dev,
+void spice_char_device_send_to_client_tokens_add(RedCharDevice *dev,
                                                  RedClient *client,
                                                  uint32_t tokens)
 {
@@ -451,7 +452,7 @@ void spice_char_device_send_to_client_tokens_add(SpiceCharDeviceState *dev,
     spice_char_device_send_to_client_tokens_absorb(dev_client, tokens);
 }
 
-void spice_char_device_send_to_client_tokens_set(SpiceCharDeviceState *dev,
+void spice_char_device_send_to_client_tokens_set(RedCharDevice *dev,
                                                  RedClient *client,
                                                  uint32_t tokens)
 {
@@ -472,7 +473,7 @@ void spice_char_device_send_to_client_tokens_set(SpiceCharDeviceState *dev,
  * Writing to the device  *
 ***************************/
 
-static void spice_char_device_client_tokens_add(SpiceCharDeviceState *dev,
+static void spice_char_device_client_tokens_add(RedCharDevice *dev,
                                                 SpiceCharDeviceClientState *dev_client,
                                                 uint32_t num_tokens)
 {
@@ -492,7 +493,7 @@ static void spice_char_device_client_tokens_add(SpiceCharDeviceState *dev,
     }
 }
 
-static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
+static int spice_char_device_write_to_device(RedCharDevice *dev)
 {
     SpiceCharDeviceInterface *sif;
     int total = 0;
@@ -567,7 +568,7 @@ static int spice_char_device_write_to_device(SpiceCharDeviceState *dev)
 
 static void spice_char_dev_write_retry(void *opaque)
 {
-    SpiceCharDeviceState *dev = opaque;
+    RedCharDevice *dev = opaque;
 
     if (dev->priv->write_to_dev_timer) {
         reds_core_timer_cancel(dev->priv->reds, dev->priv->write_to_dev_timer);
@@ -576,7 +577,7 @@ static void spice_char_dev_write_retry(void *opaque)
 }
 
 static RedCharDeviceWriteBuffer *__spice_char_device_write_buffer_get(
-    SpiceCharDeviceState *dev, RedClient *client,
+    RedCharDevice *dev, RedClient *client,
     int size, int origin, int migrated_data_tokens)
 {
     RingItem *item;
@@ -635,7 +636,7 @@ error:
     return NULL;
 }
 
-RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(SpiceCharDeviceState *dev,
+RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(RedCharDevice *dev,
                                                              RedClient *client,
                                                              int size)
 {
@@ -645,7 +646,7 @@ RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get(SpiceCharDeviceStat
 }
 
 RedCharDeviceWriteBuffer *spice_char_device_write_buffer_get_server_no_token(
-    SpiceCharDeviceState *dev, int size)
+    RedCharDevice *dev, int size)
 {
    return  __spice_char_device_write_buffer_get(dev, NULL, size,
              WRITE_BUFFER_ORIGIN_SERVER_NO_TOKEN, 0);
@@ -668,7 +669,7 @@ static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_b
         red_char_device_write_buffer_free(write_buf);
 }
 
-void spice_char_device_write_buffer_add(SpiceCharDeviceState *dev,
+void spice_char_device_write_buffer_add(RedCharDevice *dev,
                                         RedCharDeviceWriteBuffer *write_buf)
 {
     spice_assert(dev);
@@ -684,7 +685,7 @@ void spice_char_device_write_buffer_add(SpiceCharDeviceState *dev,
     spice_char_device_write_to_device(dev);
 }
 
-void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
+void spice_char_device_write_buffer_release(RedCharDevice *dev,
                                             RedCharDeviceWriteBuffer *write_buf)
 {
     int buf_origin = write_buf->origin;
@@ -719,14 +720,14 @@ void spice_char_device_write_buffer_release(SpiceCharDeviceState *dev,
  * char_device_state management *
  ********************************/
 
-SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *sin,
-                                                     RedsState *reds,
-                                                     uint32_t client_tokens_interval,
-                                                     uint32_t self_tokens,
-                                                     SpiceCharDeviceCallbacks *cbs,
-                                                     void *opaque)
+RedCharDevice *spice_char_device_state_create(SpiceCharDeviceInstance *sin,
+                                              RedsState *reds,
+                                              uint32_t client_tokens_interval,
+                                              uint32_t self_tokens,
+                                              SpiceCharDeviceCallbacks *cbs,
+                                              void *opaque)
 {
-    SpiceCharDeviceState *char_dev;
+    RedCharDevice *char_dev;
     SpiceCharDeviceInterface *sif;
 
     spice_assert(sin);
@@ -734,7 +735,7 @@ SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *si
                  cbs->unref_msg_to_client && cbs->send_msg_to_client &&
                  cbs->send_tokens_to_client && cbs->remove_client);
 
-    char_dev = spice_new0(SpiceCharDeviceState, 1);
+    char_dev = spice_new0(RedCharDevice, 1);
     char_dev->priv->sin = sin;
     char_dev->priv->reds = reds;
     char_dev->priv->cbs = *cbs;
@@ -761,7 +762,7 @@ SpiceCharDeviceState *spice_char_device_state_create(SpiceCharDeviceInstance *si
     return char_dev;
 }
 
-void spice_char_device_state_reset_dev_instance(SpiceCharDeviceState *state,
+void spice_char_device_state_reset_dev_instance(RedCharDevice *state,
                                                 SpiceCharDeviceInstance *sin)
 {
     spice_debug("sin %p dev_state %p", sin, state);
@@ -769,17 +770,17 @@ void spice_char_device_state_reset_dev_instance(SpiceCharDeviceState *state,
     sin->st = state;
 }
 
-void *spice_char_device_state_opaque_get(SpiceCharDeviceState *dev)
+void *spice_char_device_state_opaque_get(RedCharDevice *dev)
 {
     return dev->priv->opaque;
 }
 
-static void spice_char_device_state_ref(SpiceCharDeviceState *char_dev)
+static void spice_char_device_state_ref(RedCharDevice *char_dev)
 {
     char_dev->priv->refs++;
 }
 
-static void spice_char_device_state_unref(SpiceCharDeviceState *char_dev)
+static void spice_char_device_state_unref(RedCharDevice *char_dev)
 {
     /* The refs field protects the char_dev from being deallocated in
      * case spice_char_device_state_destroy has been called
@@ -793,7 +794,7 @@ static void spice_char_device_state_unref(SpiceCharDeviceState *char_dev)
     }
 }
 
-void spice_char_device_state_destroy(SpiceCharDeviceState *char_dev)
+void spice_char_device_state_destroy(RedCharDevice *char_dev)
 {
     reds_on_char_device_state_destroy(char_dev->priv->reds, char_dev);
     if (char_dev->priv->write_to_dev_timer) {
@@ -849,7 +850,7 @@ static SpiceCharDeviceClientState *red_char_device_client_new(RedClient *client,
     return dev_client;
 }
 
-int spice_char_device_client_add(SpiceCharDeviceState *dev,
+int spice_char_device_client_add(RedCharDevice *dev,
                                  RedClient *client,
                                  int do_flow_control,
                                  uint32_t max_send_queue_size,
@@ -883,7 +884,7 @@ int spice_char_device_client_add(SpiceCharDeviceState *dev,
     return TRUE;
 }
 
-void spice_char_device_client_remove(SpiceCharDeviceState *dev,
+void spice_char_device_client_remove(RedCharDevice *dev,
                                      RedClient *client)
 {
     SpiceCharDeviceClientState *dev_client;
@@ -909,13 +910,13 @@ void spice_char_device_client_remove(SpiceCharDeviceState *dev,
     }
 }
 
-int spice_char_device_client_exists(SpiceCharDeviceState *dev,
+int spice_char_device_client_exists(RedCharDevice *dev,
                                     RedClient *client)
 {
     return (spice_char_device_client_find(dev, client) != NULL);
 }
 
-void spice_char_device_start(SpiceCharDeviceState *dev)
+void spice_char_device_start(RedCharDevice *dev)
 {
     spice_debug("dev_state %p", dev);
     dev->priv->running = TRUE;
@@ -925,7 +926,7 @@ void spice_char_device_start(SpiceCharDeviceState *dev)
     spice_char_device_state_unref(dev);
 }
 
-void spice_char_device_stop(SpiceCharDeviceState *dev)
+void spice_char_device_stop(RedCharDevice *dev)
 {
     spice_debug("dev_state %p", dev);
     dev->priv->running = FALSE;
@@ -935,7 +936,7 @@ void spice_char_device_stop(SpiceCharDeviceState *dev)
     }
 }
 
-void spice_char_device_reset(SpiceCharDeviceState *dev)
+void spice_char_device_reset(RedCharDevice *dev)
 {
     RingItem *client_item;
 
@@ -967,7 +968,7 @@ void spice_char_device_reset(SpiceCharDeviceState *dev)
     dev->priv->sin = NULL;
 }
 
-void spice_char_device_wakeup(SpiceCharDeviceState *dev)
+void spice_char_device_wakeup(RedCharDevice *dev)
 {
     spice_char_device_write_to_device(dev);
     spice_char_device_read_from_device(dev);
@@ -996,7 +997,7 @@ static void migrate_data_marshaller_write_buffer_free(uint8_t *data, void *opaqu
     red_char_device_write_buffer_unref(write_buf);
 }
 
-void spice_char_device_state_migrate_data_marshall(SpiceCharDeviceState *dev,
+void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
                                                    SpiceMarshaller *m)
 {
     SpiceCharDeviceClientState *client_state;
@@ -1056,7 +1057,7 @@ void spice_char_device_state_migrate_data_marshall(SpiceCharDeviceState *dev,
                 dev, *write_to_dev_size_ptr, *write_to_dev_tokens_ptr);
 }
 
-int spice_char_device_state_restore(SpiceCharDeviceState *dev,
+int spice_char_device_state_restore(RedCharDevice *dev,
                                     SpiceMigrateDataCharDevice *mig_data)
 {
     SpiceCharDeviceClientState *client_state;
@@ -1107,7 +1108,7 @@ int spice_char_device_state_restore(SpiceCharDeviceState *dev,
     return TRUE;
 }
 
-SpiceServer* spice_char_device_get_server(SpiceCharDeviceState *dev)
+SpiceServer* spice_char_device_get_server(RedCharDevice *dev)
 {
     return dev->priv->reds;
 }

@@ -54,7 +54,7 @@ typedef struct SpiceVmcPipeItem {
 typedef struct SpiceVmcState {
     RedChannel channel; /* Must be the first item */
     RedChannelClient *rcc;
-    SpiceCharDeviceState *chardev_st;
+    RedCharDevice *chardev;
     SpiceCharDeviceInstance *chardev_sin;
     SpiceVmcPipeItem *pipe_item;
     RedCharDeviceWriteBuffer *recv_from_client_buf;
@@ -220,16 +220,16 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
     state = SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
 
     if (state->recv_from_client_buf) { /* partial message which wasn't pushed to device */
-        spice_char_device_write_buffer_release(state->chardev_st, state->recv_from_client_buf);
+        spice_char_device_write_buffer_release(state->chardev, state->recv_from_client_buf);
         state->recv_from_client_buf = NULL;
     }
 
-    if (state->chardev_st) {
-        if (spice_char_device_client_exists(state->chardev_st, rcc->client)) {
-            spice_char_device_client_remove(state->chardev_st, rcc->client);
+    if (state->chardev) {
+        if (spice_char_device_client_exists(state->chardev, rcc->client)) {
+            spice_char_device_client_remove(state->chardev, rcc->client);
         } else {
             spice_printerr("client %p have already been removed from char dev %p",
-                           rcc->client, state->chardev_st);
+                           rcc->client, state->chardev);
         }
     }
 
@@ -275,7 +275,7 @@ static int spicevmc_channel_client_handle_migrate_data(RedChannelClient *rcc,
         spice_error("bad header");
         return FALSE;
     }
-    return spice_char_device_state_restore(state->chardev_st, &mig_data->base);
+    return spice_char_device_state_restore(state->chardev, &mig_data->base);
 }
 
 static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
@@ -293,7 +293,7 @@ static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
     case SPICE_MSGC_SPICEVMC_DATA:
         spice_assert(state->recv_from_client_buf->buf == msg);
         state->recv_from_client_buf->buf_used = size;
-        spice_char_device_write_buffer_add(state->chardev_st, state->recv_from_client_buf);
+        spice_char_device_write_buffer_add(state->chardev, state->recv_from_client_buf);
         state->recv_from_client_buf = NULL;
         break;
     case SPICE_MSGC_PORT_EVENT:
@@ -323,7 +323,7 @@ static uint8_t *spicevmc_red_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
     case SPICE_MSGC_SPICEVMC_DATA:
         assert(!state->recv_from_client_buf);
 
-        state->recv_from_client_buf = spice_char_device_write_buffer_get(state->chardev_st,
+        state->recv_from_client_buf = spice_char_device_write_buffer_get(state->chardev,
                                                                          rcc->client,
                                                                          size);
         if (!state->recv_from_client_buf) {
@@ -350,7 +350,7 @@ static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
     switch (type) {
     case SPICE_MSGC_SPICEVMC_DATA:
         if (state->recv_from_client_buf) { /* buffer wasn't pushed to device */
-            spice_char_device_write_buffer_release(state->chardev_st, state->recv_from_client_buf);
+            spice_char_device_write_buffer_release(state->chardev, state->recv_from_client_buf);
             state->recv_from_client_buf = NULL;
         }
         break;
@@ -386,7 +386,7 @@ static void spicevmc_red_channel_send_migrate_data(RedChannelClient *rcc,
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SPICEVMC_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SPICEVMC_VERSION);
 
-    spice_char_device_state_migrate_data_marshall(state->chardev_st, m);
+    spice_char_device_state_migrate_data_marshall(state->chardev, m);
 }
 
 static void spicevmc_red_channel_send_port_init(RedChannelClient *rcc,
@@ -486,7 +486,7 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
         spicevmc_port_send_init(rcc);
     }
 
-    if (!spice_char_device_client_add(state->chardev_st, client, FALSE, 0, ~0, ~0,
+    if (!spice_char_device_client_add(state->chardev, client, FALSE, 0, ~0, ~0,
                                       red_channel_client_is_waiting_for_migrate_data(rcc))) {
         spice_warning("failed to add client to spicevmc");
         red_channel_client_disconnect(rcc);
@@ -499,9 +499,9 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
     }
 }
 
-SpiceCharDeviceState *spicevmc_device_connect(RedsState *reds,
-                                              SpiceCharDeviceInstance *sin,
-                                              uint8_t channel_type)
+RedCharDevice *spicevmc_device_connect(RedsState *reds,
+                                       SpiceCharDeviceInstance *sin,
+                                       uint8_t channel_type)
 {
     static uint8_t id[256] = { 0, };
     SpiceVmcState *state;
@@ -537,16 +537,16 @@ SpiceCharDeviceState *spicevmc_device_connect(RedsState *reds,
     char_dev_cbs.send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client;
     char_dev_cbs.remove_client = spicevmc_char_dev_remove_client;
 
-    state->chardev_st = spice_char_device_state_create(sin,
-                                                       reds,
-                                                       0, /* tokens interval */
-                                                       ~0, /* self tokens */
-                                                       &char_dev_cbs,
-                                                       state);
+    state->chardev = spice_char_device_state_create(sin,
+                                                    reds,
+                                                    0, /* tokens interval */
+                                                    ~0, /* self tokens */
+                                                    &char_dev_cbs,
+                                                    state);
     state->chardev_sin = sin;
 
     reds_register_channel(reds, &state->channel);
-    return state->chardev_st;
+    return state->chardev;
 }
 
 /* Must be called from RedClient handling thread. */
@@ -554,13 +554,15 @@ void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     SpiceVmcState *state;
 
-    state = (SpiceVmcState *)spice_char_device_state_opaque_get(sin->st);
+    /* FIXME */
+    state = (SpiceVmcState *)spice_char_device_state_opaque_get((RedCharDevice*)sin->st);
 
     if (state->recv_from_client_buf) {
-        spice_char_device_write_buffer_release(state->chardev_st, state->recv_from_client_buf);
+        spice_char_device_write_buffer_release(state->chardev, state->recv_from_client_buf);
     }
-    spice_char_device_state_destroy(sin->st);
-    state->chardev_st = NULL;
+    /* FIXME */
+    spice_char_device_state_destroy((RedCharDevice*)sin->st);
+    state->chardev = NULL;
     sin->st = NULL;
 
     reds_unregister_channel(reds, &state->channel);
@@ -577,7 +579,8 @@ SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, ui
         return;
     }
 
-    state = (SpiceVmcState *)spice_char_device_state_opaque_get(sin->st);
+    /* FIXME */
+    state = (SpiceVmcState *)spice_char_device_state_opaque_get((RedCharDevice*)sin->st);
     if (event == SPICE_PORT_EVENT_OPENED) {
         state->port_opened = TRUE;
     } else if (event == SPICE_PORT_EVENT_CLOSED) {

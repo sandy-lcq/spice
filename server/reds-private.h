@@ -58,7 +58,7 @@ enum {
 };
 
 struct VDIPortState {
-    SpiceCharDeviceState *base;
+    RedCharDevice *base;
     uint32_t plug_generation;
     int client_agent_started;
 

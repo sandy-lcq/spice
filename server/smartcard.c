@@ -63,7 +63,7 @@ typedef struct SmartCardChannelClient {
 } SmartCardChannelClient;
 
 struct RedCharDeviceSmartcardPrivate {
-    SpiceCharDeviceState *chardev_st;
+    RedCharDevice       *chardev;
     uint32_t             reader_id;
     /* read_from_device buffer */
     uint8_t             *buf;
@@ -286,12 +286,12 @@ static SmartCardDeviceState *smartcard_device_state_new(RedsState *reds, SpiceCh
     chardev_cbs.remove_client = smartcard_remove_client;
 
     st = spice_new0(SmartCardDeviceState, 1);
-    st->priv->chardev_st = spice_char_device_state_create(sin,
-                                                    reds,
-                                                    0, /* tokens interval */
-                                                    ~0, /* self tokens */
-                                                    &chardev_cbs,
-                                                    st);
+    st->priv->chardev = spice_char_device_state_create(sin,
+                                                       reds,
+                                                       0, /* tokens interval */
+                                                       ~0, /* self tokens */
+                                                       &chardev_cbs,
+                                                       st);
     st->priv->reader_id = VSCARD_UNDEFINED_READER_ID;
     st->priv->reader_added = FALSE;
     st->priv->buf_size = APDUBufSize + sizeof(VSCMsgHeader);
@@ -308,7 +308,7 @@ static void smartcard_device_state_free(SmartCardDeviceState* st)
         st->priv->scc->smartcard_state = NULL;
     }
     free(st->priv->buf);
-    spice_char_device_state_destroy(st->priv->chardev_st);
+    spice_char_device_state_destroy(st->priv->chardev);
     free(st);
 }
 
@@ -319,7 +319,7 @@ void smartcard_device_disconnect(SpiceCharDeviceInstance *char_device)
     smartcard_device_state_free(st);
 }
 
-SpiceCharDeviceState *smartcard_device_connect(RedsState *reds, SpiceCharDeviceInstance *char_device)
+RedCharDevice *smartcard_device_connect(RedsState *reds, SpiceCharDeviceInstance *char_device)
 {
     SmartCardDeviceState *st;
 
@@ -328,7 +328,7 @@ SpiceCharDeviceState *smartcard_device_connect(RedsState *reds, SpiceCharDeviceI
         smartcard_device_state_free(st);
         return NULL;
     }
-    return st->priv->chardev_st;
+    return st->priv->chardev;
 }
 
 static void smartcard_char_device_notify_reader_add(SmartCardDeviceState *st)
@@ -336,7 +336,7 @@ static void smartcard_char_device_notify_reader_add(SmartCardDeviceState *st)
     RedCharDeviceWriteBuffer *write_buf;
     VSCMsgHeader *vheader;
 
-    write_buf = spice_char_device_write_buffer_get(st->priv->chardev_st, NULL, sizeof(vheader));
+    write_buf = spice_char_device_write_buffer_get(st->priv->chardev, NULL, sizeof(vheader));
     if (!write_buf) {
         spice_error("failed to allocate write buffer");
         return;
@@ -358,7 +358,7 @@ static void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_de
     spice_assert(!scc->smartcard_state && !st->priv->scc);
     st->priv->scc = scc;
     scc->smartcard_state = st;
-    client_added = spice_char_device_client_add(st->priv->chardev_st,
+    client_added = spice_char_device_client_add(st->priv->chardev,
                                                 scc->base.client,
                                                 FALSE, /* no flow control yet */
                                                 0, /* send queue size */
@@ -383,7 +383,7 @@ static void smartcard_char_device_notify_reader_remove(SmartCardDeviceState *st)
         spice_debug("reader add was never sent to the device");
         return;
     }
-    write_buf = spice_char_device_write_buffer_get(st->priv->chardev_st, NULL, sizeof(vheader));
+    write_buf = spice_char_device_write_buffer_get(st->priv->chardev, NULL, sizeof(vheader));
     if (!write_buf) {
         spice_error("failed to allocate write buffer");
         return;
@@ -405,7 +405,7 @@ static void smartcard_char_device_detach_client(SmartCardChannelClient *scc)
     }
     st = scc->smartcard_state;
     spice_assert(st->priv->scc == scc);
-    spice_char_device_client_remove(st->priv->chardev_st, scc->base.client);
+    spice_char_device_client_remove(st->priv->chardev, scc->base.client);
     scc->smartcard_state = NULL;
     st->priv->scc = NULL;
 }
@@ -434,7 +434,7 @@ static uint8_t *smartcard_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
         st = scc->smartcard_state;
         spice_assert(st->priv->scc || scc->smartcard_state);
         spice_assert(!scc->write_buf);
-        scc->write_buf = spice_char_device_write_buffer_get(st->priv->chardev_st, rcc->client, size);
+        scc->write_buf = spice_char_device_write_buffer_get(st->priv->chardev, rcc->client, size);
 
         if (!scc->write_buf) {
             spice_error("failed to allocate write buffer");
@@ -460,11 +460,11 @@ static void smartcard_channel_release_msg_rcv_buf(RedChannelClient *rcc,
         spice_assert(!scc->write_buf);
         free(msg);
     } else {
-        SpiceCharDeviceState *dev_st;
+        RedCharDevice *dev;
         if (scc->write_buf) { /* msg hasn't been pushed to the guest */
             spice_assert(scc->write_buf->buf == msg);
-            dev_st = scc->smartcard_state ? scc->smartcard_state->priv->chardev_st : NULL;
-            spice_char_device_write_buffer_release(dev_st, scc->write_buf);
+            dev = scc->smartcard_state ? scc->smartcard_state->priv->chardev : NULL;
+            spice_char_device_write_buffer_release(dev, scc->write_buf);
             scc->write_buf = NULL;
         }
     }
@@ -518,7 +518,7 @@ static void smartcard_channel_send_migrate_data(RedChannelClient *rcc,
         spice_marshaller_add_uint32(m, 0);
         spice_debug("null char dev state");
     } else {
-        spice_char_device_state_migrate_data_marshall(state->priv->chardev_st, m);
+        spice_char_device_state_migrate_data_marshall(state->priv->chardev, m);
         spice_marshaller_add_uint8(m, state->priv->reader_added);
         spice_marshaller_add_uint32(m, state->priv->buf_used);
         m2 = spice_marshaller_get_ptr_submarshaller(m, 0);
@@ -746,7 +746,7 @@ static int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
     scc->smartcard_state->priv->reader_added = mig_data->reader_added;
 
     smartcard_device_state_restore_partial_read(scc->smartcard_state, mig_data);
-    return spice_char_device_state_restore(scc->smartcard_state->priv->chardev_st, &mig_data->base);
+    return spice_char_device_state_restore(scc->smartcard_state->priv->chardev, &mig_data->base);
 }
 
 static int smartcard_channel_handle_message(RedChannelClient *rcc,

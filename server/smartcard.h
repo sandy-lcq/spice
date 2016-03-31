@@ -21,7 +21,7 @@
 /*
  * connect to smartcard interface, used by smartcard channel
  */
-SpiceCharDeviceState *smartcard_device_connect(RedsState *reds, SpiceCharDeviceInstance *char_device);
+RedCharDevice *smartcard_device_connect(RedsState *reds, SpiceCharDeviceInstance *char_device);
 void smartcard_device_disconnect(SpiceCharDeviceInstance *char_device);
 
 #endif // __SMART_CARD_H__
