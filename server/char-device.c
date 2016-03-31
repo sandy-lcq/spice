@@ -30,8 +30,8 @@
 #define SPICE_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT 30000
 #define MAX_POOL_SIZE (10 * 64 * 1024)
 
-typedef struct SpiceCharDeviceClientState SpiceCharDeviceClientState;
-struct SpiceCharDeviceClientState {
+typedef struct RedCharDeviceClient RedCharDeviceClient;
+struct RedCharDeviceClient {
     RingItem link;
     RedCharDevice *dev;
     RedClient *client;
@@ -60,7 +60,7 @@ struct RedCharDevicePrivate {
     SpiceTimer *write_to_dev_timer;
     uint64_t num_self_tokens;
 
-    Ring clients; /* list of SpiceCharDeviceClientState */
+    Ring clients; /* list of RedCharDeviceClient */
     uint32_t num_clients;
 
     uint64_t client_tokens_interval; /* frequency of returning tokens to the client */
@@ -188,7 +188,7 @@ static void spice_char_device_write_buffer_pool_add(RedCharDevice *dev,
 }
 
 static void spice_char_device_client_send_queue_free(RedCharDevice *dev,
-                                                     SpiceCharDeviceClientState *dev_client)
+                                                     RedCharDeviceClient *dev_client)
 {
     spice_debug("send_queue_empty %d", ring_is_empty(&dev_client->send_queue));
     while (!ring_is_empty(&dev_client->send_queue)) {
@@ -206,7 +206,7 @@ static void spice_char_device_client_send_queue_free(RedCharDevice *dev,
 }
 
 static void spice_char_device_client_free(RedCharDevice *dev,
-                                          SpiceCharDeviceClientState *dev_client)
+                                          RedCharDeviceClient *dev_client)
 {
     RingItem *item, *next;
 
@@ -241,22 +241,22 @@ static void spice_char_device_client_free(RedCharDevice *dev,
     free(dev_client);
 }
 
-static void spice_char_device_handle_client_overflow(SpiceCharDeviceClientState *dev_client)
+static void spice_char_device_handle_client_overflow(RedCharDeviceClient *dev_client)
 {
     RedCharDevice *dev = dev_client->dev;
     spice_printerr("dev %p client %p ", dev, dev_client);
     spice_char_device_remove_client(dev, dev_client->client);
 }
 
-static SpiceCharDeviceClientState *spice_char_device_client_find(RedCharDevice *dev,
-                                                                 RedClient *client)
+static RedCharDeviceClient *spice_char_device_client_find(RedCharDevice *dev,
+                                                          RedClient *client)
 {
     RingItem *item;
 
     RING_FOREACH(item, &dev->priv->clients) {
-        SpiceCharDeviceClientState *dev_client;
+        RedCharDeviceClient *dev_client;
 
-        dev_client = SPICE_CONTAINEROF(item, SpiceCharDeviceClientState, link);
+        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
         if (dev_client->client == client) {
             return dev_client;
         }
@@ -270,12 +270,12 @@ static SpiceCharDeviceClientState *spice_char_device_client_find(RedCharDevice *
 
 static void device_client_wait_for_tokens_timeout(void *opaque)
 {
-    SpiceCharDeviceClientState *dev_client = opaque;
+    RedCharDeviceClient *dev_client = opaque;
 
     spice_char_device_handle_client_overflow(dev_client);
 }
 
-static int spice_char_device_can_send_to_client(SpiceCharDeviceClientState *dev_client)
+static int spice_char_device_can_send_to_client(RedCharDeviceClient *dev_client)
 {
     return !dev_client->do_flow_control || dev_client->num_send_tokens;
 }
@@ -286,9 +286,9 @@ static uint64_t spice_char_device_max_send_tokens(RedCharDevice *dev)
     uint64_t max = 0;
 
     RING_FOREACH(item, &dev->priv->clients) {
-        SpiceCharDeviceClientState *dev_client;
+        RedCharDeviceClient *dev_client;
 
-        dev_client = SPICE_CONTAINEROF(item, SpiceCharDeviceClientState, link);
+        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
 
         if (!dev_client->do_flow_control) {
             max = ~0;
@@ -302,7 +302,7 @@ static uint64_t spice_char_device_max_send_tokens(RedCharDevice *dev)
     return max;
 }
 
-static void spice_char_device_add_msg_to_client_queue(SpiceCharDeviceClientState *dev_client,
+static void spice_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_client,
                                                       RedCharDeviceMsgToClient *msg)
 {
     RedCharDevice *dev = dev_client->dev;
@@ -330,9 +330,9 @@ static void spice_char_device_send_msg_to_clients(RedCharDevice *dev,
     RingItem *item, *next;
 
     RING_FOREACH_SAFE(item, next, &dev->priv->clients) {
-        SpiceCharDeviceClientState *dev_client;
+        RedCharDeviceClient *dev_client;
 
-        dev_client = SPICE_CONTAINEROF(item, SpiceCharDeviceClientState, link);
+        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
         if (spice_char_device_can_send_to_client(dev_client)) {
             dev_client->num_send_tokens--;
             spice_assert(ring_is_empty(&dev_client->send_queue));
@@ -395,7 +395,7 @@ static int spice_char_device_read_from_device(RedCharDevice *dev)
     return did_read;
 }
 
-static void spice_char_device_client_send_queue_push(SpiceCharDeviceClientState *dev_client)
+static void spice_char_device_client_send_queue_push(RedCharDeviceClient *dev_client)
 {
     RingItem *item;
     while ((item = ring_get_tail(&dev_client->send_queue)) &&
@@ -415,7 +415,7 @@ static void spice_char_device_client_send_queue_push(SpiceCharDeviceClientState 
     }
 }
 
-static void spice_char_device_send_to_client_tokens_absorb(SpiceCharDeviceClientState *dev_client,
+static void spice_char_device_send_to_client_tokens_absorb(RedCharDeviceClient *dev_client,
                                                            uint32_t tokens)
 {
     RedCharDevice *dev = dev_client->dev;
@@ -441,7 +441,7 @@ void spice_char_device_send_to_client_tokens_add(RedCharDevice *dev,
                                                  RedClient *client,
                                                  uint32_t tokens)
 {
-    SpiceCharDeviceClientState *dev_client;
+    RedCharDeviceClient *dev_client;
 
     dev_client = spice_char_device_client_find(dev, client);
 
@@ -456,7 +456,7 @@ void spice_char_device_send_to_client_tokens_set(RedCharDevice *dev,
                                                  RedClient *client,
                                                  uint32_t tokens)
 {
-    SpiceCharDeviceClientState *dev_client;
+    RedCharDeviceClient *dev_client;
 
     dev_client = spice_char_device_client_find(dev, client);
 
@@ -474,7 +474,7 @@ void spice_char_device_send_to_client_tokens_set(RedCharDevice *dev,
 ***************************/
 
 static void spice_char_device_client_tokens_add(RedCharDevice *dev,
-                                                SpiceCharDeviceClientState *dev_client,
+                                                RedCharDeviceClient *dev_client,
                                                 uint32_t num_tokens)
 {
     if (!dev_client->do_flow_control) {
@@ -605,7 +605,7 @@ static RedCharDeviceWriteBuffer *__spice_char_device_write_buffer_get(
 
     if (origin == WRITE_BUFFER_ORIGIN_CLIENT) {
        spice_assert(client);
-       SpiceCharDeviceClientState *dev_client = spice_char_device_client_find(dev, client);
+       RedCharDeviceClient *dev_client = spice_char_device_client_find(dev, client);
        if (dev_client) {
             if (!migrated_data_tokens &&
                 dev_client->do_flow_control && !dev_client->num_client_tokens) {
@@ -703,7 +703,7 @@ void spice_char_device_write_buffer_release(RedCharDevice *dev,
 
     spice_char_device_write_buffer_pool_add(dev, write_buf);
     if (buf_origin == WRITE_BUFFER_ORIGIN_CLIENT) {
-        SpiceCharDeviceClientState *dev_client;
+        RedCharDeviceClient *dev_client;
 
         spice_assert(client);
         dev_client = spice_char_device_client_find(dev, client);
@@ -809,9 +809,9 @@ void spice_char_device_state_destroy(RedCharDevice *char_dev)
 
     while (!ring_is_empty(&char_dev->priv->clients)) {
         RingItem *item = ring_get_tail(&char_dev->priv->clients);
-        SpiceCharDeviceClientState *dev_client;
+        RedCharDeviceClient *dev_client;
 
-        dev_client = SPICE_CONTAINEROF(item, SpiceCharDeviceClientState, link);
+        dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
         spice_char_device_client_free(char_dev, dev_client);
     }
     char_dev->priv->running = FALSE;
@@ -819,15 +819,15 @@ void spice_char_device_state_destroy(RedCharDevice *char_dev)
     spice_char_device_state_unref(char_dev);
 }
 
-static SpiceCharDeviceClientState *red_char_device_client_new(RedClient *client,
-                                                              int do_flow_control,
-                                                              uint32_t max_send_queue_size,
-                                                              uint32_t num_client_tokens,
-                                                              uint32_t num_send_tokens)
+static RedCharDeviceClient *red_char_device_client_new(RedClient *client,
+                                                       int do_flow_control,
+                                                       uint32_t max_send_queue_size,
+                                                       uint32_t num_client_tokens,
+                                                       uint32_t num_send_tokens)
 {
-    SpiceCharDeviceClientState *dev_client;
+    RedCharDeviceClient *dev_client;
 
-    dev_client = spice_new0(SpiceCharDeviceClientState, 1);
+    dev_client = spice_new0(RedCharDeviceClient, 1);
     dev_client->client = client;
     ring_init(&dev_client->send_queue);
     dev_client->send_queue_size = 0;
@@ -858,7 +858,7 @@ int spice_char_device_client_add(RedCharDevice *dev,
                                  uint32_t num_send_tokens,
                                  int wait_for_migrate_data)
 {
-    SpiceCharDeviceClientState *dev_client;
+    RedCharDeviceClient *dev_client;
 
     spice_assert(dev);
     spice_assert(client);
@@ -887,7 +887,7 @@ int spice_char_device_client_add(RedCharDevice *dev,
 void spice_char_device_client_remove(RedCharDevice *dev,
                                      RedClient *client)
 {
-    SpiceCharDeviceClientState *dev_client;
+    RedCharDeviceClient *dev_client;
 
     spice_debug("dev_state %p client %p", dev, client);
     dev_client = spice_char_device_client_find(dev, client);
@@ -960,9 +960,9 @@ void spice_char_device_reset(RedCharDevice *dev)
     }
 
     RING_FOREACH(client_item, &dev->priv->clients) {
-        SpiceCharDeviceClientState *dev_client;
+        RedCharDeviceClient *dev_client;
 
-        dev_client = SPICE_CONTAINEROF(client_item, SpiceCharDeviceClientState, link);
+        dev_client = SPICE_CONTAINEROF(client_item, RedCharDeviceClient, link);
         spice_char_device_client_send_queue_free(dev, dev_client);
     }
     dev->priv->sin = NULL;
@@ -1000,7 +1000,7 @@ static void migrate_data_marshaller_write_buffer_free(uint8_t *data, void *opaqu
 void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
                                                    SpiceMarshaller *m)
 {
-    SpiceCharDeviceClientState *client_state;
+    RedCharDeviceClient *dev_client;
     RingItem *item;
     uint32_t *write_to_dev_size_ptr;
     uint32_t *write_to_dev_tokens_ptr;
@@ -1008,17 +1008,17 @@ void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
 
     /* multi-clients are not supported */
     spice_assert(dev->priv->num_clients == 1);
-    client_state = SPICE_CONTAINEROF(ring_get_tail(&dev->priv->clients),
-                                     SpiceCharDeviceClientState,
-                                     link);
+    dev_client = SPICE_CONTAINEROF(ring_get_tail(&dev->priv->clients),
+                                   RedCharDeviceClient,
+                                   link);
     /* FIXME: if there were more than one client before the marshalling,
      * it is possible that the send_queue_size > 0, and the send data
      * should be migrated as well */
-    spice_assert(client_state->send_queue_size == 0);
+    spice_assert(dev_client->send_queue_size == 0);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_CHAR_DEVICE_VERSION);
     spice_marshaller_add_uint8(m, 1); /* connected */
-    spice_marshaller_add_uint32(m, client_state->num_client_tokens);
-    spice_marshaller_add_uint32(m, client_state->num_send_tokens);
+    spice_marshaller_add_uint32(m, dev_client->num_client_tokens);
+    spice_marshaller_add_uint32(m, dev_client->num_send_tokens);
     write_to_dev_size_ptr = (uint32_t *)spice_marshaller_reserve_space(m, sizeof(uint32_t));
     write_to_dev_tokens_ptr = (uint32_t *)spice_marshaller_reserve_space(m, sizeof(uint32_t));
     *write_to_dev_size_ptr = 0;
@@ -1034,7 +1034,7 @@ void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
                                       );
         *write_to_dev_size_ptr += buf_remaining;
         if (dev->priv->cur_write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
-            spice_assert(dev->priv->cur_write_buf->client == client_state->client);
+            spice_assert(dev->priv->cur_write_buf->client == dev_client->client);
             (*write_to_dev_tokens_ptr) += dev->priv->cur_write_buf->token_price;
         }
     }
@@ -1049,7 +1049,7 @@ void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
                                       );
         *write_to_dev_size_ptr += write_buf->buf_used;
         if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
-            spice_assert(write_buf->client == client_state->client);
+            spice_assert(write_buf->client == dev_client->client);
             (*write_to_dev_tokens_ptr) += write_buf->token_price;
         }
     }
@@ -1060,13 +1060,13 @@ void spice_char_device_state_migrate_data_marshall(RedCharDevice *dev,
 int spice_char_device_state_restore(RedCharDevice *dev,
                                     SpiceMigrateDataCharDevice *mig_data)
 {
-    SpiceCharDeviceClientState *client_state;
+    RedCharDeviceClient *dev_client;
     uint32_t client_tokens_window;
 
     spice_assert(dev->priv->num_clients == 1 && dev->priv->wait_for_migrate_data);
 
-    client_state = SPICE_CONTAINEROF(ring_get_tail(&dev->priv->clients),
-                                     SpiceCharDeviceClientState,
+    dev_client = SPICE_CONTAINEROF(ring_get_tail(&dev->priv->clients),
+                                     RedCharDeviceClient,
                                      link);
     if (mig_data->version > SPICE_MIGRATE_DATA_CHAR_DEVICE_VERSION) {
         spice_error("dev %p error: migration data version %u is bigger than self %u",
@@ -1076,18 +1076,18 @@ int spice_char_device_state_restore(RedCharDevice *dev,
     spice_assert(!dev->priv->cur_write_buf && ring_is_empty(&dev->priv->write_queue));
     spice_assert(mig_data->connected);
 
-    client_tokens_window = client_state->num_client_tokens; /* initial state of tokens */
-    client_state->num_client_tokens = mig_data->num_client_tokens;
+    client_tokens_window = dev_client->num_client_tokens; /* initial state of tokens */
+    dev_client->num_client_tokens = mig_data->num_client_tokens;
     /* assumption: client_tokens_window stays the same across severs */
-    client_state->num_client_tokens_free = client_tokens_window -
+    dev_client->num_client_tokens_free = client_tokens_window -
                                            mig_data->num_client_tokens -
                                            mig_data->write_num_client_tokens;
-    client_state->num_send_tokens = mig_data->num_send_tokens;
+    dev_client->num_send_tokens = mig_data->num_send_tokens;
 
     if (mig_data->write_size > 0) {
         if (mig_data->write_num_client_tokens) {
             dev->priv->cur_write_buf =
-                __spice_char_device_write_buffer_get(dev, client_state->client,
+                __spice_char_device_write_buffer_get(dev, dev_client->client,
                     mig_data->write_size, WRITE_BUFFER_ORIGIN_CLIENT,
                     mig_data->write_num_client_tokens);
         } else {
