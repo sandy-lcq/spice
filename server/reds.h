@@ -37,11 +37,6 @@ static inline QXLInterface * qxl_get_interface(QXLInstance *qxl)
     return SPICE_CONTAINEROF(qxl->base.sif, QXLInterface, base);
 }
 
-struct TunnelWorker;
-struct SpiceNetWireState {
-    struct TunnelWorker *worker;
-};
-
 struct SpiceMigrateState {
     int dummy;
 };
@@ -79,7 +74,6 @@ enum {
 void reds_client_disconnect(RedsState *reds, RedClient *client);
 
 // Temporary (?) for splitting main channel
-typedef struct MainMigrateData MainMigrateData;
 void reds_marshall_migrate_data(RedsState *reds, SpiceMarshaller *m);
 SpiceMsgChannels *reds_msg_channels_new(RedsState *reds);
 
