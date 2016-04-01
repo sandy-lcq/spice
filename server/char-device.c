@@ -103,13 +103,6 @@ typedef struct RedCharDeviceMsgToClientItem {
     RedCharDeviceMsgToClient *msg;
 } RedCharDeviceMsgToClientItem;
 
-static RedCharDevice *red_char_device_new(SpiceCharDeviceInstance *sin,
-                                          RedsState *reds,
-                                          uint32_t client_tokens_interval,
-                                          uint32_t self_tokens,
-                                          RedCharDeviceCallbacks *cbs,
-                                          void *opaque);
-
 static RedCharDeviceMsgToClient *
 red_char_device_read_one_msg_from_device(RedCharDevice *dev)
 {
@@ -731,17 +724,6 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
  * char_device_state management *
  ********************************/
 
-RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
-                                      RedsState *reds,
-                                      uint32_t client_tokens_interval,
-                                      uint32_t self_tokens,
-                                      RedCharDeviceCallbacks *cbs,
-                                      void *opaque)
-{
-    return red_char_device_new(sin, reds, client_tokens_interval,
-                               self_tokens, cbs, opaque);
-}
-
 void red_char_device_reset_dev_instance(RedCharDevice *state,
                                         SpiceCharDeviceInstance *sin)
 {
@@ -1251,30 +1233,6 @@ red_char_device_init(RedCharDevice *self)
     ring_init(&self->priv->clients);
 
     g_signal_connect(self, "notify::sin", G_CALLBACK(red_char_device_on_sin_changed), NULL);
-}
-
-static RedCharDevice *
-red_char_device_new(SpiceCharDeviceInstance *sin,
-                    RedsState *reds,
-                    uint32_t client_tokens_interval,
-                    uint32_t self_tokens,
-                    RedCharDeviceCallbacks *cbs,
-                    void *opaque)
-{
-    RedCharDevice *char_dev;
-
-    char_dev = g_object_new(RED_TYPE_CHAR_DEVICE,
-                            "sin", sin,
-                            "spice-server", reds,
-                            "client-tokens-interval", (guint64) client_tokens_interval,
-                            "self-tokens", (guint64) self_tokens,
-                            "opaque", opaque,
-                            NULL);
-
-    /* TODO: redundant with the "opaque" property in g_object_new */
-    red_char_device_set_callbacks(char_dev, cbs, opaque);
-
-    return char_dev;
 }
 
 /* TODO: needs to be moved to class vfuncs once all child classes are gobjects */

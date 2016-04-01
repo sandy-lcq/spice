@@ -62,7 +62,7 @@ void red_char_device_set_callbacks(RedCharDevice *dev,
  *
  * How to use the api:
  * ==================
- * device attached: call red_char_device_create
+ * device attached: create new object instantiating a RedCharDevice child class
  * device detached: call red_char_device_destroy/reset
  *
  * client connected and associated with a device: red_char_device__add
@@ -166,13 +166,6 @@ struct RedCharDeviceCallbacks {
      * The called instance should disconnect the client, or at least the corresponding channel */
     void (*remove_client)(RedClient *client, void *opaque);
 };
-
-RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
-                                      RedsState *reds,
-                                      uint32_t client_tokens_interval,
-                                      uint32_t self_tokens,
-                                      RedCharDeviceCallbacks *cbs,
-                                      void *opaque);
 
 void red_char_device_reset_dev_instance(RedCharDevice *dev,
                                         SpiceCharDeviceInstance *sin);
