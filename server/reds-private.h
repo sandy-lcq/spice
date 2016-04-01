@@ -88,14 +88,14 @@ typedef struct RedSSLParameters {
     char ciphersuite[256];
 } RedSSLParameters;
 
-typedef struct VDIPortState VDIPortState;
+typedef struct RedCharDeviceVDIPort RedCharDeviceVDIPort;
 
 struct RedsState {
     int listen_socket;
     int secure_listen_socket;
     SpiceWatch *listen_watch;
     SpiceWatch *secure_listen_watch;
-    VDIPortState *agent_state;
+    RedCharDeviceVDIPort *agent_dev;
     int pending_mouse_event;
     Ring clients;
     int num_clients;
