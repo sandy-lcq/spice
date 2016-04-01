@@ -4322,33 +4322,28 @@ static void
 red_char_device_vdi_port_class_init(RedCharDeviceVDIPortClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedCharDeviceClass *char_dev_class = RED_CHAR_DEVICE_CLASS(klass);
 
     g_type_class_add_private(klass, sizeof (RedCharDeviceVDIPortPrivate));
 
     object_class->finalize = red_char_device_vdi_port_finalize;
     object_class->constructed = red_char_device_vdi_port_constructed;
+
+    char_dev_class->read_one_msg_from_device = vdi_port_read_one_msg_from_device;
+    char_dev_class->ref_msg_to_client = vdi_port_ref_msg_to_client;
+    char_dev_class->unref_msg_to_client = vdi_port_unref_msg_to_client;
+    char_dev_class->send_msg_to_client = vdi_port_send_msg_to_client;
+    char_dev_class->send_tokens_to_client = vdi_port_send_tokens_to_client;
+    char_dev_class->remove_client = vdi_port_remove_client;
+    char_dev_class->on_free_self_token = vdi_port_on_free_self_token;
 }
 
 static RedCharDeviceVDIPort *red_char_device_vdi_port_new(RedsState *reds)
 {
-    RedCharDevice *char_dev;
-    RedCharDeviceCallbacks char_dev_cbs = {
-        .read_one_msg_from_device = vdi_port_read_one_msg_from_device,
-        .ref_msg_to_client = vdi_port_ref_msg_to_client,
-        .unref_msg_to_client = vdi_port_unref_msg_to_client,
-        .send_msg_to_client = vdi_port_send_msg_to_client,
-        .send_tokens_to_client = vdi_port_send_tokens_to_client,
-        .remove_client = vdi_port_remove_client,
-        .on_free_self_token = vdi_port_on_free_self_token,
-    };
-
-    char_dev = g_object_new(RED_TYPE_CHAR_DEVICE_VDIPORT,
-                            "spice-server", reds,
-                            "client-tokens-interval", REDS_TOKENS_TO_SEND,
-                            "self-tokens", REDS_NUM_INTERNAL_AGENT_MESSAGES,
-                            NULL);
-
-    red_char_device_set_callbacks(RED_CHAR_DEVICE(char_dev),
-                                  &char_dev_cbs, reds);
-    return RED_CHAR_DEVICE_VDIPORT(char_dev);
+    return g_object_new(RED_TYPE_CHAR_DEVICE_VDIPORT,
+                        "spice-server", reds,
+                        "client-tokens-interval", REDS_TOKENS_TO_SEND,
+                        "self-tokens", REDS_NUM_INTERNAL_AGENT_MESSAGES,
+                        "opaque", reds,
+                        NULL);
 }

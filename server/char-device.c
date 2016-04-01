@@ -69,7 +69,6 @@ struct RedCharDevicePrivate {
     int during_read_from_device;
     int during_write_to_device;
 
-    RedCharDeviceCallbacks cbs;
     void *opaque;
     SpiceServer *reds;
 };
@@ -106,21 +105,27 @@ typedef struct RedCharDeviceMsgToClientItem {
 static RedCharDeviceMsgToClient *
 red_char_device_read_one_msg_from_device(RedCharDevice *dev)
 {
-   return dev->priv->cbs.read_one_msg_from_device(dev->priv->sin, dev->priv->opaque);
+   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
+
+   return klass->read_one_msg_from_device(dev->priv->sin, dev->priv->opaque);
 }
 
 static RedCharDeviceMsgToClient *
 red_char_device_ref_msg_to_client(RedCharDevice *dev,
                                   RedCharDeviceMsgToClient *msg)
 {
-   return dev->priv->cbs.ref_msg_to_client(msg, dev->priv->opaque);
+   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
+
+   return klass->ref_msg_to_client(msg, dev->priv->opaque);
 }
 
 static void
 red_char_device_unref_msg_to_client(RedCharDevice *dev,
                                     RedCharDeviceMsgToClient *msg)
 {
-   dev->priv->cbs.unref_msg_to_client(msg, dev->priv->opaque);
+   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
+
+   klass->unref_msg_to_client(msg, dev->priv->opaque);
 }
 
 static void
@@ -128,7 +133,9 @@ red_char_device_send_msg_to_client(RedCharDevice *dev,
                                    RedCharDeviceMsgToClient *msg,
                                    RedClient *client)
 {
-   dev->priv->cbs.send_msg_to_client(msg, client, dev->priv->opaque);
+   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
+
+   klass->send_msg_to_client(msg, client, dev->priv->opaque);
 }
 
 static void
@@ -136,21 +143,27 @@ red_char_device_send_tokens_to_client(RedCharDevice *dev,
                                       RedClient *client,
                                       uint32_t tokens)
 {
-   dev->priv->cbs.send_tokens_to_client(client, tokens, dev->priv->opaque);
+   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
+
+   klass->send_tokens_to_client(client, tokens, dev->priv->opaque);
 }
 
 static void
 red_char_device_on_free_self_token(RedCharDevice *dev)
 {
-   if (dev->priv->cbs.on_free_self_token != NULL) {
-       dev->priv->cbs.on_free_self_token(dev->priv->opaque);
+   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
+
+   if (klass->on_free_self_token != NULL) {
+       klass->on_free_self_token(dev->priv->opaque);
    }
 }
 
 static void
 red_char_device_remove_client(RedCharDevice *dev, RedClient *client)
 {
-   dev->priv->cbs.remove_client(client, dev->priv->opaque);
+   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
+
+   klass->remove_client(client, dev->priv->opaque);
 }
 
 static void red_char_device_write_buffer_free(RedCharDeviceWriteBuffer *buf)
@@ -1233,18 +1246,4 @@ red_char_device_init(RedCharDevice *self)
     ring_init(&self->priv->clients);
 
     g_signal_connect(self, "notify::sin", G_CALLBACK(red_char_device_on_sin_changed), NULL);
-}
-
-/* TODO: needs to be moved to class vfuncs once all child classes are gobjects */
-void
-red_char_device_set_callbacks(RedCharDevice *dev,
-                              RedCharDeviceCallbacks *cbs,
-                              gpointer opaque)
-{
-    g_assert(cbs->read_one_msg_from_device && cbs->ref_msg_to_client &&
-             cbs->unref_msg_to_client && cbs->send_msg_to_client &&
-             cbs->send_tokens_to_client && cbs->remove_client);
-
-    dev->priv->cbs = *cbs;
-    dev->priv->opaque = opaque;
 }

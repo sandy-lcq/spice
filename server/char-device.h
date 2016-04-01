@@ -24,6 +24,8 @@
 #include "red-channel.h"
 #include "migration-protocol.h"
 
+typedef void RedCharDeviceMsgToClient;
+
 #define RED_TYPE_CHAR_DEVICE red_char_device_get_type()
 
 #define RED_CHAR_DEVICE(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHAR_DEVICE, RedCharDevice))
@@ -48,14 +50,39 @@ struct SpiceCharDeviceState
 struct RedCharDeviceClass
 {
     GObjectClass parent_class;
+
+    /*
+     * Messages that are addressed to the client can be queued in case we have
+     * multiple clients and some of them don't have enough tokens.
+     */
+
+    /* reads from the device till reaching a msg that should be sent to the client,
+     * or till the reading fails */
+    RedCharDeviceMsgToClient* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
+                                                          void *opaque);
+    RedCharDeviceMsgToClient* (*ref_msg_to_client)(RedCharDeviceMsgToClient *msg,
+                                                   void *opaque);
+    void (*unref_msg_to_client)(RedCharDeviceMsgToClient *msg,
+                                void *opaque);
+    void (*send_msg_to_client)(RedCharDeviceMsgToClient *msg,
+                               RedClient *client,
+                               void *opaque); /* after this call, the message is unreferenced */
+
+    /* The cb is called when a predefined number of write buffers were consumed by the
+     * device */
+    void (*send_tokens_to_client)(RedClient *client, uint32_t tokens, void *opaque);
+
+    /* The cb is called when a server (self) message that was addressed to the device,
+     * has been completely written to it */
+    void (*on_free_self_token)(void *opaque);
+
+    /* This cb is called if it is recommanded that a client will be removed
+     * due to slow flow or due to some other error.
+     * The called instance should disconnect the client, or at least the corresponding channel */
+    void (*remove_client)(RedClient *client, void *opaque);
 };
 
 GType red_char_device_get_type(void) G_GNUC_CONST;
-
-typedef struct RedCharDeviceCallbacks RedCharDeviceCallbacks;
-void red_char_device_set_callbacks(RedCharDevice *dev,
-                                   RedCharDeviceCallbacks *cbs,
-                                   gpointer opaque);
 
 /*
  * Shared code for char devices, mainly for flow control.
@@ -132,40 +159,6 @@ typedef struct RedCharDeviceWriteBuffer {
     uint32_t token_price;
     uint32_t refs;
 } RedCharDeviceWriteBuffer;
-
-typedef void RedCharDeviceMsgToClient;
-
-struct RedCharDeviceCallbacks {
-    /*
-     * Messages that are addressed to the client can be queued in case we have
-     * multiple clients and some of them don't have enough tokens.
-     */
-
-    /* reads from the device till reaching a msg that should be sent to the client,
-     * or till the reading fails */
-    RedCharDeviceMsgToClient* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
-                                                            void *opaque);
-    RedCharDeviceMsgToClient* (*ref_msg_to_client)(RedCharDeviceMsgToClient *msg,
-                                                   void *opaque);
-    void (*unref_msg_to_client)(RedCharDeviceMsgToClient *msg,
-                                void *opaque);
-    void (*send_msg_to_client)(RedCharDeviceMsgToClient *msg,
-                               RedClient *client,
-                               void *opaque); /* after this call, the message is unreferenced */
-
-    /* The cb is called when a predefined number of write buffers were consumed by the
-     * device */
-    void (*send_tokens_to_client)(RedClient *client, uint32_t tokens, void *opaque);
-
-    /* The cb is called when a server (self) message that was addressed to the device,
-     * has been completely written to it */
-    void (*on_free_self_token)(void *opaque);
-
-    /* This cb is called if it is recommanded that a client will be removed
-     * due to slow flow or due to some other error.
-     * The called instance should disconnect the client, or at least the corresponding channel */
-    void (*remove_client)(RedClient *client, void *opaque);
-};
 
 void red_char_device_reset_dev_instance(RedCharDevice *dev,
                                         SpiceCharDeviceInstance *sin);

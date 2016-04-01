@@ -611,6 +611,14 @@ SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, ui
 static void
 red_char_device_spicevmc_class_init(RedCharDeviceSpiceVmcClass *klass)
 {
+    RedCharDeviceClass *char_dev_class = RED_CHAR_DEVICE_CLASS(klass);
+
+    char_dev_class->read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev;
+    char_dev_class->ref_msg_to_client = spicevmc_chardev_ref_msg_to_client;
+    char_dev_class->unref_msg_to_client = spicevmc_chardev_unref_msg_to_client;
+    char_dev_class->send_msg_to_client = spicevmc_chardev_send_msg_to_client;
+    char_dev_class->send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client;
+    char_dev_class->remove_client = spicevmc_char_dev_remove_client;
 }
 
 static void
@@ -623,25 +631,11 @@ red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                              RedsState *reds,
                              void *opaque)
 {
-    RedCharDevice *char_dev;
-    RedCharDeviceCallbacks char_dev_cbs = {
-        .read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev,
-        .ref_msg_to_client = spicevmc_chardev_ref_msg_to_client,
-        .unref_msg_to_client = spicevmc_chardev_unref_msg_to_client,
-        .send_msg_to_client = spicevmc_chardev_send_msg_to_client,
-        .send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client,
-        .remove_client = spicevmc_char_dev_remove_client,
-    };
-
-    char_dev = g_object_new(RED_TYPE_CHAR_DEVICE_SPICEVMC,
-                            "sin", sin,
-                            "spice-server", reds,
-                            "client-tokens-interval", 0ULL,
-                            "self-tokens", ~0ULL,
-                            "opaque", opaque,
-                            NULL);
-
-    red_char_device_set_callbacks(RED_CHAR_DEVICE(char_dev),
-                                  &char_dev_cbs, opaque);
-    return char_dev;
+    return g_object_new(RED_TYPE_CHAR_DEVICE_SPICEVMC,
+                        "sin", sin,
+                        "spice-server", reds,
+                        "client-tokens-interval", 0ULL,
+                        "self-tokens", ~0ULL,
+                        "opaque", opaque,
+                        NULL);
 }
