@@ -1143,7 +1143,7 @@ static void mjpeg_encoder_handle_positive_client_stream_report(MJpegEncoder *enc
     if (!bit_rate_info->change_start_mm_time || stable_client_mm_time < timeout) {
         /* assessing the stability of the current setting and only then
          * respond to the report */
-        spice_debug("no drops, but not enough time has passed for assessing"
+        spice_debug("no drops, but not enough time has passed for assessing "
                     "the playback stability since the last bit rate change");
         return;
     }
