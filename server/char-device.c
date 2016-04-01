@@ -92,7 +92,7 @@ static void red_char_device_ref(RedCharDevice *char_dev);
 static void red_char_device_unref(RedCharDevice *char_dev);
 static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
 
-static void spice_char_dev_write_retry(void *opaque);
+static void red_char_device_write_retry(void *opaque);
 
 typedef struct RedCharDeviceMsgToClientItem {
     RingItem link;
@@ -566,7 +566,7 @@ static int red_char_device_write_to_device(RedCharDevice *dev)
     return total;
 }
 
-static void spice_char_dev_write_retry(void *opaque)
+static void red_char_device_write_retry(void *opaque)
 {
     RedCharDevice *dev = opaque;
 
@@ -750,7 +750,7 @@ RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
     sif = spice_char_device_get_interface(char_dev->priv->sin);
     if (sif->base.minor_version <= 2 ||
         !(sif->flags & SPICE_CHAR_DEVICE_NOTIFY_WRITABLE)) {
-        char_dev->priv->write_to_dev_timer = reds_core_timer_add(reds, spice_char_dev_write_retry, char_dev);
+        char_dev->priv->write_to_dev_timer = reds_core_timer_add(reds, red_char_device_write_retry, char_dev);
         if (!char_dev->priv->write_to_dev_timer) {
             spice_error("failed creating char dev write timer");
         }

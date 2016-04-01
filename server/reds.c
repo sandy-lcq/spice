@@ -425,7 +425,7 @@ static void reds_reset_vdp(RedsState *reds)
      * tokens management in the vdagent protocol:
      *  The client tokens' are set only once, when the main channel is initialized.
      *  Instead, it would have been more appropriate to reset them upon AGEN_CONNECT.
-     *  The client tokens are tracked as part of the SpiceCharDeviceClientState. Thus,
+     *  The client tokens are tracked as part of the RedCharDeviceClient. Thus,
      *  in order to be backward compatible with the client, we need to track the tokens
      *  even if the agent is detached. We don't destroy the char_device state, and
      *  instead we just reset it.
