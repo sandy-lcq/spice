@@ -2972,7 +2972,7 @@ static RedCharDevice *attach_to_red_agent(RedsState *reds, SpiceCharDeviceInstan
 {
     VDIPortState *state = &reds->agent_state;
     SpiceCharDeviceInterface *sif;
-    SpiceCharDeviceCallbacks char_dev_state_cbs;
+    RedCharDeviceCallbacks char_dev_state_cbs;
 
     if (!state->base) {
         char_dev_state_cbs.read_one_msg_from_device = vdi_port_read_one_msg_from_device;

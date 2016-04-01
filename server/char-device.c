@@ -69,7 +69,7 @@ struct RedCharDevicePrivate {
     int during_read_from_device;
     int during_write_to_device;
 
-    SpiceCharDeviceCallbacks cbs;
+    RedCharDeviceCallbacks cbs;
     void *opaque;
     SpiceServer *reds;
 };
@@ -724,7 +724,7 @@ RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
                                       RedsState *reds,
                                       uint32_t client_tokens_interval,
                                       uint32_t self_tokens,
-                                      SpiceCharDeviceCallbacks *cbs,
+                                      RedCharDeviceCallbacks *cbs,
                                       void *opaque)
 {
     RedCharDevice *char_dev;

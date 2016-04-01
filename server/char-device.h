@@ -99,7 +99,7 @@ typedef struct RedCharDeviceWriteBuffer {
 
 typedef void RedCharDeviceMsgToClient;
 
-typedef struct SpiceCharDeviceCallbacks {
+typedef struct RedCharDeviceCallbacks {
     /*
      * Messages that are addressed to the client can be queued in case we have
      * multiple clients and some of them don't have enough tokens.
@@ -129,13 +129,13 @@ typedef struct SpiceCharDeviceCallbacks {
      * due to slow flow or due to some other error.
      * The called instance should disconnect the client, or at least the corresponding channel */
     void (*remove_client)(RedClient *client, void *opaque);
-} SpiceCharDeviceCallbacks;
+} RedCharDeviceCallbacks;
 
 RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
                                       struct RedsState *reds,
                                       uint32_t client_tokens_interval,
                                       uint32_t self_tokens,
-                                      SpiceCharDeviceCallbacks *cbs,
+                                      RedCharDeviceCallbacks *cbs,
                                       void *opaque);
 
 void red_char_device_reset_dev_instance(RedCharDevice *dev,

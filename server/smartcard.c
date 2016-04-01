@@ -276,7 +276,7 @@ static SpiceCharDeviceInstance *smartcard_readers_get_unattached(void)
 static SmartCardDeviceState *smartcard_device_state_new(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     SmartCardDeviceState *st;
-    SpiceCharDeviceCallbacks chardev_cbs = { NULL, };
+    RedCharDeviceCallbacks chardev_cbs = { NULL, };
 
     chardev_cbs.read_one_msg_from_device = smartcard_read_msg_from_device;
     chardev_cbs.ref_msg_to_client = smartcard_ref_msg_to_client;
