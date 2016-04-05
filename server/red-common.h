@@ -58,4 +58,6 @@ struct SpiceCoreInterfaceInternal {
 
 extern SpiceCoreInterfaceInternal event_loop_core;
 
+typedef struct RedsState RedsState;
+
 #endif

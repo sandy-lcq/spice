@@ -20,6 +20,7 @@
 
 #include "spice.h"
 #include "common/mem.h"
+#include "red-common.h"
 
 #include <stdbool.h>
 
@@ -28,7 +29,6 @@
 typedef void (*AsyncReadDone)(void *opaque);
 typedef void (*AsyncReadError)(void *opaque, int err);
 
-typedef struct RedsState RedsState;
 typedef struct RedsStream RedsStream;
 typedef struct RedsStreamPrivate RedsStreamPrivate;
 

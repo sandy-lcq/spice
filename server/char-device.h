@@ -119,8 +119,6 @@ void red_char_device_set_callbacks(RedCharDevice *dev,
  *
  * */
 
-struct RedsState;
-
 /* buffer that is used for writing to the device */
 typedef struct RedCharDeviceWriteBuffer {
     RingItem link;
@@ -170,7 +168,7 @@ struct RedCharDeviceCallbacks {
 };
 
 RedCharDevice *red_char_device_create(SpiceCharDeviceInstance *sin,
-                                      struct RedsState *reds,
+                                      RedsState *reds,
                                       uint32_t client_tokens_interval,
                                       uint32_t self_tokens,
                                       RedCharDeviceCallbacks *cbs,
@@ -253,10 +251,10 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
 
 /* api for specific char devices */
 
-RedCharDevice *spicevmc_device_connect(struct RedsState *reds,
+RedCharDevice *spicevmc_device_connect(RedsState *reds,
                                        SpiceCharDeviceInstance *sin,
                                        uint8_t channel_type);
-void spicevmc_device_disconnect(struct RedsState *reds,
+void spicevmc_device_disconnect(RedsState *reds,
                                 SpiceCharDeviceInstance *char_device);
 
 SpiceCharDeviceInterface *spice_char_device_get_interface(SpiceCharDeviceInstance *instance);

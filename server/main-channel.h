@@ -32,8 +32,6 @@
 #define MAIN_CHANNEL_RECEIVE_BUF_SIZE \
     (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
 
-struct RedsState;
-
 struct RedsMigSpice {
     char *host;
     char *cert_subject;
@@ -50,7 +48,7 @@ typedef struct MainChannel {
 } MainChannel;
 
 
-MainChannel *main_channel_new(struct RedsState *reds);
+MainChannel *main_channel_new(RedsState *reds);
 RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t link_id);
 /* This is a 'clone' from the reds.h Channel.link callback to allow passing link_id */
 MainChannelClient *main_channel_link(MainChannel *, RedClient *client,

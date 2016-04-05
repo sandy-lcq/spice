@@ -32,8 +32,6 @@
 #include "main-dispatcher.h"
 #include "migration-protocol.h"
 
-typedef struct RedsState RedsState;
-
 static inline QXLInterface * qxl_get_interface(QXLInstance *qxl)
 {
     return SPICE_CONTAINEROF(qxl->base.sif, QXLInterface, base);

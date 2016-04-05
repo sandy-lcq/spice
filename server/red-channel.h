@@ -47,8 +47,6 @@
    The intention is to move towards one channel interface gradually.
    At the final stage, this interface shouldn't be exposed. Only RedChannel will use it. */
 
-struct RedsState;
-
 typedef struct SpiceDataHeaderOpaque SpiceDataHeaderOpaque;
 
 typedef uint16_t (*get_msg_type_proc)(SpiceDataHeaderOpaque *header);
@@ -339,7 +337,7 @@ struct RedChannel {
 
     // TODO: when different channel_clients are in different threads from Channel -> need to protect!
     pthread_t thread_id;
-    struct RedsState *reds;
+    RedsState *reds;
 #ifdef RED_STATISTICS
     StatNodeRef stat;
     uint64_t *out_bytes_counter;
@@ -362,7 +360,7 @@ struct RedChannel {
 /* if one of the callbacks should cause disconnect, use red_channel_shutdown and don't
  * explicitly destroy the channel */
 RedChannel *red_channel_create(int size,
-                               struct RedsState *reds,
+                               RedsState *reds,
                                const SpiceCoreInterfaceInternal *core,
                                uint32_t type, uint32_t id,
                                int handle_acks,
@@ -373,7 +371,7 @@ RedChannel *red_channel_create(int size,
 /* alternative constructor, meant for marshaller based (inputs,main) channels,
  * will become default eventually */
 RedChannel *red_channel_create_parser(int size,
-                                      struct RedsState *reds,
+                                      RedsState *reds,
                                       const SpiceCoreInterfaceInternal *core,
                                       uint32_t type, uint32_t id,
                                       int handle_acks,
@@ -396,7 +394,7 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
 // TODO: tmp, for channels that don't use RedChannel yet (e.g., snd channel), but
 // do use the client callbacks. So the channel clients are not connected (the channel doesn't
 // have list of them, but they do have a link to the channel, and the client has a list of them)
-RedChannel *red_channel_create_dummy(int size, struct RedsState *reds, uint32_t type, uint32_t id);
+RedChannel *red_channel_create_dummy(int size, RedsState *reds, uint32_t type, uint32_t id);
 RedChannelClient *red_channel_client_create_dummy(int size,
                                                   RedChannel *channel,
                                                   RedClient  *client,
@@ -569,7 +567,7 @@ void red_channel_apply_clients(RedChannel *channel, channel_client_callback v);
 struct RedsState* red_channel_get_server(RedChannel *channel);
 
 struct RedClient {
-    struct RedsState *reds;
+    RedsState *reds;
     RingItem link;
     Ring channels;
     int channels_num;
@@ -591,7 +589,7 @@ struct RedClient {
     int refs;
 };
 
-RedClient *red_client_new(struct RedsState *reds, int migrated);
+RedClient *red_client_new(RedsState *reds, int migrated);
 
 /*
  * disconnects all the client's channels (should be called from the client's thread)
