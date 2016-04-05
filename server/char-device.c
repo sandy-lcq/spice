@@ -1265,7 +1265,7 @@ red_char_device_new(SpiceCharDeviceInstance *sin,
 
     char_dev = g_object_new(RED_TYPE_CHAR_DEVICE,
                             "sin", sin,
-                            "reds", reds,
+                            "spice-server", reds,
                             "client-tokens-interval", (guint64) client_tokens_interval,
                             "self-tokens", (guint64) self_tokens,
                             "opaque", opaque,
