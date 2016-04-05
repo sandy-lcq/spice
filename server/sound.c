@@ -185,7 +185,7 @@ typedef struct RecordChannel {
 static SndWorker *workers;
 static uint32_t playback_compression = TRUE;
 
-static void snd_receive(void* data);
+static void snd_receive(SndChannel *channel);
 
 static SndChannel *snd_channel_ref(SndChannel *channel)
 {
@@ -420,9 +420,8 @@ static int snd_record_handle_message(SndChannel *channel, size_t size, uint32_t 
     return TRUE;
 }
 
-static void snd_receive(void* data)
+static void snd_receive(SndChannel *channel)
 {
-    SndChannel *channel = (SndChannel*)data;
     SpiceDataHeaderOpaque *header;
 
     if (!channel) {
@@ -1364,7 +1363,7 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
 
     if (len < bufsize) {
         SndWorker *worker = record_channel->base.worker;
-        snd_receive(record_channel);
+        snd_receive(&record_channel->base);
         if (!worker->connection) {
             return 0;
         }
