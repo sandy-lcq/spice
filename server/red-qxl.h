@@ -19,8 +19,7 @@
 #define _H_RED_DISPATCHER
 
 #include "red-channel.h"
-
-typedef struct QXLState QXLState;
+#include "spice-qxl.h"
 
 typedef struct AsyncCommand AsyncCommand;
 
