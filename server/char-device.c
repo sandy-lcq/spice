@@ -41,8 +41,7 @@ struct RedCharDeviceClient {
     uint64_t num_send_tokens; /* send to client */
     SpiceTimer *wait_for_tokens_timer;
     int wait_for_tokens_started;
-    Ring send_queue;
-    uint32_t send_queue_size;
+    GQueue *send_queue;
     uint32_t max_send_queue_size;
 };
 
@@ -96,11 +95,6 @@ enum {
 
 static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
 static void red_char_device_write_retry(void *opaque);
-
-typedef struct RedCharDeviceMsgToClientItem {
-    RingItem link;
-    PipeItem *msg;
-} RedCharDeviceMsgToClientItem;
 
 static PipeItem *
 red_char_device_read_one_msg_from_device(RedCharDevice *dev)
@@ -186,24 +180,6 @@ static void red_char_device_write_buffer_pool_add(RedCharDevice *dev,
     red_char_device_write_buffer_unref(buf);
 }
 
-static void red_char_device_client_send_queue_free(RedCharDevice *dev,
-                                                   RedCharDeviceClient *dev_client)
-{
-    spice_debug("send_queue_empty %d", ring_is_empty(&dev_client->send_queue));
-    while (!ring_is_empty(&dev_client->send_queue)) {
-        RingItem *item = ring_get_tail(&dev_client->send_queue);
-        RedCharDeviceMsgToClientItem *msg_item = SPICE_CONTAINEROF(item,
-                                                                   RedCharDeviceMsgToClientItem,
-                                                                   link);
-
-        ring_remove(item);
-        pipe_item_unref(msg_item->msg);
-        free(msg_item);
-    }
-    dev_client->num_send_tokens += dev_client->send_queue_size;
-    dev_client->send_queue_size = 0;
-}
-
 static void red_char_device_client_free(RedCharDevice *dev,
                                         RedCharDeviceClient *dev_client)
 {
@@ -214,7 +190,7 @@ static void red_char_device_client_free(RedCharDevice *dev,
         dev_client->wait_for_tokens_timer = NULL;
     }
 
-    red_char_device_client_send_queue_free(dev, dev_client);
+    g_queue_free_full(dev_client->send_queue, pipe_item_unref);
 
     /* remove write buffers that are associated with the client */
     spice_debug("write_queue_is_empty %d", ring_is_empty(&dev->priv->write_queue) && !dev->priv->cur_write_buf);
@@ -305,17 +281,14 @@ static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_cli
                                                     PipeItem *msg)
 {
     RedCharDevice *dev = dev_client->dev;
-    RedCharDeviceMsgToClientItem *msg_item;
 
-    if (dev_client->send_queue_size >= dev_client->max_send_queue_size) {
+    if (g_queue_get_length(dev_client->send_queue) >= dev_client->max_send_queue_size) {
         red_char_device_handle_client_overflow(dev_client);
         return;
     }
 
-    msg_item = spice_new0(RedCharDeviceMsgToClientItem, 1);
-    msg_item->msg = pipe_item_ref(msg);
-    ring_add(&dev_client->send_queue, &msg_item->link);
-    dev_client->send_queue_size++;
+    pipe_item_ref(msg);
+    g_queue_push_head(dev_client->send_queue, msg);
     if (!dev_client->wait_for_tokens_started) {
         reds_core_timer_start(dev->priv->reds, dev_client->wait_for_tokens_timer,
                               RED_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT);
@@ -334,7 +307,7 @@ static void red_char_device_send_msg_to_clients(RedCharDevice *dev,
         dev_client = SPICE_CONTAINEROF(item, RedCharDeviceClient, link);
         if (red_char_device_can_send_to_client(dev_client)) {
             dev_client->num_send_tokens--;
-            spice_assert(ring_is_empty(&dev_client->send_queue));
+            spice_assert(g_queue_is_empty(dev_client->send_queue));
             red_char_device_send_msg_to_client(dev, msg, dev_client->client);
 
             /* don't refer to dev_client anymore, it may have been released */
@@ -396,21 +369,14 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
 
 static void red_char_device_client_send_queue_push(RedCharDeviceClient *dev_client)
 {
-    RingItem *item;
-    while ((item = ring_get_tail(&dev_client->send_queue)) &&
+    while (!g_queue_is_empty(dev_client->send_queue) &&
            red_char_device_can_send_to_client(dev_client)) {
-        RedCharDeviceMsgToClientItem *msg_item;
-
-        msg_item = SPICE_CONTAINEROF(item, RedCharDeviceMsgToClientItem, link);
-        ring_remove(item);
-
+        PipeItem *msg = g_queue_pop_tail(dev_client->send_queue);
+        g_assert(msg != NULL);
         dev_client->num_send_tokens--;
-        red_char_device_send_msg_to_client(dev_client->dev,
-                                           msg_item->msg,
+        red_char_device_send_msg_to_client(dev_client->dev, msg,
                                            dev_client->client);
-        pipe_item_unref(msg_item->msg);
-        dev_client->send_queue_size--;
-        free(msg_item);
+        pipe_item_unref(msg);
     }
 }
 
@@ -420,7 +386,7 @@ static void red_char_device_send_to_client_tokens_absorb(RedCharDeviceClient *de
     RedCharDevice *dev = dev_client->dev;
     dev_client->num_send_tokens += tokens;
 
-    if (dev_client->send_queue_size) {
+    if (g_queue_get_length(dev_client->send_queue)) {
         spice_assert(dev_client->num_send_tokens == tokens);
         red_char_device_client_send_queue_push(dev_client);
     }
@@ -429,7 +395,7 @@ static void red_char_device_send_to_client_tokens_absorb(RedCharDeviceClient *de
         reds_core_timer_cancel(dev->priv->reds, dev_client->wait_for_tokens_timer);
         dev_client->wait_for_tokens_started = FALSE;
         red_char_device_read_from_device(dev_client->dev);
-    } else if (dev_client->send_queue_size) {
+    } else if (!g_queue_is_empty(dev_client->send_queue)) {
         reds_core_timer_start(dev->priv->reds, dev_client->wait_for_tokens_timer,
                               RED_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT);
         dev_client->wait_for_tokens_started = TRUE;
@@ -750,8 +716,7 @@ static RedCharDeviceClient *red_char_device_client_new(RedClient *client,
 
     dev_client = spice_new0(RedCharDeviceClient, 1);
     dev_client->client = client;
-    ring_init(&dev_client->send_queue);
-    dev_client->send_queue_size = 0;
+    dev_client->send_queue = g_queue_new();
     dev_client->max_send_queue_size = max_send_queue_size;
     dev_client->do_flow_control = do_flow_control;
     if (do_flow_control) {
@@ -884,7 +849,10 @@ void red_char_device_reset(RedCharDevice *dev)
         RedCharDeviceClient *dev_client;
 
         dev_client = SPICE_CONTAINEROF(client_item, RedCharDeviceClient, link);
-        red_char_device_client_send_queue_free(dev, dev_client);
+        spice_debug("send_queue_empty %d", g_queue_is_empty(dev_client->send_queue));
+        dev_client->num_send_tokens += g_queue_get_length(dev_client->send_queue);
+        g_queue_foreach(dev_client->send_queue, (GFunc)pipe_item_unref, NULL);
+        g_queue_clear(dev_client->send_queue);
     }
     red_char_device_reset_dev_instance(dev, NULL);
 }
@@ -933,9 +901,9 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                    RedCharDeviceClient,
                                    link);
     /* FIXME: if there were more than one client before the marshalling,
-     * it is possible that the send_queue_size > 0, and the send data
+     * it is possible that the send_queue length > 0, and the send data
      * should be migrated as well */
-    spice_assert(dev_client->send_queue_size == 0);
+    spice_assert(g_queue_is_empty(dev_client->send_queue));
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_CHAR_DEVICE_VERSION);
     spice_marshaller_add_uint8(m, 1); /* connected */
     spice_marshaller_add_uint32(m, dev_client->num_client_tokens);
