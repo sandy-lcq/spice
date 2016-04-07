@@ -44,7 +44,6 @@
 
 typedef struct SpiceVmcPipeItem {
     PipeItem base;
-    uint32_t refs;
 
     /* writes which don't fit this will get split, this is not a problem */
     uint8_t buf[BUF_SIZE];
@@ -106,29 +105,16 @@ enum {
     PIPE_ITEM_TYPE_PORT_EVENT,
 };
 
-static SpiceVmcPipeItem *spicevmc_pipe_item_ref(SpiceVmcPipeItem *item)
-{
-    item->refs++;
-    return item;
-}
-
-static void spicevmc_pipe_item_unref(SpiceVmcPipeItem *item)
-{
-    if (!--item->refs) {
-        free(item);
-    }
-}
-
 static RedCharDeviceMsgToClient *spicevmc_chardev_ref_msg_to_client(RedCharDeviceMsgToClient *msg,
                                                                     void *opaque)
 {
-    return spicevmc_pipe_item_ref((SpiceVmcPipeItem *)msg);
+    return pipe_item_ref(msg);
 }
 
 static void spicevmc_chardev_unref_msg_to_client(RedCharDeviceMsgToClient *msg,
                                                  void *opaque)
 {
-    spicevmc_pipe_item_unref((SpiceVmcPipeItem *)msg);
+    pipe_item_unref(msg);
 }
 
 static RedCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
@@ -147,7 +133,6 @@ static RedCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharDev
 
     if (!state->pipe_item) {
         msg_item = spice_new0(SpiceVmcPipeItem, 1);
-        msg_item->refs = 1;
         pipe_item_init(&msg_item->base, PIPE_ITEM_TYPE_SPICEVMC_DATA);
     } else {
         spice_assert(state->pipe_item->buf_used == 0);
@@ -175,8 +160,8 @@ static void spicevmc_chardev_send_msg_to_client(RedCharDeviceMsgToClient *msg,
     SpiceVmcPipeItem *vmc_msg = msg;
 
     spice_assert(state->rcc->client == client);
-    spicevmc_pipe_item_ref(vmc_msg);
-    red_channel_client_pipe_add_push(state->rcc, &vmc_msg->base);
+    pipe_item_ref(vmc_msg);
+    red_channel_client_pipe_add_push(state->rcc, (PipeItem *)vmc_msg);
 }
 
 static void spicevmc_port_send_init(RedChannelClient *rcc)
@@ -472,7 +457,7 @@ static void spicevmc_red_channel_release_pipe_item(RedChannelClient *rcc,
     PipeItem *item, int item_pushed)
 {
     if (item->type == PIPE_ITEM_TYPE_SPICEVMC_DATA) {
-        spicevmc_pipe_item_unref((SpiceVmcPipeItem *)item);
+        pipe_item_unref(item);
     } else {
         free(item);
     }
