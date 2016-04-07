@@ -1111,8 +1111,6 @@ red_char_device_finalize(GObject *object)
 {
     RedCharDevice *self = RED_CHAR_DEVICE(object);
 
-    /* FIXME: replace with g_object_weak_ref () */
-    reds_on_char_device_state_destroy(self->priv->reds, self);
     if (self->priv->write_to_dev_timer) {
         reds_core_timer_remove(self->priv->reds, self->priv->write_to_dev_timer);
         self->priv->write_to_dev_timer = NULL;

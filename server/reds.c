@@ -252,7 +252,6 @@ static void reds_mig_target_client_free(RedsMigTargetClient *mig_client);
 static void reds_mig_cleanup_wait_disconnect(RedsState *reds);
 static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *client);
 static void reds_add_char_device(RedsState *reds, RedCharDevice *dev);
-static void reds_remove_char_device(RedsState *reds, RedCharDevice *dev);
 static void reds_send_mm_time(RedsState *reds);
 static void reds_on_ic_change(RedsState *reds);
 static void reds_on_sv_change(RedsState *reds);
@@ -3142,15 +3141,13 @@ static void reds_add_char_device(RedsState *reds, RedCharDevice *dev)
     reds->char_devices = g_list_append(reds->char_devices, dev);
 }
 
-static void reds_remove_char_device(RedsState *reds, RedCharDevice *dev)
+static void reds_on_char_device_destroy(RedsState *reds,
+                                        RedCharDevice *dev)
 {
+    g_return_if_fail(reds != NULL);
     g_warn_if_fail(g_list_find(reds->char_devices, dev) != NULL);
-    reds->char_devices = g_list_remove(reds->char_devices, dev);
-}
 
-void reds_on_char_device_state_destroy(RedsState *reds, RedCharDevice *dev)
-{
-    reds_remove_char_device(reds, dev);
+    reds->char_devices = g_list_remove(reds->char_devices, dev);
 }
 
 static int spice_server_char_device_add_interface(SpiceServer *reds,
@@ -3188,6 +3185,10 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
 
     if (dev_state) {
         spice_assert(char_device->st);
+
+        g_object_weak_ref(G_OBJECT(dev_state),
+                          (GWeakNotify)reds_on_char_device_destroy,
+                          reds);
         /* setting the char_device state to "started" for backward compatibily with
          * qemu releases that don't call spice api for start/stop (not implemented yet) */
         if (reds->vm_running) {

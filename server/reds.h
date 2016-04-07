@@ -100,7 +100,6 @@ int reds_on_migrate_dst_set_seamless(RedsState *reds, MainChannelClient *mcc, ui
 void reds_on_client_semi_seamless_migrate_complete(RedsState *reds, RedClient *client);
 void reds_on_client_seamless_migrate_complete(RedsState *reds, RedClient *client);
 void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc);
-void reds_on_char_device_state_destroy(RedsState *reds, RedCharDevice *dev);
 
 void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_t latency);
 uint32_t reds_get_streaming_video(const RedsState *reds);
