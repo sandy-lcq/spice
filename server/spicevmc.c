@@ -105,20 +105,20 @@ enum {
     PIPE_ITEM_TYPE_PORT_EVENT,
 };
 
-static RedCharDeviceMsgToClient *spicevmc_chardev_ref_msg_to_client(RedCharDeviceMsgToClient *msg,
-                                                                    void *opaque)
+static PipeItem *spicevmc_chardev_ref_msg_to_client(PipeItem *msg,
+                                                    void *opaque)
 {
     return pipe_item_ref(msg);
 }
 
-static void spicevmc_chardev_unref_msg_to_client(RedCharDeviceMsgToClient *msg,
+static void spicevmc_chardev_unref_msg_to_client(PipeItem *msg,
                                                  void *opaque)
 {
     pipe_item_unref(msg);
 }
 
-static RedCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
-                                                                    void *opaque)
+static PipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
+                                                       void *opaque)
 {
     SpiceVmcState *state = opaque;
     SpiceCharDeviceInterface *sif;
@@ -145,19 +145,19 @@ static RedCharDeviceMsgToClient *spicevmc_chardev_read_msg_from_dev(SpiceCharDev
     if (n > 0) {
         spice_debug("read from dev %d", n);
         msg_item->buf_used = n;
-        return msg_item;
+        return (PipeItem *)msg_item;
     } else {
         state->pipe_item = msg_item;
         return NULL;
     }
 }
 
-static void spicevmc_chardev_send_msg_to_client(RedCharDeviceMsgToClient *msg,
+static void spicevmc_chardev_send_msg_to_client(PipeItem *msg,
                                                 RedClient *client,
                                                 void *opaque)
 {
     SpiceVmcState *state = opaque;
-    SpiceVmcPipeItem *vmc_msg = msg;
+    SpiceVmcPipeItem *vmc_msg = (SpiceVmcPipeItem *)msg;
 
     spice_assert(state->rcc->client == client);
     pipe_item_ref(vmc_msg);

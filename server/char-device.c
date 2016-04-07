@@ -99,10 +99,10 @@ static void red_char_device_write_retry(void *opaque);
 
 typedef struct RedCharDeviceMsgToClientItem {
     RingItem link;
-    RedCharDeviceMsgToClient *msg;
+    PipeItem *msg;
 } RedCharDeviceMsgToClientItem;
 
-static RedCharDeviceMsgToClient *
+static PipeItem *
 red_char_device_read_one_msg_from_device(RedCharDevice *dev)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
@@ -110,9 +110,9 @@ red_char_device_read_one_msg_from_device(RedCharDevice *dev)
    return klass->read_one_msg_from_device(dev->priv->sin, dev->priv->opaque);
 }
 
-static RedCharDeviceMsgToClient *
+static PipeItem *
 red_char_device_ref_msg_to_client(RedCharDevice *dev,
-                                  RedCharDeviceMsgToClient *msg)
+                                  PipeItem *msg)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
 
@@ -121,7 +121,7 @@ red_char_device_ref_msg_to_client(RedCharDevice *dev,
 
 static void
 red_char_device_unref_msg_to_client(RedCharDevice *dev,
-                                    RedCharDeviceMsgToClient *msg)
+                                    PipeItem *msg)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
 
@@ -130,7 +130,7 @@ red_char_device_unref_msg_to_client(RedCharDevice *dev,
 
 static void
 red_char_device_send_msg_to_client(RedCharDevice *dev,
-                                   RedCharDeviceMsgToClient *msg,
+                                   PipeItem *msg,
                                    RedClient *client)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
@@ -320,7 +320,7 @@ static uint64_t red_char_device_max_send_tokens(RedCharDevice *dev)
 }
 
 static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_client,
-                                                    RedCharDeviceMsgToClient *msg)
+                                                    PipeItem *msg)
 {
     RedCharDevice *dev = dev_client->dev;
     RedCharDeviceMsgToClientItem *msg_item;
@@ -342,7 +342,7 @@ static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_cli
 }
 
 static void red_char_device_send_msg_to_clients(RedCharDevice *dev,
-                                                RedCharDeviceMsgToClient *msg)
+                                                PipeItem *msg)
 {
     RingItem *item, *next;
 
@@ -388,7 +388,7 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
      * All messages will be discarded if no client is attached to the device
      */
     while ((max_send_tokens || ring_is_empty(&dev->priv->clients)) && dev->priv->running) {
-        RedCharDeviceMsgToClient *msg;
+        PipeItem *msg;
 
         msg = red_char_device_read_one_msg_from_device(dev);
         if (!msg) {

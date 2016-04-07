@@ -783,8 +783,8 @@ static void vdi_port_read_buf_free(VDIReadBuf *buf)
 
 /* reads from the device till completes reading a message that is addressed to the client,
  * or otherwise, when reading from the device fails */
-static RedCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
-                                                                   void *opaque)
+static PipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
+                                                   void *opaque)
 {
     RedsState *reds = opaque;
     RedCharDeviceVDIPort *dev = reds->agent_dev;
@@ -842,7 +842,7 @@ static RedCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDevi
                 dev->priv->read_state = VDI_PORT_READ_STATE_GET_BUFF;
             }
             if (vdi_port_read_buf_process(reds->agent_dev, dispatch_buf, &error)) {
-                return dispatch_buf;
+                return (PipeItem *)dispatch_buf;
             } else {
                 if (error) {
                     reds_agent_remove(reds);
@@ -855,24 +855,24 @@ static RedCharDeviceMsgToClient *vdi_port_read_one_msg_from_device(SpiceCharDevi
     return NULL;
 }
 
-static RedCharDeviceMsgToClient *vdi_port_ref_msg_to_client(RedCharDeviceMsgToClient *msg,
-                                                            void *opaque)
+static PipeItem *vdi_port_ref_msg_to_client(PipeItem *msg,
+                                            void *opaque)
 {
     return pipe_item_ref(msg);
 }
 
-static void vdi_port_unref_msg_to_client(RedCharDeviceMsgToClient *msg,
+static void vdi_port_unref_msg_to_client(PipeItem *msg,
                                          void *opaque)
 {
     pipe_item_unref(msg);
 }
 
 /* after calling this, we unref the message, and the ref is in the instance side */
-static void vdi_port_send_msg_to_client(RedCharDeviceMsgToClient *msg,
+static void vdi_port_send_msg_to_client(PipeItem *msg,
                                         RedClient *client,
                                         void *opaque)
 {
-    VDIReadBuf *agent_data_buf = msg;
+    VDIReadBuf *agent_data_buf = (VDIReadBuf *)msg;
 
     pipe_item_ref(agent_data_buf);
     main_channel_client_push_agent_data(red_client_get_main(client),

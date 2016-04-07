@@ -24,8 +24,6 @@
 #include "red-channel.h"
 #include "migration-protocol.h"
 
-typedef void RedCharDeviceMsgToClient;
-
 #define RED_TYPE_CHAR_DEVICE red_char_device_get_type()
 
 #define RED_CHAR_DEVICE(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHAR_DEVICE, RedCharDevice))
@@ -58,13 +56,12 @@ struct RedCharDeviceClass
 
     /* reads from the device till reaching a msg that should be sent to the client,
      * or till the reading fails */
-    RedCharDeviceMsgToClient* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
-                                                          void *opaque);
-    RedCharDeviceMsgToClient* (*ref_msg_to_client)(RedCharDeviceMsgToClient *msg,
-                                                   void *opaque);
-    void (*unref_msg_to_client)(RedCharDeviceMsgToClient *msg,
-                                void *opaque);
-    void (*send_msg_to_client)(RedCharDeviceMsgToClient *msg,
+    PipeItem* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
+                                          void *opaque);
+    PipeItem* (*ref_msg_to_client)(PipeItem *msg, void *opaque);
+    void (*unref_msg_to_client)(PipeItem *msg, void *opaque);
+
+    void (*send_msg_to_client)(PipeItem *msg,
                                RedClient *client,
                                void *opaque); /* after this call, the message is unreferenced */
 
