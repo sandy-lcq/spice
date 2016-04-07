@@ -166,18 +166,6 @@ static PipeItem *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
     return NULL;
 }
 
-static PipeItem *smartcard_ref_msg_to_client(PipeItem *msg,
-                                             void *opaque)
-{
-    return pipe_item_ref(msg);
-}
-
-static void smartcard_unref_msg_to_client(PipeItem *msg,
-                                          void *opaque)
-{
-    pipe_item_ref(msg);
-}
-
 static void smartcard_send_msg_to_client(PipeItem *msg,
                                          RedClient *client,
                                          void *opaque)
@@ -857,8 +845,6 @@ red_char_device_smartcard_class_init(RedCharDeviceSmartcardClass *klass)
     object_class->finalize = red_char_device_smartcard_finalize;
 
     char_dev_class->read_one_msg_from_device = smartcard_read_msg_from_device;
-    char_dev_class->ref_msg_to_client = smartcard_ref_msg_to_client;
-    char_dev_class->unref_msg_to_client = smartcard_unref_msg_to_client;
     char_dev_class->send_msg_to_client = smartcard_send_msg_to_client;
     char_dev_class->send_tokens_to_client = smartcard_send_tokens_to_client;
     char_dev_class->remove_client = smartcard_remove_client;

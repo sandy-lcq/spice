@@ -110,24 +110,6 @@ red_char_device_read_one_msg_from_device(RedCharDevice *dev)
    return klass->read_one_msg_from_device(dev->priv->sin, dev->priv->opaque);
 }
 
-static PipeItem *
-red_char_device_ref_msg_to_client(RedCharDevice *dev,
-                                  PipeItem *msg)
-{
-   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
-
-   return klass->ref_msg_to_client(msg, dev->priv->opaque);
-}
-
-static void
-red_char_device_unref_msg_to_client(RedCharDevice *dev,
-                                    PipeItem *msg)
-{
-   RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
-
-   klass->unref_msg_to_client(msg, dev->priv->opaque);
-}
-
 static void
 red_char_device_send_msg_to_client(RedCharDevice *dev,
                                    PipeItem *msg,
@@ -215,7 +197,7 @@ static void red_char_device_client_send_queue_free(RedCharDevice *dev,
                                                                    link);
 
         ring_remove(item);
-        red_char_device_unref_msg_to_client(dev, msg_item->msg);
+        pipe_item_unref(msg_item->msg);
         free(msg_item);
     }
     dev_client->num_send_tokens += dev_client->send_queue_size;
@@ -331,7 +313,7 @@ static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_cli
     }
 
     msg_item = spice_new0(RedCharDeviceMsgToClientItem, 1);
-    msg_item->msg = red_char_device_ref_msg_to_client(dev, msg);
+    msg_item->msg = pipe_item_ref(msg);
     ring_add(&dev_client->send_queue, &msg_item->link);
     dev_client->send_queue_size++;
     if (!dev_client->wait_for_tokens_started) {
@@ -401,7 +383,7 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
         }
         did_read = TRUE;
         red_char_device_send_msg_to_clients(dev, msg);
-        red_char_device_unref_msg_to_client(dev, msg);
+        pipe_item_unref(msg);
         max_send_tokens--;
     }
     dev->priv->during_read_from_device = 0;
@@ -426,7 +408,7 @@ static void red_char_device_client_send_queue_push(RedCharDeviceClient *dev_clie
         red_char_device_send_msg_to_client(dev_client->dev,
                                            msg_item->msg,
                                            dev_client->client);
-        red_char_device_unref_msg_to_client(dev_client->dev, msg_item->msg);
+        pipe_item_unref(msg_item->msg);
         dev_client->send_queue_size--;
         free(msg_item);
     }

@@ -105,20 +105,8 @@ enum {
     PIPE_ITEM_TYPE_PORT_EVENT,
 };
 
-static PipeItem *spicevmc_chardev_ref_msg_to_client(PipeItem *msg,
-                                                    void *opaque)
-{
-    return pipe_item_ref(msg);
-}
-
-static void spicevmc_chardev_unref_msg_to_client(PipeItem *msg,
-                                                 void *opaque)
-{
-    pipe_item_unref(msg);
-}
-
 static PipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
-                                                       void *opaque)
+                                                    void *opaque)
 {
     SpiceVmcState *state = opaque;
     SpiceCharDeviceInterface *sif;
@@ -599,8 +587,6 @@ red_char_device_spicevmc_class_init(RedCharDeviceSpiceVmcClass *klass)
     RedCharDeviceClass *char_dev_class = RED_CHAR_DEVICE_CLASS(klass);
 
     char_dev_class->read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev;
-    char_dev_class->ref_msg_to_client = spicevmc_chardev_ref_msg_to_client;
-    char_dev_class->unref_msg_to_client = spicevmc_chardev_unref_msg_to_client;
     char_dev_class->send_msg_to_client = spicevmc_chardev_send_msg_to_client;
     char_dev_class->send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client;
     char_dev_class->remove_client = spicevmc_char_dev_remove_client;

@@ -855,18 +855,6 @@ static PipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
     return NULL;
 }
 
-static PipeItem *vdi_port_ref_msg_to_client(PipeItem *msg,
-                                            void *opaque)
-{
-    return pipe_item_ref(msg);
-}
-
-static void vdi_port_unref_msg_to_client(PipeItem *msg,
-                                         void *opaque)
-{
-    pipe_item_unref(msg);
-}
-
 /* after calling this, we unref the message, and the ref is in the instance side */
 static void vdi_port_send_msg_to_client(PipeItem *msg,
                                         RedClient *client,
@@ -4331,8 +4319,6 @@ red_char_device_vdi_port_class_init(RedCharDeviceVDIPortClass *klass)
     object_class->constructed = red_char_device_vdi_port_constructed;
 
     char_dev_class->read_one_msg_from_device = vdi_port_read_one_msg_from_device;
-    char_dev_class->ref_msg_to_client = vdi_port_ref_msg_to_client;
-    char_dev_class->unref_msg_to_client = vdi_port_unref_msg_to_client;
     char_dev_class->send_msg_to_client = vdi_port_send_msg_to_client;
     char_dev_class->send_tokens_to_client = vdi_port_send_tokens_to_client;
     char_dev_class->remove_client = vdi_port_remove_client;

@@ -58,12 +58,10 @@ struct RedCharDeviceClass
      * or till the reading fails */
     PipeItem* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
                                           void *opaque);
-    PipeItem* (*ref_msg_to_client)(PipeItem *msg, void *opaque);
-    void (*unref_msg_to_client)(PipeItem *msg, void *opaque);
-
+    /* after this call, the message is unreferenced */
     void (*send_msg_to_client)(PipeItem *msg,
                                RedClient *client,
-                               void *opaque); /* after this call, the message is unreferenced */
+                               void *opaque);
 
     /* The cb is called when a predefined number of write buffers were consumed by the
      * device */
