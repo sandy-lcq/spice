@@ -786,12 +786,14 @@ static void vdi_port_read_buf_free(VDIReadBuf *buf)
 static PipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
                                                    void *opaque)
 {
-    RedsState *reds = opaque;
-    RedCharDeviceVDIPort *dev = reds->agent_dev;
+    RedsState *reds;
+    RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(sin->st);
     SpiceCharDeviceInterface *sif;
     VDIReadBuf *dispatch_buf;
     int n;
 
+    g_object_get(dev, "spice-server", &reds, NULL);
+    g_assert(RED_CHAR_DEVICE(reds->agent_dev) == sin->st);
     if (!reds->vdagent) {
         return NULL;
     }
