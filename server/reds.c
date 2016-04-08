@@ -224,7 +224,6 @@ typedef struct __attribute__ ((__packed__)) VDInternalBuf {
 #define RED_IS_CHAR_DEVICE_VDIPORT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_CHAR_DEVICE_VDIPORT))
 #define RED_CHAR_DEVICE_VDIPORT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHAR_DEVICE_VDIPORT, RedCharDeviceVDIPortClass))
 
-typedef struct RedCharDeviceVDIPort RedCharDeviceVDIPort;
 typedef struct RedCharDeviceVDIPortClass RedCharDeviceVDIPortClass;
 typedef struct RedCharDeviceVDIPortPrivate RedCharDeviceVDIPortPrivate;
 
