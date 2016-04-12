@@ -2064,13 +2064,13 @@ RedClient *red_client_new(RedsState *reds, int migrated)
 RedClient *red_client_ref(RedClient *client)
 {
     spice_assert(client);
-    client->refs++;
+    g_atomic_int_inc(&client->refs);
     return client;
 }
 
 RedClient *red_client_unref(RedClient *client)
 {
-    if (!--client->refs) {
+    if (g_atomic_int_dec_and_test(&client->refs)) {
         spice_debug("release client=%p", client);
         pthread_mutex_destroy(&client->lock);
         free(client);
