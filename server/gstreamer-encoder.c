@@ -76,6 +76,11 @@ typedef struct SpiceGstEncoder {
 #   define SPICE_GST_VIDEO_PIPELINE_CAPS     0x4
     uint32_t set_pipeline;
 
+    /* Output buffer */
+    GMutex outbuf_mutex;
+    GCond outbuf_cond;
+    VideoBuffer *outbuf;
+
     /* The bit rate target for the outgoing network stream. (bits per second) */
     uint64_t bit_rate;
 
@@ -215,6 +220,56 @@ static void set_appsrc_caps(SpiceGstEncoder *encoder)
     gst_app_src_set_caps(encoder->appsrc, encoder->src_caps);
 }
 
+static GstBusSyncReply handle_pipeline_message(GstBus *bus, GstMessage *msg, gpointer video_encoder)
+{
+    SpiceGstEncoder *encoder = video_encoder;
+
+    if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ERROR) {
+        GError *err = NULL;
+        gchar *debug_info = NULL;
+        gst_message_parse_error(msg, &err, &debug_info);
+        spice_warning("GStreamer error from element %s: %s",
+                      GST_OBJECT_NAME(msg->src), err->message);
+        if (debug_info) {
+            spice_debug("debug details: %s", debug_info);
+            g_free(debug_info);
+        }
+        g_clear_error(&err);
+
+        /* Unblock the main thread */
+        g_mutex_lock(&encoder->outbuf_mutex);
+        encoder->outbuf = (VideoBuffer*)create_gst_video_buffer();
+        g_cond_signal(&encoder->outbuf_cond);
+        g_mutex_unlock(&encoder->outbuf_mutex);
+    }
+    return GST_BUS_PASS;
+}
+
+static GstFlowReturn new_sample(GstAppSink *gstappsink, gpointer video_encoder)
+{
+    SpiceGstEncoder *encoder = (SpiceGstEncoder*)video_encoder;
+    SpiceGstVideoBuffer *outbuf = create_gst_video_buffer();
+
+    GstSample *sample = gst_app_sink_pull_sample(encoder->appsink);
+    if (sample) {
+        outbuf->gst_buffer = gst_sample_get_buffer(sample);
+        gst_buffer_ref(outbuf->gst_buffer);
+        gst_sample_unref(sample);
+        if (gst_buffer_map(outbuf->gst_buffer, &outbuf->map, GST_MAP_READ)) {
+            outbuf->base.data = outbuf->map.data;
+            outbuf->base.size = gst_buffer_get_size(outbuf->gst_buffer);
+        }
+    }
+
+    /* Notify the main thread that the output buffer is ready */
+    g_mutex_lock(&encoder->outbuf_mutex);
+    encoder->outbuf = (VideoBuffer*)outbuf;
+    g_cond_signal(&encoder->outbuf_cond);
+    g_mutex_unlock(&encoder->outbuf_mutex);
+
+    return GST_FLOW_OK;
+}
+
 static gboolean create_pipeline(SpiceGstEncoder *encoder)
 {
     gchar *gstenc;
@@ -267,6 +322,22 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
     encoder->appsrc = GST_APP_SRC(gst_bin_get_by_name(GST_BIN(encoder->pipeline), "src"));
     encoder->gstenc = gst_bin_get_by_name(GST_BIN(encoder->pipeline), "encoder");
     encoder->appsink = GST_APP_SINK(gst_bin_get_by_name(GST_BIN(encoder->pipeline), "sink"));
+
+#ifdef HAVE_GSTREAMER_0_10
+    GstAppSinkCallbacks appsink_cbs = {NULL, NULL, &new_sample, NULL, {NULL}};
+#else
+    GstAppSinkCallbacks appsink_cbs = {NULL, NULL, &new_sample, {NULL}};
+#endif
+    gst_app_sink_set_callbacks(encoder->appsink, &appsink_cbs, encoder, NULL);
+
+    /* Hook into the bus so we can handle errors */
+    GstBus *bus = gst_element_get_bus(encoder->pipeline);
+#ifdef HAVE_GSTREAMER_0_10
+    gst_bus_set_sync_handler(bus, handle_pipeline_message, encoder);
+#else
+    gst_bus_set_sync_handler(bus, handle_pipeline_message, encoder, NULL);
+#endif
+    gst_object_unref(bus);
 
     if (encoder->base.codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG) {
         /* See https://bugzilla.gnome.org/show_bug.cgi?id=753257 */
@@ -473,23 +544,21 @@ static int push_raw_frame(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
 static int pull_compressed_buffer(SpiceGstEncoder *encoder,
                                   VideoBuffer **outbuf)
 {
-    GstSample *sample = gst_app_sink_pull_sample(encoder->appsink);
-    if (sample) {
-        SpiceGstVideoBuffer *buffer = create_gst_video_buffer();
-        buffer->gst_buffer = gst_sample_get_buffer(sample);
-        if (buffer->gst_buffer &&
-            gst_buffer_map(buffer->gst_buffer, &buffer->map, GST_MAP_READ)) {
-            buffer->base.data = buffer->map.data;
-            buffer->base.size = gst_buffer_get_size(buffer->gst_buffer);
-            *outbuf = (VideoBuffer*)buffer;
-            gst_buffer_ref(buffer->gst_buffer);
-            gst_sample_unref(sample);
-            return VIDEO_ENCODER_FRAME_ENCODE_DONE;
-        }
-        buffer->base.free((VideoBuffer*)buffer);
-        gst_sample_unref(sample);
+    g_mutex_lock(&encoder->outbuf_mutex);
+    while (!encoder->outbuf) {
+        g_cond_wait(&encoder->outbuf_cond, &encoder->outbuf_mutex);
     }
+    *outbuf = encoder->outbuf;
+    encoder->outbuf = NULL;
+    g_mutex_unlock(&encoder->outbuf_mutex);
+
+    if ((*outbuf)->data) {
+        return VIDEO_ENCODER_FRAME_ENCODE_DONE;
+    }
+
     spice_debug("failed to pull the compressed buffer");
+    (*outbuf)->free(*outbuf);
+    *outbuf = NULL;
     return VIDEO_ENCODER_FRAME_UNSUPPORTED;
 }
 
@@ -499,7 +568,11 @@ static int pull_compressed_buffer(SpiceGstEncoder *encoder,
 static void spice_gst_encoder_destroy(VideoEncoder *video_encoder)
 {
     SpiceGstEncoder *encoder = (SpiceGstEncoder*)video_encoder;
+
     free_pipeline(encoder);
+    g_mutex_clear(&encoder->outbuf_mutex);
+    g_cond_clear(&encoder->outbuf_cond);
+
     free(encoder);
 }
 
@@ -621,6 +694,8 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
         encoder->cbs = *cbs;
     }
     encoder->starting_bit_rate = starting_bit_rate;
+    g_mutex_init(&encoder->outbuf_mutex);
+    g_cond_init(&encoder->outbuf_cond);
 
     /* All the other fields are initialized to zero by spice_new0(). */
 
