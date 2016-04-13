@@ -725,6 +725,7 @@ void red_char_device_reset_dev_instance(RedCharDevice *state,
     spice_debug("sin %p dev_state %p", sin, state);
     state->priv->sin = sin;
     sin->st = state;
+    g_object_notify(G_OBJECT(state), "sin");
 }
 
 void *red_char_device_opaque_get(RedCharDevice *dev)
@@ -885,6 +886,7 @@ void red_char_device_reset(RedCharDevice *dev)
         red_char_device_client_send_queue_free(dev, dev_client);
     }
     dev->priv->sin = NULL;
+    g_object_notify(G_OBJECT(dev), "sin");
 }
 
 void red_char_device_wakeup(RedCharDevice *dev)
