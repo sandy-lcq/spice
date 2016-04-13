@@ -724,7 +724,8 @@ void red_char_device_reset_dev_instance(RedCharDevice *dev,
 {
     spice_debug("sin %p, char device %p", sin, dev);
     dev->priv->sin = sin;
-    sin->st = dev;
+    if (sin)
+        sin->st = dev;
     g_object_notify(G_OBJECT(dev), "sin");
 }
 
@@ -885,8 +886,7 @@ void red_char_device_reset(RedCharDevice *dev)
         dev_client = SPICE_CONTAINEROF(client_item, RedCharDeviceClient, link);
         red_char_device_client_send_queue_free(dev, dev_client);
     }
-    dev->priv->sin = NULL;
-    g_object_notify(G_OBJECT(dev), "sin");
+    red_char_device_reset_dev_instance(dev, NULL);
 }
 
 void red_char_device_wakeup(RedCharDevice *dev)
@@ -1109,7 +1109,7 @@ red_char_device_set_property(GObject      *object,
     switch (property_id)
     {
         case PROP_CHAR_DEV_INSTANCE:
-            self->priv->sin = g_value_get_pointer(value);
+            red_char_device_reset_dev_instance(self, g_value_get_pointer(value));
             break;
         case PROP_SPICE_SERVER:
             self->priv->reds = g_value_get_pointer(value);
