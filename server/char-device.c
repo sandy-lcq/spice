@@ -719,13 +719,13 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
  * char_device_state management *
  ********************************/
 
-void red_char_device_reset_dev_instance(RedCharDevice *state,
+void red_char_device_reset_dev_instance(RedCharDevice *dev,
                                         SpiceCharDeviceInstance *sin)
 {
-    spice_debug("sin %p dev_state %p", sin, state);
-    state->priv->sin = sin;
-    sin->st = state;
-    g_object_notify(G_OBJECT(state), "sin");
+    spice_debug("sin %p, char device %p", sin, dev);
+    dev->priv->sin = sin;
+    sin->st = dev;
+    g_object_notify(G_OBJECT(dev), "sin");
 }
 
 void *red_char_device_opaque_get(RedCharDevice *dev)
@@ -791,7 +791,7 @@ int red_char_device_client_add(RedCharDevice *dev,
 
     dev->priv->wait_for_migrate_data = wait_for_migrate_data;
 
-    spice_debug("dev_state %p client %p", dev, client);
+    spice_debug("char device %p, client %p", dev, client);
     dev_client = red_char_device_client_new(client, do_flow_control,
                                             max_send_queue_size,
                                             num_client_tokens,
@@ -809,7 +809,7 @@ void red_char_device_client_remove(RedCharDevice *dev,
 {
     RedCharDeviceClient *dev_client;
 
-    spice_debug("dev_state %p client %p", dev, client);
+    spice_debug("char device %p, client %p", dev, client);
     dev_client = red_char_device_client_find(dev, client);
 
     if (!dev_client) {
@@ -838,7 +838,7 @@ int red_char_device_client_exists(RedCharDevice *dev,
 
 void red_char_device_start(RedCharDevice *dev)
 {
-    spice_debug("dev_state %p", dev);
+    spice_debug("char device %p", dev);
     dev->priv->running = TRUE;
     g_object_ref(dev);
     while (red_char_device_write_to_device(dev) ||
@@ -848,7 +848,7 @@ void red_char_device_start(RedCharDevice *dev)
 
 void red_char_device_stop(RedCharDevice *dev)
 {
-    spice_debug("dev_state %p", dev);
+    spice_debug("char device %p", dev);
     dev->priv->running = FALSE;
     dev->priv->active = FALSE;
     if (dev->priv->write_to_dev_timer) {
@@ -862,7 +862,7 @@ void red_char_device_reset(RedCharDevice *dev)
 
     red_char_device_stop(dev);
     dev->priv->wait_for_migrate_data = FALSE;
-    spice_debug("dev_state %p", dev);
+    spice_debug("char device %p", dev);
     while (!ring_is_empty(&dev->priv->write_queue)) {
         RingItem *item = ring_get_tail(&dev->priv->write_queue);
         RedCharDeviceWriteBuffer *buf;
