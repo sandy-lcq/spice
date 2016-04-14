@@ -247,7 +247,6 @@ typedef struct SurfaceDestroyItem {
 
 typedef struct UpgradeItem {
     PipeItem base;
-    int refs;
     Drawable *drawable;
     SpiceClipRects *rects;
 } UpgradeItem;

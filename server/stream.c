@@ -758,6 +758,16 @@ void stream_agent_stop(StreamAgent *agent)
     }
 }
 
+static void upgrade_item_free(UpgradeItem *item)
+{
+    g_return_if_fail(item != NULL);
+    g_return_if_fail(item->base.refcount != 0);
+
+    drawable_unref(item->drawable);
+    free(item->rects);
+    free(item);
+}
+
 /*
  * after dcc_detach_stream_gracefully is called for all the display channel clients,
  * detach_stream should be called. See comment (1).
@@ -798,8 +808,8 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
         rect_debug(&stream->current->red_drawable->bbox);
         rcc = RED_CHANNEL_CLIENT(dcc);
         upgrade_item = spice_new(UpgradeItem, 1);
-        upgrade_item->refs = 1;
-        pipe_item_init(&upgrade_item->base, PIPE_ITEM_TYPE_UPGRADE);
+        pipe_item_init_full(&upgrade_item->base, PIPE_ITEM_TYPE_UPGRADE,
+                            (GDestroyNotify)upgrade_item_free);
         upgrade_item->drawable = stream->current;
         upgrade_item->drawable->refs++;
         n_rects = pixman_region32_n_rects(&upgrade_item->drawable->tree_item.base.rgn);

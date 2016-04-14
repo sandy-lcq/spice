@@ -1589,16 +1589,6 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     return TRUE;
 }
 
-static void upgrade_item_unref(UpgradeItem *item)
-{
-    if (--item->refs != 0)
-        return;
-
-    drawable_unref(item->drawable);
-    free(item->rects);
-    free(item);
-}
-
 static void release_item_after_push(PipeItem *item)
 {
     switch (item->type) {
@@ -1606,10 +1596,8 @@ static void release_item_after_push(PipeItem *item)
     case PIPE_ITEM_TYPE_IMAGE:
     case PIPE_ITEM_TYPE_STREAM_CLIP:
     case PIPE_ITEM_TYPE_MONITORS_CONFIG:
-        pipe_item_unref(item);
-        break;
     case PIPE_ITEM_TYPE_UPGRADE:
-        upgrade_item_unref((UpgradeItem *)item);
+        pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_GL_SCANOUT:
     case PIPE_ITEM_TYPE_GL_DRAW:
@@ -1647,8 +1635,6 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
     }
     case PIPE_ITEM_TYPE_STREAM_CLIP:
     case PIPE_ITEM_TYPE_UPGRADE:
-        upgrade_item_unref((UpgradeItem *)item);
-        break;
     case PIPE_ITEM_TYPE_IMAGE:
     case PIPE_ITEM_TYPE_MONITORS_CONFIG:
         pipe_item_unref(item);
