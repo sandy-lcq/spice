@@ -2271,14 +2271,6 @@ static bool reds_init_keepalive(int socket)
         }
     }
 
-    if (setsockopt(socket, SOL_TCP, TCP_KEEPINTVL,
-                   &keepalive_timeout, sizeof(keepalive_timeout)) == -1) {
-        if (errno != ENOTSUP) {
-            spice_printerr("setsockopt for keepalive interval failed, %s", strerror(errno));
-            return false;
-        }
-    }
-
     return true;
 }
 
