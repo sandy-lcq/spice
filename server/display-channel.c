@@ -1971,16 +1971,14 @@ static void hold_item(RedChannelClient *rcc, PipeItem *item)
 
     switch (item->type) {
     case PIPE_ITEM_TYPE_DRAW:
-        drawable_pipe_item_ref(SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item));
+    case PIPE_ITEM_TYPE_IMAGE:
+        pipe_item_ref(item);
         break;
     case PIPE_ITEM_TYPE_STREAM_CLIP:
         ((StreamClipItem *)item)->refs++;
         break;
     case PIPE_ITEM_TYPE_UPGRADE:
         ((UpgradeItem *)item)->refs++;
-        break;
-    case PIPE_ITEM_TYPE_IMAGE:
-        pipe_item_ref(item);
         break;
     default:
         spice_warn_if_reached();

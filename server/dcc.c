@@ -274,20 +274,14 @@ static void add_drawable_surface_images(DisplayChannelClient *dcc, Drawable *dra
     dcc_push_surface_image(dcc, drawable->surface_id);
 }
 
-DrawablePipeItem *drawable_pipe_item_ref(DrawablePipeItem *dpi)
+void drawable_pipe_item_free(PipeItem *item)
 {
-    dpi->refs++;
-    return dpi;
-}
-
-void drawable_pipe_item_unref(DrawablePipeItem *dpi)
-{
+    DrawablePipeItem *dpi = SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item);
     DisplayChannel *display = DCC_TO_DC(dpi->dcc);
 
-    if (--dpi->refs != 0)
-        return;
+    spice_assert(item->refcount == 0);
 
-    spice_warn_if_fail(!ring_item_is_linked(&dpi->dpi_pipe_item.link));
+    spice_warn_if_fail(!ring_item_is_linked(&item->link));
     spice_warn_if_fail(!ring_item_is_linked(&dpi->base));
     display_channel_drawable_unref(display, dpi->drawable);
     free(dpi);
@@ -302,8 +296,8 @@ static DrawablePipeItem *drawable_pipe_item_new(DisplayChannelClient *dcc, Drawa
     dpi->dcc = dcc;
     ring_item_init(&dpi->base);
     ring_add(&drawable->pipes, &dpi->base);
-    pipe_item_init(&dpi->dpi_pipe_item, PIPE_ITEM_TYPE_DRAW);
-    dpi->refs++;
+    pipe_item_init_full(&dpi->dpi_pipe_item, PIPE_ITEM_TYPE_DRAW,
+                        (GDestroyNotify)drawable_pipe_item_free);
     drawable->refs++;
     return dpi;
 }
@@ -1606,16 +1600,14 @@ static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
 
     switch (item->type) {
     case PIPE_ITEM_TYPE_DRAW:
-        drawable_pipe_item_unref(SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item));
+    case PIPE_ITEM_TYPE_IMAGE:
+        pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_STREAM_CLIP:
         stream_clip_item_unref(dcc, (StreamClipItem *)item);
         break;
     case PIPE_ITEM_TYPE_UPGRADE:
         upgrade_item_unref(display, (UpgradeItem *)item);
-        break;
-    case PIPE_ITEM_TYPE_IMAGE:
-        pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_GL_SCANOUT:
     case PIPE_ITEM_TYPE_GL_DRAW:
@@ -1645,7 +1637,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
     case PIPE_ITEM_TYPE_DRAW: {
         DrawablePipeItem *dpi = SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item);
         ring_remove(&dpi->base);
-        drawable_pipe_item_unref(dpi);
+        pipe_item_unref(item);
         break;
     }
     case PIPE_ITEM_TYPE_STREAM_CREATE: {
