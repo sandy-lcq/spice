@@ -1,11 +1,11 @@
 Changes in 0.12.7:
 ==================
-* Added public spice_server_set_keepalive_timeout() to make it possible
-  to tweak keepalive on all SPICE connection. This can prevent unwanted
-  idle disconnections if proxies are used between the client and the host.
+* spice-server will now send TCP keepalive probes on the TCP connections it
+  uses. This can prevent unwanted idle disconnections if proxies are used
+  between the client and the host.
 * Fix important memory usage when the webdav channel is used
 * Do not disconnect when the client requests an unsupported compression type
-* Fix potential race condition when using multiple QXL devices
+* Fix a few race conditions
 * Fix display glitch when using XSpice
 * Improve help string for 'replay -s'
 * Fix crashes in corner cases (buggy spice-html5 + win10, vnc + SPICE port
