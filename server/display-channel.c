@@ -1972,10 +1972,8 @@ static void hold_item(RedChannelClient *rcc, PipeItem *item)
     switch (item->type) {
     case PIPE_ITEM_TYPE_DRAW:
     case PIPE_ITEM_TYPE_IMAGE:
-        pipe_item_ref(item);
-        break;
     case PIPE_ITEM_TYPE_STREAM_CLIP:
-        ((StreamClipItem *)item)->refs++;
+        pipe_item_ref(item);
         break;
     case PIPE_ITEM_TYPE_UPGRADE:
         ((UpgradeItem *)item)->refs++;

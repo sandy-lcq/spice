@@ -497,7 +497,7 @@ void dcc_stop(DisplayChannelClient *dcc)
 
 void dcc_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
 {
-    StreamClipItem *item = stream_clip_item_new(dcc, agent);
+    StreamClipItem *item = stream_clip_item_new(agent);
     int n_rects;
 
     item->clip_type = SPICE_CLIP_TYPE_RECTS;
@@ -1601,10 +1601,8 @@ static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
     switch (item->type) {
     case PIPE_ITEM_TYPE_DRAW:
     case PIPE_ITEM_TYPE_IMAGE:
-        pipe_item_unref(item);
-        break;
     case PIPE_ITEM_TYPE_STREAM_CLIP:
-        stream_clip_item_unref(dcc, (StreamClipItem *)item);
+        pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_UPGRADE:
         upgrade_item_unref(display, (UpgradeItem *)item);
@@ -1645,14 +1643,12 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
         stream_agent_unref(display, agent);
         break;
     }
-    case PIPE_ITEM_TYPE_STREAM_CLIP:
-        stream_clip_item_unref(dcc, (StreamClipItem *)item);
-        break;
     case PIPE_ITEM_TYPE_STREAM_DESTROY: {
         StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, destroy_item);
         stream_agent_unref(display, agent);
         break;
     }
+    case PIPE_ITEM_TYPE_STREAM_CLIP:
     case PIPE_ITEM_TYPE_UPGRADE:
         upgrade_item_unref(display, (UpgradeItem *)item);
         break;

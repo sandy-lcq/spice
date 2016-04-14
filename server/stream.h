@@ -101,16 +101,12 @@ typedef struct StreamAgent {
 
 typedef struct StreamClipItem {
     PipeItem base;
-    int refs;
     StreamAgent *stream_agent;
     int clip_type;
     SpiceClipRects *rects;
 } StreamClipItem;
 
-StreamClipItem *      stream_clip_item_new                          (DisplayChannelClient* dcc,
-                                                                     StreamAgent *agent);
-void                  stream_clip_item_unref                        (DisplayChannelClient *dcc,
-                                                                     StreamClipItem *item);
+StreamClipItem *      stream_clip_item_new                          (StreamAgent *agent);
 
 typedef struct ItemTrace {
     red_time_t time;

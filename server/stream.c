@@ -133,27 +133,27 @@ void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
     stream_unref(display, agent->stream);
 }
 
-StreamClipItem *stream_clip_item_new(DisplayChannelClient* dcc, StreamAgent *agent)
+void stream_clip_item_free(StreamClipItem *item)
 {
-    StreamClipItem *item = spice_new(StreamClipItem, 1);
-    pipe_item_init((PipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP);
+    g_return_if_fail(item != NULL);
+    DisplayChannel *display = DCC_TO_DC(item->stream_agent->dcc);
 
-    item->stream_agent = agent;
-    agent->stream->refs++;
-    item->refs = 1;
-    return item;
-}
-
-void stream_clip_item_unref(DisplayChannelClient *dcc, StreamClipItem *item)
-{
-    DisplayChannel *display = DCC_TO_DC(dcc);
-
-    if (--item->refs != 0)
-        return;
+    g_return_if_fail(item->base.refcount == 0);
 
     stream_agent_unref(display, item->stream_agent);
     free(item->rects);
     free(item);
+}
+
+StreamClipItem *stream_clip_item_new(StreamAgent *agent)
+{
+    StreamClipItem *item = spice_new(StreamClipItem, 1);
+    pipe_item_init_full((PipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP,
+                        (GDestroyNotify)stream_clip_item_free);
+
+    item->stream_agent = agent;
+    agent->stream->refs++;
+    return item;
 }
 
 static int is_stream_start(Drawable *drawable)
