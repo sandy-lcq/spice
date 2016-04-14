@@ -510,6 +510,12 @@ void dcc_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), (PipeItem *)item);
 }
 
+static void monitors_config_item_free(MonitorsConfigItem *item)
+{
+    monitors_config_unref(item->monitors_config);
+    free(item);
+}
+
 static MonitorsConfigItem *monitors_config_item_new(RedChannel* channel,
                                                     MonitorsConfig *monitors_config)
 {
@@ -518,7 +524,8 @@ static MonitorsConfigItem *monitors_config_item_new(RedChannel* channel,
     mci = (MonitorsConfigItem *)spice_malloc(sizeof(*mci));
     mci->monitors_config = monitors_config;
 
-    pipe_item_init(&mci->pipe_item, PIPE_ITEM_TYPE_MONITORS_CONFIG);
+    pipe_item_init_full(&mci->pipe_item, PIPE_ITEM_TYPE_MONITORS_CONFIG,
+                        (GDestroyNotify)monitors_config_item_free);
     return mci;
 }
 
@@ -1602,6 +1609,7 @@ static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
     case PIPE_ITEM_TYPE_DRAW:
     case PIPE_ITEM_TYPE_IMAGE:
     case PIPE_ITEM_TYPE_STREAM_CLIP:
+    case PIPE_ITEM_TYPE_MONITORS_CONFIG:
         pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_UPGRADE:
@@ -1612,13 +1620,6 @@ static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
     case PIPE_ITEM_TYPE_VERB:
         free(item);
         break;
-    case PIPE_ITEM_TYPE_MONITORS_CONFIG: {
-        MonitorsConfigItem *monconf_item = SPICE_CONTAINEROF(item,
-                                                             MonitorsConfigItem, pipe_item);
-        monitors_config_unref(monconf_item->monitors_config);
-        free(item);
-        break;
-    }
     default:
         spice_critical("invalid item type");
     }
@@ -1653,6 +1654,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
         upgrade_item_unref(display, (UpgradeItem *)item);
         break;
     case PIPE_ITEM_TYPE_IMAGE:
+    case PIPE_ITEM_TYPE_MONITORS_CONFIG:
         pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_CREATE_SURFACE: {
@@ -1665,13 +1667,6 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
         SurfaceDestroyItem *surface_destroy = SPICE_CONTAINEROF(item, SurfaceDestroyItem,
                                                                 pipe_item);
         free(surface_destroy);
-        break;
-    }
-    case PIPE_ITEM_TYPE_MONITORS_CONFIG: {
-        MonitorsConfigItem *monconf_item = SPICE_CONTAINEROF(item,
-                                                             MonitorsConfigItem, pipe_item);
-        monitors_config_unref(monconf_item->monitors_config);
-        free(item);
         break;
     }
     case PIPE_ITEM_TYPE_INVAL_ONE:
