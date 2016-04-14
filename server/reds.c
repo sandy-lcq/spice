@@ -166,13 +166,13 @@ struct ChannelSecurityOptions {
     ChannelSecurityOptions *next;
 };
 
-typedef struct VDIReadBuf {
+typedef struct RedVDIReadBuf {
     RedPipeItem parent;
     RedCharDeviceVDIPort *dev;
 
     int len;
     uint8_t data[SPICE_AGENT_MAX_DATA_SIZE];
-} VDIReadBuf;
+} RedVDIReadBuf;
 
 enum {
     VDI_PORT_READ_STATE_READ_HEADER,
@@ -196,7 +196,7 @@ struct RedCharDeviceVDIPortPrivate {
     uint32_t message_receive_len;
     uint8_t *receive_pos;
     uint32_t receive_len;
-    VDIReadBuf *current_read_buf;
+    RedVDIReadBuf *current_read_buf;
     AgentMsgFilter read_filter;
 
     VDIChunkHeader vdi_chunk_header;
@@ -261,8 +261,8 @@ static void reds_set_mouse_mode(RedsState *reds, uint32_t mode);
 static uint32_t reds_qxl_ram_size(RedsState *reds);
 static int calc_compression_level(RedsState *reds);
 
-static VDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev);
-static void vdi_port_read_buf_free(VDIReadBuf *buf);
+static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev);
+static void vdi_port_read_buf_free(RedVDIReadBuf *buf);
 
 static ChannelSecurityOptions *reds_find_channel_security(RedsState *reds, int id)
 {
@@ -703,13 +703,14 @@ static void reds_agent_remove(RedsState *reds)
 
 static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 {
-    VDIReadBuf *buf = (VDIReadBuf *)opaque;
+    RedVDIReadBuf *buf = (RedVDIReadBuf *)opaque;
 
     red_pipe_item_unref(buf);
 }
 
 /* returns TRUE if the buffer can be forwarded */
-static gboolean vdi_port_read_buf_process(RedCharDeviceVDIPort *dev, VDIReadBuf *buf, gboolean *error)
+static gboolean vdi_port_read_buf_process(RedCharDeviceVDIPort *dev,
+                                          RedVDIReadBuf *buf, gboolean *error)
 {
     int res;
 
@@ -738,7 +739,7 @@ static gboolean vdi_port_read_buf_process(RedCharDeviceVDIPort *dev, VDIReadBuf 
     }
 }
 
-static void vdi_read_buf_init(VDIReadBuf *buf)
+static void vdi_read_buf_init(RedVDIReadBuf *buf)
 {
     g_return_if_fail(buf != NULL);
     /* Bogus pipe item type, we only need the RingItem and refcounting
@@ -748,17 +749,17 @@ static void vdi_read_buf_init(VDIReadBuf *buf)
                             (GDestroyNotify)vdi_port_read_buf_free);
 }
 
-static VDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
+static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
 {
     RingItem *item;
-    VDIReadBuf *buf;
+    RedVDIReadBuf *buf;
 
     if (!(item = ring_get_head(&dev->priv->read_bufs))) {
         return NULL;
     }
 
     ring_remove(item);
-    buf = SPICE_CONTAINEROF(item, VDIReadBuf, parent.link);
+    buf = SPICE_CONTAINEROF(item, RedVDIReadBuf, parent.link);
 
     g_warn_if_fail(buf->parent.refcount == 0);
     vdi_read_buf_init(buf);
@@ -766,7 +767,7 @@ static VDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
     return buf;
 }
 
-static void vdi_port_read_buf_free(VDIReadBuf *buf)
+static void vdi_port_read_buf_free(RedVDIReadBuf *buf)
 {
     g_warn_if_fail(buf->parent.refcount == 0);
     ring_add(&buf->dev->priv->read_bufs, (RingItem *)buf);
@@ -788,7 +789,7 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *s
     RedsState *reds;
     RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(sin->st);
     SpiceCharDeviceInterface *sif;
-    VDIReadBuf *dispatch_buf;
+    RedVDIReadBuf *dispatch_buf;
     int n;
 
     g_object_get(dev, "spice-server", &reds, NULL);
@@ -861,7 +862,7 @@ static void vdi_port_send_msg_to_client(RedPipeItem *msg,
                                         RedClient *client,
                                         void *opaque)
 {
-    VDIReadBuf *agent_data_buf = (VDIReadBuf *)msg;
+    RedVDIReadBuf *agent_data_buf = (RedVDIReadBuf *)msg;
 
     red_pipe_item_ref(agent_data_buf);
     main_channel_client_push_agent_data(red_client_get_main(client),
@@ -1201,7 +1202,7 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
 
     if (agent_dev->priv->read_filter.msg_data_to_read ||
         read_data_len > sizeof(VDAgentMessage)) { /* msg header has been read */
-        VDIReadBuf *read_buf = agent_dev->priv->current_read_buf;
+        RedVDIReadBuf *read_buf = agent_dev->priv->current_read_buf;
         gboolean error = FALSE;
 
         spice_debug("push partial read %u (msg first chunk? %d)", read_data_len,
@@ -4290,7 +4291,7 @@ red_char_device_vdi_port_init(RedCharDeviceVDIPort *self)
     self->priv->receive_len = sizeof(self->priv->vdi_chunk_header);
 
     for (i = 0; i < REDS_VDI_PORT_NUM_RECEIVE_BUFFS; i++) {
-        VDIReadBuf *buf = spice_new0(VDIReadBuf, 1);
+        RedVDIReadBuf *buf = spice_new0(RedVDIReadBuf, 1);
         vdi_read_buf_init(buf);
         buf->dev = self;
         g_warn_if_fail(!self->priv->agent_attached);
@@ -4307,7 +4308,7 @@ red_char_device_vdi_port_finalize(GObject *object)
     RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(object);
 
    free(dev->priv->mig_data);
-   /* FIXME: need to free the VDIReadBuf allocated previously */
+   /* FIXME: need to free the RedVDIReadBuf allocated previously */
 }
 
 static void

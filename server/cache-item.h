@@ -21,14 +21,14 @@
 #include "red-channel.h"
 #include "common/ring.h"
 
-typedef struct CacheItem CacheItem;
+typedef struct RedCacheItem RedCacheItem;
 
-struct CacheItem {
+struct RedCacheItem {
     union {
         RedPipeItem pipe_data;
         struct {
             RingItem lru_link;
-            CacheItem *next;
+            RedCacheItem *next;
         } cache_data;
     } u;
     uint64_t id;

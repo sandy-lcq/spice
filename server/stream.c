@@ -133,7 +133,7 @@ void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
     stream_unref(display, agent->stream);
 }
 
-void stream_clip_item_free(StreamClipItem *item)
+void red_stream_clip_item_free(RedStreamClipItem *item)
 {
     g_return_if_fail(item != NULL);
     DisplayChannel *display = DCC_TO_DC(item->stream_agent->dcc);
@@ -145,11 +145,11 @@ void stream_clip_item_free(StreamClipItem *item)
     free(item);
 }
 
-StreamClipItem *stream_clip_item_new(StreamAgent *agent)
+RedStreamClipItem *red_stream_clip_item_new(StreamAgent *agent)
 {
-    StreamClipItem *item = spice_new(StreamClipItem, 1);
-    red_pipe_item_init_full((RedPipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP,
-                            (GDestroyNotify)stream_clip_item_free);
+    RedStreamClipItem *item = spice_new(RedStreamClipItem, 1);
+    red_pipe_item_init_full((RedPipeItem *)item, RED_PIPE_ITEM_TYPE_STREAM_CLIP,
+                            (GDestroyNotify)red_stream_clip_item_free);
 
     item->stream_agent = agent;
     agent->stream->refs++;
@@ -316,7 +316,7 @@ void detach_stream(DisplayChannel *display, Stream *stream,
 static void before_reattach_stream(DisplayChannel *display,
                                    Stream *stream, Drawable *new_frame)
 {
-    DrawablePipeItem *dpi;
+    RedDrawablePipeItem *dpi;
     DisplayChannelClient *dcc;
     int index;
     StreamAgent *agent;
@@ -731,11 +731,11 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &agent->create_item);
 
     if (red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT)) {
-        StreamActivateReportItem *report_pipe_item = spice_malloc0(sizeof(*report_pipe_item));
+        RedStreamActivateReportItem *report_pipe_item = spice_malloc0(sizeof(*report_pipe_item));
 
         agent->report_id = rand();
         red_pipe_item_init(&report_pipe_item->pipe_item,
-                           PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
+                           RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
         report_pipe_item->stream_id = get_stream_id(DCC_TO_DC(dcc), stream);
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &report_pipe_item->pipe_item);
     }
@@ -758,7 +758,7 @@ void stream_agent_stop(StreamAgent *agent)
     }
 }
 
-static void upgrade_item_free(UpgradeItem *item)
+static void red_upgrade_item_free(RedUpgradeItem *item)
 {
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->base.refcount != 0);
@@ -792,7 +792,7 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
     if (stream->current &&
         region_contains(&stream->current->tree_item.base.rgn, &agent->vis_region)) {
         RedChannelClient *rcc;
-        UpgradeItem *upgrade_item;
+        RedUpgradeItem *upgrade_item;
         int n_rects;
 
         /* (1) The caller should detach the drawable from the stream. This will
@@ -807,9 +807,9 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
                     stream_id, stream->current->sized_stream != NULL);
         rect_debug(&stream->current->red_drawable->bbox);
         rcc = RED_CHANNEL_CLIENT(dcc);
-        upgrade_item = spice_new(UpgradeItem, 1);
-        red_pipe_item_init_full(&upgrade_item->base, PIPE_ITEM_TYPE_UPGRADE,
-                                (GDestroyNotify)upgrade_item_free);
+        upgrade_item = spice_new(RedUpgradeItem, 1);
+        red_pipe_item_init_full(&upgrade_item->base, RED_PIPE_ITEM_TYPE_UPGRADE,
+                                (GDestroyNotify)red_upgrade_item_free);
         upgrade_item->drawable = stream->current;
         upgrade_item->drawable->refs++;
         n_rects = pixman_region32_n_rects(&upgrade_item->drawable->tree_item.base.rgn);

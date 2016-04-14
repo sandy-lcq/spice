@@ -140,12 +140,12 @@ typedef struct MainChannelClient MainChannelClient;
  * but we keep the 100 first allocated for base channel approach.
  * */
 enum {
-    PIPE_ITEM_TYPE_SET_ACK=1,
-    PIPE_ITEM_TYPE_MIGRATE,
-    PIPE_ITEM_TYPE_EMPTY_MSG,
-    PIPE_ITEM_TYPE_PING,
+    RED_PIPE_ITEM_TYPE_SET_ACK=1,
+    RED_PIPE_ITEM_TYPE_MIGRATE,
+    RED_PIPE_ITEM_TYPE_EMPTY_MSG,
+    RED_PIPE_ITEM_TYPE_PING,
 
-    PIPE_ITEM_TYPE_CHANNEL_BASE=101,
+    RED_PIPE_ITEM_TYPE_CHANNEL_BASE=101,
 };
 
 typedef uint8_t *(*channel_alloc_msg_recv_buf_proc)(RedChannelClient *channel,

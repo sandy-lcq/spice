@@ -514,7 +514,7 @@ static void fill_attr(SpiceMarshaller *m, SpiceLineAttr *attr)
 
 static void marshall_qxl_draw_fill(RedChannelClient *rcc,
                                    SpiceMarshaller *base_marshaller,
-                                   DrawablePipeItem *dpi)
+                                   RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -608,9 +608,9 @@ static int pipe_rendered_drawables_intersect_with_areas(DisplayChannelClient *dc
     {
         Drawable *drawable;
 
-        if (pipe_item->type != PIPE_ITEM_TYPE_DRAW)
+        if (pipe_item->type != RED_PIPE_ITEM_TYPE_DRAW)
             continue;
-        drawable = SPICE_CONTAINEROF(pipe_item, DrawablePipeItem, dpi_pipe_item)->drawable;
+        drawable = SPICE_CONTAINEROF(pipe_item, RedDrawablePipeItem, dpi_pipe_item)->drawable;
 
         if (ring_item_is_linked(&drawable->list_link))
             continue; // item hasn't been rendered
@@ -699,12 +699,12 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
          pipe_item;
          pipe_item = (RedPipeItem *)ring_prev(pipe, &pipe_item->link)) {
         Drawable *drawable;
-        DrawablePipeItem *dpi;
-        ImageItem *image;
+        RedDrawablePipeItem *dpi;
+        RedImageItem *image;
 
-        if (pipe_item->type != PIPE_ITEM_TYPE_DRAW)
+        if (pipe_item->type != RED_PIPE_ITEM_TYPE_DRAW)
             continue;
-        dpi = SPICE_CONTAINEROF(pipe_item, DrawablePipeItem, dpi_pipe_item);
+        dpi = SPICE_CONTAINEROF(pipe_item, RedDrawablePipeItem, dpi_pipe_item);
         drawable = dpi->drawable;
         if (ring_item_is_linked(&drawable->list_link))
             continue; // item hasn't been rendered
@@ -803,7 +803,7 @@ static void red_add_lossless_drawable_dependencies(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_fill(RedChannelClient *rcc,
                                              SpiceMarshaller *m,
-                                             DrawablePipeItem *dpi)
+                                             RedDrawablePipeItem *dpi)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     Drawable *item = dpi->drawable;
@@ -860,7 +860,8 @@ static void red_lossy_marshall_qxl_draw_fill(RedChannelClient *rcc,
 
 static FillBitsType red_marshall_qxl_draw_opaque(RedChannelClient *rcc,
                                                  SpiceMarshaller *base_marshaller,
-                                                 DrawablePipeItem *dpi, int src_allowed_lossy)
+                                                 RedDrawablePipeItem *dpi,
+                                                 int src_allowed_lossy)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     Drawable *item = dpi->drawable;
@@ -893,7 +894,7 @@ static FillBitsType red_marshall_qxl_draw_opaque(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_opaque(RedChannelClient *rcc,
                                                SpiceMarshaller *m,
-                                               DrawablePipeItem *dpi)
+                                               RedDrawablePipeItem *dpi)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     Drawable *item = dpi->drawable;
@@ -958,7 +959,8 @@ static void red_lossy_marshall_qxl_draw_opaque(RedChannelClient *rcc,
 
 static FillBitsType red_marshall_qxl_draw_copy(RedChannelClient *rcc,
                                                SpiceMarshaller *base_marshaller,
-                                               DrawablePipeItem *dpi, int src_allowed_lossy)
+                                               RedDrawablePipeItem *dpi,
+                                               int src_allowed_lossy)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     Drawable *item = dpi->drawable;
@@ -984,7 +986,7 @@ static FillBitsType red_marshall_qxl_draw_copy(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_copy(RedChannelClient *rcc,
                                              SpiceMarshaller *base_marshaller,
-                                             DrawablePipeItem *dpi)
+                                             RedDrawablePipeItem *dpi)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     Drawable *item = dpi->drawable;
@@ -1009,7 +1011,7 @@ static void red_lossy_marshall_qxl_draw_copy(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_transparent(RedChannelClient *rcc,
                                               SpiceMarshaller *base_marshaller,
-                                              DrawablePipeItem *dpi)
+                                              RedDrawablePipeItem *dpi)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     Drawable *item = dpi->drawable;
@@ -1029,7 +1031,7 @@ static void red_marshall_qxl_draw_transparent(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_transparent(RedChannelClient *rcc,
                                                     SpiceMarshaller *base_marshaller,
-                                                    DrawablePipeItem *dpi)
+                                                    RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -1056,7 +1058,7 @@ static void red_lossy_marshall_qxl_draw_transparent(RedChannelClient *rcc,
 
 static FillBitsType red_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
                                                       SpiceMarshaller *base_marshaller,
-                                                      DrawablePipeItem *dpi,
+                                                      RedDrawablePipeItem *dpi,
                                                       int src_allowed_lossy)
 {
     Drawable *item = dpi->drawable;
@@ -1081,7 +1083,7 @@ static FillBitsType red_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
                                                     SpiceMarshaller *base_marshaller,
-                                                    DrawablePipeItem *dpi)
+                                                    RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1108,7 +1110,7 @@ static void red_lossy_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
 
 static void red_marshall_qxl_copy_bits(RedChannelClient *rcc,
                                        SpiceMarshaller *base_marshaller,
-                                       DrawablePipeItem *dpi)
+                                       RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -1123,7 +1125,7 @@ static void red_marshall_qxl_copy_bits(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_copy_bits(RedChannelClient *rcc,
                                              SpiceMarshaller *base_marshaller,
-                                             DrawablePipeItem *dpi)
+                                             RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1152,7 +1154,7 @@ static void red_lossy_marshall_qxl_copy_bits(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_blend(RedChannelClient *rcc,
                                         SpiceMarshaller *base_marshaller,
-                                        DrawablePipeItem *dpi)
+                                        RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1176,7 +1178,7 @@ static void red_marshall_qxl_draw_blend(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_blend(RedChannelClient *rcc,
                                               SpiceMarshaller *base_marshaller,
-                                              DrawablePipeItem *dpi)
+                                              RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1218,7 +1220,7 @@ static void red_lossy_marshall_qxl_draw_blend(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_blackness(RedChannelClient *rcc,
                                             SpiceMarshaller *base_marshaller,
-                                            DrawablePipeItem *dpi)
+                                            RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -1238,7 +1240,7 @@ static void red_marshall_qxl_draw_blackness(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_blackness(RedChannelClient *rcc,
                                                   SpiceMarshaller *base_marshaller,
-                                                  DrawablePipeItem *dpi)
+                                                  RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1252,7 +1254,7 @@ static void red_lossy_marshall_qxl_draw_blackness(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_whiteness(RedChannelClient *rcc,
                                             SpiceMarshaller *base_marshaller,
-                                            DrawablePipeItem *dpi)
+                                            RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -1272,7 +1274,7 @@ static void red_marshall_qxl_draw_whiteness(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_whiteness(RedChannelClient *rcc,
                                                   SpiceMarshaller *base_marshaller,
-                                                  DrawablePipeItem *dpi)
+                                                  RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1312,7 +1314,7 @@ static void red_lossy_marshall_qxl_draw_inverse(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_rop3(RedChannelClient *rcc,
                                        SpiceMarshaller *base_marshaller,
-                                       DrawablePipeItem *dpi)
+                                       RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1341,7 +1343,7 @@ static void red_marshall_qxl_draw_rop3(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_rop3(RedChannelClient *rcc,
                                              SpiceMarshaller *base_marshaller,
-                                             DrawablePipeItem *dpi)
+                                             RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1396,7 +1398,7 @@ static void red_lossy_marshall_qxl_draw_rop3(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_composite(RedChannelClient *rcc,
                                             SpiceMarshaller *base_marshaller,
-                                            DrawablePipeItem *dpi)
+                                            RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1421,7 +1423,7 @@ static void red_marshall_qxl_draw_composite(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_composite(RedChannelClient *rcc,
                                                   SpiceMarshaller *base_marshaller,
-                                                  DrawablePipeItem *dpi)
+                                                  RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1477,7 +1479,7 @@ static void red_lossy_marshall_qxl_draw_composite(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_stroke(RedChannelClient *rcc,
                                          SpiceMarshaller *base_marshaller,
-                                         DrawablePipeItem *dpi)
+                                         RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1502,7 +1504,7 @@ static void red_marshall_qxl_draw_stroke(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_stroke(RedChannelClient *rcc,
                                                SpiceMarshaller *base_marshaller,
-                                               DrawablePipeItem *dpi)
+                                               RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1557,7 +1559,7 @@ static void red_lossy_marshall_qxl_draw_stroke(RedChannelClient *rcc,
 
 static void red_marshall_qxl_draw_text(RedChannelClient *rcc,
                                        SpiceMarshaller *base_marshaller,
-                                       DrawablePipeItem *dpi)
+                                       RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1584,7 +1586,7 @@ static void red_marshall_qxl_draw_text(RedChannelClient *rcc,
 
 static void red_lossy_marshall_qxl_draw_text(RedChannelClient *rcc,
                                              SpiceMarshaller *base_marshaller,
-                                             DrawablePipeItem *dpi)
+                                             RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
@@ -1768,8 +1770,8 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
 }
 
 static inline void marshall_inval_palette(RedChannelClient *rcc,
-                                              SpiceMarshaller *base_marshaller,
-                                              CacheItem *cache_item)
+                                          SpiceMarshaller *base_marshaller,
+                                          RedCacheItem *cache_item)
 {
     SpiceMsgDisplayInvalOne inval_one;
 
@@ -1915,7 +1917,9 @@ static void display_channel_marshall_reset_cache(RedChannelClient *rcc,
                                                  &wait);
 }
 
-static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageItem *item)
+static void red_marshall_image(RedChannelClient *rcc,
+                               SpiceMarshaller *m,
+                               RedImageItem *item)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     DisplayChannel *display = DCC_TO_DC(dcc);
@@ -2009,7 +2013,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
 
 static void marshall_lossy_qxl_drawable(RedChannelClient *rcc,
                                         SpiceMarshaller *base_marshaller,
-                                        DrawablePipeItem *dpi)
+                                        RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     switch (item->red_drawable->type) {
@@ -2061,7 +2065,8 @@ static void marshall_lossy_qxl_drawable(RedChannelClient *rcc,
 }
 
 static void marshall_lossless_qxl_drawable(RedChannelClient *rcc,
-                                           SpiceMarshaller *m, DrawablePipeItem *dpi)
+                                           SpiceMarshaller *m,
+                                           RedDrawablePipeItem *dpi)
 {
     Drawable *item = dpi->drawable;
     RedDrawable *drawable = item->red_drawable;
@@ -2115,7 +2120,8 @@ static void marshall_lossless_qxl_drawable(RedChannelClient *rcc,
 }
 
 static void marshall_qxl_drawable(RedChannelClient *rcc,
-                                  SpiceMarshaller *m, DrawablePipeItem *dpi)
+                                  SpiceMarshaller *m,
+                                  RedDrawablePipeItem *dpi)
 {
     spice_return_if_fail(rcc);
 
@@ -2173,7 +2179,7 @@ static void marshall_stream_start(RedChannelClient *rcc,
 
 static void marshall_stream_clip(RedChannelClient *rcc,
                                  SpiceMarshaller *base_marshaller,
-                                 StreamClipItem *item)
+                                 RedStreamClipItem *item)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     StreamAgent *agent = item->stream_agent;
@@ -2203,7 +2209,7 @@ static void marshall_stream_end(RedChannelClient *rcc,
 }
 
 static void marshall_upgrade(RedChannelClient *rcc, SpiceMarshaller *m,
-                             UpgradeItem *item)
+                             RedUpgradeItem *item)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     RedDrawable *red_drawable;
@@ -2319,7 +2325,7 @@ static void marshall_gl_draw(RedChannelClient *rcc,
                              SpiceMarshaller *m,
                              RedPipeItem *item)
 {
-    GlDrawItem *p = SPICE_CONTAINEROF(item, GlDrawItem, base);
+    RedGlDrawItem *p = SPICE_CONTAINEROF(item, RedGlDrawItem, base);
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_GL_DRAW, NULL);
     spice_marshall_msg_display_gl_draw(m, &p->draw);
@@ -2367,80 +2373,81 @@ void dcc_send_item(DisplayChannelClient *dcc, RedPipeItem *pipe_item)
 
     reset_send_data(dcc);
     switch (pipe_item->type) {
-    case PIPE_ITEM_TYPE_DRAW: {
-        DrawablePipeItem *dpi = SPICE_CONTAINEROF(pipe_item, DrawablePipeItem, dpi_pipe_item);
+    case RED_PIPE_ITEM_TYPE_DRAW: {
+        RedDrawablePipeItem *dpi = SPICE_CONTAINEROF(pipe_item, RedDrawablePipeItem, dpi_pipe_item);
         marshall_qxl_drawable(rcc, m, dpi);
         break;
     }
-    case PIPE_ITEM_TYPE_INVAL_ONE:
-        marshall_inval_palette(rcc, m, (CacheItem *)pipe_item);
+    case RED_PIPE_ITEM_TYPE_INVAL_ONE:
+        marshall_inval_palette(rcc, m, (RedCacheItem *)pipe_item);
         break;
-    case PIPE_ITEM_TYPE_STREAM_CREATE: {
+    case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
         StreamAgent *agent = SPICE_CONTAINEROF(pipe_item, StreamAgent, create_item);
         marshall_stream_start(rcc, m, agent);
         break;
     }
-    case PIPE_ITEM_TYPE_STREAM_CLIP: {
-        StreamClipItem* clip_item = (StreamClipItem *)pipe_item;
+    case RED_PIPE_ITEM_TYPE_STREAM_CLIP: {
+        RedStreamClipItem* clip_item = (RedStreamClipItem *)pipe_item;
         marshall_stream_clip(rcc, m, clip_item);
         break;
     }
-    case PIPE_ITEM_TYPE_STREAM_DESTROY: {
+    case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
         StreamAgent *agent = SPICE_CONTAINEROF(pipe_item, StreamAgent, destroy_item);
         marshall_stream_end(rcc, m, agent);
         break;
     }
-    case PIPE_ITEM_TYPE_UPGRADE:
-        marshall_upgrade(rcc, m, (UpgradeItem *)pipe_item);
+    case RED_PIPE_ITEM_TYPE_UPGRADE:
+        marshall_upgrade(rcc, m, (RedUpgradeItem *)pipe_item);
         break;
-    case PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, (VerbItem*)pipe_item);
+    case RED_PIPE_ITEM_TYPE_VERB:
+        red_marshall_verb(rcc, (RedVerbItem*)pipe_item);
         break;
-    case PIPE_ITEM_TYPE_MIGRATE_DATA:
+    case RED_PIPE_ITEM_TYPE_MIGRATE_DATA:
         display_channel_marshall_migrate_data(rcc, m);
         break;
-    case PIPE_ITEM_TYPE_IMAGE:
-        red_marshall_image(rcc, m, (ImageItem *)pipe_item);
+    case RED_PIPE_ITEM_TYPE_IMAGE:
+        red_marshall_image(rcc, m, (RedImageItem *)pipe_item);
         break;
-    case PIPE_ITEM_TYPE_PIXMAP_SYNC:
+    case RED_PIPE_ITEM_TYPE_PIXMAP_SYNC:
         display_channel_marshall_pixmap_sync(rcc, m);
         break;
-    case PIPE_ITEM_TYPE_PIXMAP_RESET:
+    case RED_PIPE_ITEM_TYPE_PIXMAP_RESET:
         display_channel_marshall_reset_cache(rcc, m);
         break;
-    case PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
+    case RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
         dcc_palette_cache_reset(dcc);
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES, NULL);
         break;
-    case PIPE_ITEM_TYPE_CREATE_SURFACE: {
-        SurfaceCreateItem *surface_create = SPICE_CONTAINEROF(pipe_item, SurfaceCreateItem,
-                                                              pipe_item);
+    case RED_PIPE_ITEM_TYPE_CREATE_SURFACE: {
+        RedSurfaceCreateItem *surface_create = SPICE_CONTAINEROF(pipe_item, RedSurfaceCreateItem,
+                                                                 pipe_item);
         marshall_surface_create(rcc, m, &surface_create->surface_create);
         break;
     }
-    case PIPE_ITEM_TYPE_DESTROY_SURFACE: {
-        SurfaceDestroyItem *surface_destroy = SPICE_CONTAINEROF(pipe_item, SurfaceDestroyItem,
-                                                                pipe_item);
+    case RED_PIPE_ITEM_TYPE_DESTROY_SURFACE: {
+        RedSurfaceDestroyItem *surface_destroy = SPICE_CONTAINEROF(pipe_item, RedSurfaceDestroyItem,
+                                                                   pipe_item);
         marshall_surface_destroy(rcc, m, surface_destroy->surface_destroy.surface_id);
         break;
     }
-    case PIPE_ITEM_TYPE_MONITORS_CONFIG: {
-        MonitorsConfigItem *monconf_item = SPICE_CONTAINEROF(pipe_item,
-                                                             MonitorsConfigItem, pipe_item);
+    case RED_PIPE_ITEM_TYPE_MONITORS_CONFIG: {
+        RedMonitorsConfigItem *monconf_item = SPICE_CONTAINEROF(pipe_item,
+                                                                RedMonitorsConfigItem,
+                                                                pipe_item);
         marshall_monitors_config(rcc, m, monconf_item->monitors_config);
         break;
     }
-    case PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT: {
-        StreamActivateReportItem *report_item = SPICE_CONTAINEROF(pipe_item,
-                                                                  StreamActivateReportItem,
-                                                                  pipe_item);
+    case RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT: {
+        RedStreamActivateReportItem *report_item = SPICE_CONTAINEROF(pipe_item,
+                                                                     RedStreamActivateReportItem,
+                                                                     pipe_item);
         marshall_stream_activate_report(rcc, m, report_item->stream_id);
         break;
     }
-    case PIPE_ITEM_TYPE_GL_SCANOUT:
+    case RED_PIPE_ITEM_TYPE_GL_SCANOUT:
         marshall_gl_scanout(rcc, m, pipe_item);
         break;
-    case PIPE_ITEM_TYPE_GL_DRAW:
+    case RED_PIPE_ITEM_TYPE_GL_DRAW:
         marshall_gl_draw(rcc, m, pipe_item);
         break;
     default:

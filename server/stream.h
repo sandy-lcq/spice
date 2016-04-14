@@ -46,10 +46,10 @@ typedef struct DisplayChannel DisplayChannel;
 
 typedef struct Stream Stream;
 
-typedef struct StreamActivateReportItem {
+typedef struct RedStreamActivateReportItem {
     RedPipeItem pipe_item;
     uint32_t stream_id;
-} StreamActivateReportItem;
+} RedStreamActivateReportItem;
 
 enum {
     STREAM_FRAME_NONE,
@@ -99,14 +99,14 @@ typedef struct StreamAgent {
 #endif
 } StreamAgent;
 
-typedef struct StreamClipItem {
+typedef struct RedStreamClipItem {
     RedPipeItem base;
     StreamAgent *stream_agent;
     int clip_type;
     SpiceClipRects *rects;
-} StreamClipItem;
+} RedStreamClipItem;
 
-StreamClipItem *      stream_clip_item_new                          (StreamAgent *agent);
+RedStreamClipItem *   red_stream_clip_item_new                      (StreamAgent *agent);
 
 typedef struct ItemTrace {
     red_time_t time;

@@ -337,7 +337,7 @@ static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
 static void pipes_add_drawable_after(DisplayChannel *display,
                                      Drawable *drawable, Drawable *pos_after)
 {
-    DrawablePipeItem *dpi_pos_after;
+    RedDrawablePipeItem *dpi_pos_after;
     RingItem *dpi_link, *dpi_next;
     DisplayChannelClient *dcc;
     int num_other_linked = 0;
@@ -396,11 +396,11 @@ static void current_remove_drawable(DisplayChannel *display, Drawable *item)
 
 static void drawable_remove_from_pipes(Drawable *drawable)
 {
-    DrawablePipeItem *dpi;
+    RedDrawablePipeItem *dpi;
     RingItem *item, *next;
 
     RING_FOREACH_SAFE(item, next, &drawable->pipes) {
-        dpi = SPICE_CONTAINEROF(item, DrawablePipeItem, base);
+        dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, base);
         if (red_pipe_item_is_linked(&dpi->dpi_pipe_item)) {
             red_channel_client_pipe_remove_and_release(RED_CHANNEL_CLIENT(dpi->dcc),
                                                        &dpi->dpi_pipe_item);
@@ -497,7 +497,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
         if (is_same_drawable(drawable, other_drawable)) {
 
             DisplayChannelClient *dcc;
-            DrawablePipeItem *dpi;
+            RedDrawablePipeItem *dpi;
             RingItem *worker_ring_item, *dpi_ring_item;
 
             other_drawable->refs++;
@@ -511,7 +511,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             while (worker_ring_item) {
                 dcc = SPICE_CONTAINEROF(worker_ring_item, DisplayChannelClient,
                                         common.base.channel_link);
-                dpi = SPICE_CONTAINEROF(dpi_ring_item, DrawablePipeItem, base);
+                dpi = SPICE_CONTAINEROF(dpi_ring_item, RedDrawablePipeItem, base);
                 while (worker_ring_item && (!dpi || dcc != dpi->dcc)) {
                     dcc_prepend_drawable(dcc, drawable);
                     worker_ring_item = ring_next(&RED_CHANNEL(display)->clients,
@@ -1847,7 +1847,7 @@ void display_channel_destroy_surfaces(DisplayChannel *display)
     spice_warn_if_fail(ring_is_empty(&display->streams));
 
     if (red_channel_is_connected(RED_CHANNEL(display))) {
-        red_channel_pipes_add_type(RED_CHANNEL(display), PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
+        red_channel_pipes_add_type(RED_CHANNEL(display), RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
         red_pipes_add_verb(RED_CHANNEL(display), SPICE_MSG_DISPLAY_STREAM_DESTROY_ALL);
     }
 
@@ -1968,10 +1968,10 @@ static void hold_item(RedChannelClient *rcc, RedPipeItem *item)
     spice_return_if_fail(item);
 
     switch (item->type) {
-    case PIPE_ITEM_TYPE_DRAW:
-    case PIPE_ITEM_TYPE_IMAGE:
-    case PIPE_ITEM_TYPE_STREAM_CLIP:
-    case PIPE_ITEM_TYPE_UPGRADE:
+    case RED_PIPE_ITEM_TYPE_DRAW:
+    case RED_PIPE_ITEM_TYPE_IMAGE:
+    case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
+    case RED_PIPE_ITEM_TYPE_UPGRADE:
         red_pipe_item_ref(item);
         break;
     default:
@@ -1992,7 +1992,7 @@ static int handle_migrate_flush_mark(RedChannelClient *rcc)
     DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
     RedChannel *channel = RED_CHANNEL(display_channel);
 
-    red_channel_pipes_add_type(channel, PIPE_ITEM_TYPE_MIGRATE_DATA);
+    red_channel_pipes_add_type(channel, RED_PIPE_ITEM_TYPE_MIGRATE_DATA);
     return TRUE;
 }
 

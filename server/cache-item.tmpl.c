@@ -48,9 +48,9 @@
 
 #define CHANNEL_FROM_RCC(rcc) SPICE_CONTAINEROF((rcc)->channel, CHANNEL, common.base);
 
-static CacheItem *FUNC_NAME(find)(CHANNELCLIENT *channel_client, uint64_t id)
+static RedCacheItem *FUNC_NAME(find)(CHANNELCLIENT *channel_client, uint64_t id)
 {
-    CacheItem *item = channel_client->CACHE_NAME[CACHE_HASH_KEY(id)];
+    RedCacheItem *item = channel_client->CACHE_NAME[CACHE_HASH_KEY(id)];
 
     while (item) {
         if (item->id == id) {
@@ -63,9 +63,9 @@ static CacheItem *FUNC_NAME(find)(CHANNELCLIENT *channel_client, uint64_t id)
     return item;
 }
 
-static void FUNC_NAME(remove)(CHANNELCLIENT *channel_client, CacheItem *item)
+static void FUNC_NAME(remove)(CHANNELCLIENT *channel_client, RedCacheItem *item)
 {
-    CacheItem **now;
+    RedCacheItem **now;
     spice_assert(item);
 
     now = &channel_client->CACHE_NAME[CACHE_HASH_KEY(item->id)];
@@ -81,20 +81,20 @@ static void FUNC_NAME(remove)(CHANNELCLIENT *channel_client, CacheItem *item)
     channel_client->VAR_NAME(items)--;
     channel_client->VAR_NAME(available) += item->size;
 
-    red_pipe_item_init(&item->u.pipe_data, PIPE_ITEM_TYPE_INVAL_ONE);
+    red_pipe_item_init(&item->u.pipe_data, RED_PIPE_ITEM_TYPE_INVAL_ONE);
     red_channel_client_pipe_add_tail_and_push(&channel_client->common.base, &item->u.pipe_data); // for now
 }
 
 static int FUNC_NAME(add)(CHANNELCLIENT *channel_client, uint64_t id, size_t size)
 {
-    CacheItem *item;
+    RedCacheItem *item;
     int key;
 
-    item = spice_new(CacheItem, 1);
+    item = spice_new(RedCacheItem, 1);
 
     channel_client->VAR_NAME(available) -= size;
     while (channel_client->VAR_NAME(available) < 0) {
-        CacheItem *tail = (CacheItem *)ring_get_tail(&channel_client->VAR_NAME(lru));
+        RedCacheItem *tail = (RedCacheItem *)ring_get_tail(&channel_client->VAR_NAME(lru));
         if (!tail) {
             channel_client->VAR_NAME(available) += size;
             free(item);
@@ -119,7 +119,7 @@ static void FUNC_NAME(reset)(CHANNELCLIENT *channel_client, long size)
 
     for (i = 0; i < CACHE_HASH_SIZE; i++) {
         while (channel_client->CACHE_NAME[i]) {
-            CacheItem *item = channel_client->CACHE_NAME[i];
+            RedCacheItem *item = channel_client->CACHE_NAME[i];
             channel_client->CACHE_NAME[i] = item->u.cache_data.next;
             free(item);
         }

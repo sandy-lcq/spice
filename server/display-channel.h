@@ -84,7 +84,7 @@ struct Drawable {
 
 void drawable_unref (Drawable *drawable);
 
-#define LINK_TO_DPI(ptr) SPICE_CONTAINEROF((ptr), DrawablePipeItem, base)
+#define LINK_TO_DPI(ptr) SPICE_CONTAINEROF((ptr), RedDrawablePipeItem, base)
 #define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)            \
     SAFE_FOREACH(link, next, drawable,  &(drawable)->pipes, dpi, LINK_TO_DPI(link))
 
@@ -94,22 +94,22 @@ void drawable_unref (Drawable *drawable);
     SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
 
 enum {
-    PIPE_ITEM_TYPE_DRAW = PIPE_ITEM_TYPE_COMMON_LAST,
-    PIPE_ITEM_TYPE_IMAGE,
-    PIPE_ITEM_TYPE_STREAM_CREATE,
-    PIPE_ITEM_TYPE_STREAM_CLIP,
-    PIPE_ITEM_TYPE_STREAM_DESTROY,
-    PIPE_ITEM_TYPE_UPGRADE,
-    PIPE_ITEM_TYPE_MIGRATE_DATA,
-    PIPE_ITEM_TYPE_PIXMAP_SYNC,
-    PIPE_ITEM_TYPE_PIXMAP_RESET,
-    PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE,
-    PIPE_ITEM_TYPE_CREATE_SURFACE,
-    PIPE_ITEM_TYPE_DESTROY_SURFACE,
-    PIPE_ITEM_TYPE_MONITORS_CONFIG,
-    PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT,
-    PIPE_ITEM_TYPE_GL_SCANOUT,
-    PIPE_ITEM_TYPE_GL_DRAW,
+    RED_PIPE_ITEM_TYPE_DRAW = RED_PIPE_ITEM_TYPE_COMMON_LAST,
+    RED_PIPE_ITEM_TYPE_IMAGE,
+    RED_PIPE_ITEM_TYPE_STREAM_CREATE,
+    RED_PIPE_ITEM_TYPE_STREAM_CLIP,
+    RED_PIPE_ITEM_TYPE_STREAM_DESTROY,
+    RED_PIPE_ITEM_TYPE_UPGRADE,
+    RED_PIPE_ITEM_TYPE_MIGRATE_DATA,
+    RED_PIPE_ITEM_TYPE_PIXMAP_SYNC,
+    RED_PIPE_ITEM_TYPE_PIXMAP_RESET,
+    RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE,
+    RED_PIPE_ITEM_TYPE_CREATE_SURFACE,
+    RED_PIPE_ITEM_TYPE_DESTROY_SURFACE,
+    RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
+    RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT,
+    RED_PIPE_ITEM_TYPE_GL_SCANOUT,
+    RED_PIPE_ITEM_TYPE_GL_DRAW,
 };
 
 typedef struct MonitorsConfig {
@@ -119,10 +119,10 @@ typedef struct MonitorsConfig {
     QXLHead heads[0];
 } MonitorsConfig;
 
-typedef struct MonitorsConfigItem {
+typedef struct RedMonitorsConfigItem {
     RedPipeItem pipe_item;
     MonitorsConfig *monitors_config;
-} MonitorsConfigItem;
+} RedMonitorsConfigItem;
 
 MonitorsConfig*            monitors_config_new                       (QXLHead *heads, ssize_t nheads,
                                                                       ssize_t max);
@@ -240,16 +240,16 @@ static inline int get_stream_id(DisplayChannel *display, Stream *stream)
     return (int)(stream - display->streams_buf);
 }
 
-typedef struct SurfaceDestroyItem {
+typedef struct RedSurfaceDestroyItem {
     SpiceMsgSurfaceDestroy surface_destroy;
     RedPipeItem pipe_item;
-} SurfaceDestroyItem;
+} RedSurfaceDestroyItem;
 
-typedef struct UpgradeItem {
+typedef struct RedUpgradeItem {
     RedPipeItem base;
     Drawable *drawable;
     SpiceClipRects *rects;
-} UpgradeItem;
+} RedUpgradeItem;
 
 
 DisplayChannel*            display_channel_new                       (SpiceServer *reds,

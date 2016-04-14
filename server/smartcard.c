@@ -77,24 +77,24 @@ struct RedCharDeviceSmartcardPrivate {
 };
 
 enum {
-    PIPE_ITEM_TYPE_ERROR = PIPE_ITEM_TYPE_CHANNEL_BASE,
-    PIPE_ITEM_TYPE_SMARTCARD_DATA,
-    PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA,
+    RED_PIPE_ITEM_TYPE_ERROR = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
+    RED_PIPE_ITEM_TYPE_SMARTCARD_DATA,
+    RED_PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA,
 };
 
-typedef struct ErrorItem {
+typedef struct RedErrorItem {
     RedPipeItem base;
     VSCMsgHeader vheader;
     VSCMsgError  error;
-} ErrorItem;
+} RedErrorItem;
 
-typedef struct MsgItem {
+typedef struct RedMsgItem {
     RedPipeItem base;
 
     VSCMsgHeader* vheader;
-} MsgItem;
+} RedMsgItem;
 
-static MsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc, VSCMsgHeader *vheader);
+static RedMsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc, VSCMsgHeader *vheader);
 static void smartcard_channel_client_pipe_add_push(RedChannelClient *rcc, RedPipeItem *item);
 
 typedef struct SmartCardChannel {
@@ -113,7 +113,7 @@ static void smartcard_char_device_attach_client(
     SpiceCharDeviceInstance *char_device, SmartCardChannelClient *scc);
 static void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_buf);
 
-static MsgItem *smartcard_char_device_on_message_from_device(
+static RedMsgItem *smartcard_char_device_on_message_from_device(
     RedCharDeviceSmartcard *dev, VSCMsgHeader *header);
 static RedCharDeviceSmartcard *smartcard_device_new(RedsState *reds, SpiceCharDeviceInstance *sin);
 static void smartcard_init(RedsState *reds);
@@ -140,7 +140,7 @@ static RedPipeItem *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
     int actual_length;
 
     while ((n = sif->read(sin, dev->priv->buf_pos, dev->priv->buf_size - dev->priv->buf_used)) > 0) {
-        MsgItem *msg_to_client;
+        RedMsgItem *msg_to_client;
 
         dev->priv->buf_pos += n;
         dev->priv->buf_used += n;
@@ -190,8 +190,8 @@ static void smartcard_remove_client(RedClient *client, void *opaque)
     red_channel_client_shutdown(&dev->priv->scc->base);
 }
 
-MsgItem *smartcard_char_device_on_message_from_device(RedCharDeviceSmartcard *dev,
-                                                      VSCMsgHeader *vheader)
+RedMsgItem *smartcard_char_device_on_message_from_device(RedCharDeviceSmartcard *dev,
+                                                         VSCMsgHeader *vheader)
 {
     VSCMsgHeader *sent_header;
 
@@ -441,7 +441,7 @@ static void smartcard_channel_send_data(RedChannelClient *rcc, SpiceMarshaller *
 static void smartcard_channel_send_error(
     RedChannelClient *rcc, SpiceMarshaller *m, RedPipeItem *item)
 {
-    ErrorItem* error_item = (ErrorItem*)item;
+    RedErrorItem* error_item = (RedErrorItem*)item;
 
     smartcard_channel_send_data(rcc, m, item, &error_item->vheader);
 }
@@ -449,7 +449,7 @@ static void smartcard_channel_send_error(
 static void smartcard_channel_send_msg(RedChannelClient *rcc,
                                        SpiceMarshaller *m, RedPipeItem *item)
 {
-    MsgItem* msg_item = (MsgItem*)item;
+    RedMsgItem* msg_item = (RedMsgItem*)item;
 
     smartcard_channel_send_data(rcc, m, item, msg_item->vheader);
 }
@@ -488,13 +488,13 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
     switch (item->type) {
-    case PIPE_ITEM_TYPE_ERROR:
+    case RED_PIPE_ITEM_TYPE_ERROR:
         smartcard_channel_send_error(rcc, m, item);
         break;
-    case PIPE_ITEM_TYPE_SMARTCARD_DATA:
+    case RED_PIPE_ITEM_TYPE_SMARTCARD_DATA:
         smartcard_channel_send_msg(rcc, m, item);
         break;
-    case PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA:
+    case RED_PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA:
         smartcard_channel_send_migrate_data(rcc, m, item);
         break;
     default:
@@ -508,7 +508,7 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
 static void smartcard_channel_release_pipe_item(RedChannelClient *rcc,
                                       RedPipeItem *item, int item_pushed)
 {
-    if (item->type == PIPE_ITEM_TYPE_SMARTCARD_DATA) {
+    if (item->type == RED_PIPE_ITEM_TYPE_SMARTCARD_DATA) {
         red_pipe_item_unref(item);
     } else {
         free(item);
@@ -538,11 +538,11 @@ static void smartcard_channel_client_pipe_add_push(RedChannelClient *rcc,
 
 static void smartcard_push_error(RedChannelClient *rcc, uint32_t reader_id, VSCErrorCode error)
 {
-    ErrorItem *error_item = spice_new0(ErrorItem, 1);
+    RedErrorItem *error_item = spice_new0(RedErrorItem, 1);
 
-    red_pipe_item_init(&error_item->base, PIPE_ITEM_TYPE_ERROR);
+    red_pipe_item_init(&error_item->base, RED_PIPE_ITEM_TYPE_ERROR);
 
-    error_item->base.type = PIPE_ITEM_TYPE_ERROR;
+    error_item->base.type = RED_PIPE_ITEM_TYPE_ERROR;
     error_item->vheader.reader_id = reader_id;
     error_item->vheader.type = VSC_Error;
     error_item->vheader.length = sizeof(error_item->error);
@@ -550,17 +550,18 @@ static void smartcard_push_error(RedChannelClient *rcc, uint32_t reader_id, VSCE
     smartcard_channel_client_pipe_add_push(rcc, &error_item->base);
 }
 
-static void smartcard_free_vsc_msg_item(MsgItem *item)
+static void smartcard_free_vsc_msg_item(RedMsgItem *item)
 {
     free(item->vheader);
     free(item);
 }
 
-static MsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc, VSCMsgHeader *vheader)
+static RedMsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc,
+                                              VSCMsgHeader *vheader)
 {
-    MsgItem *msg_item = spice_new0(MsgItem, 1);
+    RedMsgItem *msg_item = spice_new0(RedMsgItem, 1);
 
-    red_pipe_item_init_full(&msg_item->base, PIPE_ITEM_TYPE_SMARTCARD_DATA,
+    red_pipe_item_init_full(&msg_item->base, RED_PIPE_ITEM_TYPE_SMARTCARD_DATA,
                             (GDestroyNotify)smartcard_free_vsc_msg_item);
     msg_item->vheader = vheader;
     return msg_item;
@@ -635,7 +636,7 @@ static void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_bu
 
 static int smartcard_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
-    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA);
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA);
     return TRUE;
 }
 

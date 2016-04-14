@@ -50,27 +50,27 @@ typedef struct CommonGraphicsChannel {
 #define COMMON_GRAPHICS_CHANNEL(Channel) ((CommonGraphicsChannel*)(Channel))
 
 enum {
-    PIPE_ITEM_TYPE_VERB = PIPE_ITEM_TYPE_CHANNEL_BASE,
-    PIPE_ITEM_TYPE_INVAL_ONE,
+    RED_PIPE_ITEM_TYPE_VERB = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
+    RED_PIPE_ITEM_TYPE_INVAL_ONE,
 
-    PIPE_ITEM_TYPE_COMMON_LAST
+    RED_PIPE_ITEM_TYPE_COMMON_LAST
 };
 
-typedef struct VerbItem {
+typedef struct RedVerbItem {
     RedPipeItem base;
     uint16_t verb;
-} VerbItem;
+} RedVerbItem;
 
-static inline void red_marshall_verb(RedChannelClient *rcc, VerbItem *item)
+static inline void red_marshall_verb(RedChannelClient *rcc, RedVerbItem *item)
 {
     red_channel_client_init_send_data(rcc, item->verb, NULL);
 }
 
 static inline void red_pipe_add_verb(RedChannelClient* rcc, uint16_t verb)
 {
-    VerbItem *item = spice_new(VerbItem, 1);
+    RedVerbItem *item = spice_new(RedVerbItem, 1);
 
-    red_pipe_item_init(&item->base, PIPE_ITEM_TYPE_VERB);
+    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_VERB);
     item->verb = verb;
     red_channel_client_pipe_add(rcc, &item->base);
 }

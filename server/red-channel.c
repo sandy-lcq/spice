@@ -44,10 +44,10 @@
 #include "main-dispatcher.h"
 #include "utils.h"
 
-typedef struct EmptyMsgPipeItem {
+typedef struct RedEmptyMsgPipeItem {
     RedPipeItem base;
     int msg;
-} EmptyMsgPipeItem;
+} RedEmptyMsgPipeItem;
 
 #define PING_TEST_TIMEOUT_MS (MSEC_PER_SEC * 15)
 #define PING_TEST_IDLE_NET_TIMEOUT_MS (MSEC_PER_SEC / 10)
@@ -477,7 +477,7 @@ static void red_channel_client_reset_send_data(RedChannelClient *rcc)
 
 void red_channel_client_push_set_ack(RedChannelClient *rcc)
 {
-    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_SET_ACK);
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SET_ACK);
 }
 
 static void red_channel_client_send_set_ack(RedChannelClient *rcc)
@@ -512,7 +512,7 @@ static void red_channel_client_send_migrate(RedChannelClient *rcc)
 
 static void red_channel_client_send_empty_msg(RedChannelClient *rcc, RedPipeItem *base)
 {
-    EmptyMsgPipeItem *msg_pipe_item = SPICE_CONTAINEROF(base, EmptyMsgPipeItem, base);
+    RedEmptyMsgPipeItem *msg_pipe_item = SPICE_CONTAINEROF(base, RedEmptyMsgPipeItem, base);
 
     red_channel_client_init_send_data(rcc, msg_pipe_item->msg, NULL);
     red_channel_client_begin_send_message(rcc);
@@ -562,16 +562,16 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
     spice_assert(red_channel_client_no_item_being_sent(rcc));
     red_channel_client_reset_send_data(rcc);
     switch (item->type) {
-        case PIPE_ITEM_TYPE_SET_ACK:
+        case RED_PIPE_ITEM_TYPE_SET_ACK:
             red_channel_client_send_set_ack(rcc);
             break;
-        case PIPE_ITEM_TYPE_MIGRATE:
+        case RED_PIPE_ITEM_TYPE_MIGRATE:
             red_channel_client_send_migrate(rcc);
             break;
-        case PIPE_ITEM_TYPE_EMPTY_MSG:
+        case RED_PIPE_ITEM_TYPE_EMPTY_MSG:
             red_channel_client_send_empty_msg(rcc, item);
             break;
-        case PIPE_ITEM_TYPE_PING:
+        case RED_PIPE_ITEM_TYPE_PING:
             red_channel_client_send_ping(rcc);
             break;
         default:
@@ -584,10 +584,10 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
 static void red_channel_client_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
 {
     switch (item->type) {
-        case PIPE_ITEM_TYPE_SET_ACK:
-        case PIPE_ITEM_TYPE_EMPTY_MSG:
-        case PIPE_ITEM_TYPE_MIGRATE:
-        case PIPE_ITEM_TYPE_PING:
+        case RED_PIPE_ITEM_TYPE_SET_ACK:
+        case RED_PIPE_ITEM_TYPE_EMPTY_MSG:
+        case RED_PIPE_ITEM_TYPE_MIGRATE:
+        case RED_PIPE_ITEM_TYPE_PING:
             free(item);
             break;
         default:
@@ -733,8 +733,8 @@ static void red_channel_client_push_ping(RedChannelClient *rcc)
     rcc->latency_monitor.state = PING_STATE_WARMUP;
     rcc->latency_monitor.warmup_was_sent = FALSE;
     rcc->latency_monitor.id = rand();
-    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_PING);
-    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_PING);
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_PING);
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_PING);
 }
 
 static void red_channel_client_ping_timer(void *opaque)
@@ -1013,7 +1013,7 @@ void red_channel_client_default_migrate(RedChannelClient *rcc)
        rcc->channel->core->timer_remove(rcc->connectivity_monitor.timer);
         rcc->connectivity_monitor.timer = NULL;
     }
-    red_channel_client_pipe_add_type(rcc, PIPE_ITEM_TYPE_MIGRATE);
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MIGRATE);
 }
 
 RedChannel *red_channel_create(int size,
@@ -1737,9 +1737,9 @@ void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type)
 
 void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
 {
-    EmptyMsgPipeItem *item = spice_new(EmptyMsgPipeItem, 1);
+    RedEmptyMsgPipeItem *item = spice_new(RedEmptyMsgPipeItem, 1);
 
-    red_pipe_item_init(&item->base, PIPE_ITEM_TYPE_EMPTY_MSG);
+    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_EMPTY_MSG);
     item->msg = msg_type;
     red_channel_client_pipe_add(rcc, &item->base);
     red_channel_client_push(rcc);

@@ -82,7 +82,7 @@ struct DisplayChannelClient {
     uint32_t pixmap_cache_generation;
     int pending_pixmaps_sync;
 
-    CacheItem *palette_cache[PALETTE_CACHE_HASH_SIZE];
+    RedCacheItem *palette_cache[PALETTE_CACHE_HASH_SIZE];
     Ring palette_cache_lru;
     long palette_cache_available;
     uint32_t palette_cache_items;
@@ -121,21 +121,21 @@ struct DisplayChannelClient {
      SPICE_CONTAINEROF((dcc)->common.base.channel, DisplayChannel, common.base)
 #define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)
 
-typedef struct SurfaceCreateItem {
+typedef struct RedSurfaceCreateItem {
     SpiceMsgSurfaceCreate surface_create;
     RedPipeItem pipe_item;
-} SurfaceCreateItem;
+} RedSurfaceCreateItem;
 
-typedef struct GlScanoutUnixItem {
+typedef struct RedGlScanoutUnixItem {
     RedPipeItem base;
-} GlScanoutUnixItem;
+} RedGlScanoutUnixItem;
 
-typedef struct GlDrawItem {
+typedef struct RedGlDrawItem {
     RedPipeItem base;
     SpiceMsgDisplayGlDraw draw;
-} GlDrawItem;
+} RedGlDrawItem;
 
-typedef struct ImageItem {
+typedef struct RedImageItem {
     RedPipeItem base;
     SpicePoint pos;
     int width;
@@ -147,15 +147,15 @@ typedef struct ImageItem {
     uint32_t image_flags;
     int can_lossy;
     uint8_t data[0];
-} ImageItem;
+} RedImageItem;
 
-typedef struct DrawablePipeItem {
+typedef struct RedDrawablePipeItem {
     RingItem base;  /* link for a list of pipe items held by Drawable */
     RedPipeItem dpi_pipe_item; /* link for the client's pipe itself */
     Drawable *drawable;
     DisplayChannelClient *dcc;
     uint8_t refs;
-} DrawablePipeItem;
+} RedDrawablePipeItem;
 
 DisplayChannelClient*      dcc_new                                   (DisplayChannel *display,
                                                                       RedClient *client,
@@ -186,7 +186,7 @@ void                       dcc_create_surface                        (DisplayCha
                                                                       int surface_id);
 void                       dcc_push_surface_image                    (DisplayChannelClient *dcc,
                                                                       int surface_id);
-ImageItem *                dcc_add_surface_area_image                (DisplayChannelClient *dcc,
+RedImageItem *             dcc_add_surface_area_image                (DisplayChannelClient *dcc,
                                                                       int surface_id,
                                                                       SpiceRect *area,
                                                                       RedPipeItem *pos,
