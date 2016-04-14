@@ -28,19 +28,19 @@ typedef struct {
     int refcount;
 
     GDestroyNotify free_func;
-} PipeItem;
+} RedPipeItem;
 
-void pipe_item_init_full(PipeItem *item, int type, GDestroyNotify free_func);
-PipeItem *pipe_item_ref(gpointer item);
-void pipe_item_unref(gpointer item);
+void red_pipe_item_init_full(RedPipeItem *item, int type, GDestroyNotify free_func);
+RedPipeItem *red_pipe_item_ref(gpointer item);
+void red_pipe_item_unref(gpointer item);
 
-static inline int pipe_item_is_linked(PipeItem *item)
+static inline int red_pipe_item_is_linked(RedPipeItem *item)
 {
     return ring_item_is_linked(&item->link);
 }
 
-static inline void pipe_item_init(PipeItem *item, int type)
+static inline void red_pipe_item_init(RedPipeItem *item, int type)
 {
-    pipe_item_init_full(item, type, NULL);
+    red_pipe_item_init_full(item, type, NULL);
 }
 #endif

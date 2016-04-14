@@ -96,7 +96,7 @@ enum {
 static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
 static void red_char_device_write_retry(void *opaque);
 
-static PipeItem *
+static RedPipeItem *
 red_char_device_read_one_msg_from_device(RedCharDevice *dev)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
@@ -106,7 +106,7 @@ red_char_device_read_one_msg_from_device(RedCharDevice *dev)
 
 static void
 red_char_device_send_msg_to_client(RedCharDevice *dev,
-                                   PipeItem *msg,
+                                   RedPipeItem *msg,
                                    RedClient *client)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
@@ -190,7 +190,7 @@ static void red_char_device_client_free(RedCharDevice *dev,
         dev_client->wait_for_tokens_timer = NULL;
     }
 
-    g_queue_free_full(dev_client->send_queue, pipe_item_unref);
+    g_queue_free_full(dev_client->send_queue, red_pipe_item_unref);
 
     /* remove write buffers that are associated with the client */
     spice_debug("write_queue_is_empty %d", ring_is_empty(&dev->priv->write_queue) && !dev->priv->cur_write_buf);
@@ -278,7 +278,7 @@ static uint64_t red_char_device_max_send_tokens(RedCharDevice *dev)
 }
 
 static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_client,
-                                                    PipeItem *msg)
+                                                    RedPipeItem *msg)
 {
     RedCharDevice *dev = dev_client->dev;
 
@@ -287,7 +287,7 @@ static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_cli
         return;
     }
 
-    pipe_item_ref(msg);
+    red_pipe_item_ref(msg);
     g_queue_push_head(dev_client->send_queue, msg);
     if (!dev_client->wait_for_tokens_started) {
         reds_core_timer_start(dev->priv->reds, dev_client->wait_for_tokens_timer,
@@ -297,7 +297,7 @@ static void red_char_device_add_msg_to_client_queue(RedCharDeviceClient *dev_cli
 }
 
 static void red_char_device_send_msg_to_clients(RedCharDevice *dev,
-                                                PipeItem *msg)
+                                                RedPipeItem *msg)
 {
     RingItem *item, *next;
 
@@ -343,7 +343,7 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
      * All messages will be discarded if no client is attached to the device
      */
     while ((max_send_tokens || ring_is_empty(&dev->priv->clients)) && dev->priv->running) {
-        PipeItem *msg;
+        RedPipeItem *msg;
 
         msg = red_char_device_read_one_msg_from_device(dev);
         if (!msg) {
@@ -356,7 +356,7 @@ static int red_char_device_read_from_device(RedCharDevice *dev)
         }
         did_read = TRUE;
         red_char_device_send_msg_to_clients(dev, msg);
-        pipe_item_unref(msg);
+        red_pipe_item_unref(msg);
         max_send_tokens--;
     }
     dev->priv->during_read_from_device = 0;
@@ -371,12 +371,12 @@ static void red_char_device_client_send_queue_push(RedCharDeviceClient *dev_clie
 {
     while (!g_queue_is_empty(dev_client->send_queue) &&
            red_char_device_can_send_to_client(dev_client)) {
-        PipeItem *msg = g_queue_pop_tail(dev_client->send_queue);
+        RedPipeItem *msg = g_queue_pop_tail(dev_client->send_queue);
         g_assert(msg != NULL);
         dev_client->num_send_tokens--;
         red_char_device_send_msg_to_client(dev_client->dev, msg,
                                            dev_client->client);
-        pipe_item_unref(msg);
+        red_pipe_item_unref(msg);
     }
 }
 
@@ -851,7 +851,7 @@ void red_char_device_reset(RedCharDevice *dev)
         dev_client = SPICE_CONTAINEROF(client_item, RedCharDeviceClient, link);
         spice_debug("send_queue_empty %d", g_queue_is_empty(dev_client->send_queue));
         dev_client->num_send_tokens += g_queue_get_length(dev_client->send_queue);
-        g_queue_foreach(dev_client->send_queue, (GFunc)pipe_item_unref, NULL);
+        g_queue_foreach(dev_client->send_queue, (GFunc)red_pipe_item_unref, NULL);
         g_queue_clear(dev_client->send_queue);
     }
     red_char_device_reset_dev_instance(dev, NULL);

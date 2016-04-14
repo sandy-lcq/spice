@@ -123,20 +123,20 @@ struct DisplayChannelClient {
 
 typedef struct SurfaceCreateItem {
     SpiceMsgSurfaceCreate surface_create;
-    PipeItem pipe_item;
+    RedPipeItem pipe_item;
 } SurfaceCreateItem;
 
 typedef struct GlScanoutUnixItem {
-    PipeItem base;
+    RedPipeItem base;
 } GlScanoutUnixItem;
 
 typedef struct GlDrawItem {
-    PipeItem base;
+    RedPipeItem base;
     SpiceMsgDisplayGlDraw draw;
 } GlDrawItem;
 
 typedef struct ImageItem {
-    PipeItem base;
+    RedPipeItem base;
     SpicePoint pos;
     int width;
     int height;
@@ -151,7 +151,7 @@ typedef struct ImageItem {
 
 typedef struct DrawablePipeItem {
     RingItem base;  /* link for a list of pipe items held by Drawable */
-    PipeItem dpi_pipe_item; /* link for the client's pipe itself */
+    RedPipeItem dpi_pipe_item; /* link for the client's pipe itself */
     Drawable *drawable;
     DisplayChannelClient *dcc;
     uint8_t refs;
@@ -189,7 +189,7 @@ void                       dcc_push_surface_image                    (DisplayCha
 ImageItem *                dcc_add_surface_area_image                (DisplayChannelClient *dcc,
                                                                       int surface_id,
                                                                       SpiceRect *area,
-                                                                      PipeItem *pos,
+                                                                      RedPipeItem *pos,
                                                                       int can_lossy);
 void                       dcc_palette_cache_reset                   (DisplayChannelClient *dcc);
 void                       dcc_palette_cache_palette                 (DisplayChannelClient *dcc,
@@ -203,20 +203,20 @@ void                       dcc_append_drawable                       (DisplayCha
                                                                       Drawable *drawable);
 void                       dcc_add_drawable_after                    (DisplayChannelClient *dcc,
                                                                       Drawable *drawable,
-                                                                      PipeItem *pos);
+                                                                      RedPipeItem *pos);
 void                       dcc_release_item                          (DisplayChannelClient *dcc,
-                                                                      PipeItem *item,
+                                                                      RedPipeItem *item,
                                                                       int item_pushed);
 void                       dcc_send_item                             (DisplayChannelClient *dcc,
-                                                                      PipeItem *item);
+                                                                      RedPipeItem *item);
 int                        dcc_clear_surface_drawables_from_pipe     (DisplayChannelClient *dcc,
                                                                       int surface_id,
                                                                       int wait_if_used);
 int                        dcc_drawable_is_in_pipe                   (DisplayChannelClient *dcc,
                                                                       Drawable *drawable);
-PipeItem *                 dcc_gl_scanout_item_new                   (RedChannelClient *rcc,
+RedPipeItem *              dcc_gl_scanout_item_new                   (RedChannelClient *rcc,
                                                                       void *data, int num);
-PipeItem *                 dcc_gl_draw_item_new                      (RedChannelClient *rcc,
+RedPipeItem *              dcc_gl_draw_item_new                      (RedChannelClient *rcc,
                                                                       void *data, int num);
 
 typedef struct compress_send_data_t {

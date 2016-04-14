@@ -45,7 +45,7 @@
 #include "utils.h"
 
 typedef struct EmptyMsgPipeItem {
-    PipeItem base;
+    RedPipeItem base;
     int msg;
 } EmptyMsgPipeItem;
 
@@ -510,7 +510,7 @@ static void red_channel_client_send_migrate(RedChannelClient *rcc)
 }
 
 
-static void red_channel_client_send_empty_msg(RedChannelClient *rcc, PipeItem *base)
+static void red_channel_client_send_empty_msg(RedChannelClient *rcc, RedPipeItem *base)
 {
     EmptyMsgPipeItem *msg_pipe_item = SPICE_CONTAINEROF(base, EmptyMsgPipeItem, base);
 
@@ -557,7 +557,7 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
     red_channel_client_begin_send_message(rcc);
 }
 
-static void red_channel_client_send_item(RedChannelClient *rcc, PipeItem *item)
+static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *item)
 {
     spice_assert(red_channel_client_no_item_being_sent(rcc));
     red_channel_client_reset_send_data(rcc);
@@ -581,7 +581,7 @@ static void red_channel_client_send_item(RedChannelClient *rcc, PipeItem *item)
     free(item);
 }
 
-static void red_channel_client_release_item(RedChannelClient *rcc, PipeItem *item, int item_pushed)
+static void red_channel_client_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
 {
     switch (item->type) {
         case PIPE_ITEM_TYPE_SET_ACK:
@@ -643,7 +643,7 @@ static void red_channel_peer_on_out_msg_done(void *opaque)
 
 }
 
-static void red_channel_client_pipe_remove(RedChannelClient *rcc, PipeItem *item)
+static void red_channel_client_pipe_remove(RedChannelClient *rcc, RedPipeItem *item)
 {
     rcc->pipe_size--;
     ring_remove(&item->link);
@@ -1324,13 +1324,13 @@ static inline int red_channel_client_waiting_for_ack(RedChannelClient *rcc)
             (rcc->ack_data.messages_window > rcc->ack_data.client_window * 2));
 }
 
-static inline PipeItem *red_channel_client_pipe_item_get(RedChannelClient *rcc)
+static inline RedPipeItem *red_channel_client_pipe_item_get(RedChannelClient *rcc)
 {
-    PipeItem *item;
+    RedPipeItem *item;
 
     if (!rcc || rcc->send_data.blocked
              || red_channel_client_waiting_for_ack(rcc)
-             || !(item = (PipeItem *)ring_get_tail(&rcc->pipe))) {
+             || !(item = (RedPipeItem *)ring_get_tail(&rcc->pipe))) {
         return NULL;
     }
     red_channel_client_pipe_remove(rcc, item);
@@ -1339,7 +1339,7 @@ static inline PipeItem *red_channel_client_pipe_item_get(RedChannelClient *rcc)
 
 void red_channel_client_push(RedChannelClient *rcc)
 {
-    PipeItem *pipe_item;
+    RedPipeItem *pipe_item;
 
     if (!rcc->during_send) {
         rcc->during_send = TRUE;
@@ -1589,7 +1589,7 @@ static void red_channel_client_event(int fd, int event, void *data)
     red_channel_client_unref(rcc);
 }
 
-void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type, PipeItem *item)
+void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type, RedPipeItem *item)
 {
     spice_assert(red_channel_client_no_item_being_sent(rcc));
     spice_assert(msg_type != 0);
@@ -1658,7 +1658,7 @@ void red_channel_client_set_message_serial(RedChannelClient *rcc, uint64_t seria
     rcc->send_data.serial = serial;
 }
 
-static inline gboolean client_pipe_add(RedChannelClient *rcc, PipeItem *item, RingItem *pos)
+static inline gboolean client_pipe_add(RedChannelClient *rcc, RedPipeItem *item, RingItem *pos)
 {
     spice_assert(rcc && item);
     if (SPICE_UNLIKELY(!red_channel_client_is_connected(rcc))) {
@@ -1676,38 +1676,39 @@ static inline gboolean client_pipe_add(RedChannelClient *rcc, PipeItem *item, Ri
     return TRUE;
 }
 
-void red_channel_client_pipe_add(RedChannelClient *rcc, PipeItem *item)
+void red_channel_client_pipe_add(RedChannelClient *rcc, RedPipeItem *item)
 {
 
     client_pipe_add(rcc, item, &rcc->pipe);
 }
 
-void red_channel_client_pipe_add_push(RedChannelClient *rcc, PipeItem *item)
+void red_channel_client_pipe_add_push(RedChannelClient *rcc, RedPipeItem *item)
 {
     red_channel_client_pipe_add(rcc, item);
     red_channel_client_push(rcc);
 }
 
 void red_channel_client_pipe_add_after(RedChannelClient *rcc,
-                                       PipeItem *item, PipeItem *pos)
+                                       RedPipeItem *item,
+                                       RedPipeItem *pos)
 {
     spice_assert(pos);
     client_pipe_add(rcc, item, &pos->link);
 }
 
 int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc,
-                                           PipeItem *item)
+                                           RedPipeItem *item)
 {
     return ring_item_is_linked(&item->link);
 }
 
 void red_channel_client_pipe_add_tail(RedChannelClient *rcc,
-                                              PipeItem *item)
+                                              RedPipeItem *item)
 {
     client_pipe_add(rcc, item, rcc->pipe.prev);
 }
 
-void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, PipeItem *item)
+void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, RedPipeItem *item)
 {
     if (client_pipe_add(rcc, item, rcc->pipe.prev)) {
         red_channel_client_push(rcc);
@@ -1716,9 +1717,9 @@ void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, PipeItem *
 
 void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
 {
-    PipeItem *item = spice_new(PipeItem, 1);
+    RedPipeItem *item = spice_new(RedPipeItem, 1);
 
-    pipe_item_init(item, pipe_item_type);
+    red_pipe_item_init(item, pipe_item_type);
     red_channel_client_pipe_add(rcc, item);
     red_channel_client_push(rcc);
 }
@@ -1738,7 +1739,7 @@ void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
 {
     EmptyMsgPipeItem *item = spice_new(EmptyMsgPipeItem, 1);
 
-    pipe_item_init(&item->base, PIPE_ITEM_TYPE_EMPTY_MSG);
+    red_pipe_item_init(&item->base, PIPE_ITEM_TYPE_EMPTY_MSG);
     item->msg = msg_type;
     red_channel_client_pipe_add(rcc, &item->base);
     red_channel_client_push(rcc);
@@ -1781,12 +1782,12 @@ void red_channel_client_clear_sent_item(RedChannelClient *rcc)
 
 void red_channel_client_pipe_clear(RedChannelClient *rcc)
 {
-    PipeItem *item;
+    RedPipeItem *item;
 
     if (rcc) {
         red_channel_client_clear_sent_item(rcc);
     }
-    while ((item = (PipeItem *)ring_get_head(&rcc->pipe))) {
+    while ((item = (RedPipeItem *)ring_get_head(&rcc->pipe))) {
         ring_remove(&item->link);
         red_channel_client_release_item(rcc, item, FALSE);
     }
@@ -2029,7 +2030,7 @@ int red_channel_client_no_item_being_sent(RedChannelClient *rcc)
 }
 
 void red_channel_client_pipe_remove_and_release(RedChannelClient *rcc,
-                                                PipeItem *item)
+                                                RedPipeItem *item)
 {
     red_channel_client_pipe_remove(rcc, item);
     red_channel_client_release_item(rcc, item, FALSE);
@@ -2231,8 +2232,8 @@ int red_client_during_migrate_at_target(RedClient *client)
  * TODO - inline? macro? right now this is the simplest from code amount
  */
 
-typedef void (*rcc_item_t)(RedChannelClient *rcc, PipeItem *item);
-typedef int (*rcc_item_cond_t)(RedChannelClient *rcc, PipeItem *item);
+typedef void (*rcc_item_t)(RedChannelClient *rcc, RedPipeItem *item);
+typedef int (*rcc_item_cond_t)(RedChannelClient *rcc, RedPipeItem *item);
 
 /**
  * red_channel_pipes_create_batch:
@@ -2249,7 +2250,7 @@ static int red_channel_pipes_create_batch(RedChannel *channel,
 {
     RingItem *link, *next;
     RedChannelClient *rcc;
-    PipeItem *item;
+    RedPipeItem *item;
     int num = 0, n = 0;
 
     spice_assert(creator != NULL);
@@ -2362,7 +2363,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
 
 /* TODO: more evil sync stuff. anything with the word wait in it's name. */
 int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
-                                           PipeItem *item,
+                                           RedPipeItem *item,
                                            int64_t timeout)
 {
     uint64_t end_time;

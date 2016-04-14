@@ -20,9 +20,9 @@
 #include "red-channel.h"
 #include "red-pipe-item.h"
 
-PipeItem *pipe_item_ref(gpointer object)
+RedPipeItem *red_pipe_item_ref(gpointer object)
 {
-    PipeItem *item = object;
+    RedPipeItem *item = object;
 
     g_return_val_if_fail(item->refcount > 0, NULL);
 
@@ -31,9 +31,9 @@ PipeItem *pipe_item_ref(gpointer object)
     return item;
 }
 
-void pipe_item_unref(gpointer object)
+void red_pipe_item_unref(gpointer object)
 {
-    PipeItem *item = object;
+    RedPipeItem *item = object;
 
     g_return_if_fail(item->refcount > 0);
 
@@ -42,9 +42,9 @@ void pipe_item_unref(gpointer object)
     }
 }
 
-void pipe_item_init_full(PipeItem *item,
-                         gint type,
-                         GDestroyNotify free_func)
+void red_pipe_item_init_full(RedPipeItem *item,
+                             gint type,
+                             GDestroyNotify free_func)
 {
     ring_item_init(&item->link);
     item->type = type;

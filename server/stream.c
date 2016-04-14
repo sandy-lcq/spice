@@ -78,7 +78,7 @@ void stream_stop(DisplayChannel *display, Stream *stream)
         stream_agent = &dcc->stream_agents[get_stream_id(display, stream)];
         region_clear(&stream_agent->vis_region);
         region_clear(&stream_agent->clip);
-        spice_assert(!pipe_item_is_linked(&stream_agent->destroy_item));
+        spice_assert(!red_pipe_item_is_linked(&stream_agent->destroy_item));
         if (stream_agent->mjpeg_encoder && dcc->use_mjpeg_encoder_rate_control) {
             uint64_t stream_bit_rate = mjpeg_encoder_get_bit_rate(stream_agent->mjpeg_encoder);
 
@@ -148,8 +148,8 @@ void stream_clip_item_free(StreamClipItem *item)
 StreamClipItem *stream_clip_item_new(StreamAgent *agent)
 {
     StreamClipItem *item = spice_new(StreamClipItem, 1);
-    pipe_item_init_full((PipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP,
-                        (GDestroyNotify)stream_clip_item_free);
+    red_pipe_item_init_full((RedPipeItem *)item, PIPE_ITEM_TYPE_STREAM_CLIP,
+                            (GDestroyNotify)stream_clip_item_free);
 
     item->stream_agent = agent;
     agent->stream->refs++;
@@ -343,7 +343,7 @@ static void before_reattach_stream(DisplayChannel *display,
             continue;
         }
 
-        if (pipe_item_is_linked(&dpi->dpi_pipe_item)) {
+        if (red_pipe_item_is_linked(&dpi->dpi_pipe_item)) {
 #ifdef STREAM_STATS
             agent->stats.num_drops_pipe++;
 #endif
@@ -734,8 +734,8 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
         StreamActivateReportItem *report_pipe_item = spice_malloc0(sizeof(*report_pipe_item));
 
         agent->report_id = rand();
-        pipe_item_init(&report_pipe_item->pipe_item,
-                       PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
+        red_pipe_item_init(&report_pipe_item->pipe_item,
+                           PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
         report_pipe_item->stream_id = get_stream_id(DCC_TO_DC(dcc), stream);
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &report_pipe_item->pipe_item);
     }
@@ -808,8 +808,8 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
         rect_debug(&stream->current->red_drawable->bbox);
         rcc = RED_CHANNEL_CLIENT(dcc);
         upgrade_item = spice_new(UpgradeItem, 1);
-        pipe_item_init_full(&upgrade_item->base, PIPE_ITEM_TYPE_UPGRADE,
-                            (GDestroyNotify)upgrade_item_free);
+        red_pipe_item_init_full(&upgrade_item->base, PIPE_ITEM_TYPE_UPGRADE,
+                                (GDestroyNotify)upgrade_item_free);
         upgrade_item->drawable = stream->current;
         upgrade_item->drawable->refs++;
         n_rects = pixman_region32_n_rects(&upgrade_item->drawable->tree_item.base.rgn);

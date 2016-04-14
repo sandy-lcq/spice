@@ -25,7 +25,7 @@ typedef struct CacheItem CacheItem;
 
 struct CacheItem {
     union {
-        PipeItem pipe_data;
+        RedPipeItem pipe_data;
         struct {
             RingItem lru_link;
             CacheItem *next;

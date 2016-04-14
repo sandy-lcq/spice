@@ -47,7 +47,7 @@ typedef struct DisplayChannel DisplayChannel;
 typedef struct Stream Stream;
 
 typedef struct StreamActivateReportItem {
-    PipeItem pipe_item;
+    RedPipeItem pipe_item;
     uint32_t stream_id;
 } StreamActivateReportItem;
 
@@ -81,8 +81,8 @@ typedef struct StreamAgent {
                            vis_region will contain c2 and also the part of c1/c2 that still
                            displays fragments of the video */
 
-    PipeItem create_item;
-    PipeItem destroy_item;
+    RedPipeItem create_item;
+    RedPipeItem destroy_item;
     Stream *stream;
     uint64_t last_send_time;
     MJpegEncoder *mjpeg_encoder;
@@ -100,7 +100,7 @@ typedef struct StreamAgent {
 } StreamAgent;
 
 typedef struct StreamClipItem {
-    PipeItem base;
+    RedPipeItem base;
     StreamAgent *stream_agent;
     int clip_type;
     SpiceClipRects *rects;

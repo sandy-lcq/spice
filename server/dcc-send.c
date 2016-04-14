@@ -186,9 +186,9 @@ static int is_brush_lossy(RedChannelClient *rcc, SpiceBrush *brush,
     }
 }
 
-static PipeItem *dcc_get_tail(DisplayChannelClient *dcc)
+static RedPipeItem *dcc_get_tail(DisplayChannelClient *dcc)
 {
-    return (PipeItem*)ring_get_tail(&RED_CHANNEL_CLIENT(dcc)->pipe);
+    return (RedPipeItem*)ring_get_tail(&RED_CHANNEL_CLIENT(dcc)->pipe);
 }
 
 static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
@@ -596,15 +596,15 @@ static int pipe_rendered_drawables_intersect_with_areas(DisplayChannelClient *dc
                                                         SpiceRect *surface_areas[],
                                                         int num_surfaces)
 {
-    PipeItem *pipe_item;
+    RedPipeItem *pipe_item;
     Ring *pipe;
 
     spice_assert(num_surfaces);
     pipe = &RED_CHANNEL_CLIENT(dcc)->pipe;
 
-    for (pipe_item = (PipeItem *)ring_get_head(pipe);
+    for (pipe_item = (RedPipeItem *)ring_get_head(pipe);
          pipe_item;
-         pipe_item = (PipeItem *)ring_next(pipe, &pipe_item->link))
+         pipe_item = (RedPipeItem *)ring_next(pipe, &pipe_item->link))
     {
         Drawable *drawable;
 
@@ -685,7 +685,7 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
     int resent_surface_ids[MAX_PIPE_SIZE];
     SpiceRect resent_areas[MAX_PIPE_SIZE]; // not pointers since drawables may be released
     int num_resent;
-    PipeItem *pipe_item;
+    RedPipeItem *pipe_item;
     Ring *pipe;
 
     resent_surface_ids[0] = first_surface_id;
@@ -695,9 +695,9 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
     pipe = &RED_CHANNEL_CLIENT(dcc)->pipe;
 
     // going from the oldest to the newest
-    for (pipe_item = (PipeItem *)ring_get_tail(pipe);
+    for (pipe_item = (RedPipeItem *)ring_get_tail(pipe);
          pipe_item;
-         pipe_item = (PipeItem *)ring_prev(pipe, &pipe_item->link)) {
+         pipe_item = (RedPipeItem *)ring_prev(pipe, &pipe_item->link)) {
         Drawable *drawable;
         DrawablePipeItem *dpi;
         ImageItem *image;
@@ -2301,7 +2301,7 @@ static void marshall_stream_activate_report(RedChannelClient *rcc,
 
 static void marshall_gl_scanout(RedChannelClient *rcc,
                                 SpiceMarshaller *m,
-                                PipeItem *item)
+                                RedPipeItem *item)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
@@ -2317,7 +2317,7 @@ static void marshall_gl_scanout(RedChannelClient *rcc,
 
 static void marshall_gl_draw(RedChannelClient *rcc,
                              SpiceMarshaller *m,
-                             PipeItem *item)
+                             RedPipeItem *item)
 {
     GlDrawItem *p = SPICE_CONTAINEROF(item, GlDrawItem, base);
 
@@ -2360,7 +2360,7 @@ static void reset_send_data(DisplayChannelClient *dcc)
     memset(dcc->send_data.free_list.sync, 0, sizeof(dcc->send_data.free_list.sync));
 }
 
-void dcc_send_item(DisplayChannelClient *dcc, PipeItem *pipe_item)
+void dcc_send_item(DisplayChannelClient *dcc, RedPipeItem *pipe_item)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);

@@ -81,7 +81,7 @@ static void FUNC_NAME(remove)(CHANNELCLIENT *channel_client, CacheItem *item)
     channel_client->VAR_NAME(items)--;
     channel_client->VAR_NAME(available) += item->size;
 
-    pipe_item_init(&item->u.pipe_data, PIPE_ITEM_TYPE_INVAL_ONE);
+    red_pipe_item_init(&item->u.pipe_data, PIPE_ITEM_TYPE_INVAL_ONE);
     red_channel_client_pipe_add_tail_and_push(&channel_client->common.base, &item->u.pipe_data); // for now
 }
 

@@ -43,7 +43,7 @@
 #define BUF_SIZE (64 * 1024 + 32)
 
 typedef struct SpiceVmcPipeItem {
-    PipeItem base;
+    RedPipeItem base;
 
     /* writes which don't fit this will get split, this is not a problem */
     uint8_t buf[BUF_SIZE];
@@ -88,13 +88,13 @@ static RedCharDevice *red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
 G_DEFINE_TYPE(RedCharDeviceSpiceVmc, red_char_device_spicevmc, RED_TYPE_CHAR_DEVICE)
 
 typedef struct PortInitPipeItem {
-    PipeItem base;
+    RedPipeItem base;
     char* name;
     uint8_t opened;
 } PortInitPipeItem;
 
 typedef struct PortEventPipeItem {
-    PipeItem base;
+    RedPipeItem base;
     uint8_t event;
 } PortEventPipeItem;
 
@@ -105,8 +105,8 @@ enum {
     PIPE_ITEM_TYPE_PORT_EVENT,
 };
 
-static PipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
-                                                    void *opaque)
+static RedPipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
+                                                       void *opaque)
 {
     SpiceVmcState *state = opaque;
     SpiceCharDeviceInterface *sif;
@@ -121,7 +121,7 @@ static PipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin
 
     if (!state->pipe_item) {
         msg_item = spice_new0(SpiceVmcPipeItem, 1);
-        pipe_item_init(&msg_item->base, PIPE_ITEM_TYPE_SPICEVMC_DATA);
+        red_pipe_item_init(&msg_item->base, PIPE_ITEM_TYPE_SPICEVMC_DATA);
     } else {
         spice_assert(state->pipe_item->buf_used == 0);
         msg_item = state->pipe_item;
@@ -133,14 +133,14 @@ static PipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin
     if (n > 0) {
         spice_debug("read from dev %d", n);
         msg_item->buf_used = n;
-        return (PipeItem *)msg_item;
+        return (RedPipeItem *)msg_item;
     } else {
         state->pipe_item = msg_item;
         return NULL;
     }
 }
 
-static void spicevmc_chardev_send_msg_to_client(PipeItem *msg,
+static void spicevmc_chardev_send_msg_to_client(RedPipeItem *msg,
                                                 RedClient *client,
                                                 void *opaque)
 {
@@ -148,8 +148,8 @@ static void spicevmc_chardev_send_msg_to_client(PipeItem *msg,
     SpiceVmcPipeItem *vmc_msg = (SpiceVmcPipeItem *)msg;
 
     spice_assert(state->rcc->client == client);
-    pipe_item_ref(vmc_msg);
-    red_channel_client_pipe_add_push(state->rcc, (PipeItem *)vmc_msg);
+    red_pipe_item_ref(vmc_msg);
+    red_channel_client_pipe_add_push(state->rcc, (RedPipeItem *)vmc_msg);
 }
 
 static void spicevmc_port_send_init(RedChannelClient *rcc)
@@ -158,7 +158,7 @@ static void spicevmc_port_send_init(RedChannelClient *rcc)
     SpiceCharDeviceInstance *sin = state->chardev_sin;
     PortInitPipeItem *item = spice_malloc(sizeof(PortInitPipeItem));
 
-    pipe_item_init(&item->base, PIPE_ITEM_TYPE_PORT_INIT);
+    red_pipe_item_init(&item->base, PIPE_ITEM_TYPE_PORT_INIT);
     item->name = strdup(sin->portname);
     item->opened = state->port_opened;
     red_channel_client_pipe_add_push(rcc, &item->base);
@@ -168,7 +168,7 @@ static void spicevmc_port_send_event(RedChannelClient *rcc, uint8_t event)
 {
     PortEventPipeItem *item = spice_malloc(sizeof(PortEventPipeItem));
 
-    pipe_item_init(&item->base, PIPE_ITEM_TYPE_PORT_EVENT);
+    red_pipe_item_init(&item->base, PIPE_ITEM_TYPE_PORT_EVENT);
     item->event = event;
     red_channel_client_pipe_add_push(rcc, &item->base);
 }
@@ -360,14 +360,14 @@ static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
 }
 
 static void spicevmc_red_channel_hold_pipe_item(RedChannelClient *rcc,
-    PipeItem *item)
+                                                RedPipeItem *item)
 {
     /* NOOP */
 }
 
 static void spicevmc_red_channel_send_data(RedChannelClient *rcc,
                                            SpiceMarshaller *m,
-                                           PipeItem *item)
+                                           RedPipeItem *item)
 {
     SpiceVmcPipeItem *i = SPICE_CONTAINEROF(item, SpiceVmcPipeItem, base);
 
@@ -377,7 +377,7 @@ static void spicevmc_red_channel_send_data(RedChannelClient *rcc,
 
 static void spicevmc_red_channel_send_migrate_data(RedChannelClient *rcc,
                                                    SpiceMarshaller *m,
-                                                   PipeItem *item)
+                                                   RedPipeItem *item)
 {
     SpiceVmcState *state;
 
@@ -391,7 +391,7 @@ static void spicevmc_red_channel_send_migrate_data(RedChannelClient *rcc,
 
 static void spicevmc_red_channel_send_port_init(RedChannelClient *rcc,
                                                 SpiceMarshaller *m,
-                                                PipeItem *item)
+                                                RedPipeItem *item)
 {
     PortInitPipeItem *i = SPICE_CONTAINEROF(item, PortInitPipeItem, base);
     SpiceMsgPortInit init;
@@ -405,7 +405,7 @@ static void spicevmc_red_channel_send_port_init(RedChannelClient *rcc,
 
 static void spicevmc_red_channel_send_port_event(RedChannelClient *rcc,
                                                  SpiceMarshaller *m,
-                                                 PipeItem *item)
+                                                 RedPipeItem *item)
 {
     PortEventPipeItem *i = SPICE_CONTAINEROF(item, PortEventPipeItem, base);
     SpiceMsgPortEvent event;
@@ -416,7 +416,7 @@ static void spicevmc_red_channel_send_port_event(RedChannelClient *rcc,
 }
 
 static void spicevmc_red_channel_send_item(RedChannelClient *rcc,
-                                           PipeItem *item)
+                                           RedPipeItem *item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
@@ -442,10 +442,11 @@ static void spicevmc_red_channel_send_item(RedChannelClient *rcc,
 }
 
 static void spicevmc_red_channel_release_pipe_item(RedChannelClient *rcc,
-    PipeItem *item, int item_pushed)
+                                                   RedPipeItem *item,
+                                                   int item_pushed)
 {
     if (item->type == PIPE_ITEM_TYPE_SPICEVMC_DATA) {
-        pipe_item_unref(item);
+        red_pipe_item_unref(item);
     } else {
         free(item);
     }

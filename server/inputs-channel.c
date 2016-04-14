@@ -123,16 +123,16 @@ enum {
 };
 
 typedef struct InputsPipeItem {
-    PipeItem base;
+    RedPipeItem base;
 } InputsPipeItem;
 
 typedef struct KeyModifiersPipeItem {
-    PipeItem base;
+    RedPipeItem base;
     uint8_t modifiers;
 } KeyModifiersPipeItem;
 
 typedef struct InputsInitPipeItem {
-    PipeItem base;
+    RedPipeItem base;
     uint8_t modifiers;
 } InputsInitPipeItem;
 
@@ -229,19 +229,19 @@ static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
     return sif->get_leds(sin);
 }
 
-static PipeItem *inputs_key_modifiers_item_new(
+static RedPipeItem *inputs_key_modifiers_item_new(
     RedChannelClient *rcc, void *data, int num)
 {
     KeyModifiersPipeItem *item = spice_malloc(sizeof(KeyModifiersPipeItem));
 
-    pipe_item_init(&item->base, PIPE_ITEM_KEY_MODIFIERS);
+    red_pipe_item_init(&item->base, PIPE_ITEM_KEY_MODIFIERS);
     item->modifiers = *(uint8_t *)data;
     return &item->base;
 }
 
 static void inputs_channel_send_migrate_data(RedChannelClient *rcc,
                                              SpiceMarshaller *m,
-                                             PipeItem *item)
+                                             RedPipeItem *item)
 {
     InputsChannelClient *icc = SPICE_CONTAINEROF(rcc, InputsChannelClient, base);
     InputsChannel *inputs = SPICE_CONTAINEROF(rcc->channel, InputsChannel, base);
@@ -255,12 +255,12 @@ static void inputs_channel_send_migrate_data(RedChannelClient *rcc,
 }
 
 static void inputs_channel_release_pipe_item(RedChannelClient *rcc,
-    PipeItem *base, int item_pushed)
+    RedPipeItem *base, int item_pushed)
 {
     free(base);
 }
 
-static void inputs_channel_send_item(RedChannelClient *rcc, PipeItem *base)
+static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
@@ -503,7 +503,7 @@ static void inputs_pipe_add_init(RedChannelClient *rcc)
     InputsInitPipeItem *item = spice_malloc(sizeof(InputsInitPipeItem));
     InputsChannel *inputs = SPICE_CONTAINEROF(rcc->channel, InputsChannel, base);
 
-    pipe_item_init(&item->base, PIPE_ITEM_INPUTS_INIT);
+    red_pipe_item_init(&item->base, PIPE_ITEM_INPUTS_INIT);
     item->modifiers = kbd_get_leds(inputs_channel_get_keyboard(inputs));
     red_channel_client_pipe_add_push(rcc, &item->base);
 }
@@ -524,7 +524,7 @@ static int inputs_channel_config_socket(RedChannelClient *rcc)
     return TRUE;
 }
 
-static void inputs_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item)
+static void inputs_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *item)
 {
 }
 

@@ -46,7 +46,7 @@ typedef struct CursorItem {
 G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
 typedef struct CursorPipeItem {
-    PipeItem base;
+    RedPipeItem base;
     CursorItem *cursor_item;
     int refs;
 } CursorPipeItem;
@@ -132,11 +132,11 @@ static void cursor_set_item(CursorChannel *cursor, CursorItem *item)
     cursor->item = item ? cursor_item_ref(item) : NULL;
 }
 
-static PipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int num)
+static RedPipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int num)
 {
     CursorPipeItem *item = spice_malloc0(sizeof(CursorPipeItem));
 
-    pipe_item_init(&item->base, PIPE_ITEM_TYPE_CURSOR);
+    red_pipe_item_init(&item->base, PIPE_ITEM_TYPE_CURSOR);
     item->refs = 1;
     item->cursor_item = data;
     item->cursor_item->refs++;
@@ -212,7 +212,7 @@ static void put_cursor_pipe_item(CursorChannelClient *ccc, CursorPipeItem *pipe_
         return;
     }
 
-    spice_assert(!pipe_item_is_linked(&pipe_item->base));
+    spice_assert(!red_pipe_item_is_linked(&pipe_item->base));
 
     cursor_item_unref(pipe_item->cursor_item);
     free(pipe_item);
@@ -229,7 +229,7 @@ static void cursor_channel_client_on_disconnect(RedChannelClient *rcc)
 // TODO: share code between before/after_push since most of the items need the same
 // release
 static void cursor_channel_client_release_item_before_push(CursorChannelClient *ccc,
-                                                           PipeItem *item)
+                                                           RedPipeItem *item)
 {
     switch (item->type) {
     case PIPE_ITEM_TYPE_CURSOR: {
@@ -249,7 +249,7 @@ static void cursor_channel_client_release_item_before_push(CursorChannelClient *
 }
 
 static void cursor_channel_client_release_item_after_push(CursorChannelClient *ccc,
-                                                          PipeItem *item)
+                                                          RedPipeItem *item)
 {
     switch (item->type) {
         case PIPE_ITEM_TYPE_CURSOR: {
@@ -263,7 +263,7 @@ static void cursor_channel_client_release_item_after_push(CursorChannelClient *c
 }
 
 static void red_marshall_cursor_init(RedChannelClient *rcc, SpiceMarshaller *base_marshaller,
-                                     PipeItem *pipe_item)
+                                     RedPipeItem *pipe_item)
 {
     CursorChannel *cursor_channel;
     CursorChannelClient *ccc = RCC_TO_CCC(rcc);
@@ -290,7 +290,7 @@ static void cursor_marshall(RedChannelClient *rcc,
     CursorChannel *cursor_channel = SPICE_CONTAINEROF(rcc->channel, CursorChannel, common.base);
     CursorChannelClient *ccc = RCC_TO_CCC(rcc);
     CursorItem *item = cursor_pipe_item->cursor_item;
-    PipeItem *pipe_item = &cursor_pipe_item->base;
+    RedPipeItem *pipe_item = &cursor_pipe_item->base;
     RedCursorCmd *cmd;
 
     spice_return_if_fail(cursor_channel);
@@ -348,7 +348,7 @@ static inline void red_marshall_inval(RedChannelClient *rcc,
     spice_marshall_msg_cursor_inval_one(base_marshaller, &inval_one);
 }
 
-static void cursor_channel_send_item(RedChannelClient *rcc, PipeItem *pipe_item)
+static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     CursorChannelClient *ccc = RCC_TO_CCC(rcc);
@@ -389,7 +389,7 @@ static CursorPipeItem *cursor_pipe_item_ref(CursorPipeItem *item)
 }
 
 
-static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item)
+static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *item)
 {
     CursorPipeItem *cursor_pipe_item;
 
@@ -399,7 +399,7 @@ static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, PipeItem *item)
     cursor_pipe_item_ref(cursor_pipe_item);
 }
 
-static void cursor_channel_release_item(RedChannelClient *rcc, PipeItem *item, int item_pushed)
+static void cursor_channel_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
 {
     CursorChannelClient *ccc = RCC_TO_CCC(rcc);
 

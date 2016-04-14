@@ -58,7 +58,7 @@ struct Drawable {
     RingItem list_link;
     DrawItem tree_item;
     Ring pipes;
-    PipeItem *pipe_item_rest;
+    RedPipeItem *pipe_item_rest;
     uint32_t size_pipe_item_rest;
     RedDrawable *red_drawable;
 
@@ -120,7 +120,7 @@ typedef struct MonitorsConfig {
 } MonitorsConfig;
 
 typedef struct MonitorsConfigItem {
-    PipeItem pipe_item;
+    RedPipeItem pipe_item;
     MonitorsConfig *monitors_config;
 } MonitorsConfigItem;
 
@@ -242,11 +242,11 @@ static inline int get_stream_id(DisplayChannel *display, Stream *stream)
 
 typedef struct SurfaceDestroyItem {
     SpiceMsgSurfaceDestroy surface_destroy;
-    PipeItem pipe_item;
+    RedPipeItem pipe_item;
 } SurfaceDestroyItem;
 
 typedef struct UpgradeItem {
-    PipeItem base;
+    RedPipeItem base;
     Drawable *drawable;
     SpiceClipRects *rects;
 } UpgradeItem;

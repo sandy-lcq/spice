@@ -56,10 +56,10 @@ struct RedCharDeviceClass
 
     /* reads from the device till reaching a msg that should be sent to the client,
      * or till the reading fails */
-    PipeItem* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
-                                          void *opaque);
+    RedPipeItem* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
+                                             void *opaque);
     /* after this call, the message is unreferenced */
-    void (*send_msg_to_client)(PipeItem *msg,
+    void (*send_msg_to_client)(RedPipeItem *msg,
                                RedClient *client,
                                void *opaque);
 

@@ -401,7 +401,7 @@ static void drawable_remove_from_pipes(Drawable *drawable)
 
     RING_FOREACH_SAFE(item, next, &drawable->pipes) {
         dpi = SPICE_CONTAINEROF(item, DrawablePipeItem, base);
-        if (pipe_item_is_linked(&dpi->dpi_pipe_item)) {
+        if (red_pipe_item_is_linked(&dpi->dpi_pipe_item)) {
             red_channel_client_pipe_remove_and_release(RED_CHANNEL_CLIENT(dpi->dcc),
                                                        &dpi->dpi_pipe_item);
         }
@@ -1958,12 +1958,12 @@ static void on_disconnect(RedChannelClient *rcc)
                 display->glz_drawable_count);
 }
 
-static void send_item(RedChannelClient *rcc, PipeItem *item)
+static void send_item(RedChannelClient *rcc, RedPipeItem *item)
 {
     dcc_send_item(RCC_TO_DCC(rcc), item);
 }
 
-static void hold_item(RedChannelClient *rcc, PipeItem *item)
+static void hold_item(RedChannelClient *rcc, RedPipeItem *item)
 {
     spice_return_if_fail(item);
 
@@ -1972,14 +1972,14 @@ static void hold_item(RedChannelClient *rcc, PipeItem *item)
     case PIPE_ITEM_TYPE_IMAGE:
     case PIPE_ITEM_TYPE_STREAM_CLIP:
     case PIPE_ITEM_TYPE_UPGRADE:
-        pipe_item_ref(item);
+        red_pipe_item_ref(item);
         break;
     default:
         spice_warn_if_reached();
     }
 }
 
-static void release_item(RedChannelClient *rcc, PipeItem *item, int item_pushed)
+static void release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
 

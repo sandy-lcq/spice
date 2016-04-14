@@ -167,7 +167,7 @@ struct ChannelSecurityOptions {
 };
 
 typedef struct VDIReadBuf {
-    PipeItem parent;
+    RedPipeItem parent;
     RedCharDeviceVDIPort *dev;
 
     int len;
@@ -482,7 +482,7 @@ static void reds_reset_vdp(RedsState *reds)
     dev->priv->receive_len = sizeof(dev->priv->vdi_chunk_header);
     dev->priv->message_receive_len = 0;
     if (dev->priv->current_read_buf) {
-        pipe_item_unref(dev->priv->current_read_buf);
+        red_pipe_item_unref(dev->priv->current_read_buf);
         dev->priv->current_read_buf = NULL;
     }
     /* Reset read filter to start with clean state when the agent reconnects */
@@ -705,7 +705,7 @@ static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 {
     VDIReadBuf *buf = (VDIReadBuf *)opaque;
 
-    pipe_item_unref(buf);
+    red_pipe_item_unref(buf);
 }
 
 /* returns TRUE if the buffer can be forwarded */
@@ -744,8 +744,8 @@ static void vdi_read_buf_init(VDIReadBuf *buf)
     /* Bogus pipe item type, we only need the RingItem and refcounting
      * from the base class and are not going to use the type
      */
-    pipe_item_init_full(&buf->parent, -1,
-                        (GDestroyNotify)vdi_port_read_buf_free);
+    red_pipe_item_init_full(&buf->parent, -1,
+                            (GDestroyNotify)vdi_port_read_buf_free);
 }
 
 static VDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
@@ -782,8 +782,8 @@ static void vdi_port_read_buf_free(VDIReadBuf *buf)
 
 /* reads from the device till completes reading a message that is addressed to the client,
  * or otherwise, when reading from the device fails */
-static PipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
-                                                   void *opaque)
+static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
+                                                      void *opaque)
 {
     RedsState *reds;
     RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(sin->st);
@@ -843,12 +843,12 @@ static PipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
                 dev->priv->read_state = VDI_PORT_READ_STATE_GET_BUFF;
             }
             if (vdi_port_read_buf_process(reds->agent_dev, dispatch_buf, &error)) {
-                return (PipeItem *)dispatch_buf;
+                return (RedPipeItem *)dispatch_buf;
             } else {
                 if (error) {
                     reds_agent_remove(reds);
                 }
-                pipe_item_unref(dispatch_buf);
+                red_pipe_item_unref(dispatch_buf);
             }
         }
         } /* END switch */
@@ -857,13 +857,13 @@ static PipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
 }
 
 /* after calling this, we unref the message, and the ref is in the instance side */
-static void vdi_port_send_msg_to_client(PipeItem *msg,
+static void vdi_port_send_msg_to_client(RedPipeItem *msg,
                                         RedClient *client,
                                         void *opaque)
 {
     VDIReadBuf *agent_data_buf = (VDIReadBuf *)msg;
 
-    pipe_item_ref(agent_data_buf);
+    red_pipe_item_ref(agent_data_buf);
     main_channel_client_push_agent_data(red_client_get_main(client),
                                         agent_data_buf->data,
                                         agent_data_buf->len,
@@ -1218,7 +1218,7 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
             if (error) {
                reds_agent_remove(reds);
             }
-            pipe_item_unref(read_buf);
+            red_pipe_item_unref(read_buf);
         }
 
         spice_assert(agent_dev->priv->receive_len);
@@ -4297,7 +4297,7 @@ red_char_device_vdi_port_init(RedCharDeviceVDIPort *self)
         /* This ensures the newly created buffer is placed in the
          * RedCharDeviceVDIPort::read_bufs queue ready to be reused
          */
-        pipe_item_unref(buf);
+        red_pipe_item_unref(buf);
     }
 }
 
