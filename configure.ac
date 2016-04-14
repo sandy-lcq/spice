@@ -12,7 +12,7 @@ AC_PREREQ([2.57])
 #   then set age to 0.
 #
 m4_define([SPICE_CURRENT], [11])
-m4_define([SPICE_REVISION], [0])
+m4_define([SPICE_REVISION], [1])
 m4_define([SPICE_AGE], [10])
 
 AC_INIT(spice, [m4_esyscmd(build-aux/git-version-gen .tarball-version)],
