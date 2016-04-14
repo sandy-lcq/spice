@@ -112,6 +112,8 @@ libserver_la_SOURCES =				\
 	display-channel.h			\
 	cursor-channel.c			\
 	cursor-channel.h			\
+	red-pipe-item.c				\
+	red-pipe-item.h				\
 	reds.c					\
 	reds.h					\
 	reds-private.h				\

@@ -33,6 +33,7 @@
 #include "demarshallers.h"
 #include "reds-stream.h"
 #include "stat.h"
+#include "red-pipe-item.h"
 
 #define MAX_SEND_BUFS 1000
 #define CLIENT_ACK_WINDOW 20
@@ -146,16 +147,6 @@ enum {
 
     PIPE_ITEM_TYPE_CHANNEL_BASE=101,
 };
-
-typedef struct PipeItem {
-    RingItem link;
-    int type;
-} PipeItem;
-
-static inline int pipe_item_is_linked(PipeItem *item)
-{
-    return ring_item_is_linked(&item->link);
-}
 
 typedef uint8_t *(*channel_alloc_msg_recv_buf_proc)(RedChannelClient *channel,
                                                     uint16_t type, uint32_t size);
@@ -472,8 +463,6 @@ int red_channel_client_get_roundtrip_ms(RedChannelClient *rcc);
  * Checks periodically if the connection is still alive
  */
 void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uint32_t timeout_ms);
-
-void pipe_item_init(PipeItem *item, int type);
 
 // TODO: add back the channel_pipe_add functionality - by adding reference counting
 // to the PipeItem.

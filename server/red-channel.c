@@ -1658,12 +1658,6 @@ void red_channel_client_set_message_serial(RedChannelClient *rcc, uint64_t seria
     rcc->send_data.serial = serial;
 }
 
-void pipe_item_init(PipeItem *item, int type)
-{
-    ring_item_init(&item->link);
-    item->type = type;
-}
-
 static inline gboolean client_pipe_add(RedChannelClient *rcc, PipeItem *item, RingItem *pos)
 {
     spice_assert(rcc && item);
