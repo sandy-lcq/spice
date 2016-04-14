@@ -728,7 +728,7 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
 
         spice_assert(image);
         red_channel_client_pipe_remove_and_release(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item);
-        pipe_item = &image->link;
+        pipe_item = &image->base;
     }
 }
 
@@ -1949,7 +1949,7 @@ static void red_marshall_image(RedChannelClient *rcc, SpiceMarshaller *m, ImageI
     chunks = spice_chunks_new_linear(item->data, bitmap.stride * bitmap.y);
     bitmap.data = chunks;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, &item->link);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, &item->base);
 
     copy.base.surface_id = item->surface_id;
     copy.base.box.left = item->pos.x;

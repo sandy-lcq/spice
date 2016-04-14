@@ -136,8 +136,7 @@ typedef struct GlDrawItem {
 } GlDrawItem;
 
 typedef struct ImageItem {
-    PipeItem link;
-    int refs;
+    PipeItem base;
     SpicePoint pos;
     int width;
     int height;

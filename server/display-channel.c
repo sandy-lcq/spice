@@ -1980,7 +1980,7 @@ static void hold_item(RedChannelClient *rcc, PipeItem *item)
         ((UpgradeItem *)item)->refs++;
         break;
     case PIPE_ITEM_TYPE_IMAGE:
-        ((ImageItem *)item)->refs++;
+        pipe_item_ref(item);
         break;
     default:
         spice_warn_if_reached();

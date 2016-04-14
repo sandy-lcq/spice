@@ -184,9 +184,8 @@ ImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc, int surface_id,
 
     item = (ImageItem *)spice_malloc_n_m(height, stride, sizeof(ImageItem));
 
-    pipe_item_init(&item->link, PIPE_ITEM_TYPE_IMAGE);
+    pipe_item_init(&item->base, PIPE_ITEM_TYPE_IMAGE);
 
-    item->refs = 1;
     item->surface_id = surface_id;
     item->image_format =
         spice_bitmap_from_surface_type(surface->context.format);
@@ -214,9 +213,9 @@ ImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc, int surface_id,
     }
 
     if (pos) {
-        red_channel_client_pipe_add_after(RED_CHANNEL_CLIENT(dcc), &item->link, pos);
+        red_channel_client_pipe_add_after(RED_CHANNEL_CLIENT(dcc), &item->base, pos);
     } else {
-        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &item->link);
+        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &item->base);
     }
 
     return item;
@@ -1591,14 +1590,6 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     return TRUE;
 }
 
-static void image_item_unref(ImageItem *item)
-{
-    if (--item->refs != 0)
-        return;
-
-    free(item);
-}
-
 static void upgrade_item_unref(DisplayChannel *display, UpgradeItem *item)
 {
     if (--item->refs != 0)
@@ -1624,7 +1615,7 @@ static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
         upgrade_item_unref(display, (UpgradeItem *)item);
         break;
     case PIPE_ITEM_TYPE_IMAGE:
-        image_item_unref((ImageItem *)item);
+        pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_GL_SCANOUT:
     case PIPE_ITEM_TYPE_GL_DRAW:
@@ -1674,7 +1665,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
         upgrade_item_unref(display, (UpgradeItem *)item);
         break;
     case PIPE_ITEM_TYPE_IMAGE:
-        image_item_unref((ImageItem *)item);
+        pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_CREATE_SURFACE: {
         SurfaceCreateItem *surface_create = SPICE_CONTAINEROF(item, SurfaceCreateItem,
