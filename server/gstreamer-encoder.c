@@ -99,6 +99,9 @@ typedef struct SpiceGstEncoder {
     GstElement *gstenc;
     GParamSpec *gstenc_bitrate_param;
 
+    /* True if the encoder's bitrate can be modified while playing. */
+    gboolean gstenc_bitrate_is_dynamic;
+
     /* Pipeline parameters to modify before the next frame. */
 #   define SPICE_GST_VIDEO_PIPELINE_STATE    0x1
 #   define SPICE_GST_VIDEO_PIPELINE_BITRATE  0x2
@@ -473,9 +476,16 @@ static void add_frame(SpiceGstEncoder *encoder, uint32_t frame_mm_time,
 
 /* ---------- Encoder bit rate control ---------- */
 
+static void set_gstenc_bitrate(SpiceGstEncoder *encoder);
+
 static void set_video_bit_rate(SpiceGstEncoder *encoder, uint64_t bit_rate)
 {
-    if (abs(bit_rate - encoder->video_bit_rate) > encoder->video_bit_rate * SPICE_GST_VIDEO_BITRATE_MARGIN) {
+    if (encoder->video_bit_rate != bit_rate &&
+        encoder->gstenc_bitrate_is_dynamic) {
+        encoder->video_bit_rate = bit_rate;
+        set_gstenc_bitrate(encoder);
+
+    } else  if (abs(bit_rate - encoder->video_bit_rate) > encoder->video_bit_rate * SPICE_GST_VIDEO_BITRATE_MARGIN) {
         encoder->video_bit_rate = bit_rate;
         set_pipeline_changes(encoder, SPICE_GST_VIDEO_PIPELINE_BITRATE);
     }
@@ -920,7 +930,9 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
     if (encoder->gstenc_bitrate_param == NULL) {
         encoder->gstenc_bitrate_param = g_object_class_find_property(class, "target-bitrate");
     }
-    if (!encoder->gstenc_bitrate_param) {
+    if (encoder->gstenc_bitrate_param) {
+        encoder->gstenc_bitrate_is_dynamic = (encoder->gstenc_bitrate_param->flags & GST_PARAM_MUTABLE_PLAYING);
+    } else {
         spice_warning("GStreamer error: could not find the %s bitrate parameter", gstenc_name);
     }
 
