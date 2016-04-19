@@ -17,8 +17,6 @@
 #ifndef SW_CANVAS_H_
 #define SW_CANVAS_H_
 
-#define SW_CANVAS_IMAGE_CACHE
 #include "common/sw_canvas.h"
-#undef SW_CANVAS_IMAGE_CACHE
 
 #endif /* SW_CANVAS_H_ */
