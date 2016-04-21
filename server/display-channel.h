@@ -79,7 +79,10 @@ struct Drawable {
     int surface_deps[3];
 
     uint32_t process_commands_generation;
+    DisplayChannel *display;
 };
+
+void drawable_unref (Drawable *drawable);
 
 #define LINK_TO_DPI(ptr) SPICE_CONTAINEROF((ptr), DrawablePipeItem, base)
 #define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)            \
@@ -280,7 +283,6 @@ void                       display_channel_compress_stats_print      (const Disp
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
 Drawable *                 display_channel_drawable_try_new          (DisplayChannel *display,
                                                                       int process_commands_generation);
-void                       display_channel_drawable_unref            (DisplayChannel *display, Drawable *drawable);
 void                       display_channel_surface_unref             (DisplayChannel *display,
                                                                       uint32_t surface_id);
 void                       display_channel_current_flush             (DisplayChannel *display,

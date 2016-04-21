@@ -277,13 +277,11 @@ static void add_drawable_surface_images(DisplayChannelClient *dcc, Drawable *dra
 void drawable_pipe_item_free(PipeItem *item)
 {
     DrawablePipeItem *dpi = SPICE_CONTAINEROF(item, DrawablePipeItem, dpi_pipe_item);
-    DisplayChannel *display = DCC_TO_DC(dpi->dcc);
-
     spice_assert(item->refcount == 0);
 
     spice_warn_if_fail(!ring_item_is_linked(&item->link));
     spice_warn_if_fail(!ring_item_is_linked(&dpi->base));
-    display_channel_drawable_unref(display, dpi->drawable);
+    drawable_unref(dpi->drawable);
     free(dpi);
 }
 
@@ -1591,20 +1589,18 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     return TRUE;
 }
 
-static void upgrade_item_unref(DisplayChannel *display, UpgradeItem *item)
+static void upgrade_item_unref(UpgradeItem *item)
 {
     if (--item->refs != 0)
         return;
 
-    display_channel_drawable_unref(display, item->drawable);
+    drawable_unref(item->drawable);
     free(item->rects);
     free(item);
 }
 
-static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
+static void release_item_after_push(PipeItem *item)
 {
-    DisplayChannel *display = DCC_TO_DC(dcc);
-
     switch (item->type) {
     case PIPE_ITEM_TYPE_DRAW:
     case PIPE_ITEM_TYPE_IMAGE:
@@ -1613,7 +1609,7 @@ static void release_item_after_push(DisplayChannelClient *dcc, PipeItem *item)
         pipe_item_unref(item);
         break;
     case PIPE_ITEM_TYPE_UPGRADE:
-        upgrade_item_unref(display, (UpgradeItem *)item);
+        upgrade_item_unref((UpgradeItem *)item);
         break;
     case PIPE_ITEM_TYPE_GL_SCANOUT:
     case PIPE_ITEM_TYPE_GL_DRAW:
@@ -1651,7 +1647,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
     }
     case PIPE_ITEM_TYPE_STREAM_CLIP:
     case PIPE_ITEM_TYPE_UPGRADE:
-        upgrade_item_unref(display, (UpgradeItem *)item);
+        upgrade_item_unref((UpgradeItem *)item);
         break;
     case PIPE_ITEM_TYPE_IMAGE:
     case PIPE_ITEM_TYPE_MONITORS_CONFIG:
@@ -1688,7 +1684,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, PipeItem *item)
 void dcc_release_item(DisplayChannelClient *dcc, PipeItem *item, int item_pushed)
 {
     if (item_pushed)
-        release_item_after_push(dcc, item);
+        release_item_after_push(item);
     else
         release_item_before_push(dcc, item);
 }

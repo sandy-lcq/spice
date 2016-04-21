@@ -390,7 +390,7 @@ static void current_remove_drawable(DisplayChannel *display, Drawable *item)
     ring_remove(&item->tree_item.base.siblings_link);
     ring_remove(&item->list_link);
     ring_remove(&item->surface_list_link);
-    display_channel_drawable_unref(display, item);
+    drawable_unref(item);
     display->current_size--;
 }
 
@@ -488,7 +488,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             pipes_add_drawable(display, drawable);
         }
         drawable_remove_from_pipes(other_drawable);
-        display_channel_drawable_unref(display, other_drawable);
+        drawable_unref(other_drawable);
         return TRUE;
     }
 
@@ -531,7 +531,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             /* not sending other_drawable where possible */
             drawable_remove_from_pipes(other_drawable);
 
-            display_channel_drawable_unref(display, other_drawable);
+            drawable_unref(other_drawable);
             return TRUE;
         }
         break;
@@ -1185,7 +1185,7 @@ void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_draw
 
     display_channel_add_drawable(display, drawable);
 
-    display_channel_drawable_unref(display, drawable);
+    drawable_unref(drawable);
 }
 
 int display_channel_wait_for_migrate_data(DisplayChannel *display)
@@ -1373,6 +1373,10 @@ Drawable *display_channel_drawable_try_new(DisplayChannel *display,
     }
 
     bzero(drawable, sizeof(Drawable));
+    /* Pointer to the display from which the drawable is allocated.  This
+     * pointer is safe to be retained as DisplayChannel lifespan is bigger than
+     * all drawables.  */
+    drawable->display = display;
     drawable->refs = 1;
     drawable->creation_time = drawable->first_frame_time = spice_get_monotonic_time_ns();
     ring_item_init(&drawable->list_link);
@@ -1423,8 +1427,9 @@ static void drawable_unref_surface_deps(DisplayChannel *display, Drawable *drawa
     }
 }
 
-void display_channel_drawable_unref(DisplayChannel *display, Drawable *drawable)
+void drawable_unref(Drawable *drawable)
 {
+    DisplayChannel *display = drawable->display;
     RingItem *item, *next;
 
     if (--drawable->refs != 0)
@@ -1646,7 +1651,7 @@ static void draw_until(DisplayChannel *display, RedSurface *surface, Drawable *l
            that display_channel_draw is called for, Otherwise, 'now' would have already been rendered.
            See the call for red_handle_depends_on_target_surface in red_process_draw */
         drawable_draw(display, now);
-        display_channel_drawable_unref(display, now);
+        drawable_unref(now);
     } while (now != last);
 }
 
