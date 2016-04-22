@@ -656,9 +656,8 @@ that is already there:
 Client
 ------
 
-You can enable additional displays either from the "Display/Displays"
-menu in remote-viewer, or from your guest OS display configuration
-tool.
+You can enable additional displays from the "View -> Displays"
+menu in remote-viewer.
 
 TLS
 ===
