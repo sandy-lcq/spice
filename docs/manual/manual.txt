@@ -351,10 +351,6 @@ the machine which is running our qemu instance.
 [source,sh]
 client$ remote-viewer spice://myhost:3001
 
-.Established connection to Windows 2008 guest
-image::images/spicec01.png[]
-
-
 Ticketing
 =========
 
