@@ -240,7 +240,7 @@ population. I assume that you have a locally stored ISO of your
 favourite operating system so you can use it for installation.
 
 [source,sh]
-host$ sudo qemu-kvm -boot order=dc -vga qxl \
+host$ qemu-kvm -boot order=dc -vga qxl \
         -spice port=3001,disable-ticketing -soundhw ac97 \
         -device virtio-serial -chardev spicevmc,id=vdagent,debug=0,name=vdagent \
         -device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
