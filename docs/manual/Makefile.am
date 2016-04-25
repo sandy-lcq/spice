@@ -5,7 +5,6 @@ ASCIIDOC_FLAGS = -a icons -a toc
 EXTRA_DIST =					\
 	images/icons/important.png		\
 	images/icons/note.png			\
-	images/spicec01.png			\
 	manual.html				\
 	manual.chunked				\
 	manual.txt				\
