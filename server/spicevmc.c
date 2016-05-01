@@ -152,9 +152,14 @@ static void spicevmc_chardev_send_msg_to_client(RedPipeItem *msg,
     red_channel_client_pipe_add_push(state->rcc, (RedPipeItem *)vmc_msg);
 }
 
+static SpiceVmcState *spicevmc_red_channel_client_get_state(RedChannelClient *rcc)
+{
+    return SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
+}
+
 static void spicevmc_port_send_init(RedChannelClient *rcc)
 {
-    SpiceVmcState *state = SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
+    SpiceVmcState *state = spicevmc_red_channel_client_get_state(rcc);
     SpiceCharDeviceInstance *sin = state->chardev_sin;
     RedPortInitPipeItem *item = spice_malloc(sizeof(RedPortInitPipeItem));
 
@@ -217,7 +222,7 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
         return;
     }
 
-    state = SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
+    state = spicevmc_red_channel_client_get_state(rcc);
 
     if (state->recv_from_client_buf) { /* partial message which wasn't pushed to device */
         red_char_device_write_buffer_release(state->chardev, state->recv_from_client_buf);
@@ -243,11 +248,6 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
     if (sif->state) {
         sif->state(state->chardev_sin, 0);
     }
-}
-
-static SpiceVmcState *spicevmc_red_channel_client_get_state(RedChannelClient *rcc)
-{
-    return SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
 }
 
 static int spicevmc_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc)
@@ -317,7 +317,7 @@ static uint8_t *spicevmc_red_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
 {
     SpiceVmcState *state;
 
-    state = SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
+    state = spicevmc_red_channel_client_get_state(rcc);
 
     switch (type) {
     case SPICE_MSGC_SPICEVMC_DATA:
@@ -345,7 +345,7 @@ static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
 {
     SpiceVmcState *state;
 
-    state = SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
+    state = spicevmc_red_channel_client_get_state(rcc);
 
     switch (type) {
     case SPICE_MSGC_SPICEVMC_DATA:
@@ -381,7 +381,7 @@ static void spicevmc_red_channel_send_migrate_data(RedChannelClient *rcc,
 {
     SpiceVmcState *state;
 
-    state = SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
+    state = spicevmc_red_channel_client_get_state(rcc);
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SPICEVMC_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SPICEVMC_VERSION);
