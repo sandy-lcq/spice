@@ -603,12 +603,10 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
         reds_mig_remove_wait_disconnect_client(reds, client);
     }
 
-    if (reds->agent_dev->priv->agent_attached) {
-        /* note that vdagent might be NULL, if the vdagent was once
-         * up and than was removed */
-        if (red_char_device_client_exists(RED_CHAR_DEVICE(reds->agent_dev), client)) {
-            red_char_device_client_remove(RED_CHAR_DEVICE(reds->agent_dev), client);
-        }
+    /* note that client might be NULL, if the vdagent was once
+     * up and than was removed */
+    if (red_char_device_client_exists(RED_CHAR_DEVICE(reds->agent_dev), client)) {
+        red_char_device_client_remove(RED_CHAR_DEVICE(reds->agent_dev), client);
     }
 
     ring_remove(&client->link);
