@@ -46,7 +46,6 @@ AC_CANONICAL_HOST
 LT_INIT([disable-static])
 AM_PROG_CC_C_O
 AC_C_BIGENDIAN
-AC_PATH_PROGS(PYTHON, python2 python)
 PKG_PROG_PKG_CONFIG
 
 AC_CHECK_HEADERS([sys/time.h])
@@ -239,7 +238,6 @@ AC_MSG_NOTICE([
         prefix:                   ${prefix}
         c compiler:               ${CC}
         c++ compiler:             ${CXX}
-        python:                   ${PYTHON}
 
         LZ4 support:              ${enable_lz4}
         Smartcard:                ${have_smartcard}
