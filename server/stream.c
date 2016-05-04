@@ -23,9 +23,9 @@
 
 #define FPS_TEST_INTERVAL 1
 #define FOREACH_STREAMS(display, item)                  \
-    for (item = ring_get_head(&(display)->streams);     \
+    for (item = ring_get_head(&(display)->priv->streams);     \
          item != NULL;                                  \
-         item = ring_next(&(display)->streams, item))
+         item = ring_next(&(display)->priv->streams, item))
 
 static void stream_agent_stats_print(StreamAgent *agent)
 {
@@ -121,25 +121,25 @@ void stream_stop(DisplayChannel *display, Stream *stream)
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), stream_destroy_item_new(stream_agent));
         stream_agent_stats_print(stream_agent);
     }
-    display->streams_size_total -= stream->width * stream->height;
+    display->priv->streams_size_total -= stream->width * stream->height;
     ring_remove(&stream->link);
     stream_unref(display, stream);
 }
 
 static void stream_free(DisplayChannel *display, Stream *stream)
 {
-    stream->next = display->free_streams;
-    display->free_streams = stream;
+    stream->next = display->priv->free_streams;
+    display->priv->free_streams = stream;
 }
 
 void display_channel_init_streams(DisplayChannel *display)
 {
     int i;
 
-    ring_init(&display->streams);
-    display->free_streams = NULL;
+    ring_init(&display->priv->streams);
+    display->priv->free_streams = NULL;
     for (i = 0; i < NUM_STREAMS; i++) {
-        Stream *stream = &display->streams_buf[i];
+        Stream *stream = &display->priv->streams_buf[i];
         ring_item_init(&stream->link);
         stream_free(display, stream);
     }
@@ -153,7 +153,7 @@ void stream_unref(DisplayChannel *display, Stream *stream)
     spice_warn_if_fail(!ring_item_is_linked(&stream->link));
 
     stream_free(display, stream);
-    display->stream_count--;
+    display->priv->stream_count--;
 }
 
 void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
@@ -197,7 +197,7 @@ static void update_copy_graduality(DisplayChannel *display, Drawable *drawable)
     SpiceBitmap *bitmap;
     spice_return_if_fail(drawable->red_drawable->type == QXL_DRAW_COPY);
 
-    if (display->stream_video != SPICE_STREAM_VIDEO_FILTER) {
+    if (display->priv->stream_video != SPICE_STREAM_VIDEO_FILTER) {
         drawable->copy_bitmap_graduality = BITMAP_GRADUAL_INVALID;
         return;
     }
@@ -406,11 +406,11 @@ static void before_reattach_stream(DisplayChannel *display,
 static Stream *display_channel_stream_try_new(DisplayChannel *display)
 {
     Stream *stream;
-    if (!display->free_streams) {
+    if (!display->priv->free_streams) {
         return NULL;
     }
-    stream = display->free_streams;
-    display->free_streams = display->free_streams->next;
+    stream = display->priv->free_streams;
+    display->priv->free_streams = display->priv->free_streams->next;
     return stream;
 }
 
@@ -430,7 +430,7 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
     spice_assert(drawable->red_drawable->type == QXL_DRAW_COPY);
     src_rect = &drawable->red_drawable->u.copy.src_area;
 
-    ring_add(&display->streams, &stream->link);
+    ring_add(&display->priv->streams, &stream->link);
     stream->current = drawable;
     stream->last_time = drawable->creation_time;
     stream->width = src_rect->right - src_rect->left;
@@ -452,13 +452,13 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
     }
     stream->num_input_frames = 0;
     stream->input_fps_start_time = drawable->creation_time;
-    display->streams_size_total += stream->width * stream->height;
-    display->stream_count++;
+    display->priv->streams_size_total += stream->width * stream->height;
+    display->priv->stream_count++;
     FOREACH_CLIENT(display, link, next, dcc) {
         dcc_create_stream(dcc, stream);
     }
     spice_debug("stream %d %dx%d (%d, %d) (%d, %d) %u fps",
-                (int)(stream - display->streams_buf), stream->width,
+                (int)(stream - display->priv->streams_buf), stream->width,
                 stream->height, stream->dest_area.left, stream->dest_area.top,
                 stream->dest_area.right, stream->dest_area.bottom,
                 stream->input_fps);
@@ -530,7 +530,7 @@ void stream_trace_update(DisplayChannel *display, Drawable *drawable)
         }
     }
 
-    trace = display->items_trace;
+    trace = display->priv->items_trace;
     trace_end = trace + NUM_TRACE_ITEMS;
     for (; trace < trace_end; trace++) {
         if (is_next_stream_frame(display, drawable, trace->width, trace->height,
@@ -597,7 +597,7 @@ static void dcc_update_streams_max_latency(DisplayChannelClient *dcc, StreamAgen
     }
 
     dcc_set_max_stream_latency(dcc, 0);
-    if (DCC_TO_DC(dcc)->stream_count == 1) {
+    if (DCC_TO_DC(dcc)->priv->stream_count == 1) {
         return;
     }
     for (i = 0; i < NUM_STREAMS; i++) {
@@ -656,7 +656,7 @@ static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, Stream *stream)
     /* dividing the available bandwidth among the active streams, and saving
      * (1-RED_STREAM_CHANNEL_CAPACITY) of it for other messages */
     return (RED_STREAM_CHANNEL_CAPACITY * bit_rate *
-            stream->width * stream->height) / DCC_TO_DC(dcc)->streams_size_total;
+            stream->width * stream->height) / DCC_TO_DC(dcc)->priv->streams_size_total;
 }
 
 static uint32_t get_roundtrip_ms(void *opaque)
@@ -729,8 +729,8 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
     int client_has_multi_codec = red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MULTI_CODEC);
     int i;
 
-    for (i = 0; i < display->video_codecs->len; i++) {
-        RedVideoCodec* video_codec = &g_array_index (display->video_codecs, RedVideoCodec, i);
+    for (i = 0; i < display->priv->video_codecs->len; i++) {
+        RedVideoCodec* video_codec = &g_array_index (display->priv->video_codecs, RedVideoCodec, i);
 
         if (!client_has_multi_codec &&
             video_codec->type != SPICE_VIDEO_CODEC_TYPE_MJPEG) {
@@ -924,7 +924,7 @@ static void detach_stream_gracefully(DisplayChannel *display, Stream *stream,
  */
 void stream_detach_behind(DisplayChannel *display, QRegion *region, Drawable *drawable)
 {
-    Ring *ring = &display->streams;
+    Ring *ring = &display->priv->streams;
     RingItem *item = ring_get_head(ring);
     GList *link, *next;
     DisplayChannelClient *dcc;
@@ -960,7 +960,7 @@ void stream_detach_and_stop(DisplayChannel *display)
     RingItem *stream_item;
 
     spice_debug(NULL);
-    while ((stream_item = ring_get_head(&display->streams))) {
+    while ((stream_item = ring_get_head(&display->priv->streams))) {
         Stream *stream = SPICE_CONTAINEROF(stream_item, Stream, link);
 
         detach_stream_gracefully(display, stream, NULL);
@@ -970,7 +970,7 @@ void stream_detach_and_stop(DisplayChannel *display)
 
 void stream_timeout(DisplayChannel *display)
 {
-    Ring *ring = &display->streams;
+    Ring *ring = &display->priv->streams;
     RingItem *item;
 
     red_time_t now = spice_get_monotonic_time_ns();
@@ -993,7 +993,7 @@ void stream_trace_add_drawable(DisplayChannel *display, Drawable *item)
         return;
     }
 
-    trace = &display->items_trace[display->next_item_trace++ & ITEMS_TRACE_MASK];
+    trace = &display->priv->items_trace[display->priv->next_item_trace++ & ITEMS_TRACE_MASK];
     trace->time = item->creation_time;
     trace->first_frame_time = item->first_frame_time;
     trace->frames_count = item->frames_count;

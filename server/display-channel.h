@@ -157,8 +157,12 @@ struct _Drawable {
     } u;
 };
 
-struct DisplayChannel {
-    CommonGraphicsChannel common; // Must be the first thing
+typedef struct DisplayChannelPrivate DisplayChannelPrivate;
+/* FIXME: move to separate file */
+struct DisplayChannelPrivate
+{
+    DisplayChannel *pub;
+
     uint32_t bits_unique;
 
     MonitorsConfig *monitors_config;
@@ -208,6 +212,11 @@ struct DisplayChannel {
     ImageEncoderSharedData encoder_shared_data;
 };
 
+struct DisplayChannel {
+    CommonGraphicsChannel common; // Must be the first thing
+
+    DisplayChannelPrivate priv[1];
+};
 
 #define FOREACH_DCC(channel, _link, _next, _data)                   \
     for (_link = (channel ? RED_CHANNEL(channel)->clients : NULL), \
@@ -295,6 +304,8 @@ void set_monitors_config_to_primary(DisplayChannel *display);
 gboolean display_channel_validate_surface(DisplayChannel *display, uint32_t surface_id);
 gboolean display_channel_surface_has_canvas(DisplayChannel *display, uint32_t surface_id);
 void display_channel_reset_image_cache(DisplayChannel *self);
+
+void display_channel_debug_oom(DisplayChannel *display, const char *msg);
 
 static inline int is_equal_path(SpicePath *path1, SpicePath *path2)
 {

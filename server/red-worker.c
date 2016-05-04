@@ -676,7 +676,9 @@ static void destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
     display_channel_destroy_surface_wait(display, 0);
     display_channel_surface_unref(display, 0);
 
+    /* FIXME: accessing private data only for warning purposes...
     spice_warn_if_fail(ring_is_empty(&display->streams));
+    */
     spice_warn_if_fail(!display_channel_surface_has_canvas(display, surface_id));
 
     cursor_channel_reset(worker->cursor_channel);
@@ -771,11 +773,7 @@ static void handle_dev_oom(void *opaque, void *payload)
 
     spice_return_if_fail(worker->running);
     // streams? but without streams also leak
-    spice_debug("OOM1 #draw=%u, #glz_draw=%u current %u pipes %u",
-                display->drawable_count,
-                display->encoder_shared_data.glz_drawable_count,
-                display->current_size,
-                red_channel_sum_pipes_size(display_red_channel));
+    display_channel_debug_oom(display, "OOM1");
     while (red_process_display(worker, &ring_is_empty)) {
         red_channel_push(display_red_channel);
     }
@@ -783,11 +781,7 @@ static void handle_dev_oom(void *opaque, void *payload)
         display_channel_free_some(worker->display_channel);
         red_qxl_flush_resources(worker->qxl);
     }
-    spice_debug("OOM2 #draw=%u, #glz_draw=%u current %u pipes %u",
-                display->drawable_count,
-                display->encoder_shared_data.glz_drawable_count,
-                display->current_size,
-                red_channel_sum_pipes_size(display_red_channel));
+    display_channel_debug_oom(display, "OOM2");
     red_qxl_clear_pending(worker->qxl->st, RED_DISPATCHER_PENDING_OOM);
 }
 

@@ -96,7 +96,7 @@ static int is_surface_area_lossy(DisplayChannelClient *dcc, uint32_t surface_id,
 
     spice_return_val_if_fail(display_channel_validate_surface(display, surface_id), FALSE);
 
-    surface = &display->surfaces[surface_id];
+    surface = &display->priv->surfaces[surface_id];
     surface_lossy_region = &dcc->priv->surface_client_lossy_region[surface_id];
 
     if (!area) {
@@ -197,13 +197,13 @@ static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
                 io_image->descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_ME;
                 dcc->priv->send_data.pixmap_cache_items[dcc->priv->send_data.num_pixmap_cache_items++] =
                                                                                image->descriptor.id;
-                stat_inc_counter(reds, display_channel->add_to_cache_counter, 1);
+                stat_inc_counter(reds, display_channel->priv->add_to_cache_counter, 1);
             }
         }
     }
 
     if (!(io_image->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_ME)) {
-        stat_inc_counter(reds, display_channel->non_cache_counter, 1);
+        stat_inc_counter(reds, display_channel->priv->non_cache_counter, 1);
     }
 }
 
@@ -374,7 +374,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
             dcc->priv->send_data.pixmap_cache_items[dcc->priv->send_data.num_pixmap_cache_items++] =
                 image.descriptor.id;
             if (can_lossy || !lossy_cache_item) {
-                if (!display->enable_jpeg || lossy_cache_item) {
+                if (!display->priv->enable_jpeg || lossy_cache_item) {
                     image.descriptor.type = SPICE_IMAGE_TYPE_FROM_CACHE;
                 } else {
                     // making sure, in multiple monitor scenario, that lossy items that
@@ -386,7 +386,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                                      &bitmap_palette_out, &lzplt_palette_out);
                 spice_assert(bitmap_palette_out == NULL);
                 spice_assert(lzplt_palette_out == NULL);
-                stat_inc_counter(reds, display->cache_hits_counter, 1);
+                stat_inc_counter(reds, display->priv->cache_hits_counter, 1);
                 pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
                 return FILL_BITS_TYPE_CACHE;
             } else {
@@ -409,7 +409,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
             return FILL_BITS_TYPE_SURFACE;
         }
 
-        surface = &display->surfaces[surface_id];
+        surface = &display->priv->surfaces[surface_id];
         image.descriptor.type = SPICE_IMAGE_TYPE_SURFACE;
         image.descriptor.flags = 0;
         image.descriptor.width = surface->context.width;
@@ -1850,7 +1850,7 @@ static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
     spice_marshaller_add(base_marshaller,
                          (uint8_t *)&display_data, sizeof(display_data) - sizeof(uint32_t));
     display_channel_marshall_migrate_data_surfaces(dcc, base_marshaller,
-                                                   display_channel->enable_jpeg);
+                                                   display_channel->priv->enable_jpeg);
 }
 
 static void display_channel_marshall_pixmap_sync(RedChannelClient *rcc,
@@ -2136,7 +2136,7 @@ static void marshall_qxl_drawable(RedChannelClient *rcc,
     if (item->stream && red_marshall_stream_data(rcc, m, item)) {
         return;
     }
-    if (display->enable_jpeg)
+    if (display->priv->enable_jpeg)
         marshall_lossy_qxl_drawable(rcc, m, dpi);
     else
         marshall_lossless_qxl_drawable(rcc, m, dpi);

@@ -157,7 +157,7 @@ void dcc_create_surface(DisplayChannelClient *dcc, int surface_id)
         dcc->priv->surface_client_created[surface_id]) {
         return;
     }
-    surface = &display->surfaces[surface_id];
+    surface = &display->priv->surfaces[surface_id];
     create = red_surface_create_item_new(RED_CHANNEL(display),
                                          surface_id, surface->context.width,
                                          surface->context.height,
@@ -174,7 +174,7 @@ RedImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc,
                                          int can_lossy)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
-    RedSurface *surface = &display->surfaces[surface_id];
+    RedSurface *surface = &display->priv->surfaces[surface_id];
     SpiceCanvas *canvas = surface->context.canvas;
     RedImageItem *item;
     int stride;
@@ -240,7 +240,7 @@ void dcc_push_surface_image(DisplayChannelClient *dcc, int surface_id)
     }
 
     display = DCC_TO_DC(dcc);
-    surface = &display->surfaces[surface_id];
+    surface = &display->priv->surfaces[surface_id];
     if (!surface->context.canvas) {
         return;
     }
@@ -343,7 +343,7 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 
     for (i = 0; i < NUM_STREAMS; i++) {
         StreamAgent *agent = &dcc->priv->stream_agents[i];
-        agent->stream = &display->streams_buf[i];
+        agent->stream = &display->priv->streams_buf[i];
         region_init(&agent->vis_region);
         region_init(&agent->clip);
     }
@@ -392,14 +392,14 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 
     dcc_init_stream_agents(dcc);
 
-    image_encoders_init(&dcc->priv->encoders, &display->encoder_shared_data);
+    image_encoders_init(&dcc->priv->encoders, &display->priv->encoder_shared_data);
 
     return dcc;
 }
 
 static void dcc_create_all_streams(DisplayChannelClient *dcc)
 {
-    Ring *ring = &DCC_TO_DC(dcc)->streams;
+    Ring *ring = &DCC_TO_DC(dcc)->priv->streams;
     RingItem *item = ring;
 
     while ((item = ring_next(ring, item))) {
@@ -451,7 +451,7 @@ void dcc_start(DisplayChannelClient *dcc)
         return;
 
     red_channel_client_ack_zero_messages_window(RED_CHANNEL_CLIENT(dcc));
-    if (display->surfaces[0].context.canvas) {
+    if (display->priv->surfaces[0].context.canvas) {
         display_channel_current_flush(display, 0);
         red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
         dcc_create_surface(dcc, 0);
@@ -538,7 +538,7 @@ static RedMonitorsConfigItem *red_monitors_config_item_new(RedChannel* channel,
 void dcc_push_monitors_config(DisplayChannelClient *dcc)
 {
     DisplayChannel *dc = DCC_TO_DC(dcc);
-    MonitorsConfig *monitors_config = dc->monitors_config;
+    MonitorsConfig *monitors_config = dc->priv->monitors_config;
     RedMonitorsConfigItem *mci;
 
     if (monitors_config == NULL) {
@@ -552,7 +552,7 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
     }
 
     mci = red_monitors_config_item_new(red_channel_client_get_channel(RED_CHANNEL_CLIENT(dcc)),
-                                       monitors_config_ref(dc->monitors_config));
+                                       monitors_config_ref(dc->priv->monitors_config));
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &mci->pipe_item);
     red_channel_client_push(RED_CHANNEL_CLIENT(dcc));
 }
@@ -724,14 +724,14 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     stat_start_time_t start_time;
     int success = FALSE;
 
-    stat_start_time_init(&start_time, &display_channel->encoder_shared_data.off_stat);
+    stat_start_time_init(&start_time, &display_channel->priv->encoder_shared_data.off_stat);
 
     image_compression = get_compression_for_bitmap(src, dcc->priv->image_compression, drawable);
     switch (image_compression) {
     case SPICE_IMAGE_COMPRESSION_OFF:
         break;
     case SPICE_IMAGE_COMPRESSION_QUIC:
-        if (can_lossy && display_channel->enable_jpeg &&
+        if (can_lossy && display_channel->priv->enable_jpeg &&
             (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src))) {
             success = image_encoders_compress_jpeg(&dcc->priv->encoders, dest, src, o_comp_data);
             break;
@@ -742,7 +742,7 @@ int dcc_compress_image(DisplayChannelClient *dcc,
         success = image_encoders_compress_glz(&dcc->priv->encoders, dest, src,
                                               drawable->red_drawable, &drawable->glz_retention,
                                               o_comp_data,
-                                              display_channel->enable_zlib_glz_wrap);
+                                              display_channel->priv->enable_zlib_glz_wrap);
         if (success) {
             break;
         }
@@ -768,7 +768,7 @@ lz_compress:
 
     if (!success) {
         uint64_t image_size = src->stride * (uint64_t)src->y;
-        stat_compress_add(&display_channel->encoder_shared_data.off_stat, start_time, image_size, image_size);
+        stat_compress_add(&display_channel->priv->encoder_shared_data.off_stat, start_time, image_size, image_size);
     }
 
     return success;
@@ -1115,15 +1115,15 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     if (migrate_data->low_bandwidth_setting) {
         red_channel_client_ack_set_client_window(RED_CHANNEL_CLIENT(dcc), WIDE_CLIENT_ACK_WINDOW);
         if (dcc->priv->jpeg_state == SPICE_WAN_COMPRESSION_AUTO) {
-            display->enable_jpeg = TRUE;
+            display->priv->enable_jpeg = TRUE;
         }
         if (dcc->priv->zlib_glz_state == SPICE_WAN_COMPRESSION_AUTO) {
-            display->enable_zlib_glz_wrap = TRUE;
+            display->priv->enable_zlib_glz_wrap = TRUE;
         }
     }
 
     surfaces = (uint8_t *)message + migrate_data->surfaces_at_client_ptr;
-    surfaces_restored = display->enable_jpeg ?
+    surfaces_restored = display->priv->enable_jpeg ?
         restore_surfaces_lossy(dcc, (MigrateDisplaySurfacesAtClientLossy *)surfaces) :
         restore_surfaces_lossless(dcc, (MigrateDisplaySurfacesAtClientLossless*)surfaces);
 
