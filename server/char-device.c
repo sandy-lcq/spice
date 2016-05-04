@@ -49,7 +49,6 @@ struct RedCharDevicePrivate {
     int running;
     int active; /* has read/write been performed since the device was started */
     int wait_for_migrate_data;
-    uint32_t refs;
 
     Ring write_queue;
     Ring write_bufs_pool;
