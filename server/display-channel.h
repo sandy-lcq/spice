@@ -299,7 +299,7 @@ void                       display_channel_gl_draw_done              (DisplayCha
 
 void display_channel_update_monitors_config(DisplayChannel *display, QXLMonitorsConfig *config,
                                             uint16_t count, uint16_t max_allowed);
-void set_monitors_config_to_primary(DisplayChannel *display);
+void display_channel_set_monitors_config_to_primary(DisplayChannel *display);
 
 gboolean display_channel_validate_surface(DisplayChannel *display, uint32_t surface_id);
 gboolean display_channel_surface_has_canvas(DisplayChannel *display, uint32_t surface_id);

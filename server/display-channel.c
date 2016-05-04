@@ -2080,7 +2080,7 @@ void display_channel_update_monitors_config(DisplayChannel *display,
         monitors_config_new(config->heads, count, max_allowed);
 }
 
-void set_monitors_config_to_primary(DisplayChannel *display)
+void display_channel_set_monitors_config_to_primary(DisplayChannel *display)
 {
     DrawContext *context = &display->priv->surfaces[0].context;
     QXLHead head = { 0, };

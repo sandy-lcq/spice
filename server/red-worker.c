@@ -634,7 +634,7 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
 
     display_channel_create_surface(display, 0, surface.width, surface.height, surface.stride, surface.format,
                                    line_0, surface.flags & QXL_SURF_FLAG_KEEP_DATA, TRUE);
-    set_monitors_config_to_primary(display);
+    display_channel_set_monitors_config_to_primary(display);
 
     if (display_is_connected(worker) && !worker->display_channel->common.during_target_migrate) {
         /* guest created primary, so it will (hopefully) send a monitors_config
