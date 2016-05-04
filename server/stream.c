@@ -32,10 +32,10 @@ void stream_agent_stats_print(StreamAgent *agent)
 #ifdef STREAM_STATS
     StreamStats *stats = &agent->stats;
     double passed_mm_time = (stats->end - stats->start) / 1000.0;
-    MJpegEncoderStats encoder_stats = {0};
+    VideoEncoderStats encoder_stats = {0};
 
-    if (agent->mjpeg_encoder) {
-        mjpeg_encoder_get_stats(agent->mjpeg_encoder, &encoder_stats);
+    if (agent->video_encoder) {
+        agent->video_encoder->get_stats(agent->video_encoder, &encoder_stats);
     }
 
     spice_debug("stream=%p dim=(%dx%d) #in-frames=%"PRIu64" #in-avg-fps=%.2f #out-frames=%"PRIu64" "
@@ -79,8 +79,8 @@ void stream_stop(DisplayChannel *display, Stream *stream)
         region_clear(&stream_agent->vis_region);
         region_clear(&stream_agent->clip);
         spice_assert(!red_pipe_item_is_linked(&stream_agent->destroy_item));
-        if (stream_agent->mjpeg_encoder && dcc->use_mjpeg_encoder_rate_control) {
-            uint64_t stream_bit_rate = mjpeg_encoder_get_bit_rate(stream_agent->mjpeg_encoder);
+        if (stream_agent->video_encoder && dcc->use_video_encoder_rate_control) {
+            uint64_t stream_bit_rate = stream_agent->video_encoder->get_bit_rate(stream_agent->video_encoder);
 
             if (stream_bit_rate > dcc->streams_max_bit_rate) {
                 spice_debug("old max-bit-rate=%.2f new=%.2f",
@@ -338,7 +338,7 @@ static void before_reattach_stream(DisplayChannel *display,
         dcc = dpi->dcc;
         agent = &dcc->stream_agents[index];
 
-        if (!dcc->use_mjpeg_encoder_rate_control &&
+        if (!dcc->use_video_encoder_rate_control &&
             !dcc->common.is_low_bandwidth) {
             continue;
         }
@@ -347,8 +347,8 @@ static void before_reattach_stream(DisplayChannel *display,
 #ifdef STREAM_STATS
             agent->stats.num_drops_pipe++;
 #endif
-            if (dcc->use_mjpeg_encoder_rate_control) {
-                mjpeg_encoder_notify_server_frame_drop(agent->mjpeg_encoder);
+            if (dcc->use_video_encoder_rate_control) {
+                agent->video_encoder->notify_server_frame_drop(agent->video_encoder);
             } else {
                 ++agent->drops;
             }
@@ -361,7 +361,7 @@ static void before_reattach_stream(DisplayChannel *display,
 
         agent = &dcc->stream_agents[index];
 
-        if (dcc->use_mjpeg_encoder_rate_control) {
+        if (dcc->use_video_encoder_rate_control) {
             continue;
         }
         if (agent->frames / agent->fps < FPS_TEST_INTERVAL) {
@@ -594,7 +594,7 @@ static void dcc_update_streams_max_latency(DisplayChannelClient *dcc, StreamAgen
     }
     for (i = 0; i < NUM_STREAMS; i++) {
         StreamAgent *other_agent = &dcc->stream_agents[i];
-        if (other_agent == remove_agent || !other_agent->mjpeg_encoder) {
+        if (other_agent == remove_agent || !other_agent->video_encoder) {
             continue;
         }
         if (other_agent->client_required_latency > new_max_latency) {
@@ -714,19 +714,19 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
     agent->fps = MAX_FPS;
     agent->dcc = dcc;
 
-    if (dcc->use_mjpeg_encoder_rate_control) {
-        MJpegEncoderRateControlCbs mjpeg_cbs;
+    if (dcc->use_video_encoder_rate_control) {
+        VideoEncoderRateControlCbs video_cbs;
         uint64_t initial_bit_rate;
 
-        mjpeg_cbs.opaque = agent;
-        mjpeg_cbs.get_roundtrip_ms = get_roundtrip_ms;
-        mjpeg_cbs.get_source_fps = get_source_fps;
-        mjpeg_cbs.update_client_playback_delay = update_client_playback_delay;
+        video_cbs.opaque = agent;
+        video_cbs.get_roundtrip_ms = get_roundtrip_ms;
+        video_cbs.get_source_fps = get_source_fps;
+        video_cbs.update_client_playback_delay = update_client_playback_delay;
 
         initial_bit_rate = get_initial_bit_rate(dcc, stream);
-        agent->mjpeg_encoder = mjpeg_encoder_new(initial_bit_rate, &mjpeg_cbs);
+        agent->video_encoder = mjpeg_encoder_new(initial_bit_rate, &video_cbs);
     } else {
-        agent->mjpeg_encoder = mjpeg_encoder_new(0, NULL);
+        agent->video_encoder = mjpeg_encoder_new(0, NULL);
     }
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &agent->create_item);
 
@@ -752,9 +752,9 @@ void stream_agent_stop(StreamAgent *agent)
     DisplayChannelClient *dcc = agent->dcc;
 
     dcc_update_streams_max_latency(dcc, agent);
-    if (agent->mjpeg_encoder) {
-        mjpeg_encoder_destroy(agent->mjpeg_encoder);
-        agent->mjpeg_encoder = NULL;
+    if (agent->video_encoder) {
+        agent->video_encoder->destroy(agent->video_encoder);
+        agent->video_encoder = NULL;
     }
 }
 

@@ -20,7 +20,7 @@
 #endif
 
 #include "red-common.h"
-#include "mjpeg-encoder.h"
+#include "video-encoder.h"
 #include "utils.h"
 #include <jerror.h>
 #include <jpeglib.h>
@@ -154,7 +154,8 @@ typedef struct MJpegEncoderRateControl {
     uint64_t warmup_start_time;
 } MJpegEncoderRateControl;
 
-struct MJpegEncoder {
+typedef struct MJpegEncoder {
+    VideoEncoder base;
     uint8_t *row;
     uint32_t row_size;
     int first_frame;
@@ -166,13 +167,13 @@ struct MJpegEncoder {
     void (*pixel_converter)(void *src, uint8_t *dest);
 
     MJpegEncoderRateControl rate_control;
-    MJpegEncoderRateControlCbs cbs;
+    VideoEncoderRateControlCbs cbs;
 
     /* stats */
     uint64_t starting_bit_rate;
     uint64_t avg_quality;
     uint32_t num_frames;
-};
+} MJpegEncoder;
 
 static void mjpeg_encoder_process_server_drops(MJpegEncoder *encoder);
 static uint32_t get_min_required_playback_delay(uint64_t frame_enc_size,
@@ -184,8 +185,9 @@ static inline int rate_control_is_active(MJpegEncoder* encoder)
     return encoder->cbs.get_roundtrip_ms != NULL;
 }
 
-void mjpeg_encoder_destroy(MJpegEncoder *encoder)
+static void mjpeg_encoder_destroy(VideoEncoder *video_encoder)
 {
+    MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
     free(encoder->cinfo.dest);
     jpeg_destroy_compress(&encoder->cinfo);
     free(encoder->row);
@@ -724,7 +726,7 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
         interval = (now - rate_control->bit_rate_info.last_frame_time);
 
         if (interval < NSEC_PER_SEC / rate_control->adjusted_fps) {
-            return MJPEG_ENCODER_FRAME_DROP;
+            return VIDEO_ENCODER_FRAME_DROP;
         }
 
         mjpeg_encoder_adjust_params_to_bit_rate(encoder);
@@ -772,14 +774,14 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
         break;
     default:
         spice_debug("unsupported format %d", format);
-        return MJPEG_ENCODER_FRAME_UNSUPPORTED;
+        return VIDEO_ENCODER_FRAME_UNSUPPORTED;
     }
 
     if (encoder->pixel_converter != NULL) {
         unsigned int stride = width * 3;
         /* check for integer overflow */
         if (stride < width) {
-            return MJPEG_ENCODER_FRAME_UNSUPPORTED;
+            return VIDEO_ENCODER_FRAME_UNSUPPORTED;
         }
         if (encoder->row_size < stride) {
             encoder->row = spice_realloc(encoder->row, stride);
@@ -799,7 +801,7 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
 
     encoder->num_frames++;
     encoder->avg_quality += quality;
-    return MJPEG_ENCODER_FRAME_ENCODE_DONE;
+    return VIDEO_ENCODER_FRAME_ENCODE_DONE;
 }
 
 static int mjpeg_encoder_encode_scanline(MJpegEncoder *encoder,
@@ -923,27 +925,31 @@ static int encode_frame(MJpegEncoder *encoder, const SpiceRect *src,
     return TRUE;
 }
 
-int mjpeg_encoder_encode_frame(MJpegEncoder *encoder,
-                               const SpiceBitmap *bitmap, int width, int height,
-                               const SpiceRect *src,
-                               int top_down, uint32_t frame_mm_time,
-                               uint8_t **outbuf, size_t *outbuf_size,
-                               int *data_size)
+static int mjpeg_encoder_encode_frame(VideoEncoder *video_encoder,
+                                      uint32_t frame_mm_time,
+                                      const SpiceBitmap *bitmap,
+                                      int width, int height,
+                                      const SpiceRect *src, int top_down,
+                                      uint8_t **outbuf, size_t *outbuf_size,
+                                      uint32_t *data_size)
 {
+    MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
+
     int ret = mjpeg_encoder_start_frame(encoder, bitmap->format,
-                                    width, height, outbuf, outbuf_size,
-                                    frame_mm_time);
-    if (ret != MJPEG_ENCODER_FRAME_ENCODE_DONE) {
+                                        width, height,
+                                        outbuf, outbuf_size,
+                                        frame_mm_time);
+    if (ret != VIDEO_ENCODER_FRAME_ENCODE_DONE) {
         return ret;
     }
 
     if (!encode_frame(encoder, src, bitmap, top_down)) {
-        return MJPEG_ENCODER_FRAME_UNSUPPORTED;
+        return VIDEO_ENCODER_FRAME_UNSUPPORTED;
     }
 
     *data_size = mjpeg_encoder_end_frame(encoder);
 
-    return MJPEG_ENCODER_FRAME_ENCODE_DONE;
+    return VIDEO_ENCODER_FRAME_ENCODE_DONE;
 }
 
 
@@ -1174,14 +1180,15 @@ static uint32_t get_min_required_playback_delay(uint64_t frame_enc_size,
 #define MJPEG_VIDEO_VS_AUDIO_LATENCY_FACTOR 1.25
 #define MJPEG_VIDEO_DELAY_TH -15
 
-void mjpeg_encoder_client_stream_report(MJpegEncoder *encoder,
-                                        uint32_t num_frames,
-                                        uint32_t num_drops,
-                                        uint32_t start_frame_mm_time,
-                                        uint32_t end_frame_mm_time,
-                                        int32_t end_frame_delay,
-                                        uint32_t audio_delay)
+static void mjpeg_encoder_client_stream_report(VideoEncoder *video_encoder,
+                                               uint32_t num_frames,
+                                               uint32_t num_drops,
+                                               uint32_t start_frame_mm_time,
+                                               uint32_t end_frame_mm_time,
+                                               int32_t end_frame_delay,
+                                               uint32_t audio_delay)
 {
+    MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
     MJpegEncoderRateControl *rate_control = &encoder->rate_control;
     MJpegEncoderClientState *client_state = &rate_control->client_state;
     uint64_t avg_enc_size = 0;
@@ -1282,8 +1289,9 @@ void mjpeg_encoder_client_stream_report(MJpegEncoder *encoder,
     }
 }
 
-void mjpeg_encoder_notify_server_frame_drop(MJpegEncoder *encoder)
+static void mjpeg_encoder_notify_server_frame_drop(VideoEncoder *video_encoder)
 {
+    MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
     encoder->rate_control.server_state.num_frames_dropped++;
     mjpeg_encoder_process_server_drops(encoder);
 }
@@ -1320,24 +1328,33 @@ static void mjpeg_encoder_process_server_drops(MJpegEncoder *encoder)
     server_state->num_frames_dropped = 0;
 }
 
-uint64_t mjpeg_encoder_get_bit_rate(MJpegEncoder *encoder)
+static uint64_t mjpeg_encoder_get_bit_rate(VideoEncoder *video_encoder)
 {
+    MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
     return encoder->rate_control.byte_rate * 8;
 }
 
-void mjpeg_encoder_get_stats(MJpegEncoder *encoder, MJpegEncoderStats *stats)
+static void mjpeg_encoder_get_stats(VideoEncoder *video_encoder,
+                                    VideoEncoderStats *stats)
 {
+    MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
     spice_assert(encoder != NULL && stats != NULL);
     stats->starting_bit_rate = encoder->starting_bit_rate;
-    stats->cur_bit_rate = mjpeg_encoder_get_bit_rate(encoder);
+    stats->cur_bit_rate = mjpeg_encoder_get_bit_rate(video_encoder);
     stats->avg_quality = (double)encoder->avg_quality / encoder->num_frames;
 }
 
-MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
-                                MJpegEncoderRateControlCbs *cbs)
+VideoEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
+                                VideoEncoderRateControlCbs *cbs)
 {
     MJpegEncoder *encoder = spice_new0(MJpegEncoder, 1);
 
+    encoder->base.destroy = mjpeg_encoder_destroy;
+    encoder->base.encode_frame = mjpeg_encoder_encode_frame;
+    encoder->base.client_stream_report = mjpeg_encoder_client_stream_report;
+    encoder->base.notify_server_frame_drop = mjpeg_encoder_notify_server_frame_drop;
+    encoder->base.get_bit_rate = mjpeg_encoder_get_bit_rate;
+    encoder->base.get_stats = mjpeg_encoder_get_stats;
     encoder->first_frame = TRUE;
     encoder->rate_control.byte_rate = starting_bit_rate / 8;
     encoder->starting_bit_rate = starting_bit_rate;
@@ -1357,5 +1374,5 @@ MJpegEncoder *mjpeg_encoder_new(uint64_t starting_bit_rate,
     encoder->cinfo.err = jpeg_std_error(&encoder->jerr);
     jpeg_create_compress(&encoder->cinfo);
 
-    return encoder;
+    return (VideoEncoder*)encoder;
 }

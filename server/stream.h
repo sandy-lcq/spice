@@ -20,7 +20,7 @@
 
 #include <glib.h>
 #include "utils.h"
-#include "mjpeg-encoder.h"
+#include "video-encoder.h"
 #include "common/region.h"
 #include "red-channel.h"
 #include "image-cache.h"
@@ -85,7 +85,7 @@ typedef struct StreamAgent {
     RedPipeItem destroy_item;
     Stream *stream;
     uint64_t last_send_time;
-    MJpegEncoder *mjpeg_encoder;
+    VideoEncoder *video_encoder;
     DisplayChannelClient *dcc;
 
     int frames;

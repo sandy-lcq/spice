@@ -1659,7 +1659,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     Stream *stream = drawable->stream;
     SpiceImage *image;
     uint32_t frame_mm_time;
-    int n;
+    uint32_t n;
     int width, height;
     int ret;
 
@@ -1693,7 +1693,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     uint64_t time_now = spice_get_monotonic_time_ns();
     size_t outbuf_size;
 
-    if (!dcc->use_mjpeg_encoder_rate_control) {
+    if (!dcc->use_video_encoder_rate_control) {
         if (time_now - agent->last_send_time < (1000 * 1000 * 1000) / agent->fps) {
             agent->frames--;
 #ifdef STREAM_STATS
@@ -1708,25 +1708,26 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
                         drawable->red_drawable->mm_time :
                         reds_get_mm_time();
     outbuf_size = dcc->send_data.stream_outbuf_size;
-    ret = mjpeg_encoder_encode_frame(agent->mjpeg_encoder,
-                                     &image->u.bitmap, width, height,
-                                     &drawable->red_drawable->u.copy.src_area,
-                                     stream->top_down, frame_mm_time,
-                                    &dcc->send_data.stream_outbuf,
-                                     &outbuf_size, &n);
+    ret = agent->video_encoder->encode_frame(agent->video_encoder,
+                                             frame_mm_time,
+                                             &image->u.bitmap, width, height,
+                                             &drawable->red_drawable->u.copy.src_area,
+                                             stream->top_down,
+                                             &dcc->send_data.stream_outbuf,
+                                             &outbuf_size, &n);
     switch (ret) {
-    case MJPEG_ENCODER_FRAME_DROP:
-        spice_assert(dcc->use_mjpeg_encoder_rate_control);
+    case VIDEO_ENCODER_FRAME_DROP:
+        spice_assert(dcc->use_video_encoder_rate_control);
 #ifdef STREAM_STATS
         agent->stats.num_drops_fps++;
 #endif
         return TRUE;
-    case MJPEG_ENCODER_FRAME_UNSUPPORTED:
+    case VIDEO_ENCODER_FRAME_UNSUPPORTED:
         return FALSE;
-    case MJPEG_ENCODER_FRAME_ENCODE_DONE:
+    case VIDEO_ENCODER_FRAME_ENCODE_DONE:
         break;
     default:
-        spice_error("bad return value (%d) from mjpeg_encoder_encode_frame", ret);
+        spice_error("bad return value (%d) from VideoEncoder::encode_frame", ret);
         return FALSE;
     }
     dcc->send_data.stream_outbuf_size = outbuf_size;

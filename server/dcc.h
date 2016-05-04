@@ -109,7 +109,7 @@ struct DisplayChannelClient {
     QRegion surface_client_lossy_region[NUM_SURFACES];
 
     StreamAgent stream_agents[NUM_STREAMS];
-    int use_mjpeg_encoder_rate_control;
+    int use_video_encoder_rate_control;
     uint32_t streams_max_latency;
     uint64_t streams_max_bit_rate;
     bool gl_draw_ongoing;
