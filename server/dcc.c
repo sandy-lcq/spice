@@ -1387,15 +1387,25 @@ static int dcc_handle_stream_report(DisplayChannelClient *dcc,
     StreamAgent *agent;
 
     if (report->stream_id >= NUM_STREAMS) {
+        spice_warning("stream_report: invalid stream id %u",
+                      report->stream_id);
         return FALSE;
     }
 
     agent = &dcc->stream_agents[report->stream_id];
     if (!agent->mjpeg_encoder) {
+        spice_info("stream_report: no encoder for stream id %u. "
+                   "The stream has probably been destroyed",
+                   report->stream_id);
         return TRUE;
     }
 
-    spice_return_val_if_fail(report->unique_id == agent->report_id, TRUE);
+    if (report->unique_id != agent->report_id) {
+        spice_warning("stream_report: unique id mismatch: local (%u) != msg (%u) "
+                      "The old stream was probably replaced by a new one",
+                      agent->report_id, report->unique_id);
+        return TRUE;
+    }
 
     mjpeg_encoder_client_stream_report(agent->mjpeg_encoder,
                                        report->num_frames,
