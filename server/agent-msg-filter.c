@@ -22,6 +22,7 @@
 #endif
 
 #include <string.h>
+#include <spice/vd_agent.h>
 #include "red-common.h"
 #include "agent-msg-filter.h"
 #include "reds.h"
