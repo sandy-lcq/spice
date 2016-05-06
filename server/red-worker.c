@@ -400,14 +400,14 @@ static void flush_all_qxl_commands(RedWorker *worker)
     flush_cursor_commands(worker);
 }
 
-static int common_channel_config_socket(RedChannelClient *rcc)
+int common_channel_config_socket(RedChannelClient *rcc)
 {
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
     RedsStream *stream = red_channel_client_get_stream(rcc);
-    CommonGraphicsChannelClient *ccc = COMMON_GRAPHICS_CHANNEL_CLIENT(rcc);
     int flags;
     int delay_val;
+    gboolean is_low_bandwidth;
 
     if ((flags = fcntl(stream->socket, F_GETFL)) == -1) {
         spice_warning("accept failed, %s", strerror(errno));
@@ -420,8 +420,8 @@ static int common_channel_config_socket(RedChannelClient *rcc)
     }
 
     // TODO - this should be dynamic, not one time at channel creation
-    ccc->is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
-    delay_val = ccc->is_low_bandwidth ? 0 : 1;
+    is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
+    delay_val = is_low_bandwidth ? 0 : 1;
     /* FIXME: Using Nagle's Algorithm can lead to apparent delays, depending
      * on the delayed ack timeout on the other side.
      * Instead of using Nagle's, we need to implement message buffering on
@@ -436,7 +436,7 @@ static int common_channel_config_socket(RedChannelClient *rcc)
     }
     // TODO: move wide/narrow ack setting to red_channel.
     red_channel_client_ack_set_client_window(rcc,
-        ccc->is_low_bandwidth ?
+        is_low_bandwidth ?
         WIDE_CLIENT_ACK_WINDOW : NARROW_CLIENT_ACK_WINDOW);
     return TRUE;
 }
@@ -452,11 +452,11 @@ CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
 
     spice_return_val_if_fail(worker, NULL);
     spice_return_val_if_fail(channel_cbs, NULL);
-    spice_return_val_if_fail(!channel_cbs->config_socket, NULL);
     spice_return_val_if_fail(!channel_cbs->alloc_recv_buf, NULL);
     spice_return_val_if_fail(!channel_cbs->release_recv_buf, NULL);
 
-    channel_cbs->config_socket = common_channel_config_socket;
+    if (!channel_cbs->config_socket)
+        channel_cbs->config_socket = common_channel_config_socket;
     channel_cbs->alloc_recv_buf = common_alloc_recv_buf;
     channel_cbs->release_recv_buf = common_release_recv_buf;
 

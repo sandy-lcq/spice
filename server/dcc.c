@@ -1107,7 +1107,7 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
         spice_critical("restoring global lz dictionary failed");
     }
 
-    dcc->common.is_low_bandwidth = migrate_data->low_bandwidth_setting;
+    dcc->is_low_bandwidth = migrate_data->low_bandwidth_setting;
 
     if (migrate_data->low_bandwidth_setting) {
         red_channel_client_ack_set_client_window(RED_CHANNEL_CLIENT(dcc), WIDE_CLIENT_ACK_WINDOW);
@@ -1175,4 +1175,19 @@ uint64_t dcc_get_max_stream_bit_rate(DisplayChannelClient *dcc)
 void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate)
 {
     dcc->streams_max_bit_rate = rate;
+}
+
+int dcc_config_socket(RedChannelClient *rcc)
+{
+    RedClient *client = red_channel_client_get_client(rcc);
+    MainChannelClient *mcc = red_client_get_main(client);
+
+    RCC_TO_DCC(rcc)->is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
+
+    return common_channel_config_socket(rcc);
+}
+
+gboolean dcc_is_low_bandwidth(DisplayChannelClient *dcc)
+{
+    return dcc->is_low_bandwidth;
 }

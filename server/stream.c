@@ -355,7 +355,7 @@ static void before_reattach_stream(DisplayChannel *display,
         agent = dcc_get_stream_agent(dcc, index);
 
         if (!dcc_use_video_encoder_rate_control(dcc) &&
-            !((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth) {
+            !dcc_is_low_bandwidth(dcc)) {
             continue;
         }
 
@@ -646,7 +646,7 @@ static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, Stream *stream)
              * If the network info is not initialized due to another reason,
              * the low_bandwidth flag is FALSE.
              */
-            bit_rate = ((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth ?
+            bit_rate = dcc_is_low_bandwidth(dcc) ?
                 RED_STREAM_DEFAULT_LOW_START_BIT_RATE :
                 RED_STREAM_DEFAULT_HIGH_START_BIT_RATE;
         }

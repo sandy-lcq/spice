@@ -25,6 +25,7 @@
 
 struct DisplayChannelClient {
     CommonGraphicsChannelClient common;
+    int is_low_bandwidth;
     uint32_t id;
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;

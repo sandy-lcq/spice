@@ -1845,7 +1845,7 @@ static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
                  MIGRATE_DATA_DISPLAY_MAX_CACHE_CLIENTS == MAX_CACHE_CLIENTS);
 
     display_data.message_serial = red_channel_client_get_message_serial(rcc);
-    display_data.low_bandwidth_setting = dcc->common.is_low_bandwidth;
+    display_data.low_bandwidth_setting = dcc->is_low_bandwidth;
 
     display_data.pixmap_cache_freezer = pixmap_cache_freeze(dcc->pixmap_cache);
     display_data.pixmap_cache_id = dcc->pixmap_cache->id;

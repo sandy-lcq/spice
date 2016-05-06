@@ -26,11 +26,10 @@ typedef struct RedWorker RedWorker;
 
 typedef struct CommonGraphicsChannelClient {
     RedChannelClient base;
-
-    int is_low_bandwidth;
 } CommonGraphicsChannelClient;
 
-#define COMMON_GRAPHICS_CHANNEL_CLIENT(Client) ((CommonGraphicsChannelClient*)(Client))
+int common_channel_config_socket(RedChannelClient *rcc);
+
 #define COMMON_CLIENT_TIMEOUT (NSEC_PER_SEC * 30)
 
 #define CHANNEL_RECEIVE_BUF_SIZE 1024

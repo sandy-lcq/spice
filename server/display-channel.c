@@ -1897,7 +1897,8 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
         .send_item = dcc_send_item,
         .handle_migrate_flush_mark = handle_migrate_flush_mark,
         .handle_migrate_data = handle_migrate_data,
-        .handle_migrate_data_get_serial = handle_migrate_data_get_serial
+        .handle_migrate_data_get_serial = handle_migrate_data_get_serial,
+        .config_socket = dcc_config_socket
     };
     static SpiceImageSurfacesOps image_surfaces_ops = {
         image_surfaces_get,
@@ -1992,13 +1993,13 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
 void display_channel_update_compression(DisplayChannel *display, DisplayChannelClient *dcc)
 {
     if (dcc_get_jpeg_state(dcc) == SPICE_WAN_COMPRESSION_AUTO) {
-        display->enable_jpeg = ((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth;
+        display->enable_jpeg = dcc_is_low_bandwidth(dcc);
     } else {
         display->enable_jpeg = (dcc_get_jpeg_state(dcc) == SPICE_WAN_COMPRESSION_ALWAYS);
     }
 
     if (dcc_get_zlib_glz_state(dcc) == SPICE_WAN_COMPRESSION_AUTO) {
-        display->enable_zlib_glz_wrap = ((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth;
+        display->enable_zlib_glz_wrap = dcc_is_low_bandwidth(dcc);
     } else {
         display->enable_zlib_glz_wrap = (dcc_get_zlib_glz_state(dcc) == SPICE_WAN_COMPRESSION_ALWAYS);
     }
