@@ -103,6 +103,17 @@ typedef struct RedNotifyPipeItem {
     char *msg;
 } RedNotifyPipeItem;
 
+typedef struct RedMouseModePipeItem {
+    RedPipeItem base;
+    int current_mode;
+    int is_client_mouse_allowed;
+} RedMouseModePipeItem;
+
+typedef struct RedMultiMediaTimePipeItem {
+    RedPipeItem base;
+    int time;
+} RedMultiMediaTimePipeItem;
+
 #define ZERO_BUF_SIZE 4096
 
 static const uint8_t zero_page[ZERO_BUF_SIZE] = {0};
@@ -295,6 +306,29 @@ void main_channel_client_push_notify(MainChannelClient *mcc, const char *msg)
 {
     RedPipeItem *item = main_notify_item_new(msg, 1);
     red_channel_client_pipe_add_push(&mcc->base, item);
+}
+
+RedPipeItem *main_mouse_mode_item_new(RedChannelClient *rcc, void *data, int num)
+{
+    RedMouseModePipeItem *item = spice_malloc(sizeof(RedMouseModePipeItem));
+    MainMouseModeItemInfo *info = data;
+
+    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MOUSE_MODE);
+    item->current_mode = info->current_mode;
+    item->is_client_mouse_allowed = info->is_client_mouse_allowed;
+    return &item->base;
+}
+
+RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
+                                            void *data, int num)
+{
+    MainMultiMediaTimeItemInfo *info = data;
+    RedMultiMediaTimePipeItem *item;
+
+    item = spice_malloc(sizeof(RedMultiMediaTimePipeItem));
+    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME);
+    item->time = info->time;
+    return &item->base;
 }
 
 void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,

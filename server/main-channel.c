@@ -56,33 +56,6 @@ RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t c
     return NULL;
 }
 
-typedef struct MainMouseModeItemInfo {
-    int current_mode;
-    int is_client_mouse_allowed;
-} MainMouseModeItemInfo;
-
-static RedPipeItem *main_mouse_mode_item_new(RedChannelClient *rcc, void *data, int num)
-{
-    RedMouseModePipeItem *item = spice_malloc(sizeof(RedMouseModePipeItem));
-    MainMouseModeItemInfo *info = data;
-
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MOUSE_MODE);
-    item->current_mode = info->current_mode;
-    item->is_client_mouse_allowed = info->is_client_mouse_allowed;
-    return &item->base;
-}
-
-static RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
-                                                   void *data, int num)
-{
-    RedMultiMediaTimePipeItem *item, *info = data;
-
-    item = spice_malloc(sizeof(RedMultiMediaTimePipeItem));
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME);
-    item->time = info->time;
-    return &item->base;
-}
-
 static void main_channel_push_channels(MainChannelClient *mcc)
 {
     if (red_client_during_migrate_at_target((main_channel_client_get_base(mcc))->client)) {
@@ -148,7 +121,7 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
 
 void main_channel_push_multi_media_time(MainChannel *main_chan, int time)
 {
-    RedMultiMediaTimePipeItem info = {
+    MainMultiMediaTimeItemInfo info = {
         .time = time,
     };
 
