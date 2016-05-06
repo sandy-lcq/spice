@@ -866,12 +866,9 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
                 SPICE_UPCAST(RedPingPipeItem, base));
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_MOUSE_MODE:
-            {
-                RedMouseModePipeItem *item =
-                    SPICE_UPCAST(RedMouseModePipeItem, base);
-                main_channel_marshall_mouse_mode(rcc, m, item);
-                break;
-            }
+            main_channel_marshall_mouse_mode(rcc, m,
+                SPICE_UPCAST(RedMouseModePipeItem, base));
+            break;
         case RED_PIPE_ITEM_TYPE_MAIN_AGENT_DISCONNECTED:
             main_channel_marshall_agent_disconnected(rcc, m, base);
             break;
