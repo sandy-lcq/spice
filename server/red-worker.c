@@ -441,26 +441,6 @@ static int common_channel_config_socket(RedChannelClient *rcc)
     return TRUE;
 }
 
-CommonGraphicsChannelClient *common_graphics_channel_new_client(CommonGraphicsChannel *common,
-                                                                int size,
-                                                                RedClient *client,
-                                                                RedsStream *stream,
-                                                                int monitor_latency,
-                                                                uint32_t *common_caps,
-                                                                int num_common_caps,
-                                                                uint32_t *caps,
-                                                                int num_caps)
-{
-    RedChannelClient *rcc =
-        red_channel_client_create(size, &common->base, client, stream, monitor_latency,
-                                  num_common_caps, common_caps, num_caps, caps);
-    if (!rcc) {
-        return NULL;
-    }
-    return (CommonGraphicsChannelClient*)rcc;
-}
-
-
 CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
                                               const char *name,
                                               uint32_t channel_type, int migration_flags,

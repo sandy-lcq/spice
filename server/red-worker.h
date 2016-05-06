@@ -100,14 +100,4 @@ CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
                                               ChannelCbs *channel_cbs,
                                               channel_handle_parsed_proc handle_parsed);
 
-CommonGraphicsChannelClient *common_graphics_channel_new_client(CommonGraphicsChannel *common,
-                                                                int size,
-                                                                RedClient *client,
-                                                                RedsStream *stream,
-                                                                int monitor_latency,
-                                                                uint32_t *common_caps,
-                                                                int num_common_caps,
-                                                                uint32_t *caps,
-                                                                int num_caps);
-
 #endif
