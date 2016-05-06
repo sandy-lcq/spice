@@ -434,6 +434,10 @@ static int common_channel_config_socket(RedChannelClient *rcc)
             spice_warning("setsockopt failed, %s", strerror(errno));
         }
     }
+    // TODO: move wide/narrow ack setting to red_channel.
+    red_channel_client_ack_set_client_window(rcc,
+        ccc->is_low_bandwidth ?
+        WIDE_CLIENT_ACK_WINDOW : NARROW_CLIENT_ACK_WINDOW);
     return TRUE;
 }
 
@@ -454,14 +458,8 @@ CommonGraphicsChannelClient *common_graphics_channel_new_client(CommonGraphicsCh
     if (!rcc) {
         return NULL;
     }
-    CommonGraphicsChannelClient *common_cc = (CommonGraphicsChannelClient*)rcc;
     common->during_target_migrate = mig_target;
-
-    // TODO: move wide/narrow ack setting to red_channel.
-    red_channel_client_ack_set_client_window(rcc,
-        common_cc->is_low_bandwidth ?
-        WIDE_CLIENT_ACK_WINDOW : NARROW_CLIENT_ACK_WINDOW);
-    return common_cc;
+    return (CommonGraphicsChannelClient*)rcc;
 }
 
 
