@@ -366,9 +366,10 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 
     dcc = (DisplayChannelClient*)common_graphics_channel_new_client(
         COMMON_GRAPHICS_CHANNEL(display), sizeof(DisplayChannelClient),
-        client, stream, mig_target, TRUE,
+        client, stream, TRUE,
         common_caps, num_common_caps,
         caps, num_caps);
+    display->common.during_target_migrate = mig_target;
     dcc->id = display->common.qxl->id;
     spice_return_val_if_fail(dcc, NULL);
     spice_info("New display (client %p) dcc %p stream %p", client, dcc, stream);

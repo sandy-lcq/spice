@@ -390,13 +390,13 @@ static CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
         (CursorChannelClient*)common_graphics_channel_new_client(&cursor->common,
                                                                  sizeof(CursorChannelClient),
                                                                  client, stream,
-                                                                 mig_target,
                                                                  FALSE,
                                                                  common_caps,
                                                                  num_common_caps,
                                                                  caps,
                                                                  num_caps);
     spice_return_val_if_fail(ccc != NULL, NULL);
+    cursor->common.during_target_migrate = mig_target;
 
     ring_init(&ccc->cursor_cache_lru);
     ccc->cursor_cache_available = CLIENT_CURSOR_CACHE_SIZE;

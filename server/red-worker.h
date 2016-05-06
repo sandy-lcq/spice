@@ -104,7 +104,6 @@ CommonGraphicsChannelClient *common_graphics_channel_new_client(CommonGraphicsCh
                                                                 int size,
                                                                 RedClient *client,
                                                                 RedsStream *stream,
-                                                                int mig_target,
                                                                 int monitor_latency,
                                                                 uint32_t *common_caps,
                                                                 int num_common_caps,
