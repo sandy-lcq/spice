@@ -1034,7 +1034,7 @@ RedChannel *red_channel_create(int size,
     channel->refs = 1;
     channel->handle_acks = handle_acks;
     channel->migration_flags = migration_flags;
-    memcpy(&channel->channel_cbs, channel_cbs, sizeof(ChannelCbs));
+    channel->channel_cbs = *channel_cbs;
 
     channel->reds = reds;
     channel->core = core;
