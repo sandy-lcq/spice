@@ -544,15 +544,15 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
         return;
     }
 
-    if (!red_channel_client_test_remote_cap(&dcc->common.base,
+    if (!red_channel_client_test_remote_cap(&dcc->base,
                                             SPICE_DISPLAY_CAP_MONITORS_CONFIG)) {
         return;
     }
 
-    mci = red_monitors_config_item_new(dcc->common.base.channel,
+    mci = red_monitors_config_item_new(dcc->base.channel,
                                        monitors_config_ref(dc->monitors_config));
-    red_channel_client_pipe_add(&dcc->common.base, &mci->pipe_item);
-    red_channel_client_push(&dcc->common.base);
+    red_channel_client_pipe_add(&dcc->base, &mci->pipe_item);
+    red_channel_client_push(&dcc->base);
 }
 
 static RedSurfaceDestroyItem *red_surface_destroy_item_new(RedChannel *channel,
@@ -747,7 +747,7 @@ int dcc_compress_image(DisplayChannelClient *dcc,
         goto lz_compress;
 #ifdef USE_LZ4
     case SPICE_IMAGE_COMPRESSION_LZ4:
-        if (red_channel_client_test_remote_cap(&dcc->common.base,
+        if (red_channel_client_test_remote_cap(&dcc->base,
                                                SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
             success = image_encoders_compress_lz4(&dcc->encoders, dest, src, o_comp_data);
             break;

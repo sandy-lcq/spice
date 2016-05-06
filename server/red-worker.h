@@ -24,10 +24,6 @@
 
 typedef struct RedWorker RedWorker;
 
-typedef struct CommonGraphicsChannelClient {
-    RedChannelClient base;
-} CommonGraphicsChannelClient;
-
 int common_channel_config_socket(RedChannelClient *rcc);
 
 #define COMMON_CLIENT_TIMEOUT (NSEC_PER_SEC * 30)

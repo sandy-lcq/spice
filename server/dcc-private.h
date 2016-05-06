@@ -24,7 +24,7 @@
 #include "stream.h"
 
 struct DisplayChannelClient {
-    CommonGraphicsChannelClient common;
+    RedChannelClient base;
     int is_low_bandwidth;
     uint32_t id;
     SpiceImageCompression image_compression;

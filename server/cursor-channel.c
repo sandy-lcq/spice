@@ -68,7 +68,7 @@ struct CursorChannel {
 };
 
 struct CursorChannelClient {
-    CommonGraphicsChannelClient common;
+    RedChannelClient base;
 
     RedCacheItem *cursor_cache[CURSOR_CACHE_HASH_SIZE];
     Ring cursor_cache_lru;
@@ -77,7 +77,7 @@ struct CursorChannelClient {
 };
 
 
-#define RCC_TO_CCC(rcc) SPICE_CONTAINEROF((rcc), CursorChannelClient, common.base)
+#define RCC_TO_CCC(rcc) SPICE_CONTAINEROF((rcc), CursorChannelClient, base)
 
 #define CLIENT_CURSOR_CACHE
 #include "cache-item.tmpl.c"
