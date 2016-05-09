@@ -22,7 +22,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <glib.h>
-#include "common/lz_common.h"
+#include <common/lz_common.h>
 #include "spice-bitmap-utils.h"
 #include "red-common.h"
 #include "memslot.h"

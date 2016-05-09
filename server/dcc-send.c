@@ -22,8 +22,8 @@
 #include "dcc.h"
 #include "display-channel.h"
 
-#include "common/marshaller.h"
-#include "common/generated_server_marshallers.h"
+#include <common/marshaller.h>
+#include <common/generated_server_marshallers.h>
 
 typedef enum {
     FILL_BITS_TYPE_INVALID,

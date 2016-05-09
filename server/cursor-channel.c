@@ -20,7 +20,7 @@
 #endif
 
 #include <glib.h>
-#include "common/generated_server_marshallers.h"
+#include <common/generated_server_marshallers.h>
 #include "cursor-channel.h"
 #include "cache-item.h"
 

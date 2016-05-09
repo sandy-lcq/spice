@@ -39,10 +39,10 @@
 
 #include <spice/protocol.h>
 #include <spice/qxl_dev.h>
-#include "common/lz.h"
-#include "common/rect.h"
-#include "common/region.h"
-#include "common/ring.h"
+#include <common/lz.h>
+#include <common/rect.h>
+#include <common/region.h>
+#include <common/ring.h>
 
 #include "display-channel.h"
 #include "stream.h"

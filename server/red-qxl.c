@@ -28,7 +28,7 @@
 #include <inttypes.h>
 
 #include <spice/qxl_dev.h>
-#include "common/quic.h"
+#include <common/quic.h>
 
 #include "spice.h"
 #include "red-worker.h"

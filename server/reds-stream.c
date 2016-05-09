@@ -21,7 +21,7 @@
 
 #include "main-dispatcher.h"
 #include "red-common.h"
-#include "common/log.h"
+#include <common/log.h>
 #include "reds-stream.h"
 #include "reds.h"
 

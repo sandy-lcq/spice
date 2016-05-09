@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "common/log.h"
+#include <common/log.h>
 #include "reds-stream.h"
 #include "basic_event_loop.h"
 

@@ -29,9 +29,9 @@
 #include <spice/protocol.h>
 #include <stdbool.h>
 
-#include "common/marshaller.h"
-#include "common/messages.h"
-#include "common/generated_server_marshallers.h"
+#include <common/marshaller.h>
+#include <common/messages.h>
+#include <common/generated_server_marshallers.h>
 
 #include "demarshallers.h"
 #include "spice.h"

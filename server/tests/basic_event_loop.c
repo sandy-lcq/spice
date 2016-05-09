@@ -24,8 +24,8 @@
 
 #include "red-common.h"
 #include "spice/macros.h"
-#include "common/ring.h"
-#include "common/mem.h"
+#include <common/ring.h>
+#include <common/mem.h>
 #include "basic_event_loop.h"
 
 int debug = 0;

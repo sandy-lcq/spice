@@ -35,8 +35,8 @@
 #include <linux/sockios.h> /* SIOCOUTQ */
 #endif
 
-#include "common/generated_server_marshallers.h"
-#include "common/ring.h"
+#include <common/generated_server_marshallers.h>
+#include <common/ring.h>
 
 #include "red-channel.h"
 #include "reds.h"

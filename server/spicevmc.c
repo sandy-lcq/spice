@@ -28,7 +28,7 @@
 #include <netinet/in.h> // IPPROTO_TCP
 #include <netinet/tcp.h> // TCP_NODELAY
 
-#include "common/generated_server_marshallers.h"
+#include <common/generated_server_marshallers.h>
 
 #include "char-device.h"
 #include "red-channel.h"

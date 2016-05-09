@@ -17,6 +17,6 @@
 #ifndef SW_CANVAS_H_
 #define SW_CANVAS_H_
 
-#include "common/sw_canvas.h"
+#include <common/sw_canvas.h>
 
 #endif /* SW_CANVAS_H_ */

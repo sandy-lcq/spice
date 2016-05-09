@@ -25,8 +25,8 @@
 #include <pthread.h>
 #include <limits.h>
 
-#include "common/ring.h"
-#include "common/marshaller.h"
+#include <common/ring.h>
+#include <common/marshaller.h>
 
 #include "spice.h"
 #include "red-common.h"

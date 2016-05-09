@@ -20,7 +20,7 @@
 
 #include <setjmp.h>
 
-#include "common/rect.h"
+#include <common/rect.h>
 #include "red-worker.h"
 #include "reds-stream.h"
 #include "cache-item.h"

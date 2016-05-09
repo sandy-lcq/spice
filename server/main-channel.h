@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 #include <spice/vd_agent.h>
-#include "common/marshaller.h"
+#include <common/marshaller.h>
 #include "red-channel.h"
 
 // TODO: Defines used to calculate receive buffer size, and also by reds.c

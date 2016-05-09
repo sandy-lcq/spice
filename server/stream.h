@@ -21,7 +21,7 @@
 #include <glib.h>
 #include "utils.h"
 #include "video-encoder.h"
-#include "common/region.h"
+#include <common/region.h>
 #include "red-channel.h"
 #include "image-cache.h"
 

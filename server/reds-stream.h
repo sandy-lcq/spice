@@ -19,7 +19,7 @@
 #define _H_REDS_STREAM
 
 #include "spice.h"
-#include "common/mem.h"
+#include <common/mem.h>
 #include "red-common.h"
 
 #include <stdbool.h>

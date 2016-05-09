@@ -20,9 +20,9 @@
 
 #include <inttypes.h>
 
-#include "common/pixman_utils.h"
-#include "common/canvas_base.h"
-#include "common/ring.h"
+#include <common/pixman_utils.h>
+#include <common/canvas_base.h>
+#include <common/ring.h>
 
 /* FIXME: move back to display-channel.h (once structs are private) */
 typedef struct Drawable Drawable;

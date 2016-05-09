@@ -49,8 +49,8 @@
 #include <spice/vd_agent.h>
 #include <spice/stats.h>
 
-#include "common/generated_server_marshallers.h"
-#include "common/ring.h"
+#include <common/generated_server_marshallers.h>
+#include <common/ring.h>
 
 #include "spice.h"
 #include "reds.h"

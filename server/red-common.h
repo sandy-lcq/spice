@@ -27,14 +27,14 @@
 #include <unistd.h>
 
 #include <spice/macros.h>
-#include "common/log.h"
-#include "common/lz_common.h"
-#include "common/marshaller.h"
-#include "common/mem.h"
-#include "common/messages.h"
-#include "common/ring.h"
-#include "common/spice_common.h"
-#include "common/draw.h"
+#include <common/log.h>
+#include <common/lz_common.h>
+#include <common/marshaller.h>
+#include <common/mem.h>
+#include <common/messages.h>
+#include <common/ring.h>
+#include <common/spice_common.h>
+#include <common/draw.h>
 
 #include "spice.h"
 #include "utils.h"

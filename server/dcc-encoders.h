@@ -19,8 +19,8 @@
 #define DCC_ENCODERS_H_
 
 #include <setjmp.h>
-#include "common/marshaller.h"
-#include "common/quic.h"
+#include <common/marshaller.h>
+#include <common/quic.h>
 #include "red-channel.h"
 #include "red-parse-qxl.h"
 #include "image-cache.h"

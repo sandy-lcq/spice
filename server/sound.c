@@ -26,8 +26,8 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
-#include "common/marshaller.h"
-#include "common/generated_server_marshallers.h"
+#include <common/marshaller.h>
+#include <common/generated_server_marshallers.h>
 
 #include "spice.h"
 #include "red-common.h"
@@ -35,7 +35,7 @@
 #include "reds.h"
 #include "red-qxl.h"
 #include "sound.h"
-#include "common/snd_codec.h"
+#include <common/snd_codec.h>
 #include "demarshallers.h"
 
 #ifndef IOV_MAX
