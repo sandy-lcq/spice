@@ -119,7 +119,6 @@ libserver_la_SOURCES =				\
 	reds-stream.c				\
 	reds-stream.h				\
 	sw-canvas.c			\
-	sw-canvas.h			\
 	sound.c				\
 	sound.h				\
 	stat.h					\

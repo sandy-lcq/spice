@@ -21,11 +21,12 @@
 #include <setjmp.h>
 
 #include <common/rect.h>
+#include <common/sw_canvas.h>
+
 #include "red-worker.h"
 #include "reds-stream.h"
 #include "cache-item.h"
 #include "pixmap-cache.h"
-#include "sw-canvas.h"
 #include "stat.h"
 #include "reds.h"
 #include "memslot.h"

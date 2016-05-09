@@ -29,10 +29,10 @@
 
 #include <spice/qxl_dev.h>
 #include <common/quic.h>
+#include <common/sw_canvas.h>
 
 #include "spice.h"
 #include "red-worker.h"
-#include "sw-canvas.h"
 #include "reds.h"
 #include "dispatcher.h"
 #include "red-parse-qxl.h"
