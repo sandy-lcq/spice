@@ -224,10 +224,8 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
 
     state = spicevmc_red_channel_client_get_state(rcc);
 
-    if (state->recv_from_client_buf) { /* partial message which wasn't pushed to device */
-        red_char_device_write_buffer_release(state->chardev, state->recv_from_client_buf);
-        state->recv_from_client_buf = NULL;
-    }
+    /* partial message which wasn't pushed to device */
+    red_char_device_write_buffer_release(state->chardev, &state->recv_from_client_buf);
 
     if (state->chardev) {
         if (red_char_device_client_exists(state->chardev, rcc->client)) {
@@ -349,10 +347,8 @@ static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
 
     switch (type) {
     case SPICE_MSGC_SPICEVMC_DATA:
-        if (state->recv_from_client_buf) { /* buffer wasn't pushed to device */
-            red_char_device_write_buffer_release(state->chardev, state->recv_from_client_buf);
-            state->recv_from_client_buf = NULL;
-        }
+        /* buffer wasn't pushed to device */
+        red_char_device_write_buffer_release(state->chardev, &state->recv_from_client_buf);
         break;
     default:
         free(msg);
@@ -545,9 +541,8 @@ void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
     /* FIXME */
     state = (SpiceVmcState *)red_char_device_opaque_get((RedCharDevice*)sin->st);
 
-    if (state->recv_from_client_buf) {
-        red_char_device_write_buffer_release(state->chardev, state->recv_from_client_buf);
-    }
+    red_char_device_write_buffer_release(state->chardev, &state->recv_from_client_buf);
+
     /* FIXME */
     red_char_device_destroy((RedCharDevice*)sin->st);
     state->chardev = NULL;

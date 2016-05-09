@@ -506,9 +506,7 @@ static int red_char_device_write_to_device(RedCharDevice *dev)
         total += n;
         write_len -= n;
         if (!write_len) {
-            RedCharDeviceWriteBuffer *release_buf = dev->priv->cur_write_buf;
-            dev->priv->cur_write_buf = NULL;
-            red_char_device_write_buffer_release(dev, release_buf);
+            red_char_device_write_buffer_release(dev, &dev->priv->cur_write_buf);
             continue;
         }
         dev->priv->cur_write_buf_pos += n;
@@ -650,8 +648,14 @@ void red_char_device_write_buffer_add(RedCharDevice *dev,
 }
 
 void red_char_device_write_buffer_release(RedCharDevice *dev,
-                                          RedCharDeviceWriteBuffer *write_buf)
+                                          RedCharDeviceWriteBuffer **p_write_buf)
 {
+    RedCharDeviceWriteBuffer *write_buf = *p_write_buf;
+    if (!write_buf) {
+        return;
+    }
+    *p_write_buf = NULL;
+
     int buf_origin = write_buf->origin;
     uint32_t buf_token_price = write_buf->token_price;
     RedClient *client = write_buf->client;
@@ -835,14 +839,9 @@ void red_char_device_reset(RedCharDevice *dev)
         ring_remove(item);
         buf = SPICE_CONTAINEROF(item, RedCharDeviceWriteBuffer, link);
         /* tracking the tokens */
-        red_char_device_write_buffer_release(dev, buf);
+        red_char_device_write_buffer_release(dev, &buf);
     }
-    if (dev->priv->cur_write_buf) {
-        RedCharDeviceWriteBuffer *release_buf = dev->priv->cur_write_buf;
-
-        dev->priv->cur_write_buf = NULL;
-        red_char_device_write_buffer_release(dev, release_buf);
-    }
+    red_char_device_write_buffer_release(dev, &dev->priv->cur_write_buf);
 
     RING_FOREACH(client_item, &dev->priv->clients) {
         RedCharDeviceClient *dev_client;

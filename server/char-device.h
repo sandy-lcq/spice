@@ -228,7 +228,7 @@ RedCharDeviceWriteBuffer *red_char_device_write_buffer_get_server_no_token(
 void red_char_device_write_buffer_add(RedCharDevice *dev,
                                         RedCharDeviceWriteBuffer *write_buf);
 void red_char_device_write_buffer_release(RedCharDevice *dev,
-                                            RedCharDeviceWriteBuffer *write_buf);
+                                          RedCharDeviceWriteBuffer **p_write_buf);
 
 /* api for specific char devices */
 

@@ -1131,9 +1131,10 @@ void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf)
     }
 
     spice_assert(buf == dev->priv->recv_from_client_buf->buf + sizeof(VDIChunkHeader));
+    /* if we pushed the buffer the buffer is attached to the channel so don't free it */
     if (!dev->priv->recv_from_client_buf_pushed) {
         red_char_device_write_buffer_release(RED_CHAR_DEVICE(reds->agent_dev),
-                                             dev->priv->recv_from_client_buf);
+                                             &dev->priv->recv_from_client_buf);
     }
     dev->priv->recv_from_client_buf = NULL;
     dev->priv->recv_from_client_buf_pushed = FALSE;

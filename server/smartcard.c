@@ -420,8 +420,7 @@ static void smartcard_channel_release_msg_rcv_buf(RedChannelClient *rcc,
     } else {
         if (scc->write_buf) { /* msg hasn't been pushed to the guest */
             spice_assert(scc->write_buf->buf == msg);
-            red_char_device_write_buffer_release(RED_CHAR_DEVICE(scc->smartcard), scc->write_buf);
-            scc->write_buf = NULL;
+            red_char_device_write_buffer_release(RED_CHAR_DEVICE(scc->smartcard), &scc->write_buf);
         }
     }
 }
