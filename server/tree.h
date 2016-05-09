@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <common/region.h>
 #include <common/ring.h>
+
 #include "spice-bitmap-utils.h"
 
 enum {

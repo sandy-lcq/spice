@@ -19,6 +19,7 @@
 #define DISPATCHER_H
 
 #include <glib-object.h>
+
 #include "red-common.h"
 
 #define TYPE_DISPATCHER dispatcher_get_type()

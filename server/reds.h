@@ -21,11 +21,9 @@
 #include <stdint.h>
 #include <sys/uio.h>
 #include <spice/vd_agent.h>
-#include <config.h>
-
-
 #include <common/marshaller.h>
 #include <common/messages.h>
+
 #include "char-device.h"
 #include "spice.h"
 #include "red-channel.h"

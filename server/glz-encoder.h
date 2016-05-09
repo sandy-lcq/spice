@@ -20,8 +20,9 @@
 
 /* Manging the lz encoding using a dictionary that is shared among encoders */
 
-#include "red-common.h"
 #include <common/lz_common.h>
+
+#include "red-common.h"
 #include "glz-encoder-dict.h"
 
 struct GlzEncoderUsrContext {

@@ -19,7 +19,6 @@
 #define IMAGE_CACHE_H_
 
 #include <inttypes.h>
-
 #include <common/pixman_utils.h>
 #include <common/canvas_base.h>
 #include <common/ring.h>

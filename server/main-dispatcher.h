@@ -18,7 +18,7 @@
 #ifndef MAIN_DISPATCHER_H
 #define MAIN_DISPATCHER_H
 
-#include <spice.h>
+#include "spice.h"
 #include "dispatcher.h"
 #include "red-channel.h"
 

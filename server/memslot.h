@@ -19,9 +19,9 @@
 #ifndef MEMSLOT_H_
 #define MEMSLOT_H_
 
-#include "red-common.h"
-
 #include <spice/qxl_dev.h>
+
+#include "red-common.h"
 
 typedef struct MemSlot {
     int generation;

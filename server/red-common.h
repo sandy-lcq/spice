@@ -18,14 +18,12 @@
 #ifndef _H_RED_COMMON
 #define _H_RED_COMMON
 
-#include <glib.h>
-
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <glib.h>
 #include <spice/macros.h>
 #include <common/log.h>
 #include <common/lz_common.h>

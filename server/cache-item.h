@@ -18,8 +18,9 @@
 #ifndef CACHE_ITEM_H_
 # define CACHE_ITEM_H_
 
-#include "red-channel.h"
 #include <common/ring.h>
+
+#include "red-channel.h"
 
 typedef struct RedCacheItem RedCacheItem;
 

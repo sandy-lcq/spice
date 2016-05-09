@@ -20,7 +20,8 @@
 
 #include <stdio.h>
 #include <spice/qxl_dev.h>
-#include <spice.h>
+
+#include "spice.h"
 
 typedef struct SpiceReplay SpiceReplay;
 

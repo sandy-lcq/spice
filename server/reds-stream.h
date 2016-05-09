@@ -18,13 +18,12 @@
 #ifndef _H_REDS_STREAM
 #define _H_REDS_STREAM
 
-#include "spice.h"
-#include <common/mem.h>
-#include "red-common.h"
-
 #include <stdbool.h>
-
 #include <openssl/ssl.h>
+#include <common/mem.h>
+
+#include "spice.h"
+#include "red-common.h"
 
 typedef void (*AsyncReadDone)(void *opaque);
 typedef void (*AsyncReadError)(void *opaque, int err);

@@ -19,7 +19,6 @@
 # define DISPLAY_CHANNEL_H_
 
 #include <setjmp.h>
-
 #include <common/rect.h>
 #include <common/sw_canvas.h>
 

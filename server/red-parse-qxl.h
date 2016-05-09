@@ -20,6 +20,7 @@
 #define RED_ABI_TRANSLATE_H
 
 #include <spice/qxl_dev.h>
+
 #include "red-common.h"
 #include "memslot.h"
 
