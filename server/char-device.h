@@ -71,7 +71,7 @@ struct RedCharDeviceClass
      * has been completely written to it */
     void (*on_free_self_token)(void *opaque);
 
-    /* This cb is called if it is recommanded that a client will be removed
+    /* This cb is called if it is recommended to remove the client
      * due to slow flow or due to some other error.
      * The called instance should disconnect the client, or at least the corresponding channel */
     void (*remove_client)(RedClient *client, void *opaque);
