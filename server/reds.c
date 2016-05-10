@@ -3265,6 +3265,7 @@ static void spice_server_char_device_remove_interface(RedsState *reds, SpiceBase
     if (strcmp(char_device->subtype, SUBTYPE_VDAGENT) == 0) {
         if (reds->vdagent) {
             reds_agent_remove(reds);
+            red_char_device_reset_dev_instance(RED_CHAR_DEVICE(reds->agent_dev), NULL);
         }
     }
 #ifdef USE_SMARTCARD

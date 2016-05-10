@@ -67,6 +67,11 @@ int spice_server_add_ssl_client(SpiceServer *s, int socket, int skip_auth);
 
 int spice_server_add_interface(SpiceServer *s,
                                SpiceBaseInstance *sin);
+/**
+ * Remove an interface from SpiceServer.
+ * SpiceServer won't be using the interface anymore, so it can
+ * be freed or reused.
+ */
 int spice_server_remove_interface(SpiceBaseInstance *sin);
 
 // Needed for backward API compatibility
