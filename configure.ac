@@ -70,7 +70,7 @@ dnl Check optional features
 SPICE_CHECK_SMARTCARD
 
 AC_ARG_ENABLE([automated_tests],
-              AS_HELP_STRING([--enable-automated-tests], [Enable automated tests using spicy-screenshot (part of spice--gtk)]),,
+              AS_HELP_STRING([--enable-automated-tests], [Enable automated tests using spicy-screenshot (part of spice-gtk)]),,
               [enable_automated_tests="no"])
 AS_IF([test x"$enable_automated_tests" != "xno"], [enable_automated_tests="yes"])
 AM_CONDITIONAL(HAVE_AUTOMATED_TESTS, test "x$enable_automated_tests" != "xno")
