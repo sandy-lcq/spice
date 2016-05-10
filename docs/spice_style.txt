@@ -8,11 +8,6 @@ Licensed under a Creative Commons Attribution-Share Alike 3.0
 United States License (see http://creativecommons.org/licenses/by-sa/3.0/us/legalcode).
 
 
-C and C++ style
----------------
-
-All of the following are applicable for both c and c+\+, except for <<cpp, C++>> section.
-
 Source Files
 ------------
 
@@ -21,7 +16,7 @@ Names
 
 Use lower case and separate words using underscore (e.g., file_name.c, header.h).
 
-Use cpp file extension for c\++ source files and hpp extension for c++ template files. Use standard file extension for c source and header files.
+Use standard file extension for C source and header files.
 
 Line width
 ~~~~~~~~~~
@@ -57,7 +52,7 @@ Examples: +
 TRUE, FALSE and NULL
 --------------------
 
-Use TRUE FALSE and NULL instead of 1 and 0 in order to improve code readability. TRUE FALSE is not relevant for c++, in c++ use the built-in bool type.
+Use `TRUE`, `FALSE` and `NULL` instead of 1 and 0 in order to improve code readability.
 
 Static storage initialization
 -----------------------------
@@ -319,114 +314,3 @@ char *array[] = {
     "item_2",
     "item_3",
 };
-
-[[cpp]]
-C++
----
-
-C++ style extends C Coding style
-
-One super
-~~~~~~~~~
-
-Avoid having more then one super class. Inherit from one super class and multiple interfaces (abstract class) for having multiple inheritance.
-
-Data members
-~~~~~~~~~~~~
-
-Prefix all protected and private data members with underscore (i.e., _member_name).
-
-Using public data members is allowed only as an exception. Use getters and setters instead.
-
-Object reference
-~~~~~~~~~~~~~~~~
-
-For code clarity use object reference (i.e., Type& var) in places where it is not allow to have null pointer and is not permitted to release the object.
-
-Templates
-~~~~~~~~~
-
-The use of c++ templates is limited to  simple containers.
-
-'*' and '&'
-~~~~~~~~~~~
-
-'\*' and '&' , should be directly connected with the *type names*.
-
-Example:
-
-[source,c]
-void function(int* i, int& n);
-
-Class indentation
-~~~~~~~~~~~~~~~~~
-
-[source,c]
-----
-class ClassName: public SuperClass, public FirstInterface,
-                 public SecondInterface {
-public:
-    ClassName();
-    virtual ~ClassName();
-
-    type public_function_1(type var);
-    type public_function_2();
-    ...
-
-protected:
-    type protected_function_1(type var);
-    type protected_function_2();
-    ...
-
-private:
-    type private_function_1(type var);
-    type private_function_2();
-    ...
-
-public:
-    type public_member_1;
-    type public_member_2;
-    ...
-
-protected:
-    type _protected_member_1;
-    type _protected_member_2;
-    ...
-
-private:
-    type _private_member_1;
-    type _private_member_2;
-    ...
-};
-----
-
-Constructor indentation
-~~~~~~~~~~~~~~~~~~~~~~~
-
-[source,c]
-----
-ClassName::ClassName(type1 arg1, type2 arg2,type3 arg3,
-                     type4 arg4)
-    : SuperClass(arg1, arg2)
-    , _member_1 (arg3)
-    , _member_2 (arg4)
-    ...
-{
-    ...
-}
-----
-
-bool
-~~~~
-
-Use built-in bool `true` and `false` instead of `TRUE` and `FALSE`.
-
-Operator overloading
-~~~~~~~~~~~~~~~~~~~~
-
-Avoid using operator overloading. It is only allowed as an exception.
-
-AutoRef and AutoPtr
-~~~~~~~~~~~~~~~~~~~
-
-Use `AutoRef` and `AutoPtr` style object for automatic object release. Using those objects simplify function cleanups and exception handling.
