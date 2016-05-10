@@ -430,22 +430,3 @@ AutoRef and AutoPtr
 ~~~~~~~~~~~~~~~~~~~
 
 Use `AutoRef` and `AutoPtr` style object for automatic object release. Using those objects simplify function cleanups and exception handling.
-
-Spice client
-------------
-
-#ifdef PLATFORM
-~~~~~~~~~~~~~~~
-
-Use #ifdef <platform> only in cases of different logic that depends on platform. In all other case add common interface (e.g., in platform.h) and keep specific platform implementation in platform directory (e.g.,windows).
-
-Use standard macros
-~~~~~~~~~~~~~~~~~~~
- LOG_INFO
- LOG_WARN
- LOG_ERROR
- ASSERT
- PANIC
- DBG
- THROW
- THROW_ERR
