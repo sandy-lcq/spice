@@ -1,0 +1,451 @@
+Spice project coding style and coding conventions
+=================================================
+
+Draft 2
+
+Copyright (C) 2009 Red Hat, Inc.
+Licensed under a Creative Commons Attribution-Share Alike 3.0
+United States License (see http://creativecommons.org/licenses/by-sa/3.0/us/legalcode).
+
+
+C and C++ style
+---------------
+
+All of the following are applicable for both c and c+\+, except for <<cpp, C++>> section.
+
+Source Files
+------------
+
+Names
+~~~~~
+
+Use lower case and separate words using underscore (e.g., file_name.c, header.h).
+
+Use cpp file extension for c\++ source files and hpp extension for c++ template files. Use standard file extension for c source and header files.
+
+Line width
+~~~~~~~~~~
+
+No more then 100 character on a single line
+
+Tabs
+~~~~
+
+Tabs are not allowed, use 4 spaces instead
+
+White spaces
+~~~~~~~~~~~~
+
+Trailing white spaces are not allowed
+
+New Line
+~~~~~~~~
+
+Use Unix style line ending (i.e., LF)
+
+New line (i.e., EOL) must be the last char in the file
+
+Comparing
+---------
+
+Use  right-hand comparison style.
+
+Examples: +
+  use `(var == 7)` instead of  `(7 == var)` +
+  use `(function(var) > 7)` instead of `(7 < function(var))`
+
+TRUE, FALSE and NULL
+--------------------
+
+Use TRUE FALSE and NULL instead of 1 and 0 in order to improve code readability. TRUE FALSE is not relevant for c++, in c++ use the built-in bool type.
+
+Static storage initialization
+-----------------------------
+
+To improve code readability, explicitly initialize variables that depend on default initialization with zero/null.
+
+Fixme and todo
+--------------
+
+Comments that are prefixed with `fixme` describe a bug that need to be fixed. Generally, it is not allowed to commit new code having `fixme` comment. Committing  `fixme` is allowed only for existing bugs. Comments that are prefixed with `todo` describe further features, optimization or code improvements, and they are allowed to be committed along with the relevant code.
+
+ASSERT
+------
+
+Use it freely. ASSERT helps testing function arguments and function results validity.  ASSERT helps detecting bugs and improve code readability and stability.
+
+sizeof
+------
+
+Apply function style to `sizeof` (i.e., use `sizeof(x)`)
+
+const
+-----
+
+Use const keyword when applicable to improve code reliability and celerity.
+
+goto
+----
+
+Using goto is allowed in c code for error handling. In any other case it will be used only as a special exception.
+
+Defining Constant values
+------------------------
+
+Use defines for constant values for improving readability and ease of changes. Alternatively, use global `const` variables.
+
+void argument
+-------------
+
+Don't add explicitly void argument in functions without arguments. (i.e., void function_name() is OK)
+
+Short functions
+---------------
+
+Try to split code to short functions, each having simple functionality, in order to improve code readability and re-usability. Prefix with inline short functions or functions that were splitted for readability reason.
+
+Return on if
+------------
+
+Try to return immediately on if in places that can reduce indentation level.
+
+Example:
+
+prefer
+[source,c]
+----
+void function(int *n)
+{
+    if (!n) {
+        return;
+    }
+    ...
+}
+----
+on
+[source,c]
+----
+void function(int *n)
+{
+    if (!n) {
+        return;
+    } else {
+        ...
+    }
+}
+----
+
+Names
+-----
+
+* Don't underestimate the importance of name choosing. Good names make the code more easy to understand and reduce the required level of code documentation. When choosing names, prefer long meaningful names over short vague name.
+* Variable and Function names - use lower case and separate words using underscore (e.g., sample_variable_name)
+* Structures, class and enum names - one or more words, each word start with upper case (e.g., Name, SampleStructName)
+* Defines and enum items names - uppercase words separated using underscores (e.g., NAME, SAMPLE_DEFINE_NAME)
+
+Optimization
+------------
+
+Keep optimization to fast path code. Prefer safe, clear and easy to maintain coding for code that is not on the fast path.
+
+Spacing
+-------
+
+Use spacing for improving code readability.
+
+[source,c]
+for (i = 0; i < 10; ++i) {
+    some_func(var, i * i + *ptr, &var, sizeof(var));
+}
+
+[[function_indentation]]
+Function Indentation
+--------------------
+
+* No spaces between function name to left bracket.
+* Curly bracket start on new line.
+* Functions must be padded with empty lines on both sides
++
+[source,c]
+void function(type1 arg1, type2 arg2, type2 arg3)
+{
+  ...
+}
++
+* In case of a new line in arguments list, align it to the first argument type.
++
+[source,c]
+----
+void function(type1 arg1,
+              type2 arg2,
+              type3 arg3)
+----
++
+Or
++
+[source,c]
+----
+void function(type1 arg1, type2 arg2,
+              type3 arg3)
+----
++
+* New line is acceptable only in arguments list
+
+Branching indentation
+---------------------
+
+* Add space after a branch keyword and after the right bracket.
+* Curly bracket starts on the same line the branch starts.
+* Place curly brackets after all control flow constructs even where optional. This convention reduces branching bugs that are difficult to detect. It also makes it easier to add logging messages during debugging  since it eliminates the need to add the brackets.
++
+[source,c]
+----
+if (condition) {
+    ...
+} else if (condition) {
+    ...
+} else {
+    ...
+}
+----
++
+In case of long condition statement, prefer having additional temporary variable over multiple line condition statement.
++
+In case of new line in condition statement.
++
+[source,c]
+----
+if (long_name && very_long_name && very_long ||
+                                               var_name) {
+----
++
+or indent using two tabs
++
+[source,c]
+----
+if (long_name && very_long_name && long_name ||
+        var_name) {
+----
++
+Break function arguments list in long condition statement according to <<function_indentation, Function Indentation>> section.
++
+[source,c]
+----
+while (condition) {
+        ...
+}
+
+do {
+    ...
+} while (condition);
+
+for (i = x; i < y; i++) {
+    ...
+}
+
+
+switch (x) {
+case A: {
+    ...
+    break;
+}
+case B:
+    ...
+    ...
+    break;
+default:
+    ...
+}
+----
+
+Types indentation
+-----------------
+
+[source,c]
+----
+struct StructName {
+    type1 name1;
+    type2 name2;
+
+    ...
+};
+
+enum {
+    A,
+    B,
+    C = 10,
+    D,
+};
+
+union {
+    type1 name1;
+    type2 name2;
+    ...
+} u;
+----
+
+Vertical indentation
+--------------------
+
+Use one space no tabs and no vertical alignment.
+[source,c]
+----
+long var_name_1 = 7;
+int var_name_2 = 1111l;
+unsigned long long_var_name_1 = 666;
+char long_var_name_1 = 'a';
+
+void f1(int a, char ch);
+unsigned long f2(int a, char ch);
+----
+
+Multi line macro indentation
+----------------------------
+
+[source,c]
+#define MACRO_NAME(a, b, c) {        \
+    int ab = a + c;             \
+    int ac = a + b;             \
+    int bc = b + c;             \
+    f(ab, ac, bc);              \
+}
+
+Multi line array indentation
+----------------------------
+
+[source,c]
+char *array[] = {
+    "item_1",
+    "item_2",
+    "item_3",
+};
+
+[[cpp]]
+C++
+---
+
+C++ style extends C Coding style
+
+One super
+~~~~~~~~~
+
+Avoid having more then one super class. Inherit from one super class and multiple interfaces (abstract class) for having multiple inheritance.
+
+Data members
+~~~~~~~~~~~~
+
+Prefix all protected and private data members with underscore (i.e., _member_name).
+
+Using public data members is allowed only as an exception. Use getters and setters instead.
+
+Object reference
+~~~~~~~~~~~~~~~~
+
+For code clarity use object reference (i.e., Type& var) in places where it is not allow to have null pointer and is not permitted to release the object.
+
+Templates
+~~~~~~~~~
+
+The use of c++ templates is limited to  simple containers.
+
+'*' and '&'
+~~~~~~~~~~~
+
+'\*' and '&' , should be directly connected with the *type names*.
+
+Example:
+
+[source,c]
+void function(int* i, int& n);
+
+Class indentation
+~~~~~~~~~~~~~~~~~
+
+[source,c]
+----
+class ClassName: public SuperClass, public FirstInterface,
+                 public SecondInterface {
+public:
+    ClassName();
+    virtual ~ClassName();
+
+    type public_function_1(type var);
+    type public_function_2();
+    ...
+
+protected:
+    type protected_function_1(type var);
+    type protected_function_2();
+    ...
+
+private:
+    type private_function_1(type var);
+    type private_function_2();
+    ...
+
+public:
+    type public_member_1;
+    type public_member_2;
+    ...
+
+protected:
+    type _protected_member_1;
+    type _protected_member_2;
+    ...
+
+private:
+    type _private_member_1;
+    type _private_member_2;
+    ...
+};
+----
+
+Constructor indentation
+~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,c]
+----
+ClassName::ClassName(type1 arg1, type2 arg2,type3 arg3,
+                     type4 arg4)
+    : SuperClass(arg1, arg2)
+    , _member_1 (arg3)
+    , _member_2 (arg4)
+    ...
+{
+    ...
+}
+----
+
+bool
+~~~~
+
+Use built-in bool `true` and `false` instead of `TRUE` and `FALSE`.
+
+Operator overloading
+~~~~~~~~~~~~~~~~~~~~
+
+Avoid using operator overloading. It is only allowed as an exception.
+
+AutoRef and AutoPtr
+~~~~~~~~~~~~~~~~~~~
+
+Use `AutoRef` and `AutoPtr` style object for automatic object release. Using those objects simplify function cleanups and exception handling.
+
+Spice client
+------------
+
+#ifdef PLATFORM
+~~~~~~~~~~~~~~~
+
+Use #ifdef <platform> only in cases of different logic that depends on platform. In all other case add common interface (e.g., in platform.h) and keep specific platform implementation in platform directory (e.g.,windows).
+
+Use standard macros
+~~~~~~~~~~~~~~~~~~~
+ LOG_INFO
+ LOG_WARN
+ LOG_ERROR
+ ASSERT
+ PANIC
+ DBG
+ THROW
+ THROW_ERR
