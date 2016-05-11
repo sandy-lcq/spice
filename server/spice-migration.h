@@ -56,6 +56,6 @@ int spice_server_migrate_connect(SpiceServer *s, const char* dest,
 int spice_server_migrate_start(SpiceServer *s);
 int spice_server_migrate_end(SpiceServer *s, int completed);
 
-void spice_server_set_seamless_migration(SpiceServer *s, int enable) G_GNUC_DEPRECATED;
+void spice_server_set_seamless_migration(SpiceServer *s, int enable);
 
 #endif /* SPICE_MIGRATION_H_ */
