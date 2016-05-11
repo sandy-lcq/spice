@@ -59,10 +59,10 @@ Static storage initialization
 
 To improve code readability, explicitly initialize variables that depend on default initialization with zero/null.
 
-Fixme and todo
+FIXME and TODO
 --------------
 
-Comments that are prefixed with `fixme` describe a bug that need to be fixed. Generally, it is not allowed to commit new code having `fixme` comment. Committing  `fixme` is allowed only for existing bugs. Comments that are prefixed with `todo` describe further features, optimization or code improvements, and they are allowed to be committed along with the relevant code.
+Comments that are prefixed with `FIXME` describe a bug that need to be fixed. Generally, it is not allowed to commit new code having `FIXME` comment. Committing  `FIXME` is allowed only for existing bugs. Comments that are prefixed with `TODO` describe further features, optimization or code improvements, and they are allowed to be committed along with the relevant code.
 
 ASSERT
 ------
