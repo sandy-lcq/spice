@@ -80,7 +80,7 @@ Use const keyword when applicable to improve code reliability and celerity.
 goto
 ----
 
-Using goto is allowed in c code for error handling. In any other case it will be used only as a special exception.
+Using goto is allowed in C code for error handling. In any other case it will be used only as a special exception.
 
 Defining Constant values
 ------------------------

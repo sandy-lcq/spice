@@ -236,7 +236,7 @@ AC_MSG_NOTICE([
         ==============
 
         prefix:                   ${prefix}
-        c compiler:               ${CC}
+        C compiler:               ${CC}
 
         LZ4 support:              ${enable_lz4}
         Smartcard:                ${have_smartcard}
