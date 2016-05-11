@@ -214,12 +214,12 @@ if (long_name && very_long_name && very_long ||
                                                var_name) {
 ----
 +
-or indent using two tabs
+or indent under the round bracket using spaces
 +
 [source,c]
 ----
 if (long_name && very_long_name && long_name ||
-        var_name) {
+    var_name) {
 ----
 +
 Break function arguments list in long condition statement according to <<function_indentation, Function Indentation>> section.
