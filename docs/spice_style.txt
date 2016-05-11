@@ -87,11 +87,6 @@ Defining Constant values
 
 Use defines for constant values for improving readability and ease of changes. Alternatively, use global `const` variables.
 
-void argument
--------------
-
-Don't add explicitly void argument in functions without arguments. (i.e., void function_name() is OK)
-
 Short functions
 ---------------
 
