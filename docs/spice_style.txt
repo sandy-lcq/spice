@@ -12,7 +12,7 @@ Source Files
 Names
 ~~~~~
 
-Use lower case and separate words using underscore (e.g., file_name.c, header.h).
+Use lower case and separate words using dashes (e.g., file-name.c, header.h).
 
 Use standard file extension for C source and header files.
 
