@@ -307,3 +307,36 @@ char *array[] = {
     "item_2",
     "item_3",
 };
+
+Header inclusion
+----------------
+
+Headers should be included in this order
+
+[source,c]
+----
+#include <system_headers.h>
+#include <no_spice_no_system_libraries.h>
+#include <spice_protocol.h>
+#include <spice_common.h>
+
+#include "spice_server.h"
+----
+
+(note the empty line between no spice-server and spice-server headers)
+
+Also in source (no header) files you must include `config.h` at the beginning so should start (beside comments and copyright) with
+
+[source,c]
+----
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <system_headers.h>
+#include <no_spice_no_system_libraries.h>
+#include <spice_protocol.h>
+#include <spice_common.h>
+
+#include "spice_server.h"
+----
