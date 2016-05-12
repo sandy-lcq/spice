@@ -40,11 +40,6 @@ void                 cursor_channel_connect     (CursorChannel *cursor, RedClien
                                                  uint32_t *common_caps, int num_common_caps,
                                                  uint32_t *caps, int num_caps);
 
-CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
-                                               RedClient *client, RedsStream *stream,
-                                               int mig_target,
-                                               uint32_t *common_caps, int num_common_caps,
-                                               uint32_t *caps, int num_caps);
 void                 cursor_channel_client_migrate(CursorChannelClient* client);
 
 #endif /* CURSOR_CHANNEL_H_ */

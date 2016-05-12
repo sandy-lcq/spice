@@ -373,10 +373,12 @@ void cursor_channel_client_migrate(CursorChannelClient* client)
     red_channel_client_default_migrate(rcc);
 }
 
-CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient *client, RedsStream *stream,
-                                               int mig_target,
-                                               uint32_t *common_caps, int num_common_caps,
-                                               uint32_t *caps, int num_caps)
+static CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
+                                                      RedClient *client,
+                                                      RedsStream *stream,
+                                                      int mig_target,
+                                                      uint32_t *common_caps, int num_common_caps,
+                                                      uint32_t *caps, int num_caps)
 {
     spice_return_val_if_fail(cursor, NULL);
     spice_return_val_if_fail(client, NULL);
