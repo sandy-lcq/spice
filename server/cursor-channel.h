@@ -34,6 +34,11 @@ void                 cursor_channel_reset       (CursorChannel *cursor);
 void                 cursor_channel_init        (CursorChannel *cursor, CursorChannelClient* client);
 void                 cursor_channel_process_cmd (CursorChannel *cursor, RedCursorCmd *cursor_cmd);
 void                 cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32_t mode);
+void                 cursor_channel_connect     (CursorChannel *cursor, RedClient *client, 
+                                                 RedsStream *stream,
+                                                 int migrate,
+                                                 uint32_t *common_caps, int num_common_caps,
+                                                 uint32_t *caps, int num_caps);
 
 CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
                                                RedClient *client, RedsStream *stream,

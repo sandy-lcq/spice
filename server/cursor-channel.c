@@ -492,3 +492,26 @@ void cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32_t mode)
 
     cursor->mouse_mode = mode;
 }
+
+void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream *stream,
+                            int migrate,
+                            uint32_t *common_caps, int num_common_caps,
+                            uint32_t *caps, int num_caps)
+{
+    CursorChannelClient *ccc;
+
+    spice_return_if_fail(cursor != NULL);
+
+    spice_info("add cursor channel client");
+    ccc = cursor_channel_client_new(cursor, client, stream,
+                                    migrate,
+                                    common_caps, num_common_caps,
+                                    caps, num_caps);
+    spice_return_if_fail(ccc != NULL);
+
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
+    red_channel_client_ack_zero_messages_window(rcc);
+    red_channel_client_push_set_ack(rcc);
+
+    cursor_channel_init(cursor, ccc);
+}
