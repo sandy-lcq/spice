@@ -20,10 +20,8 @@
 #include "red-channel.h"
 #include "red-pipe-item.h"
 
-RedPipeItem *red_pipe_item_ref(gpointer object)
+RedPipeItem *red_pipe_item_ref(RedPipeItem *item)
 {
-    RedPipeItem *item = object;
-
     g_return_val_if_fail(item->refcount > 0, NULL);
 
     g_atomic_int_inc(&item->refcount);

@@ -145,10 +145,10 @@ static void spicevmc_chardev_send_msg_to_client(RedPipeItem *msg,
                                                 void *opaque)
 {
     SpiceVmcState *state = opaque;
-    RedVmcPipeItem *vmc_msg = (RedVmcPipeItem *)msg;
+    RedVmcPipeItem *vmc_msg = SPICE_CONTAINEROF(msg, RedVmcPipeItem, base);
 
     spice_assert(state->rcc->client == client);
-    red_pipe_item_ref(vmc_msg);
+    red_pipe_item_ref(msg);
     red_channel_client_pipe_add_push(state->rcc, (RedPipeItem *)vmc_msg);
 }
 

@@ -910,7 +910,7 @@ static void vdi_port_send_msg_to_client(RedPipeItem *msg,
 {
     RedVDIReadBuf *agent_data_buf = (RedVDIReadBuf *)msg;
 
-    red_pipe_item_ref(agent_data_buf);
+    red_pipe_item_ref(msg);
     main_channel_client_push_agent_data(red_client_get_main(client),
                                         agent_data_buf->data,
                                         agent_data_buf->len,
