@@ -359,11 +359,6 @@ static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *it
     cursor_pipe_item_ref(cursor_pipe_item);
 }
 
-static void cursor_channel_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
-{
-    red_pipe_item_unref(item);
-}
-
 CursorChannel* cursor_channel_new(RedWorker *worker)
 {
     CursorChannel *cursor_channel;
@@ -372,7 +367,6 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
         .on_disconnect =  cursor_channel_client_on_disconnect,
         .send_item = cursor_channel_send_item,
         .hold_item = cursor_channel_hold_pipe_item,
-        .release_item = cursor_channel_release_item
     };
 
     spice_info("create cursor channel");

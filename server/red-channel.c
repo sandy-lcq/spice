@@ -1016,6 +1016,11 @@ void red_channel_client_default_migrate(RedChannelClient *rcc)
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MIGRATE);
 }
 
+static void red_channel_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
+{
+    red_pipe_item_unref(item);
+}
+
 RedChannel *red_channel_create(int size,
                                RedsState *reds,
                                const SpiceCoreInterfaceInternal *core,
@@ -1030,7 +1035,7 @@ RedChannel *red_channel_create(int size,
 
     spice_assert(size >= sizeof(*channel));
     spice_assert(channel_cbs->config_socket && channel_cbs->on_disconnect && handle_message &&
-           channel_cbs->alloc_recv_buf && channel_cbs->release_item);
+           channel_cbs->alloc_recv_buf);
     spice_assert(channel_cbs->handle_migrate_data ||
                  !(migration_flags & SPICE_MIGRATE_NEED_DATA_TRANSFER));
     channel = spice_malloc0(size);
@@ -1040,6 +1045,9 @@ RedChannel *red_channel_create(int size,
     channel->handle_acks = handle_acks;
     channel->migration_flags = migration_flags;
     memcpy(&channel->channel_cbs, channel_cbs, sizeof(ChannelCbs));
+    if (!channel->channel_cbs.release_item) {
+        channel->channel_cbs.release_item = red_channel_release_item;
+    }
 
     channel->reds = reds;
     channel->core = core;

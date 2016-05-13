@@ -504,12 +504,6 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
     red_channel_client_begin_send_message(rcc);
 }
 
-static void smartcard_channel_release_pipe_item(RedChannelClient *rcc,
-                                      RedPipeItem *item, int item_pushed)
-{
-    red_pipe_item_unref(item);
-}
-
 static void smartcard_channel_on_disconnect(RedChannelClient *rcc)
 {
     SmartCardChannelClient *scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
@@ -792,7 +786,6 @@ static void smartcard_init(RedsState *reds)
     channel_cbs.on_disconnect = smartcard_channel_on_disconnect;
     channel_cbs.send_item = smartcard_channel_send_item;
     channel_cbs.hold_item = smartcard_channel_hold_pipe_item;
-    channel_cbs.release_item = smartcard_channel_release_pipe_item;
     channel_cbs.alloc_recv_buf = smartcard_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = smartcard_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_flush_mark = smartcard_channel_client_handle_migrate_flush_mark;

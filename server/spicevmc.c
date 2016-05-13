@@ -437,13 +437,6 @@ static void spicevmc_red_channel_send_item(RedChannelClient *rcc,
     red_channel_client_begin_send_message(rcc);
 }
 
-static void spicevmc_red_channel_release_pipe_item(RedChannelClient *rcc,
-                                                   RedPipeItem *item,
-                                                   int item_pushed)
-{
-    red_pipe_item_unref(item);
-}
-
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
     RedsStream *stream, int migration, int num_common_caps,
     uint32_t *common_caps, int num_caps, uint32_t *caps)
@@ -505,7 +498,6 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
     channel_cbs.on_disconnect = spicevmc_red_channel_client_on_disconnect;
     channel_cbs.send_item = spicevmc_red_channel_send_item;
     channel_cbs.hold_item = spicevmc_red_channel_hold_pipe_item;
-    channel_cbs.release_item = spicevmc_red_channel_release_pipe_item;
     channel_cbs.alloc_recv_buf = spicevmc_red_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = spicevmc_red_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_flush_mark = spicevmc_channel_client_handle_migrate_flush_mark;

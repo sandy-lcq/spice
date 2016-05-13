@@ -1946,11 +1946,6 @@ static void hold_item(RedChannelClient *rcc, RedPipeItem *item)
     }
 }
 
-static void release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
-{
-    red_pipe_item_unref(item);
-}
-
 static int handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
@@ -1992,7 +1987,6 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
         .on_disconnect = on_disconnect,
         .send_item = send_item,
         .hold_item = hold_item,
-        .release_item = release_item,
         .handle_migrate_flush_mark = handle_migrate_flush_mark,
         .handle_migrate_data = handle_migrate_data,
         .handle_migrate_data_get_serial = handle_migrate_data_get_serial
