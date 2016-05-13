@@ -31,6 +31,8 @@
 #define CURSOR_CACHE_HASH_MASK (CURSOR_CACHE_HASH_SIZE - 1)
 #define CURSOR_CACHE_HASH_KEY(id) ((id) & CURSOR_CACHE_HASH_MASK)
 
+typedef struct CursorChannelClient CursorChannelClient;
+
 enum {
     RED_PIPE_ITEM_TYPE_CURSOR = RED_PIPE_ITEM_TYPE_COMMON_LAST,
     RED_PIPE_ITEM_TYPE_CURSOR_INIT,
@@ -362,9 +364,9 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
     return cursor_channel;
 }
 
-void cursor_channel_client_migrate(CursorChannelClient* client)
+void cursor_channel_client_migrate(RedChannelClient *rcc)
 {
-    RedChannelClient *rcc;
+    CursorChannelClient* client = (CursorChannelClient*)rcc;
 
     spice_return_if_fail(client);
     rcc = RED_CHANNEL_CLIENT(client);
@@ -471,7 +473,7 @@ void cursor_channel_reset(CursorChannel *cursor)
     }
 }
 
-void cursor_channel_init(CursorChannel *cursor, CursorChannelClient *client)
+static void cursor_channel_init_client(CursorChannel *cursor, CursorChannelClient *client)
 {
     spice_return_if_fail(cursor);
 
@@ -486,6 +488,11 @@ void cursor_channel_init(CursorChannel *cursor, CursorChannelClient *client)
                                          RED_PIPE_ITEM_TYPE_CURSOR_INIT);
     else
         red_channel_pipes_add_type(RED_CHANNEL(cursor), RED_PIPE_ITEM_TYPE_CURSOR_INIT);
+}
+
+void cursor_channel_init(CursorChannel *cursor)
+{
+    cursor_channel_init_client(cursor, NULL);
 }
 
 void cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32_t mode)
@@ -515,5 +522,5 @@ void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream
     red_channel_client_ack_zero_messages_window(rcc);
     red_channel_client_push_set_ack(rcc);
 
-    cursor_channel_init(cursor, ccc);
+    cursor_channel_init_client(cursor, ccc);
 }

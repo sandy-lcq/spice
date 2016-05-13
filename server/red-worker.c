@@ -687,7 +687,7 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
         red_channel_push(&worker->display_channel->common.base);
     }
 
-    cursor_channel_init(worker->cursor_channel, NULL);
+    cursor_channel_init(worker->cursor_channel);
 }
 
 static void handle_dev_create_primary_surface(void *opaque, void *payload)
@@ -1000,7 +1000,7 @@ static void handle_dev_cursor_migrate(void *opaque, void *payload)
     RedChannelClient *rcc = msg->rcc;
 
     spice_info("migrate cursor client");
-    cursor_channel_client_migrate(CURSOR_CHANNEL_CLIENT(rcc));
+    cursor_channel_client_migrate(rcc);
 }
 
 static void handle_dev_set_compression(void *opaque, void *payload)
