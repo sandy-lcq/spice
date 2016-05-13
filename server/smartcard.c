@@ -507,11 +507,7 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
 static void smartcard_channel_release_pipe_item(RedChannelClient *rcc,
                                       RedPipeItem *item, int item_pushed)
 {
-    if (item->type == RED_PIPE_ITEM_TYPE_SMARTCARD_DATA) {
-        red_pipe_item_unref(item);
-    } else {
-        free(item);
-    }
+    red_pipe_item_unref(item);
 }
 
 static void smartcard_channel_on_disconnect(RedChannelClient *rcc)
