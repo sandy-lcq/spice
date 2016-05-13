@@ -54,9 +54,7 @@ void inputs_channel_client_send_migrate_data(RedChannelClient *rcc,
                                              RedPipeItem *item)
 {
     InputsChannelClient *icc = SPICE_CONTAINEROF(rcc, InputsChannelClient, base);
-    InputsChannel *inputs = (InputsChannel*)rcc->channel;
 
-    inputs_channel_set_src_during_migrate(inputs, FALSE);
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
 
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_INPUTS_MAGIC);

@@ -261,6 +261,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
             red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_MOUSE_MOTION_ACK, base);
             break;
         case RED_PIPE_ITEM_MIGRATE_DATA:
+            ((InputsChannel*)rcc->channel)->src_during_migrate = FALSE;
             inputs_channel_client_send_migrate_data(rcc, m, base);
             break;
         default:
@@ -672,10 +673,4 @@ void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *ta
 gboolean inputs_channel_is_src_during_migrate(InputsChannel *inputs)
 {
     return inputs->src_during_migrate;
-}
-
-void inputs_channel_set_src_during_migrate(InputsChannel *inputs,
-                                           gboolean value)
-{
-    inputs->src_during_migrate = value;
 }

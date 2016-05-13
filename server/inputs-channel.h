@@ -41,6 +41,5 @@ void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *ta
 RedsState* spice_tablet_state_get_server(SpiceTabletState *dev);
 RedsState* spice_kbd_state_get_server(SpiceKbdState *dev);
 gboolean inputs_channel_is_src_during_migrate(InputsChannel *inputs);
-void inputs_channel_set_src_during_migrate(InputsChannel *inputs, gboolean value);
 
 #endif
