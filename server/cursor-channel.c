@@ -81,7 +81,7 @@ struct CursorChannelClient {
 #include "cache-item.tmpl.c"
 #undef CLIENT_CURSOR_CACHE
 
-static void cursor_pipe_item_free(RedCursorPipeItem *pipe_item);
+static red_pipe_item_free_t cursor_pipe_item_free;
 
 static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd)
 {
@@ -138,7 +138,7 @@ static RedPipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int 
     RedCursorPipeItem *item = spice_malloc0(sizeof(RedCursorPipeItem));
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_CURSOR,
-                            (GDestroyNotify)cursor_pipe_item_free);
+                            cursor_pipe_item_free);
     item->cursor_item = data;
     item->cursor_item->refs++;
     return &item->base;
@@ -204,9 +204,11 @@ void cursor_channel_disconnect(CursorChannel *cursor_channel)
 }
 
 
-static void cursor_pipe_item_free(RedCursorPipeItem *pipe_item)
+static void cursor_pipe_item_free(RedPipeItem *base)
 {
-    spice_return_if_fail(pipe_item);
+    spice_return_if_fail(base);
+
+    RedCursorPipeItem *pipe_item = SPICE_CONTAINEROF(base, RedCursorPipeItem, base);
 
     spice_assert(!red_pipe_item_is_linked(&pipe_item->base));
 

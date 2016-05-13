@@ -76,7 +76,7 @@ static RedPipeItem *stream_create_destroy_item_new(StreamAgent *agent, gint type
     StreamCreateDestroyItem *item = spice_new0(StreamCreateDestroyItem, 1);
 
     red_pipe_item_init_full(&item->base, type,
-                            (GDestroyNotify)stream_create_destroy_item_release);
+                            stream_create_destroy_item_release);
     agent->stream->refs++;
     item->agent = agent;
     return &item->base;
@@ -161,9 +161,10 @@ void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
     stream_unref(display, agent->stream);
 }
 
-void red_stream_clip_item_free(RedStreamClipItem *item)
+void red_stream_clip_item_free(RedPipeItem *base)
 {
-    g_return_if_fail(item != NULL);
+    g_return_if_fail(base != NULL);
+    RedStreamClipItem *item = SPICE_CONTAINEROF(base, RedStreamClipItem, base);
     DisplayChannel *display = DCC_TO_DC(item->stream_agent->dcc);
 
     g_return_if_fail(item->base.refcount == 0);
@@ -177,7 +178,7 @@ RedStreamClipItem *red_stream_clip_item_new(StreamAgent *agent)
 {
     RedStreamClipItem *item = spice_new(RedStreamClipItem, 1);
     red_pipe_item_init_full((RedPipeItem *)item, RED_PIPE_ITEM_TYPE_STREAM_CLIP,
-                            (GDestroyNotify)red_stream_clip_item_free);
+                            red_stream_clip_item_free);
 
     item->stream_agent = agent;
     agent->stream->refs++;
@@ -785,8 +786,10 @@ void stream_agent_stop(StreamAgent *agent)
     }
 }
 
-static void red_upgrade_item_free(RedUpgradeItem *item)
+static void red_upgrade_item_free(RedPipeItem *base)
 {
+    RedUpgradeItem *item = SPICE_CONTAINEROF(base, RedUpgradeItem, base);
+
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->base.refcount == 0);
 
@@ -836,7 +839,7 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
         rcc = RED_CHANNEL_CLIENT(dcc);
         upgrade_item = spice_new(RedUpgradeItem, 1);
         red_pipe_item_init_full(&upgrade_item->base, RED_PIPE_ITEM_TYPE_UPGRADE,
-                                (GDestroyNotify)red_upgrade_item_free);
+                                red_upgrade_item_free);
         upgrade_item->drawable = stream->current;
         upgrade_item->drawable->refs++;
         n_rects = pixman_region32_n_rects(&upgrade_item->drawable->tree_item.base.rgn);

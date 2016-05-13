@@ -306,7 +306,7 @@ static RedDrawablePipeItem *red_drawable_pipe_item_new(DisplayChannelClient *dcc
     ring_item_init(&dpi->base);
     ring_add(&drawable->pipes, &dpi->base);
     red_pipe_item_init_full(&dpi->dpi_pipe_item, RED_PIPE_ITEM_TYPE_DRAW,
-                            (GDestroyNotify)red_drawable_pipe_item_free);
+                            red_drawable_pipe_item_free);
     drawable->refs++;
     return dpi;
 }
@@ -517,8 +517,10 @@ void dcc_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), (RedPipeItem *)item);
 }
 
-static void red_monitors_config_item_free(RedMonitorsConfigItem *item)
+static void red_monitors_config_item_free(RedPipeItem *base)
 {
+    RedMonitorsConfigItem *item = SPICE_CONTAINEROF(base, RedMonitorsConfigItem, pipe_item);
+
     monitors_config_unref(item->monitors_config);
     free(item);
 }
@@ -532,7 +534,7 @@ static RedMonitorsConfigItem *red_monitors_config_item_new(RedChannel* channel,
     mci->monitors_config = monitors_config;
 
     red_pipe_item_init_full(&mci->pipe_item, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
-                            (GDestroyNotify)red_monitors_config_item_free);
+                            red_monitors_config_item_free);
     return mci;
 }
 

@@ -303,7 +303,7 @@ static uint32_t reds_qxl_ram_size(RedsState *reds);
 static int calc_compression_level(RedsState *reds);
 
 static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev);
-static void vdi_port_read_buf_free(RedVDIReadBuf *buf);
+static red_pipe_item_free_t vdi_port_read_buf_free;
 
 static ChannelSecurityOptions *reds_find_channel_security(RedsState *reds, int id)
 {
@@ -790,7 +790,7 @@ static void vdi_read_buf_init(RedVDIReadBuf *buf)
      * from the base class and are not going to use the type
      */
     red_pipe_item_init_full(&buf->parent, -1,
-                            (GDestroyNotify)vdi_port_read_buf_free);
+                            vdi_port_read_buf_free);
 }
 
 static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
@@ -811,8 +811,10 @@ static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
     return buf;
 }
 
-static void vdi_port_read_buf_free(RedVDIReadBuf *buf)
+static void vdi_port_read_buf_free(RedPipeItem *base)
 {
+    RedVDIReadBuf *buf = SPICE_CONTAINEROF(base, RedVDIReadBuf, parent);
+
     g_warn_if_fail(buf->parent.refcount == 0);
     ring_add(&buf->dev->priv->read_bufs, (RingItem *)buf);
 

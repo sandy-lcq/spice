@@ -537,8 +537,9 @@ static void smartcard_push_error(RedChannelClient *rcc, uint32_t reader_id, VSCE
     smartcard_channel_client_pipe_add_push(rcc, &error_item->base);
 }
 
-static void smartcard_free_vsc_msg_item(RedMsgItem *item)
+static void smartcard_free_vsc_msg_item(RedPipeItem *base)
 {
+    RedMsgItem *item = SPICE_CONTAINEROF(base, RedMsgItem, base);
     free(item->vheader);
     free(item);
 }
@@ -549,7 +550,7 @@ static RedMsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc,
     RedMsgItem *msg_item = spice_new0(RedMsgItem, 1);
 
     red_pipe_item_init_full(&msg_item->base, RED_PIPE_ITEM_TYPE_SMARTCARD_DATA,
-                            (GDestroyNotify)smartcard_free_vsc_msg_item);
+                            smartcard_free_vsc_msg_item);
     msg_item->vheader = vheader;
     return msg_item;
 }

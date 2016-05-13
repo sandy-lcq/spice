@@ -109,8 +109,9 @@ static const uint8_t zero_page[ZERO_BUF_SIZE] = {0};
 
 static int main_channel_client_push_ping(MainChannelClient *mcc, int size);
 
-static void main_notify_item_free(RedNotifyPipeItem *data)
+static void main_notify_item_free(RedPipeItem *base)
 {
+    RedNotifyPipeItem *data = SPICE_CONTAINEROF(base, RedNotifyPipeItem, base);
     free(data->msg);
     free(data);
 }
@@ -121,7 +122,7 @@ static RedPipeItem *main_notify_item_new(void *data, int num)
     const char *msg = data;
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NOTIFY,
-                            (GDestroyNotify)main_notify_item_free);
+                            main_notify_item_free);
     item->msg = spice_strdup(msg);
     return &item->base;
 }
@@ -181,8 +182,9 @@ void main_channel_client_push_agent_tokens(MainChannelClient *mcc, uint32_t num_
     red_channel_client_pipe_add_push(&mcc->base, item);
 }
 
-static void main_agent_data_item_free(RedAgentDataPipeItem *item)
+static void main_agent_data_item_free(RedPipeItem *base)
 {
+    RedAgentDataPipeItem *item = SPICE_CONTAINEROF(base, RedAgentDataPipeItem, base);
     item->free_data(item->data, item->opaque);
     free(item);
 }
@@ -194,7 +196,7 @@ static RedPipeItem *main_agent_data_item_new(uint8_t* data, size_t len,
     RedAgentDataPipeItem *item = spice_malloc(sizeof(RedAgentDataPipeItem));
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA,
-                            (GDestroyNotify)main_agent_data_item_free);
+                            main_agent_data_item_free);
     item->data = data;
     item->len = len;
     item->free_data = free_data;

@@ -21,17 +21,21 @@
 #include <glib.h>
 #include <common/ring.h>
 
-typedef struct {
+struct RedPipeItem;
+
+typedef void red_pipe_item_free_t(struct RedPipeItem *item);
+
+typedef struct RedPipeItem {
     RingItem link;
     int type;
 
     /* private */
     int refcount;
 
-    GDestroyNotify free_func;
+    red_pipe_item_free_t *free_func;
 } RedPipeItem;
 
-void red_pipe_item_init_full(RedPipeItem *item, int type, GDestroyNotify free_func);
+void red_pipe_item_init_full(RedPipeItem *item, int type, red_pipe_item_free_t free_func);
 RedPipeItem *red_pipe_item_ref(gpointer item);
 void red_pipe_item_unref(gpointer item);
 

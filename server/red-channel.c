@@ -2365,8 +2365,10 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
     }
 }
 
-static void marker_pipe_item_free(MarkerPipeItem *item)
+static void marker_pipe_item_free(RedPipeItem *base)
 {
+    MarkerPipeItem *item = SPICE_CONTAINEROF(base, MarkerPipeItem, base);
+
     if (item->item_in_pipe) {
         *item->item_in_pipe = FALSE;
     }
@@ -2392,7 +2394,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     MarkerPipeItem *mark_item = spice_new0(MarkerPipeItem, 1);
 
     red_pipe_item_init_full(&mark_item->base, RED_PIPE_ITEM_TYPE_MARKER,
-                            (GDestroyNotify)marker_pipe_item_free);
+                            marker_pipe_item_free);
     item_in_pipe = TRUE;
     mark_item->item_in_pipe = &item_in_pipe;
     red_channel_client_pipe_add_after(rcc, &mark_item->base, item);
