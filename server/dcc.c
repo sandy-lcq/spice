@@ -335,6 +335,28 @@ void dcc_add_drawable_after(DisplayChannelClient *dcc, Drawable *drawable, RedPi
     red_channel_client_pipe_add_after(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item, pos);
 }
 
+static void dcc_release_stream_create(RedPipeItem *item)
+{
+    StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, create_item);
+    DisplayChannel *display = (DisplayChannel*)agent->dcc->common.base.channel;
+    stream_agent_unref(display, agent);
+
+    /* this RedPipeItem is quite weird, basically it's always present */
+    red_pipe_item_init_full(&agent->create_item, RED_PIPE_ITEM_TYPE_STREAM_CREATE,
+                            (GDestroyNotify)dcc_release_stream_create);
+}
+
+static void dcc_release_stream_destroy(RedPipeItem *item)
+{
+    StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, destroy_item);
+    DisplayChannel *display = (DisplayChannel*)agent->dcc->common.base.channel;
+    stream_agent_unref(display, agent);
+
+    /* this RedPipeItem is quite weird, basically it's always present */
+    red_pipe_item_init_full(&agent->destroy_item, RED_PIPE_ITEM_TYPE_STREAM_DESTROY,
+                            (GDestroyNotify)dcc_release_stream_destroy);
+}
+
 static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 {
     int i;
@@ -345,8 +367,10 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
         agent->stream = &display->streams_buf[i];
         region_init(&agent->vis_region);
         region_init(&agent->clip);
-        red_pipe_item_init(&agent->create_item, RED_PIPE_ITEM_TYPE_STREAM_CREATE);
-        red_pipe_item_init(&agent->destroy_item, RED_PIPE_ITEM_TYPE_STREAM_DESTROY);
+        red_pipe_item_init_full(&agent->create_item, RED_PIPE_ITEM_TYPE_STREAM_CREATE,
+                                (GDestroyNotify)dcc_release_stream_create);
+        red_pipe_item_init_full(&agent->destroy_item, RED_PIPE_ITEM_TYPE_STREAM_DESTROY,
+                                (GDestroyNotify)dcc_release_stream_destroy);
     }
     dcc->use_video_encoder_rate_control =
         red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT);
@@ -1634,20 +1658,10 @@ static void release_item_after_push(RedPipeItem *item)
 // release
 static void release_item_before_push(DisplayChannelClient *dcc, RedPipeItem *item)
 {
-    DisplayChannel *display = DCC_TO_DC(dcc);
-
     spice_debug("item.type: %d", item->type);
     switch (item->type) {
-    case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
-        StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, create_item);
-        stream_agent_unref(display, agent);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
-        StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, destroy_item);
-        stream_agent_unref(display, agent);
-        break;
-    }
+    case RED_PIPE_ITEM_TYPE_STREAM_CREATE:
+    case RED_PIPE_ITEM_TYPE_STREAM_DESTROY:
     case RED_PIPE_ITEM_TYPE_DRAW:
     case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
     case RED_PIPE_ITEM_TYPE_UPGRADE:
