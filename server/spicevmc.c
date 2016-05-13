@@ -441,11 +441,7 @@ static void spicevmc_red_channel_release_pipe_item(RedChannelClient *rcc,
                                                    RedPipeItem *item,
                                                    int item_pushed)
 {
-    if (item->type == RED_PIPE_ITEM_TYPE_SPICEVMC_DATA) {
-        red_pipe_item_unref(item);
-    } else {
-        free(item);
-    }
+    red_pipe_item_unref(item);
 }
 
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
