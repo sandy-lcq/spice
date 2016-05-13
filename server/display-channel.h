@@ -241,8 +241,8 @@ static inline int get_stream_id(DisplayChannel *display, Stream *stream)
 }
 
 typedef struct RedSurfaceDestroyItem {
-    SpiceMsgSurfaceDestroy surface_destroy;
     RedPipeItem pipe_item;
+    SpiceMsgSurfaceDestroy surface_destroy;
 } RedSurfaceDestroyItem;
 
 typedef struct RedUpgradeItem {

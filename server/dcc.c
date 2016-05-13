@@ -1653,24 +1653,12 @@ static void release_item_before_push(DisplayChannelClient *dcc, RedPipeItem *ite
     case RED_PIPE_ITEM_TYPE_UPGRADE:
     case RED_PIPE_ITEM_TYPE_IMAGE:
     case RED_PIPE_ITEM_TYPE_MONITORS_CONFIG:
-        red_pipe_item_unref(item);
-        break;
-    case RED_PIPE_ITEM_TYPE_CREATE_SURFACE: {
-        RedSurfaceCreateItem *surface_create = SPICE_CONTAINEROF(item, RedSurfaceCreateItem,
-                                                                 pipe_item);
-        free(surface_create);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_DESTROY_SURFACE: {
-        RedSurfaceDestroyItem *surface_destroy = SPICE_CONTAINEROF(item, RedSurfaceDestroyItem,
-                                                                   pipe_item);
-        free(surface_destroy);
-        break;
-    }
+    case RED_PIPE_ITEM_TYPE_CREATE_SURFACE:
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
     case RED_PIPE_ITEM_TYPE_VERB:
     case RED_PIPE_ITEM_TYPE_MIGRATE_DATA:
     case RED_PIPE_ITEM_TYPE_PIXMAP_SYNC:
+    case RED_PIPE_ITEM_TYPE_DESTROY_SURFACE:
     case RED_PIPE_ITEM_TYPE_PIXMAP_RESET:
     case RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
     case RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT:

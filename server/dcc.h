@@ -122,8 +122,8 @@ struct DisplayChannelClient {
 #define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)
 
 typedef struct RedSurfaceCreateItem {
-    SpiceMsgSurfaceCreate surface_create;
     RedPipeItem pipe_item;
+    SpiceMsgSurfaceCreate surface_create;
 } RedSurfaceCreateItem;
 
 typedef struct RedGlScanoutUnixItem {
