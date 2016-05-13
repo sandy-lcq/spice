@@ -154,7 +154,6 @@ typedef struct RedDrawablePipeItem {
     RedPipeItem dpi_pipe_item; /* link for the client's pipe itself */
     Drawable *drawable;
     DisplayChannelClient *dcc;
-    uint8_t refs;
 } RedDrawablePipeItem;
 
 DisplayChannelClient*      dcc_new                                   (DisplayChannel *display,
