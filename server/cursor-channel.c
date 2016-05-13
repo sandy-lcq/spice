@@ -203,8 +203,7 @@ void cursor_channel_disconnect(CursorChannel *cursor_channel)
 }
 
 
-static void put_cursor_pipe_item(CursorChannelClient *ccc,
-                                 RedCursorPipeItem *pipe_item)
+static void put_cursor_pipe_item(RedCursorPipeItem *pipe_item)
 {
     spice_return_if_fail(pipe_item);
     spice_return_if_fail(pipe_item->refs > 0);
@@ -235,7 +234,7 @@ static void cursor_channel_client_release_item_before_push(CursorChannelClient *
     switch (item->type) {
     case RED_PIPE_ITEM_TYPE_CURSOR: {
         RedCursorPipeItem *cursor_pipe_item = SPICE_CONTAINEROF(item, RedCursorPipeItem, base);
-        put_cursor_pipe_item(ccc, cursor_pipe_item);
+        put_cursor_pipe_item(cursor_pipe_item);
         break;
     }
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
@@ -255,7 +254,7 @@ static void cursor_channel_client_release_item_after_push(CursorChannelClient *c
     switch (item->type) {
         case RED_PIPE_ITEM_TYPE_CURSOR: {
             RedCursorPipeItem *cursor_pipe_item = SPICE_CONTAINEROF(item, RedCursorPipeItem, base);
-            put_cursor_pipe_item(ccc, cursor_pipe_item);
+            put_cursor_pipe_item(cursor_pipe_item);
             break;
         }
         default:
