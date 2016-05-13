@@ -250,13 +250,20 @@ static RedPipeItem *main_agent_tokens_item_new(RedChannelClient *rcc, uint32_t n
     return &item->base;
 }
 
+static void main_agent_data_item_free(RedAgentDataPipeItem *item)
+{
+    item->free_data(item->data, item->opaque);
+    free(item);
+}
+
 static RedPipeItem *main_agent_data_item_new(RedChannelClient *rcc, uint8_t* data, size_t len,
                                              spice_marshaller_item_free_func free_data,
                                              void *opaque)
 {
     RedAgentDataPipeItem *item = spice_malloc(sizeof(RedAgentDataPipeItem));
 
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA);
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA,
+                            (GDestroyNotify)main_agent_data_item_free);
     item->data = data;
     item->len = len;
     item->free_data = free_data;
@@ -302,12 +309,19 @@ static RedPipeItem *main_uuid_item_new(MainChannelClient *mcc, const uint8_t uui
     return &item->base;
 }
 
+static void main_notify_item_free(RedNotifyPipeItem *data)
+{
+    free(data->msg);
+    free(data);
+}
+
 static RedPipeItem *main_notify_item_new(RedChannelClient *rcc, void *data, int num)
 {
     RedNotifyPipeItem *item = spice_malloc(sizeof(RedNotifyPipeItem));
     const char *msg = data;
 
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NOTIFY);
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NOTIFY,
+                            (GDestroyNotify)main_notify_item_free);
     item->msg = spice_strdup(msg);
     return &item->base;
 }
@@ -786,22 +800,7 @@ static void main_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
 static void main_channel_release_pipe_item(RedChannelClient *rcc,
     RedPipeItem *base, int item_pushed)
 {
-    switch (base->type) {
-        case RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA: {
-                RedAgentDataPipeItem *data = (RedAgentDataPipeItem *)base;
-
-                data->free_data(data->data, data->opaque);
-                break;
-        }
-        case RED_PIPE_ITEM_TYPE_MAIN_NOTIFY: {
-                RedNotifyPipeItem *data = (RedNotifyPipeItem *)base;
-                free(data->msg);
-                break;
-        }
-        default:
-            break;
-    }
-    free(base);
+    red_pipe_item_unref(base);
 }
 
 static void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
