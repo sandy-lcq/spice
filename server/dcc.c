@@ -1676,7 +1676,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, RedPipeItem *ite
     case RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT:
     case RED_PIPE_ITEM_TYPE_GL_SCANOUT:
     case RED_PIPE_ITEM_TYPE_GL_DRAW:
-        free(item);
+        red_pipe_item_unref(item);
         break;
     default:
         spice_critical("invalid item type");
