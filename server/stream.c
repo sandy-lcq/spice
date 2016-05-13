@@ -761,7 +761,7 @@ void stream_agent_stop(StreamAgent *agent)
 static void red_upgrade_item_free(RedUpgradeItem *item)
 {
     g_return_if_fail(item != NULL);
-    g_return_if_fail(item->base.refcount != 0);
+    g_return_if_fail(item->base.refcount == 0);
 
     drawable_unref(item->drawable);
     free(item->rects);
