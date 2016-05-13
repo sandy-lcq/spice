@@ -2455,7 +2455,7 @@ void dcc_send_item(DisplayChannelClient *dcc, RedPipeItem *pipe_item)
         spice_warn_if_reached();
     }
 
-    dcc_release_item(dcc, pipe_item, FALSE);
+    red_pipe_item_unref(pipe_item);
 
     // a message is pending
     if (red_channel_client_send_message_pending(rcc)) {

@@ -1948,10 +1948,7 @@ static void hold_item(RedChannelClient *rcc, RedPipeItem *item)
 
 static void release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
 {
-    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
-
-    spice_return_if_fail(item != NULL);
-    dcc_release_item(dcc, item, item_pushed);
+    red_pipe_item_unref(item);
 }
 
 static int handle_migrate_flush_mark(RedChannelClient *rcc)

@@ -1607,8 +1607,3 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     red_channel_client_ack_zero_messages_window(RED_CHANNEL_CLIENT(dcc));
     return TRUE;
 }
-
-void dcc_release_item(DisplayChannelClient *dcc, RedPipeItem *item, int item_pushed)
-{
-    red_pipe_item_unref(item);
-}
