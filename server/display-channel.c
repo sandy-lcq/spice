@@ -46,98 +46,65 @@ void display_channel_compress_stats_reset(DisplayChannel *display)
     stat_reset(&display->lz4_stat);
 }
 
+#define STAT_FMT "%s\t%8d\t%13.2f\t%12.2f\t%12.2f"
+
+#ifdef COMPRESS_STAT
+static void stat_print_one(const char *name, const stat_info_t *stat)
+{
+    spice_info(STAT_FMT, name, stat->count,
+               stat_byte_to_mega(stat->orig_size),
+               stat_byte_to_mega(stat->comp_size),
+               stat_cpu_time_to_sec(stat->total));
+}
+
+static void stat_sum(stat_info_t *total, const stat_info_t *stat)
+{
+    total->count += stat->count;
+    total->orig_size += stat->orig_size;
+    total->comp_size += stat->comp_size;
+    total->total += stat->total;
+}
+#endif
+
 void display_channel_compress_stats_print(const DisplayChannel *display_channel)
 {
     spice_return_if_fail(display_channel);
 
 #ifdef COMPRESS_STAT
-    uint64_t glz_enc_size;
+    /* sum all statistics */
+    stat_info_t total = {
+        .count = 0,
+        .orig_size = 0,
+        .comp_size = 0,
+        .total = 0
+    };
+    stat_sum(&total, &display_channel->off_stat);
+    stat_sum(&total, &display_channel->quic_stat);
+    stat_sum(&total, &display_channel->glz_stat);
+    stat_sum(&total, &display_channel->lz_stat);
+    stat_sum(&total, &display_channel->jpeg_stat);
+    stat_sum(&total, &display_channel->jpeg_alpha_stat);
+    stat_sum(&total, &display_channel->lz4_stat);
 
-    glz_enc_size = display_channel->enable_zlib_glz_wrap ?
-                       display_channel->zlib_glz_stat.comp_size :
-                       display_channel->glz_stat.comp_size;
+    /* fix for zlib glz */
+    total.total += display_channel->zlib_glz_stat.total;
+    if (display_channel->enable_zlib_glz_wrap) {
+        total.comp_size = total.comp_size - display_channel->glz_stat.comp_size +
+                          display_channel->zlib_glz_stat.comp_size;
+    }
 
     spice_info("==> Compression stats for display %u", display_channel->common.base.id);
     spice_info("Method   \t  count  \torig_size(MB)\tenc_size(MB)\tenc_time(s)");
-    spice_info("OFF     \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->off_stat.count,
-               stat_byte_to_mega(display_channel->off_stat.orig_size),
-               stat_byte_to_mega(display_channel->off_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->off_stat.total)
-               );
-    spice_info("QUIC     \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->quic_stat.count,
-               stat_byte_to_mega(display_channel->quic_stat.orig_size),
-               stat_byte_to_mega(display_channel->quic_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->quic_stat.total)
-               );
-    spice_info("GLZ      \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->glz_stat.count,
-               stat_byte_to_mega(display_channel->glz_stat.orig_size),
-               stat_byte_to_mega(display_channel->glz_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->glz_stat.total)
-               );
-    spice_info("ZLIB GLZ \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->zlib_glz_stat.count,
-               stat_byte_to_mega(display_channel->zlib_glz_stat.orig_size),
-               stat_byte_to_mega(display_channel->zlib_glz_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->zlib_glz_stat.total)
-               );
-    spice_info("LZ       \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->lz_stat.count,
-               stat_byte_to_mega(display_channel->lz_stat.orig_size),
-               stat_byte_to_mega(display_channel->lz_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->lz_stat.total)
-               );
-    spice_info("JPEG     \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->jpeg_stat.count,
-               stat_byte_to_mega(display_channel->jpeg_stat.orig_size),
-               stat_byte_to_mega(display_channel->jpeg_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->jpeg_stat.total)
-               );
-    spice_info("JPEG-RGBA\t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->jpeg_alpha_stat.count,
-               stat_byte_to_mega(display_channel->jpeg_alpha_stat.orig_size),
-               stat_byte_to_mega(display_channel->jpeg_alpha_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->jpeg_alpha_stat.total)
-               );
-    spice_info("LZ4      \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->lz4_stat.count,
-               stat_byte_to_mega(display_channel->lz4_stat.orig_size),
-               stat_byte_to_mega(display_channel->lz4_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->lz4_stat.total)
-               );
+    stat_print_one("OFF      ", &display_channel->off_stat);
+    stat_print_one("QUIC     ", &display_channel->quic_stat);
+    stat_print_one("GLZ      ", &display_channel->glz_stat);
+    stat_print_one("ZLIB GLZ ", &display_channel->zlib_glz_stat);
+    stat_print_one("LZ       ", &display_channel->lz_stat);
+    stat_print_one("JPEG     ", &display_channel->jpeg_stat);
+    stat_print_one("JPEG-RGBA", &display_channel->jpeg_alpha_stat);
+    stat_print_one("LZ4      ", &display_channel->lz4_stat);
     spice_info("-------------------------------------------------------------------");
-    spice_info("Total    \t%8d\t%13.2f\t%12.2f\t%12.2f",
-               display_channel->lz_stat.count + display_channel->glz_stat.count +
-                                                display_channel->off_stat.count +
-                                                display_channel->quic_stat.count +
-                                                display_channel->jpeg_stat.count +
-                                                display_channel->lz4_stat.count +
-                                                display_channel->jpeg_alpha_stat.count,
-               stat_byte_to_mega(display_channel->lz_stat.orig_size +
-                                 display_channel->glz_stat.orig_size +
-                                 display_channel->off_stat.orig_size +
-                                 display_channel->quic_stat.orig_size +
-                                 display_channel->jpeg_stat.orig_size +
-                                 display_channel->lz4_stat.orig_size +
-                                 display_channel->jpeg_alpha_stat.orig_size),
-               stat_byte_to_mega(display_channel->lz_stat.comp_size +
-                                 glz_enc_size +
-                                 display_channel->off_stat.comp_size +
-                                 display_channel->quic_stat.comp_size +
-                                 display_channel->jpeg_stat.comp_size +
-                                 display_channel->lz4_stat.comp_size +
-                                 display_channel->jpeg_alpha_stat.comp_size),
-               stat_cpu_time_to_sec(display_channel->lz_stat.total +
-                                    display_channel->glz_stat.total +
-                                    display_channel->zlib_glz_stat.total +
-                                    display_channel->off_stat.total +
-                                    display_channel->quic_stat.total +
-                                    display_channel->jpeg_stat.total +
-                                    display_channel->lz4_stat.total +
-                                    display_channel->jpeg_alpha_stat.total)
-               );
+    stat_print_one("Total    ", &total);
 #endif
 }
 
