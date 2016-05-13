@@ -288,7 +288,9 @@ void red_drawable_pipe_item_free(RedPipeItem *item)
     spice_assert(item->refcount == 0);
 
     spice_warn_if_fail(!ring_item_is_linked(&item->link));
-    spice_warn_if_fail(!ring_item_is_linked(&dpi->base));
+    if (ring_item_is_linked(&dpi->base)) {
+        ring_remove(&dpi->base);
+    }
     drawable_unref(dpi->drawable);
     free(dpi);
 }
@@ -1636,12 +1638,6 @@ static void release_item_before_push(DisplayChannelClient *dcc, RedPipeItem *ite
 
     spice_debug("item.type: %d", item->type);
     switch (item->type) {
-    case RED_PIPE_ITEM_TYPE_DRAW: {
-        RedDrawablePipeItem *dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, dpi_pipe_item);
-        ring_remove(&dpi->base);
-        red_pipe_item_unref(item);
-        break;
-    }
     case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
         StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, create_item);
         stream_agent_unref(display, agent);
@@ -1652,6 +1648,7 @@ static void release_item_before_push(DisplayChannelClient *dcc, RedPipeItem *ite
         stream_agent_unref(display, agent);
         break;
     }
+    case RED_PIPE_ITEM_TYPE_DRAW:
     case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
     case RED_PIPE_ITEM_TYPE_UPGRADE:
     case RED_PIPE_ITEM_TYPE_IMAGE:
