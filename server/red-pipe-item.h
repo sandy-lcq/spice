@@ -37,7 +37,7 @@ typedef struct RedPipeItem {
 
 void red_pipe_item_init_full(RedPipeItem *item, int type, red_pipe_item_free_t free_func);
 RedPipeItem *red_pipe_item_ref(RedPipeItem *item);
-void red_pipe_item_unref(gpointer item);
+void red_pipe_item_unref(RedPipeItem *item);
 
 static inline int red_pipe_item_is_linked(RedPipeItem *item)
 {

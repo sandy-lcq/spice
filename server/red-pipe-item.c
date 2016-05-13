@@ -29,10 +29,8 @@ RedPipeItem *red_pipe_item_ref(RedPipeItem *item)
     return item;
 }
 
-void red_pipe_item_unref(gpointer object)
+void red_pipe_item_unref(RedPipeItem *item)
 {
-    RedPipeItem *item = object;
-
     g_return_if_fail(item->refcount > 0);
 
     if (g_atomic_int_dec_and_test(&item->refcount)) {

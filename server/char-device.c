@@ -189,7 +189,7 @@ static void red_char_device_client_free(RedCharDevice *dev,
         dev_client->wait_for_tokens_timer = NULL;
     }
 
-    g_queue_free_full(dev_client->send_queue, red_pipe_item_unref);
+    g_queue_free_full(dev_client->send_queue, (GDestroyNotify)red_pipe_item_unref);
 
     /* remove write buffers that are associated with the client */
     spice_debug("write_queue_is_empty %d", ring_is_empty(&dev->priv->write_queue) && !dev->priv->cur_write_buf);

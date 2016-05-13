@@ -523,7 +523,7 @@ static void reds_reset_vdp(RedsState *reds)
     dev->priv->receive_len = sizeof(dev->priv->vdi_chunk_header);
     dev->priv->message_receive_len = 0;
     if (dev->priv->current_read_buf) {
-        red_pipe_item_unref(dev->priv->current_read_buf);
+        red_pipe_item_unref(&dev->priv->current_read_buf->parent);
         dev->priv->current_read_buf = NULL;
     }
     /* Reset read filter to start with clean state when the agent reconnects */
@@ -747,9 +747,7 @@ static void reds_agent_remove(RedsState *reds)
 
 static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 {
-    RedVDIReadBuf *buf = (RedVDIReadBuf *)opaque;
-
-    red_pipe_item_unref(buf);
+    red_pipe_item_unref((RedPipeItem *)opaque);
 }
 
 /* returns TRUE if the buffer can be forwarded */
@@ -895,7 +893,7 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *s
                 if (error) {
                     reds_agent_remove(reds);
                 }
-                red_pipe_item_unref(dispatch_buf);
+                red_pipe_item_unref(&dispatch_buf->parent);
             }
         }
         } /* END switch */
@@ -1273,7 +1271,7 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
             if (error) {
                reds_agent_remove(reds);
             }
-            red_pipe_item_unref(read_buf);
+            red_pipe_item_unref(&read_buf->parent);
         }
 
         spice_assert(agent_dev->priv->receive_len);
@@ -4353,7 +4351,7 @@ red_char_device_vdi_port_init(RedCharDeviceVDIPort *self)
         /* This ensures the newly created buffer is placed in the
          * RedCharDeviceVDIPort::read_bufs queue ready to be reused
          */
-        red_pipe_item_unref(buf);
+        red_pipe_item_unref(&buf->parent);
     }
 }
 
