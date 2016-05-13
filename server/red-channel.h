@@ -159,8 +159,6 @@ typedef void (*channel_disconnect_proc)(RedChannelClient *rcc);
 typedef int (*channel_configure_socket_proc)(RedChannelClient *rcc);
 typedef void (*channel_send_pipe_item_proc)(RedChannelClient *rcc, RedPipeItem *item);
 typedef void (*channel_hold_pipe_item_proc)(RedChannelClient *rcc, RedPipeItem *item);
-typedef void (*channel_release_pipe_item_proc)(RedChannelClient *rcc,
-                                               RedPipeItem *item, int item_pushed);
 typedef void (*channel_on_incoming_error_proc)(RedChannelClient *rcc);
 typedef void (*channel_on_outgoing_error_proc)(RedChannelClient *rcc);
 
@@ -188,7 +186,6 @@ typedef struct {
     channel_disconnect_proc on_disconnect;
     channel_send_pipe_item_proc send_item;
     channel_hold_pipe_item_proc hold_item;
-    channel_release_pipe_item_proc release_item;
     channel_alloc_msg_recv_buf_proc alloc_recv_buf;
     channel_release_msg_recv_buf_proc release_recv_buf;
     channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark;

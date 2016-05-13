@@ -583,16 +583,7 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
 
 static void red_channel_client_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
 {
-    switch (item->type) {
-        case RED_PIPE_ITEM_TYPE_SET_ACK:
-        case RED_PIPE_ITEM_TYPE_EMPTY_MSG:
-        case RED_PIPE_ITEM_TYPE_MIGRATE:
-        case RED_PIPE_ITEM_TYPE_PING:
-            free(item);
-            break;
-        default:
-            rcc->channel->channel_cbs.release_item(rcc, item, item_pushed);
-    }
+    red_pipe_item_unref(item);
 }
 
 static inline void red_channel_client_release_sent_item(RedChannelClient *rcc)
@@ -1016,11 +1007,6 @@ void red_channel_client_default_migrate(RedChannelClient *rcc)
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MIGRATE);
 }
 
-static void red_channel_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
-{
-    red_pipe_item_unref(item);
-}
-
 RedChannel *red_channel_create(int size,
                                RedsState *reds,
                                const SpiceCoreInterfaceInternal *core,
@@ -1045,9 +1031,6 @@ RedChannel *red_channel_create(int size,
     channel->handle_acks = handle_acks;
     channel->migration_flags = migration_flags;
     memcpy(&channel->channel_cbs, channel_cbs, sizeof(ChannelCbs));
-    if (!channel->channel_cbs.release_item) {
-        channel->channel_cbs.release_item = red_channel_release_item;
-    }
 
     channel->reds = reds;
     channel->core = core;
