@@ -1610,22 +1610,7 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
 
 static void release_item_after_push(RedPipeItem *item)
 {
-    switch (item->type) {
-    case RED_PIPE_ITEM_TYPE_DRAW:
-    case RED_PIPE_ITEM_TYPE_IMAGE:
-    case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
-    case RED_PIPE_ITEM_TYPE_MONITORS_CONFIG:
-    case RED_PIPE_ITEM_TYPE_UPGRADE:
-        red_pipe_item_unref(item);
-        break;
-    case RED_PIPE_ITEM_TYPE_GL_SCANOUT:
-    case RED_PIPE_ITEM_TYPE_GL_DRAW:
-    case RED_PIPE_ITEM_TYPE_VERB:
-        free(item);
-        break;
-    default:
-        spice_critical("invalid item type");
-    }
+    red_pipe_item_unref(item);
 }
 
 // TODO: share code between before/after_push since most of the items need the same
