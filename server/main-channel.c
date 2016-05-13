@@ -165,9 +165,6 @@ enum NetTestStage {
     NET_TEST_STAGE_COMPLETE,
 };
 
-static void main_channel_release_pipe_item(RedChannelClient *rcc,
-                                           RedPipeItem *base, int item_pushed);
-
 int main_channel_is_connected(MainChannel *main_chan)
 {
     return red_channel_is_connected(&main_chan->base);
@@ -726,7 +723,7 @@ static void main_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
         spice_printerr("Init msg for client %p was not sent yet "
                        "(client is probably during semi-seamless migration). Ignoring msg type %d",
                    rcc->client, base->type);
-        main_channel_release_pipe_item(rcc, base, FALSE);
+        red_pipe_item_unref(base);
         return;
     }
     switch (base->type) {
@@ -795,12 +792,6 @@ static void main_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
             break;
     };
     red_channel_client_begin_send_message(rcc);
-}
-
-static void main_channel_release_pipe_item(RedChannelClient *rcc,
-    RedPipeItem *base, int item_pushed)
-{
-    red_pipe_item_unref(base);
 }
 
 static void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
@@ -1164,7 +1155,6 @@ MainChannel* main_channel_new(RedsState *reds)
     channel_cbs.on_disconnect = main_channel_client_on_disconnect;
     channel_cbs.send_item = main_channel_send_item;
     channel_cbs.hold_item = main_channel_hold_pipe_item;
-    channel_cbs.release_item = main_channel_release_pipe_item;
     channel_cbs.alloc_recv_buf = main_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = main_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_flush_mark = main_channel_handle_migrate_flush_mark;
