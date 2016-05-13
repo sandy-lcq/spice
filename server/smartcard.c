@@ -541,7 +541,6 @@ static void smartcard_push_error(RedChannelClient *rcc, uint32_t reader_id, VSCE
 
     red_pipe_item_init(&error_item->base, RED_PIPE_ITEM_TYPE_ERROR);
 
-    error_item->base.type = RED_PIPE_ITEM_TYPE_ERROR;
     error_item->vheader.reader_id = reader_id;
     error_item->vheader.type = VSC_Error;
     error_item->vheader.length = sizeof(error_item->error);
