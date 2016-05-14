@@ -484,10 +484,9 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
                     dpi = SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item);
                     if (dpi && dcc == dpi->dcc) {
                         dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
-                        link = link->next;
-                        continue;
+                    } else {
+                        dcc_prepend_drawable(dcc, drawable);
                     }
-                    dcc_prepend_drawable(dcc, drawable);
                     link = link->next;
                 }
             }
