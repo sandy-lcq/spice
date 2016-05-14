@@ -481,7 +481,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             while (link) {
                 for (;;) {
                     if (!link) {
-                        goto out_loop;
+                        break;
                     }
                     dcc = link->data;
                     dpi = SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item);
@@ -494,7 +494,6 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
                     link = link->next;
                 }
             }
-out_loop:
             /* not sending other_drawable where possible */
             drawable_remove_from_pipes(other_drawable);
 
