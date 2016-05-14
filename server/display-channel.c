@@ -466,7 +466,6 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
         if (is_same_drawable(drawable, other_drawable)) {
 
             DisplayChannelClient *dcc;
-            RedDrawablePipeItem *dpi;
             RingItem *dpi_ring_item;
             GList *link;
 
@@ -480,8 +479,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             /* dpi contains a sublist of dcc's, ordered the same */
             while (link) {
                 dcc = link->data;
-                dpi = SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item);
-                if (dpi && dcc == dpi->dcc) {
+                if (dpi_ring_item && dcc == SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item)->dcc) {
                     dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
                 } else {
                     dcc_prepend_drawable(dcc, drawable);
