@@ -486,16 +486,15 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
                     }
                     dcc = link->data;
                     if (dpi && dcc == dpi->dcc) {
+                        if (dpi_ring_item) {
+                            dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
+                        }
+                        link = link->next;
                         break;
                     }
                     dcc_prepend_drawable(dcc, drawable);
                     link = link->next;
                 }
-
-                if (dpi_ring_item) {
-                    dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
-                }
-                link = link->next;
             }
 out_loop:
             /* not sending other_drawable where possible */
