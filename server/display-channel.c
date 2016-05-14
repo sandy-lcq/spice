@@ -481,7 +481,10 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             while (link) {
                 dcc = link->data;
                 dpi = SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item);
-                while (link && (!dpi || dcc != dpi->dcc)) {
+                for (;;) {
+                    if (!link || (dpi && dcc == dpi->dcc)) {
+                        break;
+                    }
                     dcc_prepend_drawable(dcc, drawable);
                     link = link->next;
                     if (link)
