@@ -1755,7 +1755,7 @@ int red_channel_is_connected(RedChannel *channel)
     return channel && (channel->clients_num > 0);
 }
 
-void red_channel_client_clear_sent_item(RedChannelClient *rcc)
+static void red_channel_client_clear_sent_item(RedChannelClient *rcc)
 {
     if (rcc->send_data.item) {
         red_pipe_item_unref(rcc->send_data.item);
