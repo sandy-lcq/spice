@@ -78,7 +78,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
     rcc = RED_CHANNEL_CLIENT(dcc);
     ring = &rcc->pipe;
     item = (RedPipeItem *) ring;
-    while ((item = (RedPipeItem *)ring_next(ring, (RingItem *)item))) {
+    while ((item = (RedPipeItem *)ring_next(ring, &item->link))) {
         Drawable *drawable;
         RedDrawablePipeItem *dpi = NULL;
         int depend_found = FALSE;
@@ -94,7 +94,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
 
         if (drawable->surface_id == surface_id) {
             RedPipeItem *tmp_item = item;
-            item = (RedPipeItem *)ring_prev(ring, (RingItem *)item);
+            item = (RedPipeItem *)ring_prev(ring, &item->link);
             red_channel_client_pipe_remove_and_release(rcc, tmp_item);
             if (!item) {
                 item = (RedPipeItem *)ring;
@@ -514,7 +514,7 @@ void dcc_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
     item->rects->num_rects = n_rects;
     region_ret_rects(&agent->clip, item->rects->rects, n_rects);
 
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), (RedPipeItem *)item);
+    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &item->base);
 }
 
 static void red_monitors_config_item_free(RedPipeItem *base)

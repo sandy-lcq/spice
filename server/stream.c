@@ -177,7 +177,7 @@ void red_stream_clip_item_free(RedPipeItem *base)
 RedStreamClipItem *red_stream_clip_item_new(StreamAgent *agent)
 {
     RedStreamClipItem *item = spice_new(RedStreamClipItem, 1);
-    red_pipe_item_init_full((RedPipeItem *)item, RED_PIPE_ITEM_TYPE_STREAM_CLIP,
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_STREAM_CLIP,
                             red_stream_clip_item_free);
 
     item->stream_agent = agent;

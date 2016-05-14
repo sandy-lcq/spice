@@ -888,7 +888,7 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *s
                 dev->priv->read_state = VDI_PORT_READ_STATE_GET_BUFF;
             }
             if (vdi_port_read_buf_process(reds->agent_dev, dispatch_buf, &error)) {
-                return (RedPipeItem *)dispatch_buf;
+                return &dispatch_buf->base;
             } else {
                 if (error) {
                     reds_agent_remove(reds);

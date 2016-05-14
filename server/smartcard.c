@@ -160,7 +160,7 @@ static RedPipeItem *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
         dev->priv->buf_pos = dev->priv->buf;
         dev->priv->buf_used = remaining;
         if (msg_to_client) {
-            return (RedPipeItem *)msg_to_client;
+            return &msg_to_client->base;
         }
     }
     return NULL;
@@ -172,7 +172,7 @@ static void smartcard_send_msg_to_client(RedPipeItem *msg,
 {
     RedCharDeviceSmartcard *dev = opaque;
     spice_assert(dev->priv->scc && dev->priv->scc->base.client == client);
-    smartcard_channel_client_pipe_add_push(&dev->priv->scc->base, (RedPipeItem *)msg);
+    smartcard_channel_client_pipe_add_push(&dev->priv->scc->base, msg);
 
 }
 
