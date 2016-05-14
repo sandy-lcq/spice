@@ -581,16 +581,10 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
     free(item);
 }
 
-static void red_channel_client_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
-{
-    red_pipe_item_unref(item);
-}
-
 static inline void red_channel_client_release_sent_item(RedChannelClient *rcc)
 {
     if (rcc->send_data.item) {
-        red_channel_client_release_item(rcc,
-                                        rcc->send_data.item, TRUE);
+        red_pipe_item_unref(rcc->send_data.item);
         rcc->send_data.item = NULL;
     }
 }
@@ -1654,7 +1648,7 @@ static inline gboolean client_pipe_add(RedChannelClient *rcc, RedPipeItem *item,
     spice_assert(rcc && item);
     if (SPICE_UNLIKELY(!red_channel_client_is_connected(rcc))) {
         spice_debug("rcc is disconnected %p", rcc);
-        red_channel_client_release_item(rcc, item, FALSE);
+        red_pipe_item_unref(item);
         return FALSE;
     }
     if (ring_is_empty(&rcc->pipe) && rcc->stream->watch) {
@@ -1764,7 +1758,7 @@ int red_channel_is_connected(RedChannel *channel)
 void red_channel_client_clear_sent_item(RedChannelClient *rcc)
 {
     if (rcc->send_data.item) {
-        red_channel_client_release_item(rcc, rcc->send_data.item, TRUE);
+        red_pipe_item_unref(rcc->send_data.item);
         rcc->send_data.item = NULL;
     }
     rcc->send_data.blocked = FALSE;
@@ -1780,7 +1774,7 @@ void red_channel_client_pipe_clear(RedChannelClient *rcc)
     }
     while ((item = (RedPipeItem *)ring_get_head(&rcc->pipe))) {
         ring_remove(&item->link);
-        red_channel_client_release_item(rcc, item, FALSE);
+        red_pipe_item_unref(item);
     }
     rcc->pipe_size = 0;
 }
@@ -2024,7 +2018,7 @@ void red_channel_client_pipe_remove_and_release(RedChannelClient *rcc,
                                                 RedPipeItem *item)
 {
     red_channel_client_pipe_remove(rcc, item);
-    red_channel_client_release_item(rcc, item, FALSE);
+    red_pipe_item_unref(item);
 }
 
 /*
@@ -2389,7 +2383,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         red_channel_client_push(rcc);
     }
 
-    red_channel_client_release_item(rcc, item, TRUE);
+    red_pipe_item_unref(item);
     if (item_in_pipe) {
         spice_warning("timeout");
         return FALSE;
