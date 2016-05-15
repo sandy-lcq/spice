@@ -140,7 +140,6 @@ struct RedsState {
     pthread_mutex_t stat_lock;
     RedsStatValue roundtrip_stat;
 #endif
-    int peer_minor_version;
     int allow_multiple_clients;
 
     RedsClientMonitorsConfig client_monitors_config;

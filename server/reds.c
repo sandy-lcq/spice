@@ -2356,7 +2356,6 @@ static void reds_handle_link_error(void *opaque, int err)
 static void reds_handle_read_header_done(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedsState *reds = link->reds;
     SpiceLinkHeader *header = &link->link_header;
 
     header->major_version = GUINT32_FROM_LE(header->major_version);
@@ -2378,8 +2377,6 @@ static void reds_handle_read_header_done(void *opaque)
         reds_link_free(link);
         return;
     }
-
-    reds->peer_minor_version = header->minor_version;
 
     if (header->size < sizeof(SpiceLinkMess)) {
         reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
