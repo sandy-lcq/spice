@@ -745,7 +745,8 @@ static void reds_agent_remove(RedsState *reds)
 
 static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 {
-    red_pipe_item_unref((RedPipeItem *)opaque);
+    RedVDIReadBuf *read_buf = (RedVDIReadBuf *)opaque;
+    red_pipe_item_unref(&read_buf->base);
 }
 
 /*
