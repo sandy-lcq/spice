@@ -442,7 +442,7 @@ uint64_t *stat_add_counter(RedsState *reds, StatNodeRef parent, const char *name
 
 void stat_remove_counter(RedsState *reds, uint64_t *counter)
 {
-    reds_stat_remove(reds, (SpiceStatNode *)(counter - offsetof(SpiceStatNode, value)));
+    reds_stat_remove(reds, (SpiceStatNode *)(counter - SPICE_OFFSETOF(SpiceStatNode, value)));
 }
 
 void stat_update_value(RedsState *reds, uint32_t value)
