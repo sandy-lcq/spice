@@ -1671,7 +1671,6 @@ static void reds_mig_target_client_add(RedsState *reds, RedClient *client)
     mig_client->reds = reds;
     ring_init(&mig_client->pending_links);
     ring_add(&reds->mig_target_clients, &mig_client->link);
-    reds->num_mig_target_clients++;
 
 }
 
@@ -1709,7 +1708,6 @@ static void reds_mig_target_client_free(RedsMigTargetClient *mig_client)
     RingItem *now, *next;
 
     ring_remove(&mig_client->link);
-    mig_client->reds->num_mig_target_clients--;
 
     RING_FOREACH_SAFE(now, next, &mig_client->pending_links) {
         RedsMigPendingLink *mig_link = SPICE_CONTAINEROF(now, RedsMigPendingLink, ring_link);

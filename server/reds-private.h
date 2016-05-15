@@ -118,7 +118,6 @@ struct RedsState {
     int dst_do_seamless_migrate; /* per migration. Updated after the migration handshake
                                     between the 2 servers */
     Ring mig_target_clients;
-    int num_mig_target_clients;
 
     int num_of_channels;
     Ring channels;
