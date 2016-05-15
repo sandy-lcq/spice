@@ -63,7 +63,7 @@ sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
                 exit(1);
             }
 
-            *fd = *((int *) CMSG_DATA(cmsg));
+            memcpy(fd, CMSG_DATA(cmsg), sizeof(*fd));
         } else
             *fd = -1;
     } else {
