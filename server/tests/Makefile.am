@@ -67,7 +67,18 @@ noinst_LIBRARIES += \
 	libstat_test4.a \
 	$(NULL)
 
-spice_server_replay_SOURCES = replay.c
+spice_server_replay_SOURCES = replay.c		\
+	../event-loop.c				\
+	basic_event_loop.c			\
+	basic_event_loop.h
+
+spice_server_replay_LDADD =					\
+	$(top_builddir)/spice-common/common/libspice-common.la	\
+	$(top_builddir)/server/libspice-server.la		\
+	$(GLIB2_LIBS)						\
+	$(GOBJECT2_LIBS)					\
+	$(SPICE_NONPKGCONFIG_LIBS)		                \
+	$(NULL)
 
 stat_test_SOURCES = stat-main.c
 stat_test_LDADD = \
