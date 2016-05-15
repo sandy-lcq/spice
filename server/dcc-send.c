@@ -2383,8 +2383,8 @@ void dcc_send_item(DisplayChannelClient *dcc, RedPipeItem *pipe_item)
         marshall_inval_palette(rcc, m, (RedCacheItem *)pipe_item);
         break;
     case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
-        StreamAgent *agent = SPICE_CONTAINEROF(pipe_item, StreamAgent, create_item);
-        marshall_stream_start(rcc, m, agent);
+        StreamCreateDestroyItem *item = SPICE_CONTAINEROF(pipe_item, StreamCreateDestroyItem, base);
+        marshall_stream_start(rcc, m, item->agent);
         break;
     }
     case RED_PIPE_ITEM_TYPE_STREAM_CLIP: {
@@ -2393,8 +2393,8 @@ void dcc_send_item(DisplayChannelClient *dcc, RedPipeItem *pipe_item)
         break;
     }
     case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
-        StreamAgent *agent = SPICE_CONTAINEROF(pipe_item, StreamAgent, destroy_item);
-        marshall_stream_end(rcc, m, agent);
+        StreamCreateDestroyItem *item = SPICE_CONTAINEROF(pipe_item, StreamCreateDestroyItem, base);
+        marshall_stream_end(rcc, m, item->agent);
         break;
     }
     case RED_PIPE_ITEM_TYPE_UPGRADE:
