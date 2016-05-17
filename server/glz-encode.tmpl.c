@@ -538,7 +538,6 @@ static void FNAME(compress)(Encoder *encoder)
 #undef GET_r
 #undef GET_g
 #undef GET_b
-#undef GET_CODE
 #undef LZ_PLT
 #undef LZ_RGB_ALPHA
 #undef LZ_RGB16
