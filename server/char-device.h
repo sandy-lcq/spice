@@ -93,10 +93,11 @@ GType red_char_device_get_type(void) G_GNUC_CONST;
  * Writing to the device
  * ---------------------
  * Write the data into RedCharDeviceWriteBuffer:
- * call red_char_device_buffer_get in order to get an appropriate buffer.
- * call red_char_device_buffer_add in order to push the buffer to the write queue.
+ * call red_char_device_write_buffer_get/red_char_device_write_buffer_get_server_no_token
+ * in order to get an appropriate buffer.
+ * call red_char_device_write_buffer_add in order to push the buffer to the write queue.
  * If you choose not to push the buffer to the device, call
- * red_char_device_buffer_release
+ * red_char_device_write_buffer_release
  *
  * reading from the device
  * -----------------------
