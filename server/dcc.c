@@ -288,7 +288,9 @@ void red_drawable_pipe_item_free(RedPipeItem *item)
     spice_assert(item->refcount == 0);
 
     spice_warn_if_fail(!ring_item_is_linked(&item->link));
-    spice_warn_if_fail(!ring_item_is_linked(&dpi->base));
+    if (ring_item_is_linked(&dpi->base)) {
+        ring_remove(&dpi->base);
+    }
     drawable_unref(dpi->drawable);
     free(dpi);
 }
@@ -343,8 +345,6 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
         agent->stream = &display->streams_buf[i];
         region_init(&agent->vis_region);
         region_init(&agent->clip);
-        red_pipe_item_init(&agent->create_item, RED_PIPE_ITEM_TYPE_STREAM_CREATE);
-        red_pipe_item_init(&agent->destroy_item, RED_PIPE_ITEM_TYPE_STREAM_DESTROY);
     }
     dcc->use_video_encoder_rate_control =
         red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT);
@@ -1606,90 +1606,4 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     /* enable sending messages */
     red_channel_client_ack_zero_messages_window(RED_CHANNEL_CLIENT(dcc));
     return TRUE;
-}
-
-static void release_item_after_push(RedPipeItem *item)
-{
-    switch (item->type) {
-    case RED_PIPE_ITEM_TYPE_DRAW:
-    case RED_PIPE_ITEM_TYPE_IMAGE:
-    case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
-    case RED_PIPE_ITEM_TYPE_MONITORS_CONFIG:
-    case RED_PIPE_ITEM_TYPE_UPGRADE:
-        red_pipe_item_unref(item);
-        break;
-    case RED_PIPE_ITEM_TYPE_GL_SCANOUT:
-    case RED_PIPE_ITEM_TYPE_GL_DRAW:
-    case RED_PIPE_ITEM_TYPE_VERB:
-        free(item);
-        break;
-    default:
-        spice_critical("invalid item type");
-    }
-}
-
-// TODO: share code between before/after_push since most of the items need the same
-// release
-static void release_item_before_push(DisplayChannelClient *dcc, RedPipeItem *item)
-{
-    DisplayChannel *display = DCC_TO_DC(dcc);
-
-    spice_debug("item.type: %d", item->type);
-    switch (item->type) {
-    case RED_PIPE_ITEM_TYPE_DRAW: {
-        RedDrawablePipeItem *dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, dpi_pipe_item);
-        ring_remove(&dpi->base);
-        red_pipe_item_unref(item);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
-        StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, create_item);
-        stream_agent_unref(display, agent);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
-        StreamAgent *agent = SPICE_CONTAINEROF(item, StreamAgent, destroy_item);
-        stream_agent_unref(display, agent);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
-    case RED_PIPE_ITEM_TYPE_UPGRADE:
-    case RED_PIPE_ITEM_TYPE_IMAGE:
-    case RED_PIPE_ITEM_TYPE_MONITORS_CONFIG:
-        red_pipe_item_unref(item);
-        break;
-    case RED_PIPE_ITEM_TYPE_CREATE_SURFACE: {
-        RedSurfaceCreateItem *surface_create = SPICE_CONTAINEROF(item, RedSurfaceCreateItem,
-                                                                 pipe_item);
-        free(surface_create);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_DESTROY_SURFACE: {
-        RedSurfaceDestroyItem *surface_destroy = SPICE_CONTAINEROF(item, RedSurfaceDestroyItem,
-                                                                   pipe_item);
-        free(surface_destroy);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_INVAL_ONE:
-    case RED_PIPE_ITEM_TYPE_VERB:
-    case RED_PIPE_ITEM_TYPE_MIGRATE_DATA:
-    case RED_PIPE_ITEM_TYPE_PIXMAP_SYNC:
-    case RED_PIPE_ITEM_TYPE_PIXMAP_RESET:
-    case RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE:
-    case RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT:
-    case RED_PIPE_ITEM_TYPE_GL_SCANOUT:
-    case RED_PIPE_ITEM_TYPE_GL_DRAW:
-        free(item);
-        break;
-    default:
-        spice_critical("invalid item type");
-    }
-}
-
-void dcc_release_item(DisplayChannelClient *dcc, RedPipeItem *item, int item_pushed)
-{
-    if (item_pushed)
-        release_item_after_push(item);
-    else
-        release_item_before_push(dcc, item);
 }

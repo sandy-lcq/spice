@@ -63,6 +63,36 @@ void stream_agent_stats_print(StreamAgent *agent)
 #endif
 }
 
+static void stream_create_destroy_item_release(RedPipeItem *base)
+{
+    StreamCreateDestroyItem *item = SPICE_CONTAINEROF(base, StreamCreateDestroyItem, base);
+    DisplayChannel *display = (DisplayChannel*)item->agent->dcc->common.base.channel;
+    stream_agent_unref(display, item->agent);
+    free(item);
+}
+
+static RedPipeItem *stream_create_destroy_item_new(StreamAgent *agent, gint type)
+{
+    StreamCreateDestroyItem *item = spice_new0(StreamCreateDestroyItem, 1);
+
+    red_pipe_item_init_full(&item->base, type,
+                            (GDestroyNotify)stream_create_destroy_item_release);
+    agent->stream->refs++;
+    item->agent = agent;
+    return &item->base;
+}
+
+static RedPipeItem *stream_create_item_new(StreamAgent *agent)
+{
+    return stream_create_destroy_item_new(agent, RED_PIPE_ITEM_TYPE_STREAM_CREATE);
+}
+
+static RedPipeItem *stream_destroy_item_new(StreamAgent *agent)
+{
+    return stream_create_destroy_item_new(agent, RED_PIPE_ITEM_TYPE_STREAM_DESTROY);
+}
+
+
 void stream_stop(DisplayChannel *display, Stream *stream)
 {
     DisplayChannelClient *dcc;
@@ -78,7 +108,6 @@ void stream_stop(DisplayChannel *display, Stream *stream)
         stream_agent = &dcc->stream_agents[get_stream_id(display, stream)];
         region_clear(&stream_agent->vis_region);
         region_clear(&stream_agent->clip);
-        spice_assert(!red_pipe_item_is_linked(&stream_agent->destroy_item));
         if (stream_agent->video_encoder && dcc->use_video_encoder_rate_control) {
             uint64_t stream_bit_rate = stream_agent->video_encoder->get_bit_rate(stream_agent->video_encoder);
 
@@ -89,8 +118,7 @@ void stream_stop(DisplayChannel *display, Stream *stream)
                 dcc->streams_max_bit_rate = stream_bit_rate;
             }
         }
-        stream->refs++;
-        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &stream_agent->destroy_item);
+        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), stream_destroy_item_new(stream_agent));
         stream_agent_stats_print(stream_agent);
     }
     display->streams_size_total -= stream->width * stream->height;
@@ -702,7 +730,6 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
 
     spice_return_if_fail(region_is_empty(&agent->vis_region));
 
-    stream->refs++;
     if (stream->current) {
         agent->frames = 1;
         region_clone(&agent->vis_region, &stream->current->tree_item.base.rgn);
@@ -728,7 +755,7 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
     } else {
         agent->video_encoder = mjpeg_encoder_new(0, NULL);
     }
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &agent->create_item);
+    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), stream_create_item_new(agent));
 
     if (red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT)) {
         RedStreamActivateReportItem *report_pipe_item = spice_malloc0(sizeof(*report_pipe_item));

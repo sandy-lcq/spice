@@ -82,8 +82,6 @@ typedef struct StreamAgent {
                            vis_region will contain c2 and also the part of c1/c2 that still
                            displays fragments of the video */
 
-    RedPipeItem create_item;
-    RedPipeItem destroy_item;
     Stream *stream;
     uint64_t last_send_time;
     VideoEncoder *video_encoder;
@@ -108,6 +106,11 @@ typedef struct RedStreamClipItem {
 } RedStreamClipItem;
 
 RedStreamClipItem *   red_stream_clip_item_new                      (StreamAgent *agent);
+
+typedef struct StreamCreateDestroyItem {
+    RedPipeItem base;
+    StreamAgent *agent;
+} StreamCreateDestroyItem;
 
 typedef struct ItemTrace {
     red_time_t time;

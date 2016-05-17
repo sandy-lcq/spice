@@ -254,12 +254,6 @@ static void inputs_channel_send_migrate_data(RedChannelClient *rcc,
     spice_marshaller_add_uint16(m, icc->motion_count);
 }
 
-static void inputs_channel_release_pipe_item(RedChannelClient *rcc,
-    RedPipeItem *base, int item_pushed)
-{
-    free(base);
-}
-
 static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -627,7 +621,6 @@ InputsChannel* inputs_channel_new(RedsState *reds)
     channel_cbs.on_disconnect = inputs_channel_on_disconnect;
     channel_cbs.send_item = inputs_channel_send_item;
     channel_cbs.hold_item = inputs_channel_hold_pipe_item;
-    channel_cbs.release_item = inputs_channel_release_pipe_item;
     channel_cbs.alloc_recv_buf = inputs_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = inputs_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_data = inputs_channel_handle_migrate_data;

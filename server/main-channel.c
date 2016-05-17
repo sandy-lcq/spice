@@ -165,9 +165,6 @@ enum NetTestStage {
     NET_TEST_STAGE_COMPLETE,
 };
 
-static void main_channel_release_pipe_item(RedChannelClient *rcc,
-                                           RedPipeItem *base, int item_pushed);
-
 int main_channel_is_connected(MainChannel *main_chan)
 {
     return red_channel_is_connected(&main_chan->base);
@@ -250,13 +247,20 @@ static RedPipeItem *main_agent_tokens_item_new(RedChannelClient *rcc, uint32_t n
     return &item->base;
 }
 
+static void main_agent_data_item_free(RedAgentDataPipeItem *item)
+{
+    item->free_data(item->data, item->opaque);
+    free(item);
+}
+
 static RedPipeItem *main_agent_data_item_new(RedChannelClient *rcc, uint8_t* data, size_t len,
                                              spice_marshaller_item_free_func free_data,
                                              void *opaque)
 {
     RedAgentDataPipeItem *item = spice_malloc(sizeof(RedAgentDataPipeItem));
 
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA);
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA,
+                            (GDestroyNotify)main_agent_data_item_free);
     item->data = data;
     item->len = len;
     item->free_data = free_data;
@@ -302,12 +306,19 @@ static RedPipeItem *main_uuid_item_new(MainChannelClient *mcc, const uint8_t uui
     return &item->base;
 }
 
+static void main_notify_item_free(RedNotifyPipeItem *data)
+{
+    free(data->msg);
+    free(data);
+}
+
 static RedPipeItem *main_notify_item_new(RedChannelClient *rcc, void *data, int num)
 {
     RedNotifyPipeItem *item = spice_malloc(sizeof(RedNotifyPipeItem));
     const char *msg = data;
 
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NOTIFY);
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NOTIFY,
+                            (GDestroyNotify)main_notify_item_free);
     item->msg = spice_strdup(msg);
     return &item->base;
 }
@@ -712,7 +723,7 @@ static void main_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
         spice_printerr("Init msg for client %p was not sent yet "
                        "(client is probably during semi-seamless migration). Ignoring msg type %d",
                    rcc->client, base->type);
-        main_channel_release_pipe_item(rcc, base, FALSE);
+        red_pipe_item_unref(base);
         return;
     }
     switch (base->type) {
@@ -781,27 +792,6 @@ static void main_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
             break;
     };
     red_channel_client_begin_send_message(rcc);
-}
-
-static void main_channel_release_pipe_item(RedChannelClient *rcc,
-    RedPipeItem *base, int item_pushed)
-{
-    switch (base->type) {
-        case RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA: {
-                RedAgentDataPipeItem *data = (RedAgentDataPipeItem *)base;
-
-                data->free_data(data->data, data->opaque);
-                break;
-        }
-        case RED_PIPE_ITEM_TYPE_MAIN_NOTIFY: {
-                RedNotifyPipeItem *data = (RedNotifyPipeItem *)base;
-                free(data->msg);
-                break;
-        }
-        default:
-            break;
-    }
-    free(base);
 }
 
 static void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
@@ -1165,7 +1155,6 @@ MainChannel* main_channel_new(RedsState *reds)
     channel_cbs.on_disconnect = main_channel_client_on_disconnect;
     channel_cbs.send_item = main_channel_send_item;
     channel_cbs.hold_item = main_channel_hold_pipe_item;
-    channel_cbs.release_item = main_channel_release_pipe_item;
     channel_cbs.alloc_recv_buf = main_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = main_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_flush_mark = main_channel_handle_migrate_flush_mark;

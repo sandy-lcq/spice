@@ -431,21 +431,10 @@ static void spicevmc_red_channel_send_item(RedChannelClient *rcc,
         break;
     default:
         spice_error("bad pipe item %d", item->type);
-        free(item);
+        red_pipe_item_unref(item);
         return;
     }
     red_channel_client_begin_send_message(rcc);
-}
-
-static void spicevmc_red_channel_release_pipe_item(RedChannelClient *rcc,
-                                                   RedPipeItem *item,
-                                                   int item_pushed)
-{
-    if (item->type == RED_PIPE_ITEM_TYPE_SPICEVMC_DATA) {
-        red_pipe_item_unref(item);
-    } else {
-        free(item);
-    }
 }
 
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
@@ -509,7 +498,6 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
     channel_cbs.on_disconnect = spicevmc_red_channel_client_on_disconnect;
     channel_cbs.send_item = spicevmc_red_channel_send_item;
     channel_cbs.hold_item = spicevmc_red_channel_hold_pipe_item;
-    channel_cbs.release_item = spicevmc_red_channel_release_pipe_item;
     channel_cbs.alloc_recv_buf = spicevmc_red_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = spicevmc_red_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_flush_mark = spicevmc_channel_client_handle_migrate_flush_mark;

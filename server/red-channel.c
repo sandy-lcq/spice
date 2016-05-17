@@ -578,28 +578,13 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
             rcc->channel->channel_cbs.send_item(rcc, item);
             return;
     }
-    free(item);
-}
-
-static void red_channel_client_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
-{
-    switch (item->type) {
-        case RED_PIPE_ITEM_TYPE_SET_ACK:
-        case RED_PIPE_ITEM_TYPE_EMPTY_MSG:
-        case RED_PIPE_ITEM_TYPE_MIGRATE:
-        case RED_PIPE_ITEM_TYPE_PING:
-            free(item);
-            break;
-        default:
-            rcc->channel->channel_cbs.release_item(rcc, item, item_pushed);
-    }
+    red_pipe_item_unref(item);
 }
 
 static inline void red_channel_client_release_sent_item(RedChannelClient *rcc)
 {
     if (rcc->send_data.item) {
-        red_channel_client_release_item(rcc,
-                                        rcc->send_data.item, TRUE);
+        red_pipe_item_unref(rcc->send_data.item);
         rcc->send_data.item = NULL;
     }
 }
@@ -1030,7 +1015,7 @@ RedChannel *red_channel_create(int size,
 
     spice_assert(size >= sizeof(*channel));
     spice_assert(channel_cbs->config_socket && channel_cbs->on_disconnect && handle_message &&
-           channel_cbs->alloc_recv_buf && channel_cbs->release_item);
+           channel_cbs->alloc_recv_buf);
     spice_assert(channel_cbs->handle_migrate_data ||
                  !(migration_flags & SPICE_MIGRATE_NEED_DATA_TRANSFER));
     channel = spice_malloc0(size);
@@ -1663,7 +1648,7 @@ static inline gboolean client_pipe_add(RedChannelClient *rcc, RedPipeItem *item,
     spice_assert(rcc && item);
     if (SPICE_UNLIKELY(!red_channel_client_is_connected(rcc))) {
         spice_debug("rcc is disconnected %p", rcc);
-        red_channel_client_release_item(rcc, item, FALSE);
+        red_pipe_item_unref(item);
         return FALSE;
     }
     if (ring_is_empty(&rcc->pipe) && rcc->stream->watch) {
@@ -1770,12 +1755,9 @@ int red_channel_is_connected(RedChannel *channel)
     return channel && (channel->clients_num > 0);
 }
 
-void red_channel_client_clear_sent_item(RedChannelClient *rcc)
+static void red_channel_client_clear_sent_item(RedChannelClient *rcc)
 {
-    if (rcc->send_data.item) {
-        red_channel_client_release_item(rcc, rcc->send_data.item, TRUE);
-        rcc->send_data.item = NULL;
-    }
+    red_channel_client_release_sent_item(rcc);
     rcc->send_data.blocked = FALSE;
     rcc->send_data.size = 0;
 }
@@ -1789,7 +1771,7 @@ void red_channel_client_pipe_clear(RedChannelClient *rcc)
     }
     while ((item = (RedPipeItem *)ring_get_head(&rcc->pipe))) {
         ring_remove(&item->link);
-        red_channel_client_release_item(rcc, item, FALSE);
+        red_pipe_item_unref(item);
     }
     rcc->pipe_size = 0;
 }
@@ -2033,7 +2015,7 @@ void red_channel_client_pipe_remove_and_release(RedChannelClient *rcc,
                                                 RedPipeItem *item)
 {
     red_channel_client_pipe_remove(rcc, item);
-    red_channel_client_release_item(rcc, item, FALSE);
+    red_pipe_item_unref(item);
 }
 
 /*
@@ -2398,7 +2380,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         red_channel_client_push(rcc);
     }
 
-    red_channel_client_release_item(rcc, item, TRUE);
+    red_pipe_item_unref(item);
     if (item_in_pipe) {
         spice_warning("timeout");
         return FALSE;

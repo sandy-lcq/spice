@@ -48,7 +48,6 @@ G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 typedef struct RedCursorPipeItem {
     RedPipeItem base;
     CursorItem *cursor_item;
-    int refs;
 } RedCursorPipeItem;
 
 struct CursorChannel {
@@ -81,6 +80,8 @@ struct CursorChannelClient {
 #define CLIENT_CURSOR_CACHE
 #include "cache-item.tmpl.c"
 #undef CLIENT_CURSOR_CACHE
+
+static void cursor_pipe_item_free(RedCursorPipeItem *pipe_item);
 
 static CursorItem *cursor_item_new(QXLInstance *qxl, RedCursorCmd *cmd)
 {
@@ -136,8 +137,8 @@ static RedPipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int 
 {
     RedCursorPipeItem *item = spice_malloc0(sizeof(RedCursorPipeItem));
 
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_CURSOR);
-    item->refs = 1;
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_CURSOR,
+                            (GDestroyNotify)cursor_pipe_item_free);
     item->cursor_item = data;
     item->cursor_item->refs++;
     return &item->base;
@@ -203,15 +204,9 @@ void cursor_channel_disconnect(CursorChannel *cursor_channel)
 }
 
 
-static void put_cursor_pipe_item(CursorChannelClient *ccc,
-                                 RedCursorPipeItem *pipe_item)
+static void cursor_pipe_item_free(RedCursorPipeItem *pipe_item)
 {
     spice_return_if_fail(pipe_item);
-    spice_return_if_fail(pipe_item->refs > 0);
-
-    if (--pipe_item->refs) {
-        return;
-    }
 
     spice_assert(!red_pipe_item_is_linked(&pipe_item->base));
 
@@ -225,42 +220,6 @@ static void cursor_channel_client_on_disconnect(RedChannelClient *rcc)
         return;
     }
     red_reset_cursor_cache(rcc);
-}
-
-// TODO: share code between before/after_push since most of the items need the same
-// release
-static void cursor_channel_client_release_item_before_push(CursorChannelClient *ccc,
-                                                           RedPipeItem *item)
-{
-    switch (item->type) {
-    case RED_PIPE_ITEM_TYPE_CURSOR: {
-        RedCursorPipeItem *cursor_pipe_item = SPICE_CONTAINEROF(item, RedCursorPipeItem, base);
-        put_cursor_pipe_item(ccc, cursor_pipe_item);
-        break;
-    }
-    case RED_PIPE_ITEM_TYPE_INVAL_ONE:
-    case RED_PIPE_ITEM_TYPE_VERB:
-    case RED_PIPE_ITEM_TYPE_CURSOR_INIT:
-    case RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE:
-        free(item);
-        break;
-    default:
-        spice_error("invalid pipe item type");
-    }
-}
-
-static void cursor_channel_client_release_item_after_push(CursorChannelClient *ccc,
-                                                          RedPipeItem *item)
-{
-    switch (item->type) {
-        case RED_PIPE_ITEM_TYPE_CURSOR: {
-            RedCursorPipeItem *cursor_pipe_item = SPICE_CONTAINEROF(item, RedCursorPipeItem, base);
-            put_cursor_pipe_item(ccc, cursor_pipe_item);
-            break;
-        }
-        default:
-            spice_critical("invalid item type");
-    }
 }
 
 static void red_marshall_cursor_init(RedChannelClient *rcc, SpiceMarshaller *base_marshaller,
@@ -354,7 +313,6 @@ static inline void red_marshall_inval(RedChannelClient *rcc,
 static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
-    CursorChannelClient *ccc = RCC_TO_CCC(rcc);
 
     switch (pipe_item->type) {
     case RED_PIPE_ITEM_TYPE_CURSOR:
@@ -378,16 +336,15 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
         spice_error("invalid pipe item type");
     }
 
-    cursor_channel_client_release_item_before_push(ccc, pipe_item);
+    red_pipe_item_unref(pipe_item);
     red_channel_client_begin_send_message(rcc);
 }
 
 static RedCursorPipeItem *cursor_pipe_item_ref(RedCursorPipeItem *item)
 {
     spice_return_val_if_fail(item, NULL);
-    spice_return_val_if_fail(item->refs > 0, NULL);
 
-    item->refs++;
+    red_pipe_item_ref(item);
     return item;
 }
 
@@ -402,20 +359,6 @@ static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *it
     cursor_pipe_item_ref(cursor_pipe_item);
 }
 
-static void cursor_channel_release_item(RedChannelClient *rcc, RedPipeItem *item, int item_pushed)
-{
-    CursorChannelClient *ccc = RCC_TO_CCC(rcc);
-
-    spice_assert(item);
-
-    if (item_pushed) {
-        cursor_channel_client_release_item_after_push(ccc, item);
-    } else {
-        spice_debug("not pushed (%d)", item->type);
-        cursor_channel_client_release_item_before_push(ccc, item);
-    }
-}
-
 CursorChannel* cursor_channel_new(RedWorker *worker)
 {
     CursorChannel *cursor_channel;
@@ -424,7 +367,6 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
         .on_disconnect =  cursor_channel_client_on_disconnect,
         .send_item = cursor_channel_send_item,
         .hold_item = cursor_channel_hold_pipe_item,
-        .release_item = cursor_channel_release_item
     };
 
     spice_info("create cursor channel");

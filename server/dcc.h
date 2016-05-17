@@ -122,8 +122,8 @@ struct DisplayChannelClient {
 #define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)
 
 typedef struct RedSurfaceCreateItem {
-    SpiceMsgSurfaceCreate surface_create;
     RedPipeItem pipe_item;
+    SpiceMsgSurfaceCreate surface_create;
 } RedSurfaceCreateItem;
 
 typedef struct RedGlScanoutUnixItem {
@@ -154,7 +154,6 @@ typedef struct RedDrawablePipeItem {
     RedPipeItem dpi_pipe_item; /* link for the client's pipe itself */
     Drawable *drawable;
     DisplayChannelClient *dcc;
-    uint8_t refs;
 } RedDrawablePipeItem;
 
 DisplayChannelClient*      dcc_new                                   (DisplayChannel *display,
@@ -204,9 +203,6 @@ void                       dcc_append_drawable                       (DisplayCha
 void                       dcc_add_drawable_after                    (DisplayChannelClient *dcc,
                                                                       Drawable *drawable,
                                                                       RedPipeItem *pos);
-void                       dcc_release_item                          (DisplayChannelClient *dcc,
-                                                                      RedPipeItem *item,
-                                                                      int item_pushed);
 void                       dcc_send_item                             (DisplayChannelClient *dcc,
                                                                       RedPipeItem *item);
 int                        dcc_clear_surface_drawables_from_pipe     (DisplayChannelClient *dcc,
