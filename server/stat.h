@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <glib.h>
 
+#include "spice.h"
+
 typedef uint32_t StatNodeRef;
 #define INVALID_STAT_REF (~(StatNodeRef)0)
 

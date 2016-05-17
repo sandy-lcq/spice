@@ -21,6 +21,9 @@
 #ifndef _H_AGENT_MSG_FILTER
 #define _H_AGENT_MSG_FILTER
 
+#include <inttypes.h>
+#include <glib.h>
+
 /* Possible return values for agent_msg_filter_process_data */
 enum {
     AGENT_MSG_FILTER_OK,

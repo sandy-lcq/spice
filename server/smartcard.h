@@ -20,6 +20,8 @@
 
 #include <glib-object.h>
 
+#include "char-device.h"
+
 #define RED_TYPE_CHAR_DEVICE_SMARTCARD red_char_device_smartcard_get_type()
 
 #define RED_CHAR_DEVICE_SMARTCARD(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHAR_DEVICE_SMARTCARD, RedCharDeviceSmartcard))

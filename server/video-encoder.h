@@ -21,6 +21,9 @@
 #ifndef _H_VIDEO_ENCODER
 #define _H_VIDEO_ENCODER
 
+#include <inttypes.h>
+#include <common/draw.h>
+
 enum {
     VIDEO_ENCODER_FRAME_UNSUPPORTED = -1,
     VIDEO_ENCODER_FRAME_DROP,

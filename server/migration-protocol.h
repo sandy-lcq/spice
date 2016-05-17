@@ -20,6 +20,7 @@
 
 #include <spice/macros.h>
 #include <spice/vd_agent.h>
+#include <common/log.h>
 
 #include "glz-encoder-dict.h"
 

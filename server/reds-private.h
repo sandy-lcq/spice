@@ -19,6 +19,11 @@
 #define REDS_PRIVATE_H
 
 #include <spice/protocol.h>
+#include <spice/stats.h>
+
+#include "main-dispatcher.h"
+#include "main-channel.h"
+#include "inputs-channel.h"
 
 #define MIGRATE_TIMEOUT (MSEC_PER_SEC * 10)
 #define MM_TIME_DELTA 400 /*ms*/

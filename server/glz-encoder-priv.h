@@ -18,7 +18,10 @@
 #ifndef GLZ_ENCODER_PRIV_H_
 #define GLZ_ENCODER_PRIV_H_
 
-#include "red-common.h"
+#include <pthread.h>
+#include <common/lz_common.h>
+
+#include "glz-encoder-dict.h"
 
 /* Interface for using the dictionary for encoding.
    Data structures are exposed for the encoder for efficiency

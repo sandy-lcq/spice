@@ -24,6 +24,8 @@
 #include <stdint.h>
 #include <spice/vd_agent.h>
 
+#include "red-channel.h"
+
 typedef struct InputsChannel InputsChannel;
 
 InputsChannel* inputs_channel_new(RedsState *reds);

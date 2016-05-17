@@ -30,6 +30,8 @@
 #ifndef _H_ZLIB_ENCODER
 #define _H_ZLIB_ENCODER
 
+#include <inttypes.h>
+
 typedef struct ZlibEncoder ZlibEncoder;
 typedef struct ZlibEncoderUsrContext ZlibEncoderUsrContext;
 

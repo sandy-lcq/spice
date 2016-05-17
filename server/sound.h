@@ -18,7 +18,9 @@
 #ifndef SOUND_H_
 #define SOUND_H_
 
-#include "spice.h"
+#include "red-common.h"
+
+struct RedClient;
 
 void snd_attach_playback(RedsState *reds, SpicePlaybackInstance *sin);
 void snd_detach_playback(SpicePlaybackInstance *sin);
@@ -28,6 +30,6 @@ void snd_detach_record(SpiceRecordInstance *sin);
 
 void snd_set_playback_compression(int on);
 
-void snd_set_playback_latency(RedClient *client, uint32_t latency);
+void snd_set_playback_latency(struct RedClient *client, uint32_t latency);
 
 #endif
