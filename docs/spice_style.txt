@@ -131,6 +131,21 @@ Names
 * Structures, class and enum names - one or more words, each word start with upper case (e.g., Name, SampleStructName)
 * Defines and enum items names - uppercase words separated using underscores (e.g., NAME, SAMPLE_DEFINE_NAME)
 
+Type prefix
+~~~~~~~~~~~
+In the code there are some common prefixes for types, `Red` and `Spice`.
+As a basic rule `Spice` refers to types in the public external headers while `Red` is used for internal types.
+
+Common abbreviations
+~~~~~~~~~~~~~~~~~~~~
+`rcc` RedChannelClient
+
+`dcc` DisplayChannelClient
+
+`sin` spice instance
+
+`sif` spice interface
+
 Optimization
 ------------
 
