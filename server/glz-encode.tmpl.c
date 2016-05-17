@@ -409,26 +409,21 @@ match:        // RLE or dictionary (both are encoded by distance from ref (-1) a
 
         /* update the hash at match boundary */
 #if defined(LZ_RGB16) || defined(LZ_RGB24) || defined(LZ_RGB32)
-        if (ip > anchor) {
+        if (ip > anchor)
 #endif
+        {
             HASH_FUNC(hval, ip);
             UPDATE_HASH(encoder->dict, hval, seg_idx, ip - ((PIXEL *)seg->lines));
-            ip++;
-#if defined(LZ_RGB16) || defined(LZ_RGB24) || defined(LZ_RGB32)
-        } else {ip++;
         }
-#endif
+        ip++;
 #if defined(LZ_RGB24) || defined(LZ_RGB32)
-        if (ip > anchor) {
+        if (ip > anchor)
 #endif
+        {
             HASH_FUNC(hval, ip);
             UPDATE_HASH(encoder->dict, hval, seg_idx, ip - ((PIXEL *)seg->lines));
-            ip++;
-#if defined(LZ_RGB24) || defined(LZ_RGB32)
-        } else {
-            ip++;
         }
-#endif
+        ip++;
         /* assuming literal copy */
         encode_copy_count(encoder, MAX_COPY - 1);
         continue;
