@@ -18,6 +18,8 @@
 #include <config.h>
 #endif
 
+#include <common/sw_canvas.h>
+
 #include "display-channel.h"
 
 static void drawable_draw(DisplayChannel *display, Drawable *drawable);

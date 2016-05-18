@@ -23,7 +23,6 @@
 #include <inttypes.h>
 #include <fcntl.h>
 #include <glib.h>
-#include "red-worker.h"
 #include "red-common.h"
 #include "memslot.h"
 #include "red-parse-qxl.h"
