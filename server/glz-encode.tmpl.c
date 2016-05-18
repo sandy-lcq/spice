@@ -128,18 +128,12 @@
 
 #endif
 
-#ifndef LZ_PLT
-#define PIXEL_ID(pix_ptr, seg_ptr) \
-    ((pix_ptr) - ((PIXEL *)(seg_ptr)->lines) + (seg_ptr)->pixels_so_far)
-#define PIXEL_DIST(src_pix_ptr, src_seg_ptr, ref_pix_ptr, ref_seg_ptr, pix_per_byte) \
-    (PIXEL_ID(src_pix_ptr,src_seg_ptr) - PIXEL_ID(ref_pix_ptr, ref_seg_ptr))
-#else
 #define PIXEL_ID(pix_ptr, seg_ptr, pix_per_byte) \
     (((pix_ptr) - ((PIXEL *)(seg_ptr)->lines)) * pix_per_byte + (seg_ptr)->pixels_so_far)
+
 #define PIXEL_DIST(src_pix_ptr, src_seg_ptr, ref_pix_ptr, ref_seg_ptr, pix_per_byte) \
     ((PIXEL_ID(src_pix_ptr,src_seg_ptr, pix_per_byte) - \
     PIXEL_ID(ref_pix_ptr, ref_seg_ptr, pix_per_byte)) / pix_per_byte)
-#endif
 
 /* returns the length of the match. 0 if no match.
   if image_distance = 0, pixel_distance is the distance between the matching pixels.
@@ -149,9 +143,7 @@ static inline size_t FNAME(do_match)(SharedDictionary *dict,
                                      const PIXEL *ref_limit,
                                      WindowImageSegment *ip_seg,  const PIXEL *ip,
                                      const PIXEL *ip_limit,
-#ifdef  LZ_PLT
                                      int pix_per_byte,
-#endif
                                      size_t *o_image_dist, size_t *o_pix_distance)
 {
     int encode_size;
@@ -262,6 +254,8 @@ static void FNAME(compress_seg)(Encoder *encoder, uint32_t seg_idx, PIXEL *from,
     int copy = copied;
 #ifdef  LZ_PLT
     int pix_per_byte = PLT_PIXELS_PER_BYTE[encoder->cur_image.type];
+#else
+    int pix_per_byte = 1;
 #endif
 
 #ifdef DEBUG_ENCODE
@@ -342,9 +336,7 @@ static void FNAME(compress_seg)(Encoder *encoder, uint32_t seg_idx, PIXEL *from,
                 ref_limit = (PIXEL *)ref_seg->lines_end;
 
                 len = FNAME(do_match)(encoder->dict, ref_seg, ref, ref_limit, seg, ip, ip_bound,
-#ifdef  LZ_PLT
                                       pix_per_byte,
-#endif
                                       &image_dist, &pix_dist);
 
 #ifdef CHAINED_HASH
