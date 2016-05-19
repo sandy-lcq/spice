@@ -1171,7 +1171,7 @@ SPICE_GNUC_VISIBLE void spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt
 
     switch (cmd->cmd.type) {
     case QXL_CMD_DRAW: {
-        // FIXME: compat flag must be save somewhere...
+        // FIXME: compat flag must be saved somewhere...
         spice_return_if_fail(cmd->flags == 0);
         QXLDrawable *qxl = QXLPHYSICAL_TO_PTR(cmd->cmd.data);
         red_replay_native_drawable_free(replay, qxl, cmd->flags);
