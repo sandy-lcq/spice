@@ -340,23 +340,11 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
     red_channel_client_begin_send_message(rcc);
 }
 
-static RedCursorPipeItem *cursor_pipe_item_ref(RedCursorPipeItem *item)
-{
-    spice_return_val_if_fail(item, NULL);
-
-    red_pipe_item_ref(item);
-    return item;
-}
-
-
 static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *item)
 {
-    RedCursorPipeItem *cursor_pipe_item;
-
     spice_return_if_fail(item);
 
-    cursor_pipe_item = SPICE_CONTAINEROF(item, RedCursorPipeItem, base);
-    cursor_pipe_item_ref(cursor_pipe_item);
+    red_pipe_item_ref(item);
 }
 
 CursorChannel* cursor_channel_new(RedWorker *worker)
