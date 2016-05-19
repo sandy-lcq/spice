@@ -156,6 +156,11 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
             worker->cursor_poll_tries++;
             return n;
         }
+
+        if (worker->record)
+            red_record_qxl_command(worker->record, &worker->mem_slots, ext_cmd,
+                                   stat_now(CLOCK_MONOTONIC));
+
         worker->cursor_poll_tries = 0;
         switch (ext_cmd.cmd.type) {
         case QXL_CMD_CURSOR: {
