@@ -1934,16 +1934,7 @@ static void hold_item(RedChannelClient *rcc, RedPipeItem *item)
 {
     spice_return_if_fail(item);
 
-    switch (item->type) {
-    case RED_PIPE_ITEM_TYPE_DRAW:
-    case RED_PIPE_ITEM_TYPE_IMAGE:
-    case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
-    case RED_PIPE_ITEM_TYPE_UPGRADE:
-        red_pipe_item_ref(item);
-        break;
-    default:
-        spice_warn_if_reached();
-    }
+    red_pipe_item_ref(item);
 }
 
 static int handle_migrate_flush_mark(RedChannelClient *rcc)
