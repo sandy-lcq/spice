@@ -330,6 +330,16 @@ struct RedChannel {
 #endif
 };
 
+#define FOREACH_CLIENT(channel, _link, _next, _data)                   \
+    for (_link = (channel ? RED_CHANNEL(channel)->clients : NULL), \
+         _next = (_link ? _link->next : NULL), \
+         _data = (_link ? _link->data : NULL); \
+         _link; \
+         _link = _next, \
+         _next = (_link ? _link->next : NULL), \
+         _data = (_link ? _link->data : NULL))
+
+
 #define RED_CHANNEL(Channel) ((RedChannel *)(Channel))
 
 /*

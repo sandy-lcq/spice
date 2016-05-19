@@ -675,11 +675,10 @@ int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap)
 
 int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
 {
-    GList *link;
+    GList *link, *next;
+    RedChannelClient *rcc;
 
-    for (link = channel->clients; link != NULL; link = link->next) {
-        RedChannelClient *rcc = link->data;
-
+    FOREACH_CLIENT(channel, link, next, rcc) {
         if (!red_channel_client_test_remote_common_cap(rcc, cap)) {
             return FALSE;
         }
@@ -689,11 +688,10 @@ int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
 
 int red_channel_test_remote_cap(RedChannel *channel, uint32_t cap)
 {
-    GList *link;
+    GList *link, *next;
+    RedChannelClient *rcc;
 
-    for (link = channel->clients; link != NULL; link = link->next) {
-        RedChannelClient *rcc = link->data;
-
+    FOREACH_CLIENT(channel, link, next, rcc) {
         if (!red_channel_client_test_remote_cap(rcc, cap)) {
             return FALSE;
         }
@@ -1920,11 +1918,10 @@ int red_channel_all_blocked(RedChannel *channel)
 
 int red_channel_any_blocked(RedChannel *channel)
 {
-    GList *link;
+    GList *link, *next;
     RedChannelClient *rcc;
 
-    for (link = channel->clients; link != NULL; link = link->next) {
-        rcc = link->data;
+    FOREACH_CLIENT(channel, link, next, rcc) {
         if (rcc->send_data.blocked) {
             return TRUE;
         }
@@ -1979,11 +1976,10 @@ int red_channel_get_first_socket(RedChannel *channel)
 
 int red_channel_no_item_being_sent(RedChannel *channel)
 {
-    GList *link;
+    GList *link, *next;
     RedChannelClient *rcc;
 
-    for (link = channel->clients; link != NULL; link = link->next) {
-        rcc = link->data;
+    FOREACH_CLIENT(channel, link, next, rcc) {
         if (!red_channel_client_no_item_being_sent(rcc)) {
             return FALSE;
         }
@@ -2228,16 +2224,12 @@ static int red_channel_pipes_create_batch(RedChannel *channel,
     spice_assert(creator != NULL);
     spice_assert(pipe_add != NULL);
 
-    link = channel->clients;
-    while (link != NULL) {
-        next = link->next;
-        rcc = link->data;
+    FOREACH_CLIENT(channel, link, next, rcc) {
         item = (*creator)(rcc, data, num++);
         if (item) {
             (*pipe_add)(rcc, item);
             n++;
         }
-        link = next;
     }
 
     return n;
@@ -2280,12 +2272,11 @@ uint32_t red_channel_max_pipe_size(RedChannel *channel)
 
 uint32_t red_channel_min_pipe_size(RedChannel *channel)
 {
-    GList *link;
+    GList *link, *next;
     RedChannelClient *rcc;
     uint32_t pipe_size = ~0;
 
-    for (link = channel->clients; link != NULL; link = link->next) {
-        rcc = link->data;
+    FOREACH_CLIENT(channel, link, next, rcc) {
         pipe_size = MIN(pipe_size, rcc->pipe_size);
     }
     return pipe_size == ~0 ? 0 : pipe_size;
@@ -2293,12 +2284,11 @@ uint32_t red_channel_min_pipe_size(RedChannel *channel)
 
 uint32_t red_channel_sum_pipes_size(RedChannel *channel)
 {
-    GList *link;
+    GList *link, *next;
     RedChannelClient *rcc;
     uint32_t sum = 0;
 
-    for (link = channel->clients; link != NULL; link = link->next) {
-        rcc = link->data;
+    FOREACH_CLIENT(channel, link, next, rcc) {
         sum += rcc->pipe_size;
     }
     return sum;

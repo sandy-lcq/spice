@@ -226,15 +226,6 @@ struct DisplayChannel {
     stat_info_t lz4_stat;
 };
 
-#define FOREACH_DCC(channel, _link, _next, _data)                   \
-    for (_link = (channel ? RED_CHANNEL(channel)->clients : NULL), \
-         _next = (_link ? _link->next : NULL), \
-         _data = (_link ? _link->data : NULL); \
-         _link; \
-         _link = _next, \
-         _next = (_link ? _link->next : NULL), \
-         _data = (_link ? _link->data : NULL))
-
 static inline int get_stream_id(DisplayChannel *display, Stream *stream)
 {
     return (int)(stream - display->streams_buf);

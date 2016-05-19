@@ -245,7 +245,7 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 
     region_destroy(&surface->draw_dirty_region);
     surface->context.canvas = NULL;
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         dcc_destroy_surface(dcc, surface_id);
     }
 
@@ -280,7 +280,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
             continue;
         }
 
-        FOREACH_DCC(display, link, next, dcc) {
+        FOREACH_CLIENT(display, link, next, dcc) {
             agent = &dcc->stream_agents[get_stream_id(display, stream)];
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
@@ -298,7 +298,7 @@ static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
     GList *link, *next;
 
     spice_warn_if_fail(ring_is_empty(&drawable->pipes));
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         dcc_prepend_drawable(dcc, drawable);
     }
 }
@@ -322,7 +322,7 @@ static void pipes_add_drawable_after(DisplayChannel *display,
     if (num_other_linked != display->common.base.clients_num) {
         GList *link, *next;
         spice_debug("TODO: not O(n^2)");
-        FOREACH_DCC(display, link, next, dcc) {
+        FOREACH_CLIENT(display, link, next, dcc) {
             int sent = 0;
             DRAWABLE_FOREACH_DPI_SAFE(pos_after, dpi_link, dpi_next, dpi_pos_after) {
                 if (dpi_pos_after->dcc == dcc) {
@@ -1213,7 +1213,7 @@ void display_channel_free_glz_drawables_to_free(DisplayChannel *display)
 
     spice_return_if_fail(display);
 
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         dcc_free_glz_drawables_to_free(dcc);
     }
 }
@@ -1225,7 +1225,7 @@ void display_channel_free_glz_drawables(DisplayChannel *display)
 
     spice_return_if_fail(display);
 
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         dcc_free_glz_drawables(dcc);
     }
 }
@@ -1272,7 +1272,7 @@ void display_channel_free_some(DisplayChannel *display)
 
     spice_debug("#draw=%d, #glz_draw=%d", display->drawable_count,
                 display->glz_drawable_count);
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
 
         if (glz_dict) {
@@ -1287,7 +1287,7 @@ void display_channel_free_some(DisplayChannel *display)
         free_one_drawable(display, TRUE);
     }
 
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
 
         if (glz_dict) {
@@ -1762,7 +1762,7 @@ static void clear_surface_drawables_from_pipes(DisplayChannel *display, int surf
     GList *link, *next;
     DisplayChannelClient *dcc;
 
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         if (!dcc_clear_surface_drawables_from_pipe(dcc, surface_id, wait_if_used)) {
             red_channel_client_disconnect(RED_CHANNEL_CLIENT(dcc));
         }
@@ -1828,7 +1828,7 @@ static void send_create_surface(DisplayChannel *display, int surface_id, int ima
     DisplayChannelClient *dcc;
     GList *link, *next;
 
-    FOREACH_DCC(display, link, next, dcc) {
+    FOREACH_CLIENT(display, link, next, dcc) {
         dcc_create_surface(dcc, surface_id);
         if (image_ready)
             dcc_push_surface_image(dcc, surface_id);
