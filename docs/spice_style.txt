@@ -146,6 +146,8 @@ Common abbreviations
 
 `sif` spice interface
 
+`dpi` drawable pipe item
+
 Optimization
 ------------
 
