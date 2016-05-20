@@ -1925,11 +1925,6 @@ static void on_disconnect(RedChannelClient *rcc)
                 display->glz_drawable_count);
 }
 
-static void send_item(RedChannelClient *rcc, RedPipeItem *item)
-{
-    dcc_send_item(RCC_TO_DCC(rcc), item);
-}
-
 static int handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
@@ -1969,7 +1964,7 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
     DisplayChannel *display;
     ChannelCbs cbs = {
         .on_disconnect = on_disconnect,
-        .send_item = send_item,
+        .send_item = dcc_send_item,
         .handle_migrate_flush_mark = handle_migrate_flush_mark,
         .handle_migrate_data = handle_migrate_data,
         .handle_migrate_data_get_serial = handle_migrate_data_get_serial

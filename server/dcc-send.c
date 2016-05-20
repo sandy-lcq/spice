@@ -2367,9 +2367,9 @@ static void reset_send_data(DisplayChannelClient *dcc)
     memset(dcc->send_data.free_list.sync, 0, sizeof(dcc->send_data.free_list.sync));
 }
 
-void dcc_send_item(DisplayChannelClient *dcc, RedPipeItem *pipe_item)
+void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
-    RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
+    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
     reset_send_data(dcc);

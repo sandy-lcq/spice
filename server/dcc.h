@@ -203,7 +203,7 @@ void                       dcc_append_drawable                       (DisplayCha
 void                       dcc_add_drawable_after                    (DisplayChannelClient *dcc,
                                                                       Drawable *drawable,
                                                                       RedPipeItem *pos);
-void                       dcc_send_item                             (DisplayChannelClient *dcc,
+void                       dcc_send_item                             (RedChannelClient *dcc,
                                                                       RedPipeItem *item);
 int                        dcc_clear_surface_drawables_from_pipe     (DisplayChannelClient *dcc,
                                                                       int surface_id,
