@@ -49,6 +49,11 @@ typedef struct RedEmptyMsgPipeItem {
     int msg;
 } RedEmptyMsgPipeItem;
 
+typedef struct MarkerPipeItem {
+    RedPipeItem base;
+    gboolean *item_in_pipe;
+} MarkerPipeItem;
+
 #define PING_TEST_TIMEOUT_MS (MSEC_PER_SEC * 15)
 #define PING_TEST_IDLE_NET_TIMEOUT_MS (MSEC_PER_SEC / 10)
 
@@ -573,6 +578,8 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
             break;
         case RED_PIPE_ITEM_TYPE_PING:
             red_channel_client_send_ping(rcc);
+            break;
+        case RED_PIPE_ITEM_TYPE_MARKER:
             break;
         default:
             rcc->channel->channel_cbs.send_item(rcc, item);
@@ -2358,13 +2365,21 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
     }
 }
 
+static void marker_pipe_item_free(MarkerPipeItem *item)
+{
+    if (item->item_in_pipe) {
+        *item->item_in_pipe = FALSE;
+    }
+    free(item);
+}
+
 /* TODO: more evil sync stuff. anything with the word wait in it's name. */
 int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
                                            RedPipeItem *item,
                                            int64_t timeout)
 {
     uint64_t end_time;
-    int item_in_pipe;
+    gboolean item_in_pipe;
 
     spice_info(NULL);
 
@@ -2374,7 +2389,13 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         end_time = UINT64_MAX;
     }
 
-    red_pipe_item_ref(item);
+    MarkerPipeItem *mark_item = spice_new0(MarkerPipeItem, 1);
+
+    red_pipe_item_init_full(&mark_item->base, RED_PIPE_ITEM_TYPE_MARKER,
+                            (GDestroyNotify)marker_pipe_item_free);
+    item_in_pipe = TRUE;
+    mark_item->item_in_pipe = &item_in_pipe;
+    red_channel_client_pipe_add_after(rcc, &mark_item->base, item);
 
     if (red_channel_client_blocked(rcc)) {
         red_channel_client_receive(rcc);
@@ -2382,7 +2403,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     }
     red_channel_client_push(rcc);
 
-    while((item_in_pipe = ring_item_is_linked(&item->link)) &&
+    while(item_in_pipe &&
           (timeout == -1 || spice_get_monotonic_time_ns() < end_time)) {
         usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
         red_channel_client_receive(rcc);
@@ -2390,8 +2411,9 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         red_channel_client_push(rcc);
     }
 
-    red_pipe_item_unref(item);
     if (item_in_pipe) {
+        // still on the queue, make sure won't overwrite the stack variable
+        mark_item->item_in_pipe = NULL;
         spice_warning("timeout");
         return FALSE;
     } else {
