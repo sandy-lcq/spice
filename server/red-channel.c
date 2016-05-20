@@ -576,7 +576,7 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
             break;
         default:
             rcc->channel->channel_cbs.send_item(rcc, item);
-            return;
+            break;
     }
     red_pipe_item_unref(item);
 }

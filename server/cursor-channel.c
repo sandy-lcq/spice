@@ -336,7 +336,6 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
         spice_error("invalid pipe item type");
     }
 
-    red_pipe_item_unref(pipe_item);
     red_channel_client_begin_send_message(rcc);
 }
 

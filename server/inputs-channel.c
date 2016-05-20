@@ -289,7 +289,6 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
             spice_warning("invalid pipe iten %d", base->type);
             break;
     }
-    red_pipe_item_unref(base);
     red_channel_client_begin_send_message(rcc);
 }
 

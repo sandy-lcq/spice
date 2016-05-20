@@ -820,7 +820,6 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
         spice_printerr("Init msg for client %p was not sent yet "
                        "(client is probably during semi-seamless migration). Ignoring msg type %d",
                    rcc->client, base->type);
-        red_pipe_item_unref(base);
         return;
     }
     switch (base->type) {
@@ -888,6 +887,5 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
         default:
             break;
     };
-    red_pipe_item_unref(base);
     red_channel_client_begin_send_message(rcc);
 }

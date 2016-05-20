@@ -425,10 +425,8 @@ static void spicevmc_red_channel_send_item(RedChannelClient *rcc,
         break;
     default:
         spice_error("bad pipe item %d", item->type);
-        red_pipe_item_unref(item);
         return;
     }
-    red_pipe_item_unref(item);
     red_channel_client_begin_send_message(rcc);
 }
 
