@@ -1794,8 +1794,7 @@ static void red_channel_remove_client(RedChannelClient *rcc)
 static void red_client_remove_channel(RedChannelClient *rcc)
 {
     pthread_mutex_lock(&rcc->client->lock);
-    ring_remove(&rcc->client_link);
-    rcc->client->channels_num--;
+    rcc->client->channels = g_list_remove(rcc->client->channels, rcc);
     pthread_mutex_unlock(&rcc->client->lock);
 }
 
@@ -2010,7 +2009,6 @@ RedClient *red_client_new(RedsState *reds, int migrated)
 
     client = spice_malloc0(sizeof(RedClient));
     client->reds = reds;
-    ring_init(&client->channels);
     pthread_mutex_init(&client->lock, NULL);
     client->thread_id = pthread_self();
     client->during_target_migrate = migrated;
@@ -2054,15 +2052,14 @@ static gboolean red_channel_client_set_migration_seamless(RedChannelClient *rcc)
 
 void red_client_set_migration_seamless(RedClient *client) // dest
 {
-    RingItem *link;
+    GList *link;
     spice_assert(client->during_target_migrate);
     pthread_mutex_lock(&client->lock);
     client->seamless_migrate = TRUE;
     /* update channel clients that got connected before the migration
      * type was set. red_client_add_channel will handle newer channel clients */
-    RING_FOREACH(link, &client->channels) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(link, RedChannelClient, client_link);
-        if (red_channel_client_set_migration_seamless(rcc))
+    for (link = client->channels; link != NULL; link = link->next) {
+        if (red_channel_client_set_migration_seamless(link->data))
             client->num_migrated_channels++;
     }
     pthread_mutex_unlock(&client->lock);
@@ -2070,30 +2067,33 @@ void red_client_set_migration_seamless(RedClient *client) // dest
 
 void red_client_migrate(RedClient *client)
 {
-    RingItem *link, *next;
+    GList *link, *next;
     RedChannelClient *rcc;
 
-    spice_printerr("migrate client with #channels %d", client->channels_num);
+    spice_printerr("migrate client with #channels %d", g_list_length(client->channels));
     if (!pthread_equal(pthread_self(), client->thread_id)) {
         spice_warning("client->thread_id (0x%lx) != pthread_self (0x%lx)."
                       "If one of the threads is != io-thread && != vcpu-thread,"
                       " this might be a BUG",
                       client->thread_id, pthread_self());
     }
-    RING_FOREACH_SAFE(link, next, &client->channels) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, client_link);
+    link = client->channels;
+    while (link) {
+        next = link->next;
+        rcc = link->data;
         if (red_channel_client_is_connected(rcc)) {
             rcc->channel->client_cbs.migrate(rcc);
         }
+        link = next;
     }
 }
 
 void red_client_destroy(RedClient *client)
 {
-    RingItem *link, *next;
+    GList *link, *next;
     RedChannelClient *rcc;
 
-    spice_printerr("destroy client %p with #channels=%d", client, client->channels_num);
+    spice_printerr("destroy client %p with #channels=%d", client, g_list_length(client->channels));
     if (!pthread_equal(pthread_self(), client->thread_id)) {
         spice_warning("client->thread_id (0x%lx) != pthread_self (0x%lx)."
                       "If one of the threads is != io-thread && != vcpu-thread,"
@@ -2101,10 +2101,12 @@ void red_client_destroy(RedClient *client)
                       client->thread_id,
                       pthread_self());
     }
-    RING_FOREACH_SAFE(link, next, &client->channels) {
+    link = client->channels;
+    while (link) {
+        next = link->next;
         // some channels may be in other threads, so disconnection
         // is not synchronous.
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, client_link);
+        rcc = link->data;
         rcc->destroying = 1;
         // some channels may be in other threads. However we currently
         // assume disconnect is synchronous (we changed the dispatcher
@@ -2116,6 +2118,7 @@ void red_client_destroy(RedClient *client)
         spice_assert(rcc->pipe_size == 0);
         spice_assert(rcc->send_data.size == 0);
         red_channel_client_destroy(rcc);
+        link = next;
     }
     red_client_unref(client);
 }
@@ -2123,12 +2126,12 @@ void red_client_destroy(RedClient *client)
 /* client->lock should be locked */
 static RedChannelClient *red_client_get_channel(RedClient *client, int type, int id)
 {
-    RingItem *link;
+    GList *link;
     RedChannelClient *rcc;
     RedChannelClient *ret = NULL;
 
-    RING_FOREACH(link, &client->channels) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, client_link);
+    for (link = client->channels; link != NULL; link = link->next) {
+        rcc = link->data;
         if (rcc->channel->type == type && rcc->channel->id == id) {
             ret = rcc;
             break;
@@ -2141,12 +2144,11 @@ static RedChannelClient *red_client_get_channel(RedClient *client, int type, int
 static void red_client_add_channel(RedClient *client, RedChannelClient *rcc)
 {
     spice_assert(rcc && client);
-    ring_add(&client->channels, &rcc->client_link);
+    client->channels = g_list_prepend(client->channels, rcc);
     if (client->during_target_migrate && client->seamless_migrate) {
         if (red_channel_client_set_migration_seamless(rcc))
             client->num_migrated_channels++;
     }
-    client->channels_num++;
 }
 
 MainChannelClient *red_client_get_main(RedClient *client) {
@@ -2159,7 +2161,7 @@ void red_client_set_main(RedClient *client, MainChannelClient *mcc) {
 
 void red_client_semi_seamless_migrate_complete(RedClient *client)
 {
-    RingItem *link, *next;
+    GList *link, *next;
 
     pthread_mutex_lock(&client->lock);
     if (!client->during_target_migrate || client->seamless_migrate) {
@@ -2168,12 +2170,15 @@ void red_client_semi_seamless_migrate_complete(RedClient *client)
         return;
     }
     client->during_target_migrate = FALSE;
-    RING_FOREACH_SAFE(link, next, &client->channels) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(link, RedChannelClient, client_link);
+    link = client->channels;
+    while (link) {
+        next = link->next;
+        RedChannelClient *rcc = link->data;
 
         if (rcc->latency_monitor.timer) {
             red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
         }
+        link = next;
     }
     pthread_mutex_unlock(&client->lock);
     reds_on_client_semi_seamless_migrate_complete(client->reds, client);

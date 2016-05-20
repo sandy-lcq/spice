@@ -232,8 +232,6 @@ typedef struct RedChannelClientConnectivityMonitor {
 } RedChannelClientConnectivityMonitor;
 
 struct RedChannelClient {
-    RingItem channel_link;
-    RingItem client_link;
     RedChannel *channel;
     RedClient  *client;
     RedsStream *stream;
@@ -564,8 +562,7 @@ struct RedsState* red_channel_get_server(RedChannel *channel);
 struct RedClient {
     RedsState *reds;
     RingItem link;
-    Ring channels;
-    int channels_num;
+    GList *channels;
     MainChannelClient *mcc;
     pthread_mutex_t lock; // different channels can be in different threads
 
