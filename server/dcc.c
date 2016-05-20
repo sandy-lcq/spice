@@ -87,7 +87,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
             dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, dpi_pipe_item);
             drawable = dpi->drawable;
         } else if (item->type == RED_PIPE_ITEM_TYPE_UPGRADE) {
-            drawable = ((RedUpgradeItem *)item)->drawable;
+            drawable = SPICE_CONTAINEROF(item, RedUpgradeItem, base)->drawable;
         } else {
             continue;
         }
@@ -530,7 +530,7 @@ static RedMonitorsConfigItem *red_monitors_config_item_new(RedChannel* channel,
 {
     RedMonitorsConfigItem *mci;
 
-    mci = (RedMonitorsConfigItem *)spice_malloc(sizeof(*mci));
+    mci = spice_new(RedMonitorsConfigItem, 1);
     mci->monitors_config = monitors_config;
 
     red_pipe_item_init_full(&mci->pipe_item, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
@@ -1323,6 +1323,7 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
         NewCacheItem *tail;
         NewCacheItem **now;
 
+        verify(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
         if (!(tail = (NewCacheItem *)ring_get_tail(&cache->lru)) ||
                                                    tail->sync[dcc->id] == serial) {
             cache->available += size;

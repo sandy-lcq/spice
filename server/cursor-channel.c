@@ -321,10 +321,10 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
         cursor_marshall(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCursorPipeItem, base));
         break;
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
-        red_marshall_inval(rcc, m, (RedCacheItem *)pipe_item);
+        red_marshall_inval(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCacheItem, u.pipe_data));
         break;
     case RED_PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, (RedVerbItem*)pipe_item);
+        red_marshall_verb(rcc, SPICE_CONTAINEROF(pipe_item, RedVerbItem, base));
         break;
     case RED_PIPE_ITEM_TYPE_CURSOR_INIT:
         red_reset_cursor_cache(rcc);

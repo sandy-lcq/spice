@@ -116,10 +116,9 @@ static void main_notify_item_free(RedPipeItem *base)
     free(data);
 }
 
-static RedPipeItem *main_notify_item_new(void *data, int num)
+static RedPipeItem *main_notify_item_new(const char *msg, int num)
 {
     RedNotifyPipeItem *item = spice_malloc(sizeof(RedNotifyPipeItem));
-    const char *msg = data;
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NOTIFY,
                             main_notify_item_free);
@@ -294,7 +293,7 @@ void main_channel_client_push_uuid(MainChannelClient *mcc, const uint8_t uuid[16
 
 void main_channel_client_push_notify(MainChannelClient *mcc, const char *msg)
 {
-    RedPipeItem *item = main_notify_item_new((void *)msg, 1);
+    RedPipeItem *item = main_notify_item_new(msg, 1);
     red_channel_client_pipe_add_push(&mcc->base, item);
 }
 

@@ -46,6 +46,7 @@ void pixmap_cache_clear(PixmapCache *cache)
         cache->freezed = FALSE;
     }
 
+    verify(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
     while ((item = (NewCacheItem *)ring_get_head(&cache->lru))) {
         ring_remove(&item->lru_link);
         free(item);
@@ -113,7 +114,7 @@ PixmapCache *pixmap_cache_get(RedClient *client, uint8_t id, int64_t size)
 
     now = &pixmap_cache_list;
     while ((now = ring_next(&pixmap_cache_list, now))) {
-        PixmapCache *cache = (PixmapCache *)now;
+        PixmapCache *cache = SPICE_CONTAINEROF(now, PixmapCache, base);
         if ((cache->client == client) && (cache->id == id)) {
             ret = cache;
             ret->refs++;

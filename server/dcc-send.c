@@ -2380,34 +2380,32 @@ void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         break;
     }
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
-        marshall_inval_palette(rcc, m, (RedCacheItem *)pipe_item);
+        marshall_inval_palette(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCacheItem, u.pipe_data));
         break;
     case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
         StreamCreateDestroyItem *item = SPICE_CONTAINEROF(pipe_item, StreamCreateDestroyItem, base);
         marshall_stream_start(rcc, m, item->agent);
         break;
     }
-    case RED_PIPE_ITEM_TYPE_STREAM_CLIP: {
-        RedStreamClipItem* clip_item = (RedStreamClipItem *)pipe_item;
-        marshall_stream_clip(rcc, m, clip_item);
+    case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
+        marshall_stream_clip(rcc, m, SPICE_CONTAINEROF(pipe_item, RedStreamClipItem, base));
         break;
-    }
     case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
         StreamCreateDestroyItem *item = SPICE_CONTAINEROF(pipe_item, StreamCreateDestroyItem, base);
         marshall_stream_end(rcc, m, item->agent);
         break;
     }
     case RED_PIPE_ITEM_TYPE_UPGRADE:
-        marshall_upgrade(rcc, m, (RedUpgradeItem *)pipe_item);
+        marshall_upgrade(rcc, m, SPICE_CONTAINEROF(pipe_item, RedUpgradeItem, base));
         break;
     case RED_PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, (RedVerbItem*)pipe_item);
+        red_marshall_verb(rcc, SPICE_CONTAINEROF(pipe_item, RedVerbItem, base));
         break;
     case RED_PIPE_ITEM_TYPE_MIGRATE_DATA:
         display_channel_marshall_migrate_data(rcc, m);
         break;
     case RED_PIPE_ITEM_TYPE_IMAGE:
-        red_marshall_image(rcc, m, (RedImageItem *)pipe_item);
+        red_marshall_image(rcc, m, SPICE_CONTAINEROF(pipe_item, RedImageItem, base));
         break;
     case RED_PIPE_ITEM_TYPE_PIXMAP_SYNC:
         display_channel_marshall_pixmap_sync(rcc, m);

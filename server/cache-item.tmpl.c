@@ -93,6 +93,7 @@ static int FUNC_NAME(add)(CHANNELCLIENT *channel_client, uint64_t id, size_t siz
     item = spice_new(RedCacheItem, 1);
 
     channel_client->VAR_NAME(available) -= size;
+    verify(SPICE_OFFSETOF(RedCacheItem, u.cache_data.lru_link) == 0);
     while (channel_client->VAR_NAME(available) < 0) {
         RedCacheItem *tail = (RedCacheItem *)ring_get_tail(&channel_client->VAR_NAME(lru));
         if (!tail) {

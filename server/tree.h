@@ -54,7 +54,7 @@ struct Shadow {
 };
 
 #define IS_SHADOW(item) ((item)->type == TREE_ITEM_TYPE_SHADOW)
-#define SHADOW(item) ((Shadow*)(item))
+#define SHADOW(item) SPICE_CONTAINEROF(item, Shadow, base)
 
 struct Container {
     TreeItem base;
@@ -62,7 +62,7 @@ struct Container {
 };
 
 #define IS_CONTAINER(item) ((item)->type == TREE_ITEM_TYPE_CONTAINER)
-#define CONTAINER(item) ((Container*)(item))
+#define CONTAINER(item) SPICE_CONTAINEROF(item, Container, base)
 
 struct DrawItem {
     TreeItem base;
@@ -72,12 +72,12 @@ struct DrawItem {
 };
 
 #define IS_DRAW_ITEM(item) ((item)->type == TREE_ITEM_TYPE_DRAWABLE)
-#define DRAW_ITEM(item) ((DrawItem*)(item))
+#define DRAW_ITEM(item) SPICE_CONTAINEROF(item, DrawItem, base)
 
 static inline int is_opaque_item(TreeItem *item)
 {
     return item->type == TREE_ITEM_TYPE_CONTAINER ||
-        (IS_DRAW_ITEM(item) && ((DrawItem *)item)->effect == QXL_EFFECT_OPAQUE);
+        (IS_DRAW_ITEM(item) && DRAW_ITEM(item)->effect == QXL_EFFECT_OPAQUE);
 }
 
 void       tree_item_dump                           (TreeItem *item);

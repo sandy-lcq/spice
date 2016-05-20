@@ -153,7 +153,7 @@ static void dump_item(TreeItem *item, void *data)
     }
     case TREE_ITEM_TYPE_CONTAINER:
         di->level++;
-        di->container = (Container *)item;
+        di->container = CONTAINER(item);
         break;
     case TREE_ITEM_TYPE_SHADOW:
         break;
@@ -168,7 +168,7 @@ static void tree_foreach(TreeItem *item, void (*f)(TreeItem *, void *), void * d
     f(item, data);
 
     if (item->type == TREE_ITEM_TYPE_CONTAINER) {
-        Container *container = (Container*)item;
+        Container *container = CONTAINER(item);
         RingItem *it;
 
         RING_FOREACH(it, &container->items) {
@@ -240,6 +240,7 @@ void container_cleanup(Container *container)
     while (container && container->items.next == container->items.prev) {
         Container *next = container->base.container;
         if (container->items.next != &container->items) {
+            verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
             TreeItem *item = (TreeItem *)ring_get_head(&container->items);
             spice_assert(item);
             ring_remove(&item->siblings_link);
@@ -255,7 +256,8 @@ void container_cleanup(Container *container)
 Shadow* tree_item_find_shadow(TreeItem *item)
 {
     while (item->type == TREE_ITEM_TYPE_CONTAINER) {
-        if (!(item = (TreeItem *)ring_get_tail(&((Container *)item)->items))) {
+        verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
+        if (!(item = (TreeItem *)ring_get_tail(&CONTAINER(item)->items))) {
             return NULL;
         }
     }
@@ -264,7 +266,7 @@ Shadow* tree_item_find_shadow(TreeItem *item)
         return NULL;
     }
 
-    return ((DrawItem *)item)->shadow;
+    return DRAW_ITEM(item)->shadow;
 }
 
 Ring *tree_item_container_items(TreeItem *item, Ring *ring)
@@ -280,7 +282,7 @@ int tree_item_contained_by(TreeItem *item, Ring *ring)
         if (now == ring) {
             return TRUE;
         }
-    } while ((item = (TreeItem *)item->container));
+    } while ((item = &item->container->base));
 
     return FALSE;
 }

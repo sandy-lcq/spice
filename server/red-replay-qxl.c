@@ -369,7 +369,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         return NULL;
     }
 
-    qxl = (QXLImage*)spice_malloc0(sizeof(QXLImage));
+    qxl = spice_new0(QXLImage, 1);
     replay_fscanf(replay, "descriptor.id %"PRIu64"\n", &qxl->descriptor.id);
     replay_fscanf(replay, "descriptor.type %d\n", &temp); qxl->descriptor.type = temp;
     replay_fscanf(replay, "descriptor.flags %d\n", &temp); qxl->descriptor.flags = temp;

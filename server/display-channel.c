@@ -390,7 +390,7 @@ static void current_remove(DisplayChannel *display, TreeItem *item)
             drawable_remove_from_pipes(drawable);
             current_remove_drawable(display, drawable);
         } else {
-            Container *container = (Container *)now;
+            Container *container = CONTAINER(now);
 
             spice_assert(now->type == TREE_ITEM_TYPE_CONTAINER);
 
@@ -408,7 +408,7 @@ static void current_remove(DisplayChannel *display, TreeItem *item)
         if ((ring_item = ring_next(&container->items, ring_item))) {
             now = SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link);
         } else {
-            now = (TreeItem *)container;
+            now = &container->base;
         }
     }
 }
@@ -433,7 +433,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
     if (other->type != TREE_ITEM_TYPE_DRAWABLE) {
         return FALSE;
     }
-    other_draw_item = (DrawItem *)other;
+    other_draw_item = DRAW_ITEM(other);
 
     if (item->shadow || other_draw_item->shadow || item->effect != other_draw_item->effect) {
         return FALSE;
@@ -530,7 +530,7 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
     region_and(&and_rgn, &item->rgn);
     if (!region_is_empty(&and_rgn)) {
         if (IS_DRAW_ITEM(item)) {
-            DrawItem *draw = (DrawItem *)item;
+            DrawItem *draw = DRAW_ITEM(item);
 
             if (draw->effect == QXL_EFFECT_OPAQUE) {
                 region_exclude(rgn, &and_rgn);
@@ -551,8 +551,8 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
                     region_exclude(&shadow->on_hold, &and_rgn);
                     region_or(rgn, &and_rgn);
                     // in flat representation of current, shadow is always his owner next
-                    if (!tree_item_contained_by((TreeItem*)shadow, *top_ring)) {
-                        *top_ring = tree_item_container_items((TreeItem*)shadow, ring);
+                    if (!tree_item_contained_by(&shadow->base, *top_ring)) {
+                        *top_ring = tree_item_container_items(&shadow->base, ring);
                     }
                 }
             } else {
@@ -571,8 +571,8 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
                 region_exclude(rgn, &and_rgn);
                 if ((shadow = tree_item_find_shadow(item))) {
                     region_or(rgn, &shadow->on_hold);
-                    if (!tree_item_contained_by((TreeItem*)shadow, *top_ring)) {
-                        *top_ring = tree_item_container_items((TreeItem*)shadow, ring);
+                    if (!tree_item_contained_by(&shadow->base, *top_ring)) {
+                        *top_ring = tree_item_container_items(&shadow->base, ring);
                     }
                 }
             }
@@ -580,7 +580,7 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
             Shadow *shadow;
 
             spice_assert(item->type == TREE_ITEM_TYPE_SHADOW);
-            shadow = (Shadow *)item;
+            shadow = SHADOW(item);
             region_exclude(rgn, &and_rgn);
             region_or(&shadow->on_hold, &and_rgn);
         }
@@ -615,13 +615,14 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
                 ring_item = now->siblings_link.prev;
                 current_remove(display, now);
                 if (last && *last == now) {
+                    verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
                     *last = (TreeItem *)ring_next(ring, ring_item);
                 }
             } else if (now->type == TREE_ITEM_TYPE_CONTAINER) {
-                Container *container = (Container *)now;
+                Container *container = CONTAINER(now);
                 if ((ring_item = ring_get_head(&container->items))) {
                     ring = &container->items;
-                    spice_assert(((TreeItem *)ring_item)->container);
+                    spice_assert(SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link)->container);
                     continue;
                 }
                 ring_item = &now->siblings_link;
@@ -633,6 +634,7 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
             }
         }
 
+        verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
         while ((last && *last == (TreeItem *)ring_item) ||
                !(ring_item = ring_next(ring, ring_item))) {
             if (ring == top_ring) {
@@ -755,7 +757,7 @@ static int current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                     exclude_base = NULL;
                 }
                 if (sibling->type == TREE_ITEM_TYPE_CONTAINER) {
-                    container = (Container *)sibling;
+                    container = CONTAINER(sibling);
                     ring = &container->items;
                     item->base.container = container;
                     now = ring_next(ring, ring);

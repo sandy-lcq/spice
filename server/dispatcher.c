@@ -299,8 +299,7 @@ static int dispatcher_handle_single_read(Dispatcher *dispatcher)
             /* TODO: close socketpair? */
         }
     } else if (msg->ack == DISPATCHER_ASYNC && dispatcher->priv->handle_async_done) {
-        dispatcher->priv->handle_async_done(dispatcher->priv->opaque, type,
-                                      (void *)payload);
+        dispatcher->priv->handle_async_done(dispatcher->priv->opaque, type, payload);
     }
     return 1;
 }

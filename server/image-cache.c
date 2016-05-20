@@ -74,11 +74,12 @@ static void image_cache_remove(ImageCache *cache, ImageCacheItem *item)
 
 static void image_cache_put(SpiceImageCache *spice_cache, uint64_t id, pixman_image_t *image)
 {
-    ImageCache *cache = (ImageCache *)spice_cache;
+    ImageCache *cache = SPICE_CONTAINEROF(spice_cache, ImageCache, base);
     ImageCacheItem *item;
 
 #ifndef IMAGE_CACHE_AGE
     if (cache->num_items == IMAGE_CACHE_MAX_ITEMS) {
+        verify(SPICE_OFFSETOF(ImageCacheItem, lru_link) == 0);
         ImageCacheItem *tail = (ImageCacheItem *)ring_get_tail(&cache->lru);
         spice_assert(tail);
         image_cache_remove(cache, tail);
@@ -103,7 +104,7 @@ static void image_cache_put(SpiceImageCache *spice_cache, uint64_t id, pixman_im
 
 static pixman_image_t *image_cache_get(SpiceImageCache *spice_cache, uint64_t id)
 {
-    ImageCache *cache = (ImageCache *)spice_cache;
+    ImageCache *cache = SPICE_CONTAINEROF(spice_cache, ImageCache,base);
 
     ImageCacheItem *item = image_cache_find(cache, id);
     if (!item) {
@@ -133,6 +134,7 @@ void image_cache_reset(ImageCache *cache)
 {
     ImageCacheItem *item;
 
+    verify(SPICE_OFFSETOF(ImageCacheItem, lru_link) == 0);
     while ((item = (ImageCacheItem *)ring_get_head(&cache->lru))) {
         image_cache_remove(cache, item);
     }
@@ -145,6 +147,7 @@ void image_cache_reset(ImageCache *cache)
 
 void image_cache_aging(ImageCache *cache)
 {
+    verify(SPICE_OFFSETOF(ImageCacheItem, lru_link) == 0);
 #ifdef IMAGE_CACHE_AGE
     ImageCacheItem *item;
 
