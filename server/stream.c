@@ -772,9 +772,10 @@ void stream_agent_stop(StreamAgent *agent)
 
 static void red_upgrade_item_free(RedPipeItem *base)
 {
+    g_return_if_fail(base != NULL);
+
     RedUpgradeItem *item = SPICE_UPCAST(RedUpgradeItem, base);
 
-    g_return_if_fail(item != NULL);
     g_return_if_fail(item->base.refcount == 0);
 
     drawable_unref(item->drawable);

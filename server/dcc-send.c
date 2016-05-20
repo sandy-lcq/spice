@@ -1922,8 +1922,8 @@ static void red_marshall_image(RedChannelClient *rcc,
                                SpiceMarshaller *m,
                                RedImageItem *item)
 {
-    DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    DisplayChannel *display = DCC_TO_DC(dcc);
+    DisplayChannelClient *dcc;
+    DisplayChannel *display;
     SpiceImage red_image;
     SpiceBitmap bitmap;
     SpiceChunks *chunks;
@@ -1932,7 +1932,12 @@ static void red_marshall_image(RedChannelClient *rcc,
     SpiceMarshaller *src_bitmap_out, *mask_bitmap_out;
     SpiceMarshaller *bitmap_palette_out, *lzplt_palette_out;
 
-    spice_assert(rcc && display && item);
+    spice_assert(rcc && item);
+
+    dcc = DISPLAY_CHANNEL_CLIENT(rcc);
+
+    display = DCC_TO_DC(dcc);
+    spice_assert(display);
 
     QXL_SET_IMAGE_ID(&red_image, QXL_IMAGE_GROUP_RED, display_channel_generate_uid(display));
     red_image.descriptor.type = SPICE_IMAGE_TYPE_BITMAP;

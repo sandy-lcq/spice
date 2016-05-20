@@ -182,11 +182,12 @@ static void cursor_pipe_item_free(RedPipeItem *base)
 static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *base_marshaller,
                                      RedPipeItem *pipe_item)
 {
+    spice_assert(ccc);
+
     CursorChannel *cursor_channel;
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
     SpiceMsgCursorInit msg;
 
-    spice_assert(rcc);
     cursor_channel = CURSOR_CHANNEL(red_channel_client_get_channel(rcc));
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_INIT);
