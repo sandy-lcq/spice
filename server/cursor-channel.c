@@ -340,13 +340,6 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
     red_channel_client_begin_send_message(rcc);
 }
 
-static void cursor_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *item)
-{
-    spice_return_if_fail(item);
-
-    red_pipe_item_ref(item);
-}
-
 CursorChannel* cursor_channel_new(RedWorker *worker)
 {
     CursorChannel *cursor_channel;
@@ -354,7 +347,6 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
     ChannelCbs cbs = {
         .on_disconnect =  cursor_channel_client_on_disconnect,
         .send_item = cursor_channel_send_item,
-        .hold_item = cursor_channel_hold_pipe_item,
     };
 
     spice_info("create cursor channel");

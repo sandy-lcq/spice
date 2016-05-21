@@ -289,6 +289,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
             spice_warning("invalid pipe iten %d", base->type);
             break;
     }
+    red_pipe_item_unref(base);
     red_channel_client_begin_send_message(rcc);
 }
 
@@ -518,10 +519,6 @@ static int inputs_channel_config_socket(RedChannelClient *rcc)
     return TRUE;
 }
 
-static void inputs_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *item)
-{
-}
-
 static void inputs_connect(RedChannel *channel, RedClient *client,
                            RedsStream *stream, int migration,
                            int num_common_caps, uint32_t *common_caps,
@@ -620,7 +617,6 @@ InputsChannel* inputs_channel_new(RedsState *reds)
     channel_cbs.config_socket = inputs_channel_config_socket;
     channel_cbs.on_disconnect = inputs_channel_on_disconnect;
     channel_cbs.send_item = inputs_channel_send_item;
-    channel_cbs.hold_item = inputs_channel_hold_pipe_item;
     channel_cbs.alloc_recv_buf = inputs_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = inputs_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_data = inputs_channel_handle_migrate_data;

@@ -888,5 +888,6 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
         default:
             break;
     };
+    red_pipe_item_unref(base);
     red_channel_client_begin_send_message(rcc);
 }

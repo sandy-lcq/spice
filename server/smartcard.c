@@ -498,9 +498,10 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
         break;
     default:
         spice_error("bad pipe item %d", item->type);
-        free(item);
+        red_pipe_item_unref(item);
         return;
     }
+    red_pipe_item_unref(item);
     red_channel_client_begin_send_message(rcc);
 }
 
@@ -737,11 +738,6 @@ static int smartcard_channel_handle_message(RedChannelClient *rcc,
     return TRUE;
 }
 
-static void smartcard_channel_hold_pipe_item(RedChannelClient *rcc,
-                                             RedPipeItem *item)
-{
-}
-
 static void smartcard_connect_client(RedChannel *channel, RedClient *client,
                                      RedsStream *stream, int migration,
                                      int num_common_caps, uint32_t *common_caps,
@@ -785,7 +781,6 @@ static void smartcard_init(RedsState *reds)
     channel_cbs.config_socket = smartcard_channel_client_config_socket;
     channel_cbs.on_disconnect = smartcard_channel_on_disconnect;
     channel_cbs.send_item = smartcard_channel_send_item;
-    channel_cbs.hold_item = smartcard_channel_hold_pipe_item;
     channel_cbs.alloc_recv_buf = smartcard_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = smartcard_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_flush_mark = smartcard_channel_client_handle_migrate_flush_mark;

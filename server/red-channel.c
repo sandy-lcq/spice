@@ -1591,7 +1591,7 @@ void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type,
     rcc->send_data.header.set_msg_type(&rcc->send_data.header, msg_type);
     rcc->send_data.item = item;
     if (item) {
-        rcc->channel->channel_cbs.hold_item(rcc, item);
+        red_pipe_item_ref(item);
     }
 }
 
@@ -2374,7 +2374,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         end_time = UINT64_MAX;
     }
 
-    rcc->channel->channel_cbs.hold_item(rcc, item);
+    red_pipe_item_ref(item);
 
     if (red_channel_client_blocked(rcc)) {
         red_channel_client_receive(rcc);

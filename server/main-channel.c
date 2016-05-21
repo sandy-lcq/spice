@@ -273,10 +273,6 @@ static int main_channel_config_socket(RedChannelClient *rcc)
     return TRUE;
 }
 
-static void main_channel_hold_pipe_item(RedChannelClient *rcc, RedPipeItem *item)
-{
-}
-
 static int main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     spice_debug(NULL);
@@ -333,7 +329,6 @@ MainChannel* main_channel_new(RedsState *reds)
     channel_cbs.config_socket = main_channel_config_socket;
     channel_cbs.on_disconnect = main_channel_client_on_disconnect;
     channel_cbs.send_item = main_channel_client_send_item;
-    channel_cbs.hold_item = main_channel_hold_pipe_item;
     channel_cbs.alloc_recv_buf = main_channel_alloc_msg_rcv_buf;
     channel_cbs.release_recv_buf = main_channel_release_msg_rcv_buf;
     channel_cbs.handle_migrate_flush_mark = main_channel_handle_migrate_flush_mark;
