@@ -80,6 +80,8 @@ libserver_la_SOURCES =				\
 	glz-encoder-priv.h	\
 	inputs-channel.c			\
 	inputs-channel.h			\
+	inputs-channel-client.c		\
+	inputs-channel-client.h		\
 	jpeg-encoder.c				\
 	jpeg-encoder.h				\
 	lz4-encoder.c				\

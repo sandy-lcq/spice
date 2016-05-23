@@ -39,6 +39,7 @@
 #include "reds.h"
 #include "reds-stream.h"
 #include "red-channel.h"
+#include "inputs-channel-client.h"
 #include "main-channel-client.h"
 #include "inputs-channel.h"
 #include "migration-protocol.h"
@@ -99,11 +100,6 @@ RedsState* spice_tablet_state_get_server(SpiceTabletState *st)
     return st->reds;
 }
 
-typedef struct InputsChannelClient {
-    RedChannelClient base;
-    uint16_t motion_count;
-} InputsChannelClient;
-
 struct InputsChannel {
     RedChannel base;
     uint8_t recv_buf[RECEIVE_BUF_SIZE];
@@ -113,13 +109,6 @@ struct InputsChannel {
     SpiceKbdInstance *keyboard;
     SpiceMouseInstance *mouse;
     SpiceTabletInstance *tablet;
-};
-
-enum {
-    RED_PIPE_ITEM_INPUTS_INIT = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
-    RED_PIPE_ITEM_MOUSE_MOTION_ACK,
-    RED_PIPE_ITEM_KEY_MODIFIERS,
-    RED_PIPE_ITEM_MIGRATE_DATA,
 };
 
 typedef struct RedInputsPipeItem {
@@ -239,21 +228,6 @@ static RedPipeItem *red_inputs_key_modifiers_item_new(
     return &item->base;
 }
 
-static void inputs_channel_send_migrate_data(RedChannelClient *rcc,
-                                             SpiceMarshaller *m,
-                                             RedPipeItem *item)
-{
-    InputsChannelClient *icc = SPICE_CONTAINEROF(rcc, InputsChannelClient, base);
-    InputsChannel *inputs = SPICE_CONTAINEROF(rcc->channel, InputsChannel, base);
-
-    inputs->src_during_migrate = FALSE;
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
-
-    spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_INPUTS_MAGIC);
-    spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_INPUTS_VERSION);
-    spice_marshaller_add_uint16(m, icc->motion_count);
-}
-
 static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -283,7 +257,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
             red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_MOUSE_MOTION_ACK, base);
             break;
         case RED_PIPE_ITEM_MIGRATE_DATA:
-            inputs_channel_send_migrate_data(rcc, m, base);
+            inputs_channel_client_send_migrate_data(rcc, m, base);
             break;
         default:
             spice_warning("invalid pipe iten %d", base->type);
@@ -331,11 +305,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         SpiceMouseInstance *mouse = inputs_channel_get_mouse(inputs_channel);
         SpiceMsgcMouseMotion *mouse_motion = message;
 
-        if (++icc->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
-            !inputs_channel->src_during_migrate) {
-            red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_MOUSE_MOTION_ACK);
-            icc->motion_count = 0;
-        }
+        inputs_channel_client_on_mouse_motion(icc);
         if (mouse && reds_get_mouse_mode(reds) == SPICE_MOUSE_MODE_SERVER) {
             SpiceMouseInterface *sif;
             sif = SPICE_CONTAINEROF(mouse->base.sif, SpiceMouseInterface, base);
@@ -349,11 +319,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         SpiceMsgcMousePosition *pos = message;
         SpiceTabletInstance *tablet = inputs_channel_get_tablet(inputs_channel);
 
-        if (++icc->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
-            !inputs_channel->src_during_migrate) {
-            red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_MOUSE_MOTION_ACK);
-            icc->motion_count = 0;
-        }
+        inputs_channel_client_on_mouse_motion(icc);
         if (reds_get_mouse_mode(reds) != SPICE_MOUSE_MODE_CLIENT) {
             break;
         }
@@ -523,7 +489,7 @@ static void inputs_connect(RedChannel *channel, RedClient *client,
                            int num_common_caps, uint32_t *common_caps,
                            int num_caps, uint32_t *caps)
 {
-    InputsChannelClient *icc;
+    RedChannelClient *rcc;
 
     if (!reds_stream_is_ssl(stream) && !red_client_during_migrate_at_target(client)) {
         main_channel_client_push_notify(red_client_get_main(client),
@@ -531,18 +497,13 @@ static void inputs_connect(RedChannel *channel, RedClient *client,
     }
 
     spice_printerr("inputs channel client create");
-    icc = (InputsChannelClient*)red_channel_client_create(sizeof(InputsChannelClient),
-                                                          channel,
-                                                          client,
-                                                          stream,
-                                                          FALSE,
-                                                          num_common_caps, common_caps,
-                                                          num_caps, caps);
-    if (!icc) {
+    rcc = inputs_channel_client_create(channel, client, stream, FALSE,
+                                       num_common_caps, common_caps,
+                                       num_caps, caps);
+    if (!rcc) {
         return;
     }
-    icc->motion_count = 0;
-    inputs_pipe_add_init(&icc->base);
+    inputs_pipe_add_init(rcc);
 }
 
 static void inputs_migrate(RedChannelClient *rcc)
@@ -583,7 +544,7 @@ static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
                                               uint32_t size,
                                               void *message)
 {
-    InputsChannelClient *icc = SPICE_CONTAINEROF(rcc, InputsChannelClient, base);
+    InputsChannelClient *icc = (InputsChannelClient*)rcc;
     InputsChannel *inputs = SPICE_CONTAINEROF(rcc->channel, InputsChannel, base);
     SpiceMigrateDataHeader *header;
     SpiceMigrateDataInputs *mig_data;
@@ -598,12 +559,7 @@ static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
         return FALSE;
     }
     key_modifiers_sender(inputs);
-    icc->motion_count = mig_data->motion_count;
-
-    for (; icc->motion_count >= SPICE_INPUT_MOTION_ACK_BUNCH;
-           icc->motion_count -= SPICE_INPUT_MOTION_ACK_BUNCH) {
-        red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_MOUSE_MOTION_ACK);
-    }
+    inputs_channel_client_handle_migrate_data(icc, mig_data->motion_count);
     return TRUE;
 }
 
@@ -709,3 +665,13 @@ void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *ta
     inputs->tablet = NULL;
 }
 
+gboolean inputs_channel_is_src_during_migrate(InputsChannel *inputs)
+{
+    return inputs->src_during_migrate;
+}
+
+void inputs_channel_set_src_during_migrate(InputsChannel *inputs,
+                                           gboolean value)
+{
+    inputs->src_during_migrate = value;
+}
