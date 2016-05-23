@@ -500,7 +500,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
     int i;
     DisplayChannelClient *dcc;
     RedChannelClient *rcc;
-    RingItem *link, *next;
+    GList *link, *next;
     uint8_t caps[SPICE_CAPABILITIES_SIZE] = { 0 };
     int caps_available[] = {
         SPICE_DISPLAY_CAP_SIZED_STREAM,
@@ -533,7 +533,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
         for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
             SET_CAP(caps, caps_available[i]);
         }
-        DCC_FOREACH_SAFE(link, next, dcc, RED_CHANNEL(worker->display_channel)) {
+        FOREACH_DCC(worker->display_channel, link, next, dcc) {
             rcc = (RedChannelClient *)dcc;
             for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
                 if (!red_channel_client_test_remote_cap(rcc, caps_available[i]))
@@ -646,7 +646,7 @@ static void display_update_monitors_config(DisplayChannel *display,
 static void red_worker_push_monitors_config(RedWorker *worker)
 {
     DisplayChannelClient *dcc;
-    RingItem *item, *next;
+    GList *item, *next;
 
     FOREACH_DCC(worker->display_channel, item, next, dcc) {
         dcc_push_monitors_config(dcc);

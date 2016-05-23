@@ -226,14 +226,14 @@ struct DisplayChannel {
     stat_info_t lz4_stat;
 };
 
-#define LINK_TO_DCC(ptr) SPICE_CONTAINEROF(ptr, DisplayChannelClient,   \
-                                           common.base.channel_link)
-#define DCC_FOREACH_SAFE(link, next, dcc, channel)                      \
-    SAFE_FOREACH(link, next, channel,  &(channel)->clients, dcc, LINK_TO_DCC(link))
-
-
-#define FOREACH_DCC(display_channel, link, next, dcc)                   \
-    DCC_FOREACH_SAFE(link, next, dcc, RED_CHANNEL(display_channel))
+#define FOREACH_DCC(channel, _link, _next, _data)                   \
+    for (_link = (channel ? RED_CHANNEL(channel)->clients : NULL), \
+         _next = (_link ? _link->next : NULL), \
+         _data = (_link ? _link->data : NULL); \
+         _link; \
+         _link = _next, \
+         _next = (_link ? _link->next : NULL), \
+         _data = (_link ? _link->data : NULL))
 
 static inline int get_stream_id(DisplayChannel *display, Stream *stream)
 {

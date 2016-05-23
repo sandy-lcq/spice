@@ -332,14 +332,7 @@ void red_channel_client_receive(RedChannelClient *rcc)
 
 void red_channel_receive(RedChannel *channel)
 {
-    RingItem *link;
-    RingItem *next;
-    RedChannelClient *rcc;
-
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
-        red_channel_client_receive(rcc);
-    }
+    g_list_foreach(channel->clients, (GFunc)red_channel_client_receive, NULL);
 }
 
 static void red_peer_handle_outgoing(RedsStream *stream, OutgoingHandler *handler)
@@ -644,8 +637,7 @@ static void red_channel_client_pipe_remove(RedChannelClient *rcc, RedPipeItem *i
 static void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc)
 {
     spice_assert(rcc);
-    ring_add(&channel->clients, &rcc->channel_link);
-    channel->clients_num++;
+    channel->clients = g_list_prepend(channel->clients, rcc);
 }
 
 static void red_channel_client_set_remote_caps(RedChannelClient* rcc,
@@ -683,10 +675,10 @@ int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap)
 
 int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
 {
-    RingItem *link;
+    GList *link;
 
-    RING_FOREACH(link, &channel->clients) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        RedChannelClient *rcc = link->data;
 
         if (!red_channel_client_test_remote_common_cap(rcc, cap)) {
             return FALSE;
@@ -697,10 +689,10 @@ int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
 
 int red_channel_test_remote_cap(RedChannel *channel, uint32_t cap)
 {
-    RingItem *link;
+    GList *link;
 
-    RING_FOREACH(link, &channel->clients) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        RedChannelClient *rcc = link->data;
 
         if (!red_channel_client_test_remote_cap(rcc, cap)) {
             return FALSE;
@@ -908,7 +900,7 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
                                            stream->socket,
                                            SPICE_WATCH_EVENT_READ,
                                            red_channel_client_event, rcc);
-    rcc->id = channel->clients_num;
+    rcc->id = g_list_length(channel->clients);
     red_channel_add_client(channel, rcc);
     red_client_add_channel(client, rcc);
     red_channel_ref(channel);
@@ -977,16 +969,17 @@ int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc)
 int red_channel_is_waiting_for_migrate_data(RedChannel *channel)
 {
     RedChannelClient *rcc;
+    guint n_clients = g_list_length(channel->clients);
 
     if (!red_channel_is_connected(channel)) {
         return FALSE;
     }
 
-    if (channel->clients_num > 1) {
+    if (n_clients > 1) {
         return FALSE;
     }
-    spice_assert(channel->clients_num == 1);
-    rcc = SPICE_CONTAINEROF(ring_get_head(&channel->clients), RedChannelClient, channel_link);
+    spice_assert(n_clients == 1);
+    rcc = g_list_nth_data(channel->clients, 0);
     return red_channel_client_is_waiting_for_migrate_data(rcc);
 }
 
@@ -1045,7 +1038,6 @@ RedChannel *red_channel_create(int size,
 
     channel->reds = reds;
     channel->core = core;
-    ring_init(&channel->clients);
 
     // TODO: send incoming_cb as parameters instead of duplicating?
     channel->incoming_cb.alloc_msg_buf = (alloc_msg_recv_buf_proc)channel_cbs->alloc_recv_buf;
@@ -1112,7 +1104,6 @@ RedChannel *red_channel_create_dummy(int size, RedsState *reds, uint32_t type, u
     channel->refs = 1;
     channel->reds = reds;
     channel->core = &dummy_core;
-    ring_init(&channel->clients);
     client_cbs.connect = red_channel_client_default_connect;
     client_cbs.disconnect = red_channel_client_default_disconnect;
     client_cbs.migrate = red_channel_client_default_migrate;
@@ -1279,17 +1270,11 @@ void red_channel_client_destroy(RedChannelClient *rcc)
 
 void red_channel_destroy(RedChannel *channel)
 {
-    RingItem *link;
-    RingItem *next;
-
     if (!channel) {
         return;
     }
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        red_channel_client_destroy(
-            SPICE_CONTAINEROF(link, RedChannelClient, channel_link));
-    }
 
+    g_list_foreach(channel->clients, (GFunc)red_channel_client_destroy, NULL);
     red_channel_unref(channel);
 }
 
@@ -1312,12 +1297,7 @@ void red_channel_client_send(RedChannelClient *rcc)
 
 void red_channel_send(RedChannel *channel)
 {
-    RingItem *link;
-    RingItem *next;
-
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        red_channel_client_send(SPICE_CONTAINEROF(link, RedChannelClient, channel_link));
-    }
+    g_list_foreach(channel->clients, (GFunc)red_channel_client_send, NULL);
 }
 
 static inline int red_channel_client_waiting_for_ack(RedChannelClient *rcc)
@@ -1372,17 +1352,11 @@ void red_channel_client_push(RedChannelClient *rcc)
 
 void red_channel_push(RedChannel *channel)
 {
-    RingItem *link;
-    RingItem *next;
-    RedChannelClient *rcc;
-
     if (!channel) {
         return;
     }
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
-        red_channel_client_push(rcc);
-    }
+
+    g_list_foreach(channel->clients, (GFunc)red_channel_client_push, NULL);
 }
 
 int red_channel_client_get_roundtrip_ms(RedChannelClient *rcc)
@@ -1403,13 +1377,7 @@ static void red_channel_client_init_outgoing_messages_window(RedChannelClient *r
 // specific
 void red_channel_init_outgoing_messages_window(RedChannel *channel)
 {
-    RingItem *link;
-    RingItem *next;
-
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        red_channel_client_init_outgoing_messages_window(
-            SPICE_CONTAINEROF(link, RedChannelClient, channel_link));
-    }
+    g_list_foreach(channel->clients, (GFunc)red_channel_client_init_outgoing_messages_window, NULL);
 }
 
 static void red_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
@@ -1726,15 +1694,16 @@ void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
     red_channel_client_push(rcc);
 }
 
+static void red_channel_client_pipe_add_type_proxy(gpointer data, gpointer user_data)
+{
+    int type = GPOINTER_TO_INT(user_data);
+    red_channel_client_pipe_add_type(data, type);
+}
+
 void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type)
 {
-    RingItem *link, *next;
-
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        red_channel_client_pipe_add_type(
-            SPICE_CONTAINEROF(link, RedChannelClient, channel_link),
-            pipe_item_type);
-    }
+    g_list_foreach(channel->clients, red_channel_client_pipe_add_type_proxy,
+                   GINT_TO_POINTER(pipe_item_type));
 }
 
 void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
@@ -1747,21 +1716,22 @@ void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
     red_channel_client_push(rcc);
 }
 
+static void red_channel_client_pipe_add_empty_msg_proxy(gpointer data, gpointer user_data)
+{
+    int type = GPOINTER_TO_INT(user_data);
+    red_channel_client_pipe_add_empty_msg(data, type);
+}
+
 void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type)
 {
-    RingItem *link, *next;
-
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        red_channel_client_pipe_add_empty_msg(
-            SPICE_CONTAINEROF(link, RedChannelClient, channel_link),
-            msg_type);
-    }
+    g_list_foreach(channel->clients, red_channel_client_pipe_add_empty_msg_proxy, GINT_TO_POINTER(msg_type));
 }
 
 int red_channel_client_is_connected(RedChannelClient *rcc)
 {
     if (!rcc->dummy) {
-        return ring_item_is_linked(&rcc->channel_link);
+        return rcc->channel
+            && (g_list_find(rcc->channel->clients, rcc) != NULL);
     } else {
         return rcc->dummy_connected;
     }
@@ -1769,7 +1739,7 @@ int red_channel_client_is_connected(RedChannelClient *rcc)
 
 int red_channel_is_connected(RedChannel *channel)
 {
-    return channel && (channel->clients_num > 0);
+    return channel && channel->clients;
 }
 
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc)
@@ -1805,6 +1775,8 @@ void red_channel_client_ack_set_client_window(RedChannelClient *rcc, int client_
 
 static void red_channel_remove_client(RedChannelClient *rcc)
 {
+    GList *link;
+
     if (!pthread_equal(pthread_self(), rcc->channel->thread_id)) {
         spice_warning("channel type %d id %d - "
                       "channel->thread_id (0x%lx) != pthread_self (0x%lx)."
@@ -1813,11 +1785,11 @@ static void red_channel_remove_client(RedChannelClient *rcc)
                       rcc->channel->type, rcc->channel->id,
                       rcc->channel->thread_id, pthread_self());
     }
-    spice_return_if_fail(ring_item_is_linked(&rcc->channel_link));
+    spice_return_if_fail(rcc->channel);
+    link = g_list_find(rcc->channel->clients, rcc);
+    spice_return_if_fail(link != NULL);
 
-    ring_remove(&rcc->channel_link);
-    spice_assert(rcc->channel->clients_num > 0);
-    rcc->channel->clients_num--;
+    rcc->channel->clients = g_list_remove_link(rcc->channel->clients, link);
     // TODO: should we set rcc->channel to NULL???
 }
 
@@ -1831,11 +1803,12 @@ static void red_client_remove_channel(RedChannelClient *rcc)
 
 static void red_channel_client_disconnect_dummy(RedChannelClient *rcc)
 {
+    GList *link;
     spice_assert(rcc->dummy);
-    if (ring_item_is_linked(&rcc->channel_link)) {
+    if (rcc->channel && (link = g_list_find(rcc->channel->clients, rcc))) {
         spice_printerr("rcc=%p (channel=%p type=%d id=%d)", rcc, rcc->channel,
                        rcc->channel->type, rcc->channel->id);
-        red_channel_remove_client(rcc);
+        red_channel_remove_client(link->data);
     }
     rcc->dummy_connected = FALSE;
 }
@@ -1870,13 +1843,7 @@ void red_channel_client_disconnect(RedChannelClient *rcc)
 
 void red_channel_disconnect(RedChannel *channel)
 {
-    RingItem *link;
-    RingItem *next;
-
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        red_channel_client_disconnect(
-            SPICE_CONTAINEROF(link, RedChannelClient, channel_link));
-    }
+    g_list_foreach(channel->clients, (GFunc)red_channel_client_disconnect, NULL);
 }
 
 RedChannelClient *red_channel_client_create_dummy(int size,
@@ -1926,26 +1893,24 @@ error:
 
 void red_channel_apply_clients(RedChannel *channel, channel_client_callback cb)
 {
-    RingItem *link;
-    RingItem *next;
-    RedChannelClient *rcc;
+    g_list_foreach(channel->clients, (GFunc)cb, NULL);
+}
 
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
-        cb(rcc);
-    }
+void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback_data cb, void *data)
+{
+    g_list_foreach(channel->clients, (GFunc)cb, data);
 }
 
 int red_channel_all_blocked(RedChannel *channel)
 {
-    RingItem *link;
+    GList *link;
     RedChannelClient *rcc;
 
-    if (!channel || channel->clients_num == 0) {
+    if (!channel || !channel->clients) {
         return FALSE;
     }
-    RING_FOREACH(link, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        rcc = link->data;
         if (!rcc->send_data.blocked) {
             return FALSE;
         }
@@ -1955,11 +1920,11 @@ int red_channel_all_blocked(RedChannel *channel)
 
 int red_channel_any_blocked(RedChannel *channel)
 {
-    RingItem *link;
+    GList *link;
     RedChannelClient *rcc;
 
-    RING_FOREACH(link, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        rcc = link->data;
         if (rcc->send_data.blocked) {
             return TRUE;
         }
@@ -2002,20 +1967,23 @@ void red_channel_client_set_header_sub_list(RedChannelClient *rcc, uint32_t sub_
 
 int red_channel_get_first_socket(RedChannel *channel)
 {
-    if (!channel || channel->clients_num == 0) {
+    RedChannelClient *rcc;
+
+    if (!channel || !channel->clients) {
         return -1;
     }
-    return SPICE_CONTAINEROF(ring_get_head(&channel->clients),
-                             RedChannelClient, channel_link)->stream->socket;
+    rcc = g_list_nth_data(channel->clients, 0);
+
+    return rcc->stream->socket;
 }
 
 int red_channel_no_item_being_sent(RedChannel *channel)
 {
-    RingItem *link;
+    GList *link;
     RedChannelClient *rcc;
 
-    RING_FOREACH(link, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        rcc = link->data;
         if (!red_channel_client_no_item_being_sent(rcc)) {
             return FALSE;
         }
@@ -2252,7 +2220,7 @@ static int red_channel_pipes_create_batch(RedChannel *channel,
                                 new_pipe_item_t creator, void *data,
                                 rcc_item_t pipe_add)
 {
-    RingItem *link, *next;
+    GList *link, *next;
     RedChannelClient *rcc;
     RedPipeItem *item;
     int num = 0, n = 0;
@@ -2260,13 +2228,16 @@ static int red_channel_pipes_create_batch(RedChannel *channel,
     spice_assert(creator != NULL);
     spice_assert(pipe_add != NULL);
 
-    RING_FOREACH_SAFE(link, next, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    link = channel->clients;
+    while (link != NULL) {
+        next = link->next;
+        rcc = link->data;
         item = (*creator)(rcc, data, num++);
         if (item) {
             (*pipe_add)(rcc, item);
             n++;
         }
+        link = next;
     }
 
     return n;
@@ -2296,12 +2267,12 @@ void red_channel_pipes_new_add_tail(RedChannel *channel, new_pipe_item_t creator
 
 uint32_t red_channel_max_pipe_size(RedChannel *channel)
 {
-    RingItem *link;
+    GList *link;
     RedChannelClient *rcc;
     uint32_t pipe_size = 0;
 
-    RING_FOREACH(link, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        rcc = link->data;
         pipe_size = MAX(pipe_size, rcc->pipe_size);
     }
     return pipe_size;
@@ -2309,12 +2280,12 @@ uint32_t red_channel_max_pipe_size(RedChannel *channel)
 
 uint32_t red_channel_min_pipe_size(RedChannel *channel)
 {
-    RingItem *link;
+    GList *link;
     RedChannelClient *rcc;
     uint32_t pipe_size = ~0;
 
-    RING_FOREACH(link, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        rcc = link->data;
         pipe_size = MIN(pipe_size, rcc->pipe_size);
     }
     return pipe_size == ~0 ? 0 : pipe_size;
@@ -2322,12 +2293,12 @@ uint32_t red_channel_min_pipe_size(RedChannel *channel)
 
 uint32_t red_channel_sum_pipes_size(RedChannel *channel)
 {
-    RingItem *link;
+    GList *link;
     RedChannelClient *rcc;
     uint32_t sum = 0;
 
-    RING_FOREACH(link, &channel->clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = channel->clients; link != NULL; link = link->next) {
+        rcc = link->data;
         sum += rcc->pipe_size;
     }
     return sum;

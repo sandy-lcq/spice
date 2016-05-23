@@ -75,19 +75,16 @@ static inline void red_pipe_add_verb(RedChannelClient* rcc, uint16_t verb)
     red_channel_client_pipe_add(rcc, &item->base);
 }
 
-#define LINK_TO_RCC(ptr) SPICE_CONTAINEROF(ptr, RedChannelClient, channel_link)
-#define RCC_FOREACH_SAFE(link, next, rcc, channel) \
-    SAFE_FOREACH(link, next, channel,  &(channel)->clients, rcc, LINK_TO_RCC(link))
+static inline void red_pipe_add_verb_proxy(RedChannelClient *rcc, gpointer data)
+{
+    uint16_t verb = GPOINTER_TO_UINT(data);
+    red_pipe_add_verb(rcc, verb);
+}
 
 
 static inline void red_pipes_add_verb(RedChannel *channel, uint16_t verb)
 {
-    RedChannelClient *rcc;
-    RingItem *link, *next;
-
-    RCC_FOREACH_SAFE(link, next, rcc, channel) {
-        red_pipe_add_verb(rcc, verb);
-    }
+    red_channel_apply_clients_data(channel, red_pipe_add_verb_proxy, GUINT_TO_POINTER(verb));
 }
 
 RedWorker* red_worker_new(QXLInstance *qxl,

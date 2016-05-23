@@ -307,7 +307,7 @@ struct RedChannel {
     // However RCC still holds a reference to the Channel.
     // Maybe replace these logic with ref count?
     // TODO: rename to 'connected_clients'?
-    Ring clients;
+    GList *clients;
     uint32_t clients_num;
 
     OutgoingHandlerInterface outgoing_cb;
@@ -548,6 +548,7 @@ uint32_t red_channel_sum_pipes_size(RedChannel *channel);
 typedef void (*channel_client_callback)(RedChannelClient *rcc);
 typedef void (*channel_client_callback_data)(RedChannelClient *rcc, void *data);
 void red_channel_apply_clients(RedChannel *channel, channel_client_callback v);
+void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback_data v, void * data);
 struct RedsState* red_channel_get_server(RedChannel *channel);
 
 struct RedClient {

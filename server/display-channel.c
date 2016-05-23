@@ -223,7 +223,7 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
     RedSurface *surface = &display->surfaces[surface_id];
     QXLInstance *qxl = display->common.qxl;
     DisplayChannelClient *dcc;
-    RingItem *link, *next;
+    GList *link, *next;
 
     if (--surface->refs != 0) {
         return;
@@ -256,7 +256,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
 {
     Ring *ring;
     RingItem *item;
-    RingItem *dcc_ring_item, *next;
+    GList *link, *next;
     DisplayChannelClient *dcc;
 
     if (!red_channel_is_connected(RED_CHANNEL(display))) {
@@ -280,7 +280,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
             continue;
         }
 
-        FOREACH_DCC(display, dcc_ring_item, next, dcc) {
+        FOREACH_DCC(display, link, next, dcc) {
             agent = &dcc->stream_agents[get_stream_id(display, stream)];
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
@@ -295,10 +295,10 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
 static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
     DisplayChannelClient *dcc;
-    RingItem *dcc_ring_item, *next;
+    GList *link, *next;
 
     spice_warn_if_fail(ring_is_empty(&drawable->pipes));
-    FOREACH_DCC(display, dcc_ring_item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_prepend_drawable(dcc, drawable);
     }
 }
@@ -320,9 +320,9 @@ static void pipes_add_drawable_after(DisplayChannel *display,
         return;
     }
     if (num_other_linked != display->common.base.clients_num) {
-        RingItem *item, *next;
+        GList *link, *next;
         spice_debug("TODO: not O(n^2)");
-        FOREACH_DCC(display, item, next, dcc) {
+        FOREACH_DCC(display, link, next, dcc) {
             int sent = 0;
             DRAWABLE_FOREACH_DPI_SAFE(pos_after, dpi_link, dpi_next, dpi_pos_after) {
                 if (dpi_pos_after->dcc == dcc) {
@@ -467,34 +467,32 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
 
             DisplayChannelClient *dcc;
             RedDrawablePipeItem *dpi;
-            RingItem *worker_ring_item, *dpi_ring_item;
+            RingItem *dpi_ring_item;
+            GList *link;
 
             other_drawable->refs++;
             current_remove_drawable(display, other_drawable);
 
             /* sending the drawable to clients that already received
              * (or will receive) other_drawable */
-            worker_ring_item = ring_get_head(&RED_CHANNEL(display)->clients);
+            link = RED_CHANNEL(display)->clients;
             dpi_ring_item = ring_get_head(&other_drawable->pipes);
             /* dpi contains a sublist of dcc's, ordered the same */
-            while (worker_ring_item) {
-                dcc = SPICE_CONTAINEROF(worker_ring_item, DisplayChannelClient,
-                                        common.base.channel_link);
+            while (link) {
+                dcc = link->data;
                 dpi = SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item);
-                while (worker_ring_item && (!dpi || dcc != dpi->dcc)) {
+                while (link && (!dpi || dcc != dpi->dcc)) {
                     dcc_prepend_drawable(dcc, drawable);
-                    worker_ring_item = ring_next(&RED_CHANNEL(display)->clients,
-                                                 worker_ring_item);
-                    dcc = SPICE_CONTAINEROF(worker_ring_item, DisplayChannelClient,
-                                            common.base.channel_link);
+                    link = link->next;
+                    if (link)
+                        dcc = link->data;
                 }
 
                 if (dpi_ring_item) {
                     dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
                 }
-                if (worker_ring_item) {
-                    worker_ring_item = ring_next(&RED_CHANNEL(display)->clients,
-                                                 worker_ring_item);
+                if (link) {
+                    link = link->next;
                 }
             }
             /* not sending other_drawable where possible */
@@ -1171,9 +1169,9 @@ int display_channel_wait_for_migrate_data(DisplayChannel *display)
     }
 
     spice_debug(NULL);
-    spice_warn_if_fail(channel->clients_num == 1);
+    spice_warn_if_fail(g_list_length(channel->clients) == 1);
 
-    rcc = SPICE_CONTAINEROF(ring_get_head(&channel->clients), RedChannelClient, channel_link);
+    rcc = g_list_nth_data(channel->clients, 0);
 
     red_channel_client_ref(rcc);
     for (;;) {
@@ -1210,24 +1208,24 @@ void display_channel_flush_all_surfaces(DisplayChannel *display)
 
 void display_channel_free_glz_drawables_to_free(DisplayChannel *display)
 {
-    RingItem *link, *next;
+    GList *link, *next;
     DisplayChannelClient *dcc;
 
     spice_return_if_fail(display);
 
-    DCC_FOREACH_SAFE(link, next, dcc, RED_CHANNEL(display)) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_free_glz_drawables_to_free(dcc);
     }
 }
 
 void display_channel_free_glz_drawables(DisplayChannel *display)
 {
-    RingItem *link, *next;
+    GList *link, *next;
     DisplayChannelClient *dcc;
 
     spice_return_if_fail(display);
 
-    DCC_FOREACH_SAFE(link, next, dcc, RED_CHANNEL(display)) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_free_glz_drawables(dcc);
     }
 }
@@ -1270,11 +1268,11 @@ void display_channel_free_some(DisplayChannel *display)
 {
     int n = 0;
     DisplayChannelClient *dcc;
-    RingItem *item, *next;
+    GList *link, *next;
 
     spice_debug("#draw=%d, #glz_draw=%d", display->drawable_count,
                 display->glz_drawable_count);
-    FOREACH_DCC(display, item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
 
         if (glz_dict) {
@@ -1289,7 +1287,7 @@ void display_channel_free_some(DisplayChannel *display)
         free_one_drawable(display, TRUE);
     }
 
-    FOREACH_DCC(display, item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
 
         if (glz_dict) {
@@ -1761,10 +1759,10 @@ void display_channel_update(DisplayChannel *display,
 static void clear_surface_drawables_from_pipes(DisplayChannel *display, int surface_id,
                                                int wait_if_used)
 {
-    RingItem *item, *next;
+    GList *link, *next;
     DisplayChannelClient *dcc;
 
-    FOREACH_DCC(display, item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         if (!dcc_clear_surface_drawables_from_pipe(dcc, surface_id, wait_if_used)) {
             red_channel_client_disconnect(RED_CHANNEL_CLIENT(dcc));
         }
@@ -1828,9 +1826,9 @@ void display_channel_destroy_surfaces(DisplayChannel *display)
 static void send_create_surface(DisplayChannel *display, int surface_id, int image_ready)
 {
     DisplayChannelClient *dcc;
-    RingItem *item, *next;
+    GList *link, *next;
 
-    FOREACH_DCC(display, item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_create_surface(dcc, surface_id);
         if (image_ready)
             dcc_push_surface_image(dcc, surface_id);

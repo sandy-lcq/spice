@@ -42,12 +42,12 @@ static void main_channel_client_on_disconnect(RedChannelClient *rcc)
 
 RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t connection_id)
 {
-    RingItem *link;
+    GList *link;
     MainChannelClient *mcc;
     RedChannelClient *rcc;
 
-    RING_FOREACH(link, &main_chan->base.clients) {
-        rcc = SPICE_CONTAINEROF(link, RedChannelClient, channel_link);
+    for (link = main_chan->base.clients; link != NULL; link = link->next) {
+        rcc = link->data;
         mcc = (MainChannelClient*) rcc;
         if (main_channel_client_get_connection_id(mcc) == connection_id) {
             return rcc->client;
@@ -328,11 +328,10 @@ MainChannel* main_channel_new(RedsState *reds)
 
 static int main_channel_connect_semi_seamless(MainChannel *main_channel)
 {
-    RingItem *client_link;
+    GList *link;
 
-    RING_FOREACH(client_link, &main_channel->base.clients) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(client_link, RedChannelClient,
-                                                    channel_link);
+    for (link = main_channel->base.clients; link != NULL; link = link->next) {
+        RedChannelClient *rcc = link->data;
         MainChannelClient *mcc = (MainChannelClient*)rcc;
         if (main_channel_client_connect_semi_seamless(mcc))
             main_channel->num_clients_mig_wait++;
@@ -342,13 +341,12 @@ static int main_channel_connect_semi_seamless(MainChannel *main_channel)
 
 static int main_channel_connect_seamless(MainChannel *main_channel)
 {
-    RingItem *client_link;
+    GList *link;
 
-    spice_assert(main_channel->base.clients_num == 1);
+    spice_assert(g_list_length(main_channel->base.clients) == 1);
 
-    RING_FOREACH(client_link, &main_channel->base.clients) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(client_link, RedChannelClient,
-                                                    channel_link);
+    for (link = main_channel->base.clients; link != NULL; link = link->next) {
+        RedChannelClient *rcc = link->data;
         MainChannelClient *mcc = (MainChannelClient*)rcc;
         main_channel_client_connect_seamless(mcc);
         main_channel->num_clients_mig_wait++;
@@ -369,11 +367,9 @@ int main_channel_migrate_connect(MainChannel *main_channel, RedsMigSpice *mig_ta
     if (!try_seamless) {
         return main_channel_connect_semi_seamless(main_channel);
     } else {
-        RingItem *client_item;
         RedChannelClient *rcc;
 
-        client_item = ring_get_head(&main_channel->base.clients);
-        rcc = SPICE_CONTAINEROF(client_item, RedChannelClient, channel_link);
+        rcc = g_list_nth_data(main_channel->base.clients, 0);
 
         if (!red_channel_client_test_remote_cap(rcc,
                                                 SPICE_MAIN_CAP_SEAMLESS_MIGRATE)) {
@@ -387,11 +383,10 @@ int main_channel_migrate_connect(MainChannel *main_channel, RedsMigSpice *mig_ta
 
 void main_channel_migrate_cancel_wait(MainChannel *main_chan)
 {
-    RingItem *client_link;
+    GList *link;
 
-    RING_FOREACH(client_link, &main_chan->base.clients) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(client_link, RedChannelClient,
-                                                    channel_link);
+    for (link = main_chan->base.clients; link != NULL; link = link->next) {
+        RedChannelClient *rcc = link->data;
         MainChannelClient *mcc = (MainChannelClient*)rcc;
         main_channel_client_migrate_cancel_wait(mcc);
     }
@@ -400,19 +395,18 @@ void main_channel_migrate_cancel_wait(MainChannel *main_chan)
 
 int main_channel_migrate_src_complete(MainChannel *main_chan, int success)
 {
-    RingItem *client_link;
+    GList *link;
     int semi_seamless_count = 0;
 
     spice_printerr("");
 
-    if (ring_is_empty(&main_chan->base.clients)) {
+    if (!main_chan->base.clients) {
         spice_printerr("no peer connected");
         return 0;
     }
 
-    RING_FOREACH(client_link, &main_chan->base.clients) {
-        RedChannelClient *rcc = SPICE_CONTAINEROF(client_link, RedChannelClient,
-                                                    channel_link);
+    for (link = main_chan->base.clients; link != NULL; link = link->next) {
+        RedChannelClient *rcc = link->data;
         MainChannelClient *mcc = (MainChannelClient*)rcc;
         if (main_channel_client_migrate_src_complete(mcc, success))
             semi_seamless_count++;

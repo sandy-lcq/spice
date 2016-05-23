@@ -96,13 +96,13 @@ static RedPipeItem *stream_destroy_item_new(StreamAgent *agent)
 void stream_stop(DisplayChannel *display, Stream *stream)
 {
     DisplayChannelClient *dcc;
-    RingItem *item, *next;
+    GList *link, *next;
 
     spice_return_if_fail(ring_item_is_linked(&stream->link));
     spice_return_if_fail(!stream->current);
 
     spice_debug("stream %d", get_stream_id(display, stream));
-    FOREACH_DCC(display, item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         StreamAgent *stream_agent;
 
         stream_agent = &dcc->stream_agents[get_stream_id(display, stream)];
@@ -289,7 +289,7 @@ static int is_next_stream_frame(DisplayChannel *display,
 static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream)
 {
     DisplayChannelClient *dcc;
-    RingItem *item, *next;
+    GList *link, *next;
 
     spice_assert(drawable && stream);
     spice_assert(!drawable->stream && !stream->current);
@@ -308,7 +308,7 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *s
         stream->num_input_frames++;
     }
 
-    FOREACH_DCC(display, item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         StreamAgent *agent;
         QRegion clip_in_draw_dest;
 
@@ -350,6 +350,7 @@ static void before_reattach_stream(DisplayChannel *display,
     int index;
     StreamAgent *agent;
     RingItem *ring_item, *next;
+    GList *link, *link_next;
 
     spice_return_if_fail(stream->current);
 
@@ -385,7 +386,7 @@ static void before_reattach_stream(DisplayChannel *display,
     }
 
 
-    FOREACH_DCC(display, ring_item, next, dcc) {
+    FOREACH_DCC(display, link, link_next, dcc) {
         double drop_factor;
 
         agent = &dcc->stream_agents[index];
@@ -430,7 +431,7 @@ static Stream *display_channel_stream_try_new(DisplayChannel *display)
 static void display_channel_create_stream(DisplayChannel *display, Drawable *drawable)
 {
     DisplayChannelClient *dcc;
-    RingItem *dcc_ring_item, *next;
+    GList *link, *next;
     Stream *stream;
     SpiceRect* src_rect;
 
@@ -467,7 +468,7 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
     stream->input_fps_start_time = drawable->creation_time;
     display->streams_size_total += stream->width * stream->height;
     display->stream_count++;
-    FOREACH_DCC(display, dcc_ring_item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_create_stream(dcc, stream);
     }
     spice_debug("stream %d %dx%d (%d, %d) (%d, %d) %u fps",
@@ -870,10 +871,10 @@ clear_vis_region:
 static void detach_stream_gracefully(DisplayChannel *display, Stream *stream,
                                      Drawable *update_area_limit)
 {
-    RingItem *item, *next;
+    GList *link, *next;
     DisplayChannelClient *dcc;
 
-    FOREACH_DCC(display, item, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_detach_stream_gracefully(dcc, stream, update_area_limit);
     }
     if (stream->current) {
@@ -895,7 +896,7 @@ void stream_detach_behind(DisplayChannel *display, QRegion *region, Drawable *dr
 {
     Ring *ring = &display->streams;
     RingItem *item = ring_get_head(ring);
-    RingItem *dcc_ring_item, *next;
+    GList *link, *next;
     DisplayChannelClient *dcc;
     bool is_connected = red_channel_is_connected(RED_CHANNEL(display));
 
@@ -904,7 +905,7 @@ void stream_detach_behind(DisplayChannel *display, QRegion *region, Drawable *dr
         int detach = 0;
         item = ring_next(ring, item);
 
-        FOREACH_DCC(display, dcc_ring_item, next, dcc) {
+        FOREACH_DCC(display, link, next, dcc) {
             StreamAgent *agent = &dcc->stream_agents[get_stream_id(display, stream)];
 
             if (region_intersects(&agent->vis_region, region)) {
