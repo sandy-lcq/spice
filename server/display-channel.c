@@ -1758,7 +1758,7 @@ static void clear_surface_drawables_from_pipes(DisplayChannel *display, int surf
 }
 
 /* TODO: cleanup/refactor destroy functions */
-void display_channel_destroy_surface(DisplayChannel *display, uint32_t surface_id)
+static void display_channel_destroy_surface(DisplayChannel *display, uint32_t surface_id)
 {
     draw_depend_on_me(display, surface_id);
     /* note that draw_depend_on_me must be called before current_remove_all.

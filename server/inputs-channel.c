@@ -65,6 +65,10 @@ struct SpiceKbdState {
     RedsState *reds;
 };
 
+static SpiceKbdInstance* inputs_channel_get_keyboard(InputsChannel *inputs);
+static SpiceMouseInstance* inputs_channel_get_mouse(InputsChannel *inputs);
+static SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs);
+
 static SpiceKbdState* spice_kbd_state_new(RedsState *reds)
 {
     SpiceKbdState *st = spice_new0(SpiceKbdState, 1);
@@ -605,7 +609,7 @@ InputsChannel* inputs_channel_new(RedsState *reds)
     return inputs;
 }
 
-SpiceKbdInstance* inputs_channel_get_keyboard(InputsChannel *inputs)
+static SpiceKbdInstance* inputs_channel_get_keyboard(InputsChannel *inputs)
 {
     return inputs->keyboard;
 }
@@ -621,7 +625,7 @@ int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboar
     return 0;
 }
 
-SpiceMouseInstance* inputs_channel_get_mouse(InputsChannel *inputs)
+static SpiceMouseInstance* inputs_channel_get_mouse(InputsChannel *inputs)
 {
     return inputs->mouse;
 }
@@ -637,7 +641,7 @@ int inputs_channel_set_mouse(InputsChannel *inputs, SpiceMouseInstance *mouse)
     return 0;
 }
 
-SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs)
+static SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs)
 {
     return inputs->tablet;
 }

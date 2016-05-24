@@ -38,8 +38,6 @@ typedef struct RedGlzDrawable RedGlzDrawable;
 
 void             dcc_encoders_init                           (DisplayChannelClient *dcc);
 void             dcc_encoders_free                           (DisplayChannelClient *dcc);
-void             dcc_free_glz_drawable_instance              (DisplayChannelClient *dcc,
-                                                              GlzDrawableInstanceItem *item);
 void             dcc_free_glz_drawable                       (DisplayChannelClient *dcc,
                                                               RedGlzDrawable *drawable);
 int              dcc_free_some_independent_glz_drawables     (DisplayChannelClient *dcc);

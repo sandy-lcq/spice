@@ -50,7 +50,6 @@ typedef struct ImageCache {
 #endif
 } ImageCache;
 
-int          image_cache_hit               (ImageCache *cache, uint64_t id);
 void         image_cache_init              (ImageCache *cache);
 void         image_cache_reset             (ImageCache *cache);
 void         image_cache_aging             (ImageCache *cache);

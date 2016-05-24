@@ -282,8 +282,6 @@ void                       display_channel_free_glz_drawables        (DisplayCha
 void                       display_channel_destroy_surface_wait      (DisplayChannel *display,
                                                                       uint32_t surface_id);
 void                       display_channel_destroy_surfaces          (DisplayChannel *display);
-void                       display_channel_destroy_surface           (DisplayChannel *display,
-                                                                      uint32_t surface_id);
 uint32_t                   display_channel_generate_uid              (DisplayChannel *display);
 void                       display_channel_process_draw              (DisplayChannel *display,
                                                                       RedDrawable *red_drawable,

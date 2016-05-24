@@ -26,6 +26,9 @@
 
 #define ZLIB_DEFAULT_COMPRESSION_LEVEL 3
 
+static void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
+                                           GlzDrawableInstanceItem *item);
+
 static SPICE_GNUC_NORETURN SPICE_GNUC_PRINTF(2, 3) void
 quic_usr_error(QuicUsrContext *usr, const char *fmt, ...)
 {
@@ -452,8 +455,8 @@ void marshaller_add_compressed(SpiceMarshaller *m,
    it is not used by Drawable).
    NOTE - 1) can be called only by the display channel that created the drawable
           2) it is assumed that the instance was already removed from the dictionary*/
-void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
-                                    GlzDrawableInstanceItem *instance)
+static void dcc_free_glz_drawable_instance(DisplayChannelClient *dcc,
+                                           GlzDrawableInstanceItem *instance)
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     RedGlzDrawable *glz_drawable;

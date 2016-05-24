@@ -45,9 +45,6 @@ void reds_handle_channel_event(RedsState *reds, int event, SpiceChannelEventInfo
 void reds_disable_mm_time(RedsState *reds);
 void reds_enable_mm_time(RedsState *reds);
 uint32_t reds_get_mm_time(void);
-void reds_set_client_mouse_allowed(RedsState *reds,
-                                   int is_client_mouse_allowed,
-                                   int x_res, int y_res);
 void reds_register_channel(RedsState *reds, RedChannel *channel);
 void reds_unregister_channel(RedsState *reds, RedChannel *channel);
 int reds_get_mouse_mode(RedsState *reds); // used by inputs_channel
@@ -100,8 +97,6 @@ spice_wan_compression_t reds_get_jpeg_state(const RedsState *reds);
 spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds);
 SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds);
 void reds_update_client_mouse_allowed(RedsState *reds);
-gboolean reds_use_client_monitors_config(RedsState *reds);
-void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
 MainDispatcher* reds_get_main_dispatcher(RedsState *reds);
 
 /* fd watches/timers */

@@ -72,6 +72,9 @@
 
 #include "reds-private.h"
 
+static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
+static gboolean reds_use_client_monitors_config(RedsState *reds);
+
 static SpiceCoreInterface *core_public = NULL;
 
 static SpiceTimer *adapter_timer_add(const SpiceCoreInterfaceInternal *iface, SpiceTimerFunc func, void *opaque)
@@ -1848,7 +1851,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
      ((state & SPICE_MOUSE_BUTTON_MASK_MIDDLE) ? VD_AGENT_MBUTTON_MASK : 0) |    \
      ((state & SPICE_MOUSE_BUTTON_MASK_RIGHT) ? VD_AGENT_RBUTTON_MASK : 0))
 
-void reds_set_client_mouse_allowed(RedsState *reds, int is_client_mouse_allowed, int x_res, int y_res)
+static void reds_set_client_mouse_allowed(RedsState *reds, int is_client_mouse_allowed, int x_res, int y_res)
 {
     reds->monitor_mode.x_res = x_res;
     reds->monitor_mode.y_res = y_res;
@@ -4209,7 +4212,7 @@ void reds_update_client_mouse_allowed(RedsState *reds)
     }
 }
 
-gboolean reds_use_client_monitors_config(RedsState *reds)
+static gboolean reds_use_client_monitors_config(RedsState *reds)
 {
     GList *l;
 
@@ -4226,7 +4229,7 @@ gboolean reds_use_client_monitors_config(RedsState *reds)
     return TRUE;
 }
 
-void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config)
+static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config)
 {
     GList *l;
 
