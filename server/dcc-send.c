@@ -1777,7 +1777,7 @@ static inline void marshall_inval_palette(RedChannelClient *rcc,
     SpiceMsgDisplayInvalOne inval_one;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_INVAL_PALETTE, NULL);
-    inval_one.id = *(uint64_t *)&cache_item->id;
+    inval_one.id = cache_item->id;
 
     spice_marshall_msg_display_inval_palette(base_marshaller, &inval_one);
 
