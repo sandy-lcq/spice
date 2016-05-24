@@ -24,7 +24,6 @@
 #define CACHE_NAME cursor_cache
 #define CACHE_HASH_KEY CURSOR_CACHE_HASH_KEY
 #define CACHE_HASH_SIZE CURSOR_CACHE_HASH_SIZE
-#define CACHE_INVAL_TYPE SPICE_MSG_CURSOR_INVAL_ONE
 #define FUNC_NAME(name) red_cursor_cache_##name
 #define VAR_NAME(name) cursor_cache_##name
 #define CHANNEL CursorChannel
@@ -35,7 +34,6 @@
 #define CACHE_NAME palette_cache
 #define CACHE_HASH_KEY PALETTE_CACHE_HASH_KEY
 #define CACHE_HASH_SIZE PALETTE_CACHE_HASH_SIZE
-#define CACHE_INVAL_TYPE SPICE_MSG_DISPLAY_INVAL_PALETTE
 #define FUNC_NAME(name) red_palette_cache_##name
 #define VAR_NAME(name) palette_cache_##name
 #define CHANNEL DisplayChannel
@@ -110,7 +108,6 @@ static int FUNC_NAME(add)(CHANNELCLIENT *channel_client, uint64_t id, size_t siz
     ring_add(&channel_client->VAR_NAME(lru), &item->u.cache_data.lru_link);
     item->id = id;
     item->size = size;
-    item->inval_type = CACHE_INVAL_TYPE;
     return TRUE;
 }
 
@@ -134,7 +131,6 @@ static void FUNC_NAME(reset)(CHANNELCLIENT *channel_client, long size)
 #undef CACHE_NAME
 #undef CACHE_HASH_KEY
 #undef CACHE_HASH_SIZE
-#undef CACHE_INVAL_TYPE
 #undef CACHE_MAX_CLIENT_SIZE
 #undef FUNC_NAME
 #undef VAR_NAME

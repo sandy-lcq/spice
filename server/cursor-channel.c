@@ -306,7 +306,7 @@ static inline void red_marshall_inval(RedChannelClient *rcc,
 {
     SpiceMsgDisplayInvalOne inval_one;
 
-    red_channel_client_init_send_data(rcc, cach_item->inval_type, NULL);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_INVAL_ONE, NULL);
     inval_one.id = *(uint64_t *)&cach_item->id;
 
     spice_marshall_msg_cursor_inval_one(base_marshaller, &inval_one);

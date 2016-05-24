@@ -34,7 +34,6 @@ struct RedCacheItem {
     } u;
     uint64_t id;
     size_t size;
-    uint32_t inval_type;
 };
 
 #endif /* CACHE_ITEM_H_ */
