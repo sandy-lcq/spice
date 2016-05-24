@@ -280,8 +280,6 @@ void                       display_channel_set_stream_video          (DisplayCha
 int                        display_channel_get_streams_timeout       (DisplayChannel *display);
 void                       display_channel_compress_stats_print      (const DisplayChannel *display);
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
-Drawable *                 display_channel_drawable_try_new          (DisplayChannel *display,
-                                                                      int process_commands_generation);
 void                       display_channel_surface_unref             (DisplayChannel *display,
                                                                       uint32_t surface_id);
 void                       display_channel_current_flush             (DisplayChannel *display,

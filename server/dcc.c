@@ -281,7 +281,7 @@ static void add_drawable_surface_images(DisplayChannelClient *dcc, Drawable *dra
     dcc_push_surface_image(dcc, drawable->surface_id);
 }
 
-void red_drawable_pipe_item_free(RedPipeItem *item)
+static void red_drawable_pipe_item_free(RedPipeItem *item)
 {
     RedDrawablePipeItem *dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem,
                                                  dpi_pipe_item);

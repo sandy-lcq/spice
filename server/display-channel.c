@@ -21,6 +21,8 @@
 #include "display-channel.h"
 
 static void drawable_draw(DisplayChannel *display, Drawable *drawable);
+static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
+                                                  int process_commands_generation);
 
 uint32_t display_channel_generate_uid(DisplayChannel *display)
 {
@@ -848,7 +850,7 @@ static bool drawable_can_stream(DisplayChannel *display, Drawable *drawable)
     return TRUE;
 }
 
-void display_channel_print_stats(DisplayChannel *display)
+static void display_channel_print_stats(DisplayChannel *display)
 {
 #ifdef RED_WORKER_STAT
     stat_time_t total = display->add_stat.total;
@@ -1331,8 +1333,8 @@ static void drawables_init(DisplayChannel *display)
  *
  * @return pointer to uninitialized Drawable or NULL on failure
  */
-Drawable *display_channel_drawable_try_new(DisplayChannel *display,
-                                           int process_commands_generation)
+static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
+                                                  int process_commands_generation)
 {
     Drawable *drawable;
 

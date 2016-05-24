@@ -27,7 +27,7 @@
          item != NULL;                                  \
          item = ring_next(&(display)->streams, item))
 
-void stream_agent_stats_print(StreamAgent *agent)
+static void stream_agent_stats_print(StreamAgent *agent)
 {
 #ifdef STREAM_STATS
     StreamStats *stats = &agent->stats;
@@ -161,7 +161,7 @@ void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
     stream_unref(display, agent->stream);
 }
 
-void red_stream_clip_item_free(RedPipeItem *base)
+static void red_stream_clip_item_free(RedPipeItem *base)
 {
     g_return_if_fail(base != NULL);
     RedStreamClipItem *item = SPICE_CONTAINEROF(base, RedStreamClipItem, base);

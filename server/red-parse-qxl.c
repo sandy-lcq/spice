@@ -585,7 +585,7 @@ error:
     return NULL;
 }
 
-void red_put_image(SpiceImage *red)
+static void red_put_image(SpiceImage *red)
 {
     if (red == NULL)
         return;

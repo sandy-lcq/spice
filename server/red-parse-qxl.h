@@ -118,7 +118,6 @@ void red_get_rect_ptr(SpiceRect *red, const QXLRect *qxl);
 int red_get_drawable(RedMemSlotInfo *slots, int group_id,
                      RedDrawable *red, QXLPHYSICAL addr, uint32_t flags);
 void red_put_drawable(RedDrawable *red);
-void red_put_image(SpiceImage *red);
 
 int red_get_update_cmd(RedMemSlotInfo *slots, int group_id,
                        RedUpdateCmd *red, QXLPHYSICAL addr);
