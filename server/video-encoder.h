@@ -65,6 +65,8 @@ struct VideoEncoder {
      * @bitmap:        A bitmap containing the source video frame.
      * @src:           A rectangle specifying the area occupied by the video.
      * @top_down:      If true the first video line is specified by src.top.
+     * @bitmap_opaque: The parameter for the bitmap_ref() and bitmap_unref()
+     *                 callbacks.
      * @outbuf:        A pointer to a VideoBuffer structure containing the
      *                 compressed frame if successful. Call the buffer's
      *                 free() method as soon as it is no longer needed.
@@ -77,7 +79,7 @@ struct VideoEncoder {
     int (*encode_frame)(VideoEncoder *encoder, uint32_t frame_mm_time,
                         const SpiceBitmap *bitmap,
                         const SpiceRect *src, int top_down,
-                        VideoBuffer** outbuf);
+                        gpointer bitmap_opaque, VideoBuffer** outbuf);
 
     /*
      * Bit rate control methods.
@@ -166,6 +168,8 @@ typedef struct VideoEncoderRateControlCbs {
     void (*update_client_playback_delay)(void *opaque, uint32_t delay_ms);
 } VideoEncoderRateControlCbs;
 
+typedef void (*bitmap_ref_t)(gpointer data);
+typedef void (*bitmap_unref_t)(gpointer data);
 
 /* Instantiates the video encoder.
  *
@@ -173,21 +177,34 @@ typedef struct VideoEncoderRateControlCbs {
  * @starting_bit_rate: An initial estimate of the available stream bit rate
  *                     or zero if the client does not support rate control.
  * @cbs:               A set of callback methods to be used for rate control.
+ * @bitmap_ref:        A callback that the encoder can use to increase the
+ *                     bitmap refcount.
+ *                     This must be called from the main context.
+ * @bitmap_unref:      A callback that the encoder can use to decrease the
+ *                     bitmap refcount.
+ *                     This must be called from the main context.
  * @return:            A pointer to a structure implementing the VideoEncoder
  *                     methods.
  */
 typedef VideoEncoder* (*new_video_encoder_t)(SpiceVideoCodecType codec_type,
                                              uint64_t starting_bit_rate,
-                                             VideoEncoderRateControlCbs *cbs);
+                                             VideoEncoderRateControlCbs *cbs,
+                                             bitmap_ref_t bitmap_ref,
+                                             bitmap_unref_t bitmap_unref);
 
 VideoEncoder* mjpeg_encoder_new(SpiceVideoCodecType codec_type,
                                 uint64_t starting_bit_rate,
-                                VideoEncoderRateControlCbs *cbs);
+                                VideoEncoderRateControlCbs *cbs,
+                                bitmap_ref_t bitmap_ref,
+                                bitmap_unref_t bitmap_unref);
 #ifdef HAVE_GSTREAMER_1_0
 VideoEncoder* gstreamer_encoder_new(SpiceVideoCodecType codec_type,
                                     uint64_t starting_bit_rate,
-                                    VideoEncoderRateControlCbs *cbs);
+                                    VideoEncoderRateControlCbs *cbs,
+                                    bitmap_ref_t bitmap_ref,
+                                    bitmap_unref_t bitmap_unref);
 #endif
+
 
 typedef struct RedVideoCodec {
     new_video_encoder_t create;

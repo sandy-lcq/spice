@@ -30,6 +30,8 @@
 
 #define SPICE_GST_DEFAULT_FPS 30
 
+#define DO_ZERO_COPY
+
 
 typedef struct {
     SpiceBitmapFmt spice_format;
@@ -45,6 +47,14 @@ typedef struct SpiceGstVideoBuffer {
 
 typedef struct SpiceGstEncoder {
     VideoEncoder base;
+
+    /* Callbacks to adjust the refcount of the bitmap being encoded. */
+    bitmap_ref_t bitmap_ref;
+    bitmap_unref_t bitmap_unref;
+
+#ifdef DO_ZERO_COPY
+    GAsyncQueue *unused_bitmap_opaques;
+#endif
 
     /* Rate control callbacks */
     VideoEncoderRateControlCbs cbs;
@@ -460,12 +470,109 @@ static inline int line_copy(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
      return TRUE;
 }
 
+#ifdef DO_ZERO_COPY
+typedef struct {
+    gint refs;
+    SpiceGstEncoder *encoder;
+    gpointer opaque;
+} BitmapWrapper;
+
+static void clear_zero_copy_queue(SpiceGstEncoder *encoder, gboolean unref_queue)
+{
+    gpointer bitmap_opaque;
+    while ((bitmap_opaque = g_async_queue_try_pop(encoder->unused_bitmap_opaques))) {
+        encoder->bitmap_unref(bitmap_opaque);
+    }
+    if (unref_queue) {
+        g_async_queue_unref(encoder->unused_bitmap_opaques);
+    }
+}
+
+static BitmapWrapper *bitmap_wrapper_new(SpiceGstEncoder *encoder, gpointer bitmap_opaque)
+{
+    BitmapWrapper *wrapper = spice_new(BitmapWrapper, 1);
+    wrapper->refs = 1;
+    wrapper->encoder = encoder;
+    wrapper->opaque = bitmap_opaque;
+    encoder->bitmap_ref(bitmap_opaque);
+    return wrapper;
+}
+
+static void bitmap_wrapper_unref(gpointer data)
+{
+    BitmapWrapper *wrapper = data;
+    if (g_atomic_int_dec_and_test(&wrapper->refs)) {
+        g_async_queue_push(wrapper->encoder->unused_bitmap_opaques, wrapper->opaque);
+        free(wrapper);
+    }
+}
+
+
+/* A helper for push_raw_frame() */
+static inline int zero_copy(SpiceGstEncoder *encoder,
+                            const SpiceBitmap *bitmap, gpointer bitmap_opaque,
+                            GstBuffer *buffer, uint32_t *chunk_index,
+                            uint32_t *chunk_offset, uint32_t *len)
+{
+    const SpiceChunks *chunks = bitmap->data;
+    while (*chunk_index < chunks->num_chunks &&
+           *chunk_offset >= chunks->chunk[*chunk_index].len) {
+        if (!is_chunk_stride_aligned(bitmap, *chunk_index)) {
+            return FALSE;
+        }
+        *chunk_offset -= chunks->chunk[*chunk_index].len;
+        (*chunk_index)++;
+    }
+
+    int max_block_count = gst_buffer_get_max_memory();
+    if (chunks->num_chunks - *chunk_index > max_block_count) {
+        /* There are more chunks than we can fit memory objects in a
+         * buffer. This will cause the buffer to merge memory objects to
+         * fit the extra chunks, which means doing wasteful memory copies.
+         * So use the zero-copy approach for the first max_mem-1 chunks, and
+         * let push_raw_frame() deal with the rest.
+         */
+        max_block_count = *chunk_index + max_block_count - 1;
+    } else {
+        max_block_count = chunks->num_chunks;
+    }
+
+    BitmapWrapper *wrapper = NULL;
+    while (*len && *chunk_index < max_block_count) {
+        if (!is_chunk_stride_aligned(bitmap, *chunk_index)) {
+            return FALSE;
+        }
+        if (wrapper) {
+            g_atomic_int_inc(&wrapper->refs);
+        } else {
+            wrapper = bitmap_wrapper_new(encoder, bitmap_opaque);
+        }
+        uint32_t thislen = MIN(chunks->chunk[*chunk_index].len - *chunk_offset, *len);
+        GstMemory *mem = gst_memory_new_wrapped(GST_MEMORY_FLAG_READONLY,
+                                                chunks->chunk[*chunk_index].data,
+                                                chunks->chunk[*chunk_index].len,
+                                                *chunk_offset, thislen,
+                                                wrapper, bitmap_wrapper_unref);
+        gst_buffer_append_memory(buffer, mem);
+        *len -= thislen;
+        *chunk_offset = 0;
+        (*chunk_index)++;
+    }
+    return TRUE;
+}
+#else
+static void clear_zero_copy_queue(SpiceGstEncoder *encoder, gboolean unref_queue)
+{
+    /* Nothing to do */
+}
+#endif
+
 /* A helper for push_raw_frame() */
 static inline int chunk_copy(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
-                             uint32_t chunk_offset, uint32_t len, uint8_t *dst)
+                             uint32_t chunk_index, uint32_t chunk_offset,
+                             uint32_t len, uint8_t *dst)
 {
     SpiceChunks *chunks = bitmap->data;
-    uint32_t chunk_index = 0;
     /* Skip chunks until we find the start of the frame */
     while (chunk_index < chunks->num_chunks &&
            chunk_offset >= chunks->chunk[chunk_index].len) {
@@ -493,17 +600,34 @@ static inline int chunk_copy(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap
     return TRUE;
 }
 
+/* A helper for push_raw_frame() */
+static uint8_t *allocate_and_map_memory(gsize size, GstMapInfo *map, GstBuffer *buffer)
+{
+    GstMemory *mem = gst_allocator_alloc(NULL, size, NULL);
+    if (!mem) {
+        gst_buffer_unref(buffer);
+        return NULL;
+    }
+    if (!gst_memory_map(mem, map, GST_MAP_WRITE)) {
+        gst_memory_unref(mem);
+        gst_buffer_unref(buffer);
+        return NULL;
+    }
+    return map->data;
+}
+
 /* A helper for spice_gst_encoder_encode_frame() */
-static int push_raw_frame(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
-                          const SpiceRect *src, int top_down)
+static int push_raw_frame(SpiceGstEncoder *encoder,
+                          const SpiceBitmap *bitmap,
+                          const SpiceRect *src, int top_down,
+                          gpointer bitmap_opaque)
 {
     uint32_t height = src->bottom - src->top;
     uint32_t stream_stride = (src->right - src->left) * encoder->format->bpp / 8;
     uint32_t len = stream_stride * height;
-    GstBuffer *buffer = gst_buffer_new_and_alloc(len);
-    GstMapInfo map;
-    gst_buffer_map(buffer, &map, GST_MAP_WRITE);
-    uint8_t *dst = map.data;
+    GstBuffer *buffer = gst_buffer_new();
+    /* TODO Use GST_MAP_INFO_INIT once GStreamer 1.4.5 is no longer relevant */
+    GstMapInfo map = { .memory = NULL };
 
     /* Note that we should not reorder the lines, even if top_down is false.
      * It just changes the number of lines to skip at the start of the bitmap.
@@ -515,21 +639,51 @@ static int push_raw_frame(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
         /* We have to do a line-by-line copy because for each we have to
          * leave out pixels on the left or right.
          */
+        uint8_t *dst = allocate_and_map_memory(len, &map, buffer);
+        if (!dst) {
+            return VIDEO_ENCODER_FRAME_UNSUPPORTED;
+        }
+
         chunk_offset += src->left * encoder->format->bpp / 8;
         if (!line_copy(encoder, bitmap, chunk_offset, stream_stride, height, dst)) {
-            gst_buffer_unmap(buffer, &map);
+            gst_memory_unmap(map.memory, &map);
+            gst_memory_unref(map.memory);
             gst_buffer_unref(buffer);
             return VIDEO_ENCODER_FRAME_UNSUPPORTED;
         }
     } else {
         /* We can copy the bitmap chunk by chunk */
-        if (!chunk_copy(encoder, bitmap, chunk_offset, len, dst)) {
-            gst_buffer_unmap(buffer, &map);
+        uint32_t chunk_index = 0;
+#ifdef DO_ZERO_COPY
+        if (!zero_copy(encoder, bitmap, bitmap_opaque, buffer, &chunk_index,
+                       &chunk_offset, &len)) {
             gst_buffer_unref(buffer);
             return VIDEO_ENCODER_FRAME_UNSUPPORTED;
         }
+        /* len now contains the remaining number of bytes to copy.
+         * However we must avoid any write to the GstBuffer object as it
+         * would cause a copy of the read-only memory objects we just added.
+         * Fortunately we can append extra writable memory objects instead.
+         */
+#endif
+
+        if (len) {
+            uint8_t *dst = allocate_and_map_memory(len, &map, buffer);
+            if (!dst) {
+                return VIDEO_ENCODER_FRAME_UNSUPPORTED;
+            }
+            if (!chunk_copy(encoder, bitmap, chunk_index, chunk_offset, len, dst)) {
+                gst_memory_unmap(map.memory, &map);
+                gst_memory_unref(map.memory);
+                gst_buffer_unref(buffer);
+                return VIDEO_ENCODER_FRAME_UNSUPPORTED;
+            }
+        }
     }
-    gst_buffer_unmap(buffer, &map);
+    if (map.memory) {
+        gst_memory_unmap(map.memory, &map);
+        gst_buffer_append_memory(buffer, map.memory);
+    }
 
     GstFlowReturn ret = gst_app_src_push_buffer(encoder->appsrc, buffer);
     if (ret != GST_FLOW_OK) {
@@ -573,6 +727,9 @@ static void spice_gst_encoder_destroy(VideoEncoder *video_encoder)
     g_mutex_clear(&encoder->outbuf_mutex);
     g_cond_clear(&encoder->outbuf_cond);
 
+    /* Unref any lingering bitmap opaque structures from past frames */
+    clear_zero_copy_queue(encoder, TRUE);
+
     free(encoder);
 }
 
@@ -580,11 +737,15 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
                                           uint32_t frame_mm_time,
                                           const SpiceBitmap *bitmap,
                                           const SpiceRect *src, int top_down,
+                                          gpointer bitmap_opaque,
                                           VideoBuffer **outbuf)
 {
     SpiceGstEncoder *encoder = (SpiceGstEncoder*)video_encoder;
     g_return_val_if_fail(outbuf != NULL, VIDEO_ENCODER_FRAME_UNSUPPORTED);
     *outbuf = NULL;
+
+    /* Unref the last frame's bitmap_opaque structures if any */
+    clear_zero_copy_queue(encoder, FALSE);
 
     uint32_t width = src->right - src->left;
     uint32_t height = src->bottom - src->top;
@@ -610,7 +771,7 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
         return VIDEO_ENCODER_FRAME_UNSUPPORTED;
     }
 
-    int rc = push_raw_frame(encoder, bitmap, src, top_down);
+    int rc = push_raw_frame(encoder, bitmap, src, top_down, bitmap_opaque);
     if (rc == VIDEO_ENCODER_FRAME_ENCODE_DONE) {
         rc = pull_compressed_buffer(encoder, outbuf);
         if (rc != VIDEO_ENCODER_FRAME_ENCODE_DONE) {
@@ -622,6 +783,9 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
             free_pipeline(encoder);
         }
     }
+
+    /* Unref the last frame's bitmap_opaque structures if any */
+    clear_zero_copy_queue(encoder, FALSE);
     return rc;
 }
 
@@ -669,7 +833,9 @@ static void spice_gst_encoder_get_stats(VideoEncoder *video_encoder,
 
 VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
                                     uint64_t starting_bit_rate,
-                                    VideoEncoderRateControlCbs *cbs)
+                                    VideoEncoderRateControlCbs *cbs,
+                                    bitmap_ref_t bitmap_ref,
+                                    bitmap_unref_t bitmap_unref)
 {
     spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG ||
                              codec_type == SPICE_VIDEO_CODEC_TYPE_VP8, NULL);
@@ -689,11 +855,16 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
     encoder->base.get_bit_rate = spice_gst_encoder_get_bit_rate;
     encoder->base.get_stats = spice_gst_encoder_get_stats;
     encoder->base.codec_type = codec_type;
+#ifdef DO_ZERO_COPY
+    encoder->unused_bitmap_opaques = g_async_queue_new();
+#endif
 
     if (cbs) {
         encoder->cbs = *cbs;
     }
     encoder->starting_bit_rate = starting_bit_rate;
+    encoder->bitmap_ref = bitmap_ref;
+    encoder->bitmap_unref = bitmap_unref;
     g_mutex_init(&encoder->outbuf_mutex);
     g_cond_init(&encoder->outbuf_cond);
 

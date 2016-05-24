@@ -948,6 +948,7 @@ static int mjpeg_encoder_encode_frame(VideoEncoder *video_encoder,
                                       uint32_t frame_mm_time,
                                       const SpiceBitmap *bitmap,
                                       const SpiceRect *src, int top_down,
+                                      gpointer bitmap_opaque,
                                       VideoBuffer **outbuf)
 {
     MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
@@ -1367,7 +1368,9 @@ static void mjpeg_encoder_get_stats(VideoEncoder *video_encoder,
 
 VideoEncoder *mjpeg_encoder_new(SpiceVideoCodecType codec_type,
                                 uint64_t starting_bit_rate,
-                                VideoEncoderRateControlCbs *cbs)
+                                VideoEncoderRateControlCbs *cbs,
+                                bitmap_ref_t bitmap_ref,
+                                bitmap_unref_t bitmap_unref)
 {
     MJpegEncoder *encoder = spice_new0(MJpegEncoder, 1);
 

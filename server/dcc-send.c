@@ -1678,7 +1678,8 @@ static void red_release_video_encoder_buffer(uint8_t *data, void *opaque)
 }
 
 static int red_marshall_stream_data(RedChannelClient *rcc,
-                                    SpiceMarshaller *base_marshaller, Drawable *drawable)
+                                    SpiceMarshaller *base_marshaller,
+                                    Drawable *drawable)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     DisplayChannel *display = DCC_TO_DC(dcc);
@@ -1727,6 +1728,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
                                              frame_mm_time,
                                              &copy->src_bitmap->u.bitmap,
                                              &copy->src_area, stream->top_down,
+                                             drawable->red_drawable,
                                              &outbuf);
     switch (ret) {
     case VIDEO_ENCODER_FRAME_DROP:
