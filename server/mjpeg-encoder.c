@@ -706,7 +706,7 @@ static void mjpeg_encoder_adjust_fps(MJpegEncoder *encoder, uint64_t now)
  */
 static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
                                      SpiceBitmapFmt format,
-                                     int width, int height,
+                                     const SpiceRect *src,
                                      uint8_t **dest, size_t *dest_len,
                                      uint32_t frame_mm_time)
 {
@@ -777,10 +777,12 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
         return VIDEO_ENCODER_FRAME_UNSUPPORTED;
     }
 
+    encoder->cinfo.image_width = src->right - src->left;
+    encoder->cinfo.image_height = src->bottom - src->top;
     if (encoder->pixel_converter != NULL) {
-        unsigned int stride = width * 3;
+        JDIMENSION stride = encoder->cinfo.image_width * 3;
         /* check for integer overflow */
-        if (stride < width) {
+        if (stride < encoder->cinfo.image_width) {
             return VIDEO_ENCODER_FRAME_UNSUPPORTED;
         }
         if (encoder->row_size < stride) {
@@ -790,9 +792,6 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
     }
 
     spice_jpeg_mem_dest(&encoder->cinfo, dest, dest_len);
-
-    encoder->cinfo.image_width      = width;
-    encoder->cinfo.image_height     = height;
     jpeg_set_defaults(&encoder->cinfo);
     encoder->cinfo.dct_method       = JDCT_IFAST;
     quality = mjpeg_quality_samples[encoder->rate_control.quality_id];
@@ -935,8 +934,7 @@ static int mjpeg_encoder_encode_frame(VideoEncoder *video_encoder,
 {
     MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
 
-    int ret = mjpeg_encoder_start_frame(encoder, bitmap->format,
-                                        width, height,
+    int ret = mjpeg_encoder_start_frame(encoder, bitmap->format, src,
                                         outbuf, outbuf_size,
                                         frame_mm_time);
     if (ret != VIDEO_ENCODER_FRAME_ENCODE_DONE) {
