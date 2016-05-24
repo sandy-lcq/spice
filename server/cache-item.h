@@ -30,10 +30,10 @@ struct RedCacheItem {
         struct {
             RingItem lru_link;
             RedCacheItem *next;
+            size_t size;
         } cache_data;
     } u;
     uint64_t id;
-    size_t size;
 };
 
 #endif /* CACHE_ITEM_H_ */
