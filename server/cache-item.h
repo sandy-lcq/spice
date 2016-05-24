@@ -20,7 +20,7 @@
 
 #include <common/ring.h>
 
-#include "red-channel.h"
+#include "red-pipe-item.h"
 
 typedef struct RedCacheItem RedCacheItem;
 
