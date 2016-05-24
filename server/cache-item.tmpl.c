@@ -44,8 +44,6 @@
 
 #endif
 
-#define CHANNEL_FROM_RCC(rcc) SPICE_CONTAINEROF((rcc)->channel, CHANNEL, common.base);
-
 static RedCacheItem *FUNC_NAME(find)(CHANNELCLIENT *channel_client, uint64_t id)
 {
     RedCacheItem *item = channel_client->CACHE_NAME[CACHE_HASH_KEY(id)];
@@ -131,9 +129,7 @@ static void FUNC_NAME(reset)(CHANNELCLIENT *channel_client, long size)
 #undef CACHE_NAME
 #undef CACHE_HASH_KEY
 #undef CACHE_HASH_SIZE
-#undef CACHE_MAX_CLIENT_SIZE
 #undef FUNC_NAME
 #undef VAR_NAME
 #undef CHANNEL
 #undef CHANNELCLIENT
-#undef CHANNEL_FROM_RCC
