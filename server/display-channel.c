@@ -848,9 +848,9 @@ static bool drawable_can_stream(DisplayChannel *display, Drawable *drawable)
     return TRUE;
 }
 
+#ifdef RED_WORKER_STAT
 static void display_channel_print_stats(DisplayChannel *display)
 {
-#ifdef RED_WORKER_STAT
     stat_time_t total = display->add_stat.total;
     spice_info("add with shadow count %u",
                display->add_with_shadow_count);
@@ -871,8 +871,8 @@ static void display_channel_print_stats(DisplayChannel *display)
     stat_reset(&display->add_stat);
     stat_reset(&display->exclude_stat);
     stat_reset(&display->__exclude_stat);
-#endif
 }
+#endif
 
 static void drawable_ref_surface_deps(DisplayChannel *display, Drawable *drawable)
 {
