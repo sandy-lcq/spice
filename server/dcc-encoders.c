@@ -624,7 +624,7 @@ static GlzSharedDictionary *find_glz_dictionary(RedClient *client, uint8_t dict_
 
     now = &glz_dictionary_list;
     while ((now = ring_next(&glz_dictionary_list, now))) {
-        GlzSharedDictionary *dict = SPICE_CONTAINEROF(now, GlzSharedDictionary, base);
+        GlzSharedDictionary *dict = SPICE_UPCAST(GlzSharedDictionary, now);
         if ((dict->client == client) && (dict->id == dict_id)) {
             ret = dict;
             break;

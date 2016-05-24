@@ -1002,7 +1002,7 @@ SpiceServer* red_char_device_get_server(RedCharDevice *dev)
 
 SpiceCharDeviceInterface *spice_char_device_get_interface(SpiceCharDeviceInstance *instance)
 {
-   return SPICE_CONTAINEROF(instance->base.sif, SpiceCharDeviceInterface, base);
+   return SPICE_UPCAST(SpiceCharDeviceInterface, instance->base.sif);
 }
 
 

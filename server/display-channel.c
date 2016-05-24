@@ -369,7 +369,7 @@ static void drawable_remove_from_pipes(Drawable *drawable)
     RingItem *item, *next;
 
     RING_FOREACH_SAFE(item, next, &drawable->pipes) {
-        dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, base);
+        dpi = SPICE_UPCAST(RedDrawablePipeItem, item);
         if (red_pipe_item_is_linked(&dpi->dpi_pipe_item)) {
             red_channel_client_pipe_remove_and_release(RED_CHANNEL_CLIENT(dpi->dcc),
                                                        &dpi->dpi_pipe_item);
@@ -480,7 +480,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
             while (worker_ring_item) {
                 dcc = SPICE_CONTAINEROF(worker_ring_item, DisplayChannelClient,
                                         common.base.channel_link);
-                dpi = SPICE_CONTAINEROF(dpi_ring_item, RedDrawablePipeItem, base);
+                dpi = SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item);
                 while (worker_ring_item && (!dpi || dcc != dpi->dcc)) {
                     dcc_prepend_drawable(dcc, drawable);
                     worker_ring_item = ring_next(&RED_CHANNEL(display)->clients,

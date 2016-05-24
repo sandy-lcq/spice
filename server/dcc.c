@@ -87,7 +87,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
             dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, dpi_pipe_item);
             drawable = dpi->drawable;
         } else if (item->type == RED_PIPE_ITEM_TYPE_UPGRADE) {
-            drawable = SPICE_CONTAINEROF(item, RedUpgradeItem, base)->drawable;
+            drawable = SPICE_UPCAST(RedUpgradeItem, item)->drawable;
         } else {
             continue;
         }

@@ -114,7 +114,7 @@ PixmapCache *pixmap_cache_get(RedClient *client, uint8_t id, int64_t size)
 
     now = &pixmap_cache_list;
     while ((now = ring_next(&pixmap_cache_list, now))) {
-        PixmapCache *cache = SPICE_CONTAINEROF(now, PixmapCache, base);
+        PixmapCache *cache = SPICE_UPCAST(PixmapCache, now);
         if ((cache->client == client) && (cache->id == id)) {
             ret = cache;
             ret->refs++;

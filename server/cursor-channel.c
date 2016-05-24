@@ -208,7 +208,7 @@ static void cursor_pipe_item_free(RedPipeItem *base)
 {
     spice_return_if_fail(base);
 
-    RedCursorPipeItem *pipe_item = SPICE_CONTAINEROF(base, RedCursorPipeItem, base);
+    RedCursorPipeItem *pipe_item = SPICE_UPCAST(RedCursorPipeItem, base);
 
     spice_assert(!red_pipe_item_is_linked(&pipe_item->base));
 
@@ -318,13 +318,13 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
 
     switch (pipe_item->type) {
     case RED_PIPE_ITEM_TYPE_CURSOR:
-        cursor_marshall(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCursorPipeItem, base));
+        cursor_marshall(rcc, m, SPICE_UPCAST(RedCursorPipeItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
         red_marshall_inval(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCacheItem, u.pipe_data));
         break;
     case RED_PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, SPICE_CONTAINEROF(pipe_item, RedVerbItem, base));
+        red_marshall_verb(rcc, SPICE_UPCAST(RedVerbItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_CURSOR_INIT:
         red_reset_cursor_cache(rcc);

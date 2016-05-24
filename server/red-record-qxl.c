@@ -70,7 +70,7 @@ static int record_zlib_more_space(ZlibEncoderUsrContext *usr, uint8_t **io_ptr)
 
 static int record_zlib_more_input(ZlibEncoderUsrContext *usr, uint8_t **input)
 {
-    RecordEncoderData *data = SPICE_CONTAINEROF(usr, RecordEncoderData, base);
+    RecordEncoderData *data = SPICE_UPCAST(RecordEncoderData, usr);
 
     if (data->buf == NULL) {
         fprintf(stderr, "%s: error: no more data\n", __FUNCTION__);

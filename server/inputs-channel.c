@@ -149,7 +149,7 @@ void inputs_channel_set_tablet_logical_size(InputsChannel *inputs, int x_res, in
 {
     SpiceTabletInterface *sif;
 
-    sif = SPICE_CONTAINEROF(inputs->tablet->base.sif, SpiceTabletInterface, base);
+    sif = SPICE_UPCAST(SpiceTabletInterface, inputs->tablet->base.sif);
     sif->set_logical_size(inputs->tablet, x_res, y_res);
 }
 
@@ -265,7 +265,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
 
             red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_KEY_MODIFIERS, base);
             key_modifiers.modifiers =
-                SPICE_CONTAINEROF(base, RedKeyModifiersPipeItem, base)->modifiers;
+                SPICE_UPCAST(RedKeyModifiersPipeItem, base)->modifiers;
             spice_marshall_msg_inputs_key_modifiers(m, &key_modifiers);
             break;
         }
@@ -275,7 +275,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
 
             red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_INIT, base);
             inputs_init.keyboard_modifiers =
-                SPICE_CONTAINEROF(base, RedInputsInitPipeItem, base)->modifiers;
+                SPICE_UPCAST(RedInputsInitPipeItem, base)->modifiers;
             spice_marshall_msg_inputs_init(m, &inputs_init);
             break;
         }

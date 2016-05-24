@@ -517,7 +517,7 @@ static void red_channel_client_send_migrate(RedChannelClient *rcc)
 
 static void red_channel_client_send_empty_msg(RedChannelClient *rcc, RedPipeItem *base)
 {
-    RedEmptyMsgPipeItem *msg_pipe_item = SPICE_CONTAINEROF(base, RedEmptyMsgPipeItem, base);
+    RedEmptyMsgPipeItem *msg_pipe_item = SPICE_UPCAST(RedEmptyMsgPipeItem, base);
 
     red_channel_client_init_send_data(rcc, msg_pipe_item->msg, NULL);
     red_channel_client_begin_send_message(rcc);
@@ -2367,7 +2367,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
 
 static void marker_pipe_item_free(RedPipeItem *base)
 {
-    MarkerPipeItem *item = SPICE_CONTAINEROF(base, MarkerPipeItem, base);
+    MarkerPipeItem *item = SPICE_UPCAST(MarkerPipeItem, base);
 
     if (item->item_in_pipe) {
         *item->item_in_pipe = FALSE;

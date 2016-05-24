@@ -84,7 +84,7 @@ struct Drawable {
 
 void drawable_unref (Drawable *drawable);
 
-#define LINK_TO_DPI(ptr) SPICE_CONTAINEROF((ptr), RedDrawablePipeItem, base)
+#define LINK_TO_DPI(ptr) SPICE_UPCAST(RedDrawablePipeItem, (ptr))
 #define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)            \
     SAFE_FOREACH(link, next, drawable,  &(drawable)->pipes, dpi, LINK_TO_DPI(link))
 

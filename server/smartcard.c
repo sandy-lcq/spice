@@ -440,7 +440,7 @@ static void smartcard_channel_send_data(RedChannelClient *rcc, SpiceMarshaller *
 static void smartcard_channel_send_error(
     RedChannelClient *rcc, SpiceMarshaller *m, RedPipeItem *item)
 {
-    RedErrorItem* error_item = SPICE_CONTAINEROF(item, RedErrorItem, base);
+    RedErrorItem* error_item = SPICE_UPCAST(RedErrorItem, item);
 
     smartcard_channel_send_data(rcc, m, item, &error_item->vheader);
 }
@@ -448,7 +448,7 @@ static void smartcard_channel_send_error(
 static void smartcard_channel_send_msg(RedChannelClient *rcc,
                                        SpiceMarshaller *m, RedPipeItem *item)
 {
-    RedMsgItem* msg_item = SPICE_CONTAINEROF(item, RedMsgItem, base);
+    RedMsgItem* msg_item = SPICE_UPCAST(RedMsgItem, item);
 
     smartcard_channel_send_data(rcc, m, item, msg_item->vheader);
 }
@@ -539,7 +539,7 @@ static void smartcard_push_error(RedChannelClient *rcc, uint32_t reader_id, VSCE
 
 static void smartcard_free_vsc_msg_item(RedPipeItem *base)
 {
-    RedMsgItem *item = SPICE_CONTAINEROF(base, RedMsgItem, base);
+    RedMsgItem *item = SPICE_UPCAST(RedMsgItem, base);
     free(item->vheader);
     free(item);
 }

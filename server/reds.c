@@ -811,7 +811,7 @@ static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
 
 static void vdi_port_read_buf_free(RedPipeItem *base)
 {
-    RedVDIReadBuf *buf = SPICE_CONTAINEROF(base, RedVDIReadBuf, base);
+    RedVDIReadBuf *buf = SPICE_UPCAST(RedVDIReadBuf, base);
 
     g_warn_if_fail(buf->base.refcount == 0);
     ring_add(&buf->dev->priv->read_bufs, &buf->base.link);

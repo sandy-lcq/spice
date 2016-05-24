@@ -74,7 +74,7 @@ static void image_cache_remove(ImageCache *cache, ImageCacheItem *item)
 
 static void image_cache_put(SpiceImageCache *spice_cache, uint64_t id, pixman_image_t *image)
 {
-    ImageCache *cache = SPICE_CONTAINEROF(spice_cache, ImageCache, base);
+    ImageCache *cache = SPICE_UPCAST(ImageCache, spice_cache);
     ImageCacheItem *item;
 
 #ifndef IMAGE_CACHE_AGE
@@ -104,7 +104,7 @@ static void image_cache_put(SpiceImageCache *spice_cache, uint64_t id, pixman_im
 
 static pixman_image_t *image_cache_get(SpiceImageCache *spice_cache, uint64_t id)
 {
-    ImageCache *cache = SPICE_CONTAINEROF(spice_cache, ImageCache,base);
+    ImageCache *cache = SPICE_UPCAST(ImageCache, spice_cache);
 
     ImageCacheItem *item = image_cache_find(cache, id);
     if (!item) {

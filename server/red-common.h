@@ -33,9 +33,13 @@
 #include <common/ring.h>
 #include <common/spice_common.h>
 #include <common/draw.h>
+#include <common/verify.h>
 
 #include "spice.h"
 #include "utils.h"
+
+#define SPICE_UPCAST(type, ptr) \
+    (verify_expr(SPICE_OFFSETOF(type, base) == 0,SPICE_CONTAINEROF(ptr, type, base)))
 
 typedef struct SpiceCoreInterfaceInternal SpiceCoreInterfaceInternal;
 

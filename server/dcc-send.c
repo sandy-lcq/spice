@@ -2326,7 +2326,7 @@ static void marshall_gl_draw(RedChannelClient *rcc,
                              SpiceMarshaller *m,
                              RedPipeItem *item)
 {
-    RedGlDrawItem *p = SPICE_CONTAINEROF(item, RedGlDrawItem, base);
+    RedGlDrawItem *p = SPICE_UPCAST(RedGlDrawItem, item);
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_GL_DRAW, NULL);
     spice_marshall_msg_display_gl_draw(m, &p->draw);
@@ -2383,29 +2383,29 @@ void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         marshall_inval_palette(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCacheItem, u.pipe_data));
         break;
     case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
-        StreamCreateDestroyItem *item = SPICE_CONTAINEROF(pipe_item, StreamCreateDestroyItem, base);
+        StreamCreateDestroyItem *item = SPICE_UPCAST(StreamCreateDestroyItem, pipe_item);
         marshall_stream_start(rcc, m, item->agent);
         break;
     }
     case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
-        marshall_stream_clip(rcc, m, SPICE_CONTAINEROF(pipe_item, RedStreamClipItem, base));
+        marshall_stream_clip(rcc, m, SPICE_UPCAST(RedStreamClipItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
-        StreamCreateDestroyItem *item = SPICE_CONTAINEROF(pipe_item, StreamCreateDestroyItem, base);
+        StreamCreateDestroyItem *item = SPICE_UPCAST(StreamCreateDestroyItem, pipe_item);
         marshall_stream_end(rcc, m, item->agent);
         break;
     }
     case RED_PIPE_ITEM_TYPE_UPGRADE:
-        marshall_upgrade(rcc, m, SPICE_CONTAINEROF(pipe_item, RedUpgradeItem, base));
+        marshall_upgrade(rcc, m, SPICE_UPCAST(RedUpgradeItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, SPICE_CONTAINEROF(pipe_item, RedVerbItem, base));
+        red_marshall_verb(rcc, SPICE_UPCAST(RedVerbItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_MIGRATE_DATA:
         display_channel_marshall_migrate_data(rcc, m);
         break;
     case RED_PIPE_ITEM_TYPE_IMAGE:
-        red_marshall_image(rcc, m, SPICE_CONTAINEROF(pipe_item, RedImageItem, base));
+        red_marshall_image(rcc, m, SPICE_UPCAST(RedImageItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_PIXMAP_SYNC:
         display_channel_marshall_pixmap_sync(rcc, m);

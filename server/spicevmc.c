@@ -358,7 +358,7 @@ static void spicevmc_red_channel_send_data(RedChannelClient *rcc,
                                            SpiceMarshaller *m,
                                            RedPipeItem *item)
 {
-    RedVmcPipeItem *i = SPICE_CONTAINEROF(item, RedVmcPipeItem, base);
+    RedVmcPipeItem *i = SPICE_UPCAST(RedVmcPipeItem, item);
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_DATA, item);
     spice_marshaller_add_ref(m, i->buf, i->buf_used);
@@ -382,7 +382,7 @@ static void spicevmc_red_channel_send_port_init(RedChannelClient *rcc,
                                                 SpiceMarshaller *m,
                                                 RedPipeItem *item)
 {
-    RedPortInitPipeItem *i = SPICE_CONTAINEROF(item, RedPortInitPipeItem, base);
+    RedPortInitPipeItem *i = SPICE_UPCAST(RedPortInitPipeItem, item);
     SpiceMsgPortInit init;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_PORT_INIT, item);
@@ -396,7 +396,7 @@ static void spicevmc_red_channel_send_port_event(RedChannelClient *rcc,
                                                  SpiceMarshaller *m,
                                                  RedPipeItem *item)
 {
-    RedPortEventPipeItem *i = SPICE_CONTAINEROF(item, RedPortEventPipeItem, base);
+    RedPortEventPipeItem *i = SPICE_UPCAST(RedPortEventPipeItem, item);
     SpiceMsgPortEvent event;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_PORT_EVENT, item);

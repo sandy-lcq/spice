@@ -65,7 +65,7 @@ static void stream_agent_stats_print(StreamAgent *agent)
 
 static void stream_create_destroy_item_release(RedPipeItem *base)
 {
-    StreamCreateDestroyItem *item = SPICE_CONTAINEROF(base, StreamCreateDestroyItem, base);
+    StreamCreateDestroyItem *item = SPICE_UPCAST(StreamCreateDestroyItem, base);
     DisplayChannel *display = (DisplayChannel*)item->agent->dcc->common.base.channel;
     stream_agent_unref(display, item->agent);
     free(item);
@@ -164,7 +164,7 @@ void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
 static void red_stream_clip_item_free(RedPipeItem *base)
 {
     g_return_if_fail(base != NULL);
-    RedStreamClipItem *item = SPICE_CONTAINEROF(base, RedStreamClipItem, base);
+    RedStreamClipItem *item = SPICE_UPCAST(RedStreamClipItem, base);
     DisplayChannel *display = DCC_TO_DC(item->stream_agent->dcc);
 
     g_return_if_fail(item->base.refcount == 0);
@@ -788,7 +788,7 @@ void stream_agent_stop(StreamAgent *agent)
 
 static void red_upgrade_item_free(RedPipeItem *base)
 {
-    RedUpgradeItem *item = SPICE_CONTAINEROF(base, RedUpgradeItem, base);
+    RedUpgradeItem *item = SPICE_UPCAST(RedUpgradeItem, base);
 
     g_return_if_fail(item != NULL);
     g_return_if_fail(item->base.refcount == 0);

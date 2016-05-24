@@ -111,7 +111,7 @@ static int main_channel_client_push_ping(MainChannelClient *mcc, int size);
 
 static void main_notify_item_free(RedPipeItem *base)
 {
-    RedNotifyPipeItem *data = SPICE_CONTAINEROF(base, RedNotifyPipeItem, base);
+    RedNotifyPipeItem *data = SPICE_UPCAST(RedNotifyPipeItem, base);
     free(data->msg);
     free(data);
 }
@@ -183,7 +183,7 @@ void main_channel_client_push_agent_tokens(MainChannelClient *mcc, uint32_t num_
 
 static void main_agent_data_item_free(RedPipeItem *base)
 {
-    RedAgentDataPipeItem *item = SPICE_CONTAINEROF(base, RedAgentDataPipeItem, base);
+    RedAgentDataPipeItem *item = SPICE_UPCAST(RedAgentDataPipeItem, base);
     item->free_data(item->data, item->opaque);
     free(item);
 }
@@ -829,12 +829,12 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_PING:
             main_channel_marshall_ping(rcc, m,
-                SPICE_CONTAINEROF(base, RedPingPipeItem, base));
+                SPICE_UPCAST(RedPingPipeItem, base));
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_MOUSE_MODE:
             {
                 RedMouseModePipeItem *item =
-                    SPICE_CONTAINEROF(base, RedMouseModePipeItem, base);
+                    SPICE_UPCAST(RedMouseModePipeItem, base);
                 main_channel_marshall_mouse_mode(rcc, m, item);
                 break;
             }
@@ -843,11 +843,11 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_AGENT_TOKEN:
             main_channel_marshall_tokens(rcc, m,
-                SPICE_CONTAINEROF(base, RedTokensPipeItem, base));
+                SPICE_UPCAST(RedTokensPipeItem, base));
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA:
             main_channel_marshall_agent_data(rcc, m,
-                SPICE_CONTAINEROF(base, RedAgentDataPipeItem, base));
+                SPICE_UPCAST(RedAgentDataPipeItem, base));
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_DATA:
             main_channel_marshall_migrate_data_item(rcc, m, base);
@@ -855,11 +855,11 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
         case RED_PIPE_ITEM_TYPE_MAIN_INIT:
             mcc->init_sent = TRUE;
             main_channel_marshall_init(rcc, m,
-                SPICE_CONTAINEROF(base, RedInitPipeItem, base));
+                SPICE_UPCAST(RedInitPipeItem, base));
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_NOTIFY:
             main_channel_marshall_notify(rcc, m,
-                SPICE_CONTAINEROF(base, RedNotifyPipeItem, base));
+                SPICE_UPCAST(RedNotifyPipeItem, base));
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_BEGIN:
             main_channel_marshall_migrate_begin(m, rcc, base);
@@ -869,18 +869,18 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME:
             main_channel_marshall_multi_media_time(rcc, m,
-                SPICE_CONTAINEROF(base, RedMultiMediaTimePipeItem, base));
+                SPICE_UPCAST(RedMultiMediaTimePipeItem, base));
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_SWITCH_HOST:
             main_channel_marshall_migrate_switch(m, rcc, base);
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_NAME:
             red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_NAME, base);
-            spice_marshall_msg_main_name(m, &SPICE_CONTAINEROF(base, RedNamePipeItem, base)->msg);
+            spice_marshall_msg_main_name(m, &SPICE_UPCAST(RedNamePipeItem, base)->msg);
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_UUID:
             red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_UUID, base);
-            spice_marshall_msg_main_uuid(m, &SPICE_CONTAINEROF(base, RedUuidPipeItem, base)->msg);
+            spice_marshall_msg_main_uuid(m, &SPICE_UPCAST(RedUuidPipeItem, base)->msg);
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS:
             main_channel_marshall_agent_connected(m, rcc, base);

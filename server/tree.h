@@ -54,7 +54,7 @@ struct Shadow {
 };
 
 #define IS_SHADOW(item) ((item)->type == TREE_ITEM_TYPE_SHADOW)
-#define SHADOW(item) SPICE_CONTAINEROF(item, Shadow, base)
+#define SHADOW(item) SPICE_UPCAST(Shadow, item)
 
 struct Container {
     TreeItem base;
@@ -62,7 +62,7 @@ struct Container {
 };
 
 #define IS_CONTAINER(item) ((item)->type == TREE_ITEM_TYPE_CONTAINER)
-#define CONTAINER(item) SPICE_CONTAINEROF(item, Container, base)
+#define CONTAINER(item) SPICE_UPCAST(Container, item)
 
 struct DrawItem {
     TreeItem base;
@@ -72,7 +72,7 @@ struct DrawItem {
 };
 
 #define IS_DRAW_ITEM(item) ((item)->type == TREE_ITEM_TYPE_DRAWABLE)
-#define DRAW_ITEM(item) SPICE_CONTAINEROF(item, DrawItem, base)
+#define DRAW_ITEM(item) SPICE_UPCAST(DrawItem, item)
 
 static inline int is_opaque_item(TreeItem *item)
 {
