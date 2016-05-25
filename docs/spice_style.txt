@@ -138,6 +138,10 @@ As a basic rule `Spice` refers to types in the public external headers while `Re
 
 Common abbreviations
 ~~~~~~~~~~~~~~~~~~~~
+`ccc` CursorChannelClient
+
+`dc`  DisplayChannel
+
 `dcc` DisplayChannelClient
 
 `dpi` drawable pipe item
