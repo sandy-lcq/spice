@@ -466,33 +466,21 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
         if (is_same_drawable(drawable, other_drawable)) {
 
             DisplayChannelClient *dcc;
-            RedDrawablePipeItem *dpi;
             RingItem *dpi_ring_item;
-            GList *link;
+            GList *link, *next;
 
             other_drawable->refs++;
             current_remove_drawable(display, other_drawable);
 
             /* sending the drawable to clients that already received
              * (or will receive) other_drawable */
-            link = RED_CHANNEL(display)->clients;
             dpi_ring_item = ring_get_head(&other_drawable->pipes);
             /* dpi contains a sublist of dcc's, ordered the same */
-            while (link) {
-                dcc = link->data;
-                dpi = SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item);
-                while (link && (!dpi || dcc != dpi->dcc)) {
-                    dcc_prepend_drawable(dcc, drawable);
-                    link = link->next;
-                    if (link)
-                        dcc = link->data;
-                }
-
-                if (dpi_ring_item) {
+            FOREACH_CLIENT(display, link, next, dcc) {
+                if (dpi_ring_item && dcc == SPICE_UPCAST(RedDrawablePipeItem, dpi_ring_item)->dcc) {
                     dpi_ring_item = ring_next(&other_drawable->pipes, dpi_ring_item);
-                }
-                if (link) {
-                    link = link->next;
+                } else {
+                    dcc_prepend_drawable(dcc, drawable);
                 }
             }
             /* not sending other_drawable where possible */
