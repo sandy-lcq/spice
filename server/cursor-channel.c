@@ -366,10 +366,7 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
 
 void cursor_channel_client_migrate(RedChannelClient *rcc)
 {
-    CursorChannelClient* client = (CursorChannelClient*)rcc;
-
-    spice_return_if_fail(client);
-    rcc = RED_CHANNEL_CLIENT(client);
+    spice_return_if_fail(rcc);
 
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
     red_channel_client_default_migrate(rcc);
