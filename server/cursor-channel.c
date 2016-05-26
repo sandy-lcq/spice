@@ -226,11 +226,11 @@ static void cursor_channel_client_on_disconnect(RedChannelClient *rcc)
     red_reset_cursor_cache(rcc);
 }
 
-static void red_marshall_cursor_init(RedChannelClient *rcc, SpiceMarshaller *base_marshaller,
+static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *base_marshaller,
                                      RedPipeItem *pipe_item)
 {
     CursorChannel *cursor_channel;
-    CursorChannelClient *ccc = RCC_TO_CCC(rcc);
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
     SpiceMsgCursorInit msg;
     AddBufInfo info;
 
@@ -248,12 +248,12 @@ static void red_marshall_cursor_init(RedChannelClient *rcc, SpiceMarshaller *bas
     add_buf_from_info(base_marshaller, &info);
 }
 
-static void cursor_marshall(RedChannelClient *rcc,
+static void cursor_marshall(CursorChannelClient *ccc,
                             SpiceMarshaller *m,
                             RedCursorPipeItem *cursor_pipe_item)
 {
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
     CursorChannel *cursor_channel = SPICE_CONTAINEROF(rcc->channel, CursorChannel, common.base);
-    CursorChannelClient *ccc = RCC_TO_CCC(rcc);
     CursorItem *item = cursor_pipe_item->cursor_item;
     RedPipeItem *pipe_item = &cursor_pipe_item->base;
     RedCursorCmd *cmd;
@@ -317,10 +317,11 @@ static inline void red_marshall_inval(RedChannelClient *rcc,
 static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
+    CursorChannelClient *ccc = RCC_TO_CCC(rcc);
 
     switch (pipe_item->type) {
     case RED_PIPE_ITEM_TYPE_CURSOR:
-        cursor_marshall(rcc, m, SPICE_UPCAST(RedCursorPipeItem, pipe_item));
+        cursor_marshall(ccc, m, SPICE_UPCAST(RedCursorPipeItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
         red_marshall_inval(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCacheItem, u.pipe_data));
@@ -330,7 +331,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
         break;
     case RED_PIPE_ITEM_TYPE_CURSOR_INIT:
         red_reset_cursor_cache(rcc);
-        red_marshall_cursor_init(rcc, m, pipe_item);
+        red_marshall_cursor_init(ccc, m, pipe_item);
         break;
     case RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE:
         red_reset_cursor_cache(rcc);
