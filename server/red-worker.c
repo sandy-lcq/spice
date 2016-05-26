@@ -498,7 +498,6 @@ CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
 static void guest_set_client_capabilities(RedWorker *worker)
 {
     int i;
-    DisplayChannelClient *dcc;
     RedChannelClient *rcc;
     GList *link, *next;
     uint8_t caps[SPICE_CAPABILITIES_SIZE] = { 0 };
@@ -533,8 +532,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
         for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
             SET_CAP(caps, caps_available[i]);
         }
-        FOREACH_CLIENT(worker->display_channel, link, next, dcc) {
-            rcc = (RedChannelClient *)dcc;
+        FOREACH_CLIENT(worker->display_channel, link, next, rcc) {
             for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
                 if (!red_channel_client_test_remote_cap(rcc, caps_available[i]))
                     CLEAR_CAP(caps, caps_available[i]);
