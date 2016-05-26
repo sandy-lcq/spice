@@ -34,9 +34,9 @@ RedRecord* red_record_new(const char *filename);
 
 void red_record_free(RedRecord *record);
 
-void red_record_dev_input_primary_surface_create(RedRecord *record,
-                                                 QXLDevSurfaceCreate *surface,
-                                                 uint8_t *line_0);
+void red_record_primary_surface_create(RedRecord *record,
+                                       QXLDevSurfaceCreate *surface,
+                                       uint8_t *line_0);
 
 void red_record_event(RedRecord *record, int what, uint32_t type, unsigned long ts);
 

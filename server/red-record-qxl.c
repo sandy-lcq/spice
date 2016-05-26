@@ -790,8 +790,9 @@ void red_record_cursor_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id,
     }
 }
 
-void red_record_dev_input_primary_surface_create(RedRecord *record,
-    QXLDevSurfaceCreate* surface, uint8_t *line_0)
+void red_record_primary_surface_create(RedRecord *record,
+                                       QXLDevSurfaceCreate* surface,
+                                       uint8_t *line_0)
 {
     FILE *fd = record->fd;
 

@@ -664,8 +664,8 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
         return;
     }
     if (worker->record) {
-        red_record_dev_input_primary_surface_create(worker->record,
-                                                    &surface, line_0);
+        red_record_primary_surface_create(worker->record,
+                                          &surface, line_0);
     }
 
     if (surface.stride < 0) {
