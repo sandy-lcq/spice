@@ -3098,12 +3098,8 @@ static RedCharDevice *attach_to_red_agent(RedsState *reds, SpiceCharDeviceInstan
     RedCharDeviceVDIPort *dev = reds->agent_dev;
     SpiceCharDeviceInterface *sif;
 
-    if (dev->priv->agent_attached) {
-        red_char_device_reset_dev_instance(RED_CHAR_DEVICE(dev), sin);
-    } else {
-        dev->priv->agent_attached = TRUE;
-        g_object_set(G_OBJECT(dev), "sin", sin, NULL);
-    }
+    dev->priv->agent_attached = TRUE;
+    red_char_device_reset_dev_instance(RED_CHAR_DEVICE(dev), sin);
 
     reds->vdagent = sin;
     reds_update_mouse_mode(reds);
