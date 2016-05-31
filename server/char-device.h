@@ -182,8 +182,6 @@ int red_char_device_restore(RedCharDevice *dev,
  *  instead we just reset it.
  *  In addition, there is a misshandling of AGENT_TOKENS message in spice-gtk: it
  *  overrides the amount of tokens, instead of adding the given amount.
- *
- *  todo: change AGENT_CONNECT msg to contain tokens count.
  */
 void red_char_device_reset(RedCharDevice *dev);
 
