@@ -175,9 +175,9 @@ int red_char_device_restore(RedCharDevice *dev,
  * This routine is a workaround for a bad tokens management in the vdagent
  * protocol:
  *  The client tokens' are set only once, when the main channel is initialized.
- *  Instead, it would have been more appropriate to reset them upon AGEN_CONNECT.
+ *  Instead, it would have been more appropriate to reset them upon AGENT_CONNECT.
  *  The client tokens are tracked as part of the RedCharDeviceClient. Thus,
- *  in order to be backwartd compatible with the client, we need to track the tokens
+ *  in order to be backward compatible with the client, we need to track the tokens
  *  event when the agent is detached. We don't destroy the char_device state, and
  *  instead we just reset it.
  *  In addition, there is a misshandling of AGENT_TOKENS message in spice-gtk: it
