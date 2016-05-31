@@ -1120,6 +1120,11 @@ uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, siz
     dev->priv->recv_from_client_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev),
                                                                        client,
                                                                        size + sizeof(VDIChunkHeader));
+    /* check if buffer was allocated, as flow control is enabled for
+     * this device this is a normal condition */
+    if (!dev->priv->recv_from_client_buf) {
+        return NULL;
+    }
     dev->priv->recv_from_client_buf_pushed = FALSE;
     return dev->priv->recv_from_client_buf->buf + sizeof(VDIChunkHeader);
 }
