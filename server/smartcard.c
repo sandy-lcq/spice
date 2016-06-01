@@ -274,7 +274,7 @@ void smartcard_device_disconnect(SpiceCharDeviceInstance *char_device)
 {
     g_return_if_fail(RED_IS_CHAR_DEVICE_SMARTCARD(char_device->st));
 
-    g_object_unref(char_device);
+    g_object_unref(char_device->st);
 }
 
 RedCharDevice *smartcard_device_connect(RedsState *reds, SpiceCharDeviceInstance *char_device)
