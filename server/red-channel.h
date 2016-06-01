@@ -306,7 +306,6 @@ struct RedChannel {
     // Maybe replace these logic with ref count?
     // TODO: rename to 'connected_clients'?
     GList *clients;
-    uint32_t clients_num;
 
     OutgoingHandlerInterface outgoing_cb;
     IncomingHandlerInterface incoming_cb;

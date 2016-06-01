@@ -525,7 +525,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
         return;
     }
     if ((worker->display_channel == NULL) ||
-        (RED_CHANNEL(worker->display_channel)->clients_num == 0)) {
+        (RED_CHANNEL(worker->display_channel)->clients == NULL)) {
         red_qxl_set_client_capabilities(worker->qxl, FALSE, caps);
     } else {
         // Take least common denominator

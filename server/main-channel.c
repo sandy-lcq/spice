@@ -102,7 +102,7 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
     SpiceMigrateDataHeader *header = (SpiceMigrateDataHeader *)message;
 
     /* not supported with multi-clients */
-    spice_assert(rcc->channel->clients_num == 1);
+    spice_assert(g_list_length(rcc->channel->clients) == 1);
 
     if (size < sizeof(SpiceMigrateDataHeader) + sizeof(SpiceMigrateDataMain)) {
         spice_printerr("bad message size %u", size);

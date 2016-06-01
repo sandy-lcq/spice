@@ -457,7 +457,7 @@ void main_channel_client_migrate_dst_complete(MainChannelClient *mcc)
 {
     if (mcc->mig_wait_prev_complete) {
         if (mcc->mig_wait_prev_try_seamless) {
-            spice_assert(mcc->base.channel->clients_num == 1);
+            spice_assert(g_list_length(mcc->base.channel->clients) == 1);
             red_channel_client_pipe_add_type(&mcc->base,
                                              RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_BEGIN_SEAMLESS);
         } else {

@@ -319,7 +319,7 @@ static void pipes_add_drawable_after(DisplayChannel *display,
         pipes_add_drawable(display, drawable);
         return;
     }
-    if (num_other_linked != display->common.base.clients_num) {
+    if (num_other_linked != g_list_length(display->common.base.clients)) {
         GList *link, *next;
         spice_debug("TODO: not O(n^2)");
         FOREACH_CLIENT(display, link, next, dcc) {
