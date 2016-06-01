@@ -682,6 +682,20 @@ static int red_get_copy_ptr(RedMemSlotInfo *slots, int group_id,
         return 1;
     }
     red_get_rect_ptr(&red->src_area, &qxl->src_area);
+    /* The source area should not extend outside the source bitmap or have
+     * swapped coordinates.
+     */
+    if (red->src_area.left < 0 ||
+        red->src_area.left > red->src_area.right ||
+        red->src_area.top < 0 ||
+        red->src_area.top > red->src_area.bottom) {
+        return 1;
+    }
+    if (red->src_bitmap->descriptor.type == SPICE_IMAGE_TYPE_BITMAP &&
+        (red->src_area.right > red->src_bitmap->u.bitmap.x ||
+         red->src_area.bottom > red->src_bitmap->u.bitmap.y)) {
+        return 1;
+    }
     red->rop_descriptor  = qxl->rop_descriptor;
     red->scale_mode      = qxl->scale_mode;
     red_get_qmask_ptr(slots, group_id, &red->mask, &qxl->mask, flags);
