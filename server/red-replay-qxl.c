@@ -306,6 +306,14 @@ static void red_replay_point_ptr(SpiceReplay *replay, QXLPoint *qxl)
     replay_fscanf(replay, "point %d %d\n", &qxl->x, &qxl->y);
 }
 
+static void red_replay_point16_ptr(SpiceReplay *replay, QXLPoint16 *qxl)
+{
+    int x, y;
+    replay_fscanf(replay, "point16 %d %d\n", &x, &y);
+    qxl->x = x;
+    qxl->y = y;
+}
+
 static void red_replay_rect_ptr(SpiceReplay *replay, const char *prefix, QXLRect *qxl)
 {
     char template[1024];
@@ -1052,6 +1060,69 @@ static void red_replay_surface_cmd_free(SpiceReplay *replay, QXLSurfaceCmd *qxl)
     free(qxl);
 }
 
+static QXLCursor *red_replay_cursor(SpiceReplay *replay)
+{
+    int temp;
+    QXLCursor cursor, *qxl = NULL;
+
+    replay_fscanf(replay, "header.unique %"SCNu64"\n", &cursor.header.unique);
+    replay_fscanf(replay, "header.type %d\n", &temp);
+    cursor.header.type = temp;
+    replay_fscanf(replay, "header.width %d\n", &temp);
+    cursor.header.width = temp;
+    replay_fscanf(replay, "header.height %d\n", &temp);
+    cursor.header.height = temp;
+    replay_fscanf(replay, "header.hot_spot_x %d\n", &temp);
+    cursor.header.hot_spot_x = temp;
+    replay_fscanf(replay, "header.hot_spot_y %d\n", &temp);
+    cursor.header.hot_spot_y = temp;
+
+    replay_fscanf(replay, "data_size %d\n", &temp);
+    cursor.data_size = temp;
+    cursor.data_size = red_replay_data_chunks(replay, "cursor", (uint8_t**)&qxl, sizeof(QXLCursor));
+    qxl->header = cursor.header;
+    qxl->data_size = cursor.data_size;
+    return qxl;
+}
+
+static QXLCursorCmd *red_replay_cursor_cmd(SpiceReplay *replay)
+{
+    int temp;
+    QXLCursorCmd *qxl = spice_new0(QXLCursorCmd, 1);
+
+    replay_fscanf(replay, "cursor_cmd\n");
+    replay_fscanf(replay, "type %d\n", &temp);
+    qxl->type = temp;
+    switch (qxl->type) {
+    case QXL_CURSOR_SET:
+        red_replay_point16_ptr(replay, &qxl->u.set.position);
+        replay_fscanf(replay, "u.set.visible %d\n", &temp);
+        qxl->u.set.visible = temp;
+        qxl->u.set.shape = QXLPHYSICAL_FROM_PTR(red_replay_cursor(replay));
+        break;
+    case QXL_CURSOR_MOVE:
+        red_replay_point16_ptr(replay, &qxl->u.position);
+        break;
+    case QXL_CURSOR_TRAIL:
+        replay_fscanf(replay, "u.trail.length %d\n", &temp);
+        qxl->u.trail.length = temp;
+        replay_fscanf(replay, "u.trail.frequency %d\n", &temp);
+        qxl->u.trail.frequency = temp;
+        break;
+    }
+    return qxl;
+}
+
+static void red_replay_cursor_cmd_free(SpiceReplay *replay, QXLCursorCmd *qxl)
+{
+    if (qxl->type == QXL_CURSOR_SET) {
+        QXLCursor *cursor = QXLPHYSICAL_TO_PTR(qxl->u.set.shape);
+        red_replay_data_chunks_free(replay, cursor, sizeof(*cursor));
+    }
+
+    free(qxl);
+}
+
 static void replay_handle_create_primary(QXLWorker *worker, SpiceReplay *replay)
 {
     QXLDevSurfaceCreate surface = { 0, };
@@ -1148,6 +1219,9 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
     case QXL_CMD_SURFACE:
         cmd->cmd.data = QXLPHYSICAL_FROM_PTR(red_replay_surface_cmd(replay));
         break;
+    case QXL_CMD_CURSOR:
+        cmd->cmd.data = QXLPHYSICAL_FROM_PTR(red_replay_cursor_cmd(replay));
+        break;
     }
 
     QXLReleaseInfo *info;
@@ -1155,6 +1229,7 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
     case QXL_CMD_DRAW:
     case QXL_CMD_UPDATE:
     case QXL_CMD_SURFACE:
+    case QXL_CMD_CURSOR:
         info = QXLPHYSICAL_TO_PTR(cmd->cmd.data);
         info->id = (uintptr_t)cmd;
     }
@@ -1185,6 +1260,11 @@ SPICE_GNUC_VISIBLE void spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt
     case QXL_CMD_SURFACE: {
         QXLSurfaceCmd *qxl = QXLPHYSICAL_TO_PTR(cmd->cmd.data);
         red_replay_surface_cmd_free(replay, qxl);
+        break;
+    }
+    case QXL_CMD_CURSOR: {
+        QXLCursorCmd *qxl = QXLPHYSICAL_TO_PTR(cmd->cmd.data);
+        red_replay_cursor_cmd_free(replay, qxl);
         break;
     }
     default:
