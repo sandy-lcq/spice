@@ -146,7 +146,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 #define REDS_VDI_PORT_NUM_RECEIVE_BUFFS 5
 
 static pthread_mutex_t *lock_cs;
-static long *lock_count;
 
 /* TODO while we can technically create more than one server in a process,
  * the intended use is to support a single server per process */
@@ -2804,7 +2803,6 @@ static void pthreads_locking_callback(int mode, int type, const char *file, int 
 {
     if (mode & CRYPTO_LOCK) {
         pthread_mutex_lock(&(lock_cs[type]));
-        lock_count[type]++;
     } else {
         pthread_mutex_unlock(&(lock_cs[type]));
     }
@@ -2815,10 +2813,8 @@ static void openssl_thread_setup(void)
     int i;
 
     lock_cs = OPENSSL_malloc(CRYPTO_num_locks() * sizeof(pthread_mutex_t));
-    lock_count = OPENSSL_malloc(CRYPTO_num_locks() * sizeof(long));
 
     for (i = 0; i < CRYPTO_num_locks(); i++) {
-        lock_count[i] = 0;
         pthread_mutex_init(&(lock_cs[i]), NULL);
     }
 
