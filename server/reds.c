@@ -1855,17 +1855,6 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
      ((state & SPICE_MOUSE_BUTTON_MASK_MIDDLE) ? VD_AGENT_MBUTTON_MASK : 0) |    \
      ((state & SPICE_MOUSE_BUTTON_MASK_RIGHT) ? VD_AGENT_RBUTTON_MASK : 0))
 
-static void reds_set_client_mouse_allowed(RedsState *reds, int is_client_mouse_allowed, int x_res, int y_res)
-{
-    reds->monitor_mode.x_res = x_res;
-    reds->monitor_mode.y_res = y_res;
-    reds->dispatcher_allows_client_mouse = is_client_mouse_allowed;
-    reds_update_mouse_mode(reds);
-    if (reds->is_client_mouse_allowed && inputs_channel_has_tablet(reds->inputs_channel)) {
-        inputs_channel_set_tablet_logical_size(reds->inputs_channel, reds->monitor_mode.x_res, reds->monitor_mode.y_res);
-    }
-}
-
 static void openssl_init(RedLinkInfo *link)
 {
     unsigned long f4 = RSA_F4;
@@ -4185,7 +4174,6 @@ void reds_core_timer_remove(RedsState *reds,
 
 void reds_update_client_mouse_allowed(RedsState *reds)
 {
-    static int allowed = FALSE;
     int allow_now = FALSE;
     int x_res = 0;
     int y_res = 0;
@@ -4203,9 +4191,14 @@ void reds_update_client_mouse_allowed(RedsState *reds)
         }
     }
 
-    if (allow_now || allow_now != allowed) {
-        allowed = allow_now;
-        reds_set_client_mouse_allowed(reds, allowed, x_res, y_res);
+    if (allow_now || allow_now != reds->dispatcher_allows_client_mouse) {
+        reds->monitor_mode.x_res = x_res;
+        reds->monitor_mode.y_res = y_res;
+        reds->dispatcher_allows_client_mouse = allow_now;
+        reds_update_mouse_mode(reds);
+        if (reds->is_client_mouse_allowed && inputs_channel_has_tablet(reds->inputs_channel)) {
+            inputs_channel_set_tablet_logical_size(reds->inputs_channel, reds->monitor_mode.x_res, reds->monitor_mode.y_res);
+        }
     }
 }
 
