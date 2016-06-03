@@ -143,7 +143,6 @@ void encoder_data_init(EncoderData *data, DisplayChannelClient *dcc)
 {
     data->bufs_tail = g_new(RedCompressBuf, 1);
     data->bufs_head = data->bufs_tail;
-    data->dcc = dcc;
     data->bufs_head->send_next = NULL;
 }
 

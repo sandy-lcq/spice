@@ -938,8 +938,6 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
     comp_head_left = sizeof(lz_data->data.bufs_head->buf) - comp_head_filled;
     lz_out_start_byte = lz_data->data.bufs_head->buf.bytes + comp_head_filled;
 
-    lz_data->data.dcc = dcc;
-
     lz_data->data.u.lines_data.chunks = src->data;
     lz_data->data.u.lines_data.stride = src->stride;
     lz_data->data.u.lines_data.next = 0;

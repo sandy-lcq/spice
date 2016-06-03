@@ -80,7 +80,6 @@ GlzSharedDictionary* dcc_restore_glz_dictionary              (DisplayChannelClie
                                                               GlzEncDictRestoreData *restore_data);
 
 typedef struct  {
-    DisplayChannelClient *dcc;
     RedCompressBuf *bufs_head;
     RedCompressBuf *bufs_tail;
     jmp_buf jmp_env;
