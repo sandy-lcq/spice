@@ -98,7 +98,7 @@ typedef struct  {
     char message_buf[512];
 } EncoderData;
 
-void encoder_data_init(EncoderData *data, DisplayChannelClient *dcc);
+void encoder_data_init(EncoderData *data);
 void encoder_data_reset(EncoderData *data);
 
 typedef struct {

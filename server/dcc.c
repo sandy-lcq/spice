@@ -719,7 +719,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     spice_info("LZ global compress fmt=%d", src->format);
 #endif
 
-    encoder_data_init(&glz_data->data, dcc);
+    encoder_data_init(&glz_data->data);
 
     glz_drawable = get_glz_drawable(dcc, drawable);
     glz_drawable_instance = add_glz_drawable_instance(glz_drawable);
@@ -744,7 +744,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     stat_start_time_init(&start_time, &display_channel->zlib_glz_stat);
     zlib_data = &dcc->zlib_data;
 
-    encoder_data_init(&zlib_data->data, dcc);
+    encoder_data_init(&zlib_data->data);
 
     zlib_data->data.u.compressed_data.next = glz_data->data.bufs_head;
     zlib_data->data.u.compressed_data.size_left = glz_size;
@@ -796,7 +796,7 @@ static int dcc_compress_image_lz(DisplayChannelClient *dcc,
     spice_info("LZ LOCAL compress");
 #endif
 
-    encoder_data_init(&lz_data->data, dcc);
+    encoder_data_init(&lz_data->data);
 
     if (setjmp(lz_data->data.jmp_env)) {
         encoder_data_reset(&lz_data->data);
@@ -886,7 +886,7 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
         return FALSE;
     }
 
-    encoder_data_init(&jpeg_data->data, dcc);
+    encoder_data_init(&jpeg_data->data);
 
     if (setjmp(jpeg_data->data.jmp_env)) {
         encoder_data_reset(&jpeg_data->data);
@@ -985,7 +985,7 @@ static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
     spice_info("LZ4 compress");
 #endif
 
-    encoder_data_init(&lz4_data->data, dcc);
+    encoder_data_init(&lz4_data->data);
 
     if (setjmp(lz4_data->data.jmp_env)) {
         encoder_data_reset(&lz4_data->data);
@@ -1053,7 +1053,7 @@ static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
         return FALSE;
     }
 
-    encoder_data_init(&quic_data->data, dcc);
+    encoder_data_init(&quic_data->data);
 
     if (setjmp(quic_data->data.jmp_env)) {
         encoder_data_reset(&quic_data->data);

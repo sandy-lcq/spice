@@ -139,7 +139,7 @@ static void glz_usr_free(GlzEncoderUsrContext *usr, void *ptr)
     free(ptr);
 }
 
-void encoder_data_init(EncoderData *data, DisplayChannelClient *dcc)
+void encoder_data_init(EncoderData *data)
 {
     data->bufs_tail = g_new(RedCompressBuf, 1);
     data->bufs_head = data->bufs_tail;
