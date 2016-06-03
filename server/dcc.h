@@ -63,11 +63,6 @@ struct DisplayChannelClient {
 
     ImageEncoders encoders;
 
-    int zlib_level;
-
-    ZlibData zlib_data;
-    ZlibEncoder *zlib;
-
     int expect_init;
 
     PixmapCache *pixmap_cache;

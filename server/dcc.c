@@ -746,14 +746,14 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
         goto glz;
     }
     stat_start_time_init(&start_time, &display_channel->zlib_glz_stat);
-    zlib_data = &dcc->zlib_data;
+    zlib_data = &dcc->encoders.zlib_data;
 
     encoder_data_init(&zlib_data->data);
 
     zlib_data->data.u.compressed_data.next = glz_data->data.bufs_head;
     zlib_data->data.u.compressed_data.size_left = glz_size;
 
-    zlib_size = zlib_encode(dcc->zlib, dcc->zlib_level,
+    zlib_size = zlib_encode(dcc->encoders.zlib, dcc->encoders.zlib_level,
                             glz_size, zlib_data->data.bufs_head->buf.bytes,
                             sizeof(zlib_data->data.bufs_head->buf));
 

@@ -177,6 +177,11 @@ struct ImageEncoders {
     Lz4Data lz4_data;
     Lz4EncoderContext *lz4;
 #endif
+
+    int zlib_level;
+
+    ZlibData zlib_data;
+    ZlibEncoder *zlib;
 };
 
 typedef struct compress_send_data_t {

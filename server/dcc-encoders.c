@@ -386,14 +386,14 @@ static inline void image_encoders_init_lz4(ImageEncoders *enc)
 }
 #endif
 
-static void dcc_init_zlib(DisplayChannelClient *dcc)
+static void image_encoders_init_zlib(ImageEncoders *enc)
 {
-    dcc->zlib_data.usr.more_space = zlib_usr_more_space;
-    dcc->zlib_data.usr.more_input = zlib_usr_more_input;
+    enc->zlib_data.usr.more_space = zlib_usr_more_space;
+    enc->zlib_data.usr.more_input = zlib_usr_more_input;
 
-    dcc->zlib = zlib_encoder_create(&dcc->zlib_data.usr, ZLIB_DEFAULT_COMPRESSION_LEVEL);
+    enc->zlib = zlib_encoder_create(&enc->zlib_data.usr, ZLIB_DEFAULT_COMPRESSION_LEVEL);
 
-    if (!dcc->zlib) {
+    if (!enc->zlib) {
         spice_critical("create zlib encoder failed");
     }
 }
@@ -409,10 +409,10 @@ void dcc_encoders_init(DisplayChannelClient *dcc)
 #ifdef USE_LZ4
     image_encoders_init_lz4(enc);
 #endif
-    dcc_init_zlib(dcc);
+    image_encoders_init_zlib(enc);
 
     // todo: tune level according to bandwidth
-    dcc->zlib_level = ZLIB_DEFAULT_COMPRESSION_LEVEL;
+    enc->zlib_level = ZLIB_DEFAULT_COMPRESSION_LEVEL;
 }
 
 void dcc_encoders_free(DisplayChannelClient *dcc)
@@ -428,8 +428,8 @@ void dcc_encoders_free(DisplayChannelClient *dcc)
     lz4_encoder_destroy(enc->lz4);
     enc->lz4 = NULL;
 #endif
-    zlib_encoder_destroy(dcc->zlib);
-    dcc->zlib = NULL;
+    zlib_encoder_destroy(enc->zlib);
+    enc->zlib = NULL;
 }
 
 /* Remove from the to_free list and the instances_list.
