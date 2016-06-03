@@ -784,58 +784,6 @@ glz:
     return TRUE;
 }
 
-#ifdef USE_LZ4
-static int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
-                                       SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                       stat_info_t *stats)
-{
-    Lz4Data *lz4_data = &enc->lz4_data;
-    Lz4EncoderContext *lz4 = enc->lz4;
-    int lz4_size = 0;
-    stat_start_time_t start_time;
-    stat_start_time_init(&start_time, stats);
-
-#ifdef COMPRESS_DEBUG
-    spice_info("LZ4 compress");
-#endif
-
-    encoder_data_init(&lz4_data->data);
-
-    if (setjmp(lz4_data->data.jmp_env)) {
-        encoder_data_reset(&lz4_data->data);
-        return FALSE;
-    }
-
-    if (src->data->flags & SPICE_CHUNKS_FLAGS_UNSTABLE) {
-        spice_chunks_linearize(src->data);
-    }
-
-    lz4_data->data.u.lines_data.chunks = src->data;
-    lz4_data->data.u.lines_data.stride = src->stride;
-    lz4_data->data.u.lines_data.next = 0;
-    lz4_data->data.u.lines_data.reverse = 0;
-
-    lz4_size = lz4_encode(lz4, src->y, src->stride, lz4_data->data.bufs_head->buf.bytes,
-                          sizeof(lz4_data->data.bufs_head->buf),
-                          src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN, src->format);
-
-    // the compressed buffer is bigger than the original data
-    if (lz4_size > (src->y * src->stride)) {
-        longjmp(lz4_data->data.jmp_env, 1);
-    }
-
-    dest->descriptor.type = SPICE_IMAGE_TYPE_LZ4;
-    dest->u.lz4.data_size = lz4_size;
-
-    o_comp_data->comp_buf = lz4_data->data.bufs_head;
-    o_comp_data->comp_buf_size = lz4_size;
-
-    stat_compress_add(stats, start_time, src->stride * src->y,
-                      o_comp_data->comp_buf_size);
-    return TRUE;
-}
-#endif
-
 #define MIN_DIMENSION_TO_QUIC 3
 /**
  * quic doesn't handle:
