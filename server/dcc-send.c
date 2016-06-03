@@ -1680,7 +1680,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     SpiceCopy *copy;
     uint32_t frame_mm_time;
     uint32_t n;
-    int is_sized, width, height;
+    int is_sized;
     int ret;
 
     spice_assert(drawable->red_drawable->type == QXL_DRAW_COPY);
@@ -1690,9 +1690,8 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
         return FALSE;
     }
 
-    width = copy->src_area.right - copy->src_area.left;
-    height = copy->src_area.bottom - copy->src_area.top;
-    is_sized = (width != stream->width) || (height != stream->height) ||
+    is_sized = (copy->src_area.right - copy->src_area.left != stream->width) ||
+               (copy->src_area.bottom - copy->src_area.top != stream->height) ||
                !rect_is_equal(&drawable->red_drawable->bbox, &stream->dest_area);
 
     if (is_sized &&
@@ -1722,8 +1721,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     ret = agent->video_encoder->encode_frame(agent->video_encoder,
                                              frame_mm_time,
                                              &copy->src_bitmap->u.bitmap,
-                                             width, height, &copy->src_area,
-                                             stream->top_down,
+                                             &copy->src_area, stream->top_down,
                                              &dcc->send_data.stream_outbuf,
                                              &outbuf_size, &n);
     switch (ret) {
@@ -1761,8 +1759,8 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
         stream_data.base.id = get_stream_id(display, stream);
         stream_data.base.multi_media_time = frame_mm_time;
         stream_data.data_size = n;
-        stream_data.width = width;
-        stream_data.height = height;
+        stream_data.width = copy->src_area.right - copy->src_area.left;
+        stream_data.height = copy->src_area.bottom - copy->src_area.top;
         stream_data.dest = drawable->red_drawable->bbox;
 
         spice_debug("stream %d: sized frame: dest ==> ", stream_data.base.id);

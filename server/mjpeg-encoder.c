@@ -927,7 +927,6 @@ static int encode_frame(MJpegEncoder *encoder, const SpiceRect *src,
 static int mjpeg_encoder_encode_frame(VideoEncoder *video_encoder,
                                       uint32_t frame_mm_time,
                                       const SpiceBitmap *bitmap,
-                                      int width, int height,
                                       const SpiceRect *src, int top_down,
                                       uint8_t **outbuf, size_t *outbuf_size,
                                       uint32_t *data_size)
