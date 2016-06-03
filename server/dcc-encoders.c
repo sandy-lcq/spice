@@ -429,26 +429,6 @@ void dcc_encoders_free(DisplayChannelClient *dcc)
     dcc->zlib = NULL;
 }
 
-static void marshaller_compress_buf_free(uint8_t *data, void *opaque)
-{
-    g_free(opaque);
-}
-
-void marshaller_add_compressed(SpiceMarshaller *m,
-                               RedCompressBuf *comp_buf, size_t size)
-{
-    size_t max = size;
-    size_t now;
-    do {
-        spice_return_if_fail(comp_buf);
-        now = MIN(sizeof(comp_buf->buf), max);
-        max -= now;
-        spice_marshaller_add_ref_full(m, comp_buf->buf.bytes, now,
-                                      marshaller_compress_buf_free, comp_buf);
-        comp_buf = comp_buf->send_next;
-    } while (max);
-}
-
 /* Remove from the to_free list and the instances_list.
    When no instance is left - the RedGlzDrawable is released too. (and the qxl drawable too, if
    it is not used by Drawable).

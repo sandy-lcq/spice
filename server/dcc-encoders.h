@@ -19,7 +19,6 @@
 #define DCC_ENCODERS_H_
 
 #include <setjmp.h>
-#include <common/marshaller.h>
 #include <common/quic.h>
 
 #include "red-channel.h"
@@ -45,10 +44,6 @@ void             dcc_free_glz_drawables                      (DisplayChannelClie
 void             dcc_free_glz_drawables_to_free              (DisplayChannelClient* dcc);
 void             dcc_freeze_glz                              (DisplayChannelClient *dcc);
 void             dcc_release_glz                             (DisplayChannelClient *dcc);
-
-void             marshaller_add_compressed                   (SpiceMarshaller *m,
-                                                              RedCompressBuf *comp_buf,
-                                                              size_t size);
 
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 struct RedCompressBuf {

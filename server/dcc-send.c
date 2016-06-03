@@ -335,6 +335,26 @@ static void fill_base(SpiceMarshaller *base_marshaller, Drawable *drawable)
     spice_marshall_DisplayBase(base_marshaller, &base);
 }
 
+static void marshaller_compress_buf_free(uint8_t *data, void *opaque)
+{
+    compress_buf_free(opaque);
+}
+
+static void marshaller_add_compressed(SpiceMarshaller *m,
+                                      RedCompressBuf *comp_buf, size_t size)
+{
+    size_t max = size;
+    size_t now;
+    do {
+        spice_return_if_fail(comp_buf);
+        now = MIN(sizeof(comp_buf->buf), max);
+        max -= now;
+        spice_marshaller_add_ref_full(m, comp_buf->buf.bytes, now,
+                                      marshaller_compress_buf_free, comp_buf);
+        comp_buf = comp_buf->send_next;
+    } while (max);
+}
+
 /* if the number of times fill_bits can be called per one qxl_drawable increases -
    MAX_LZ_DRAWABLE_INSTANCES must be increased as well */
 static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
