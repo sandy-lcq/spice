@@ -252,6 +252,7 @@ static int is_next_stream_frame(DisplayChannel *display,
         }
     } else {
         if (rect_contains(&red_drawable->bbox, other_dest)) {
+            SpiceRect* candidate_src;
             int candidate_area = rect_get_area(&red_drawable->bbox);
             int other_area = rect_get_area(other_dest);
             /* do not stream drawables that are significantly
@@ -265,7 +266,10 @@ static int is_next_stream_frame(DisplayChannel *display,
                 return STREAM_FRAME_NONE;
             }
 
-            if (candidate_area > other_area) {
+            candidate_src = &red_drawable->u.copy.src_area;
+            if (candidate_area > other_area ||
+                candidate_src->right - candidate_src->left != other_src_width ||
+                candidate_src->bottom - candidate_src->top != other_src_height) {
                 is_frame_container = TRUE;
             }
         } else {
