@@ -166,6 +166,16 @@ struct ImageEncoders {
     QuicContext *quic;
 };
 
+typedef struct compress_send_data_t {
+    void* comp_buf;
+    uint32_t comp_buf_size;
+    SpicePalette *lzplt_palette;
+    int is_lossy;
+} compress_send_data_t;
+
+int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
+                                 SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                 stat_info_t *stats);
 #define RED_RELEASE_BUNCH_SIZE 64
 
 #endif /* DCC_ENCODERS_H_ */

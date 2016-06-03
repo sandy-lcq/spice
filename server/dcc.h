@@ -216,13 +216,6 @@ RedPipeItem *              dcc_gl_scanout_item_new                   (RedChannel
 RedPipeItem *              dcc_gl_draw_item_new                      (RedChannelClient *rcc,
                                                                       void *data, int num);
 
-typedef struct compress_send_data_t {
-    void*    comp_buf;
-    uint32_t comp_buf_size;
-    SpicePalette *lzplt_palette;
-    int is_lossy;
-} compress_send_data_t;
-
 int                        dcc_compress_image                        (DisplayChannelClient *dcc,
                                                                       SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
                                                                       int can_lossy,
