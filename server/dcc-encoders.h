@@ -188,6 +188,10 @@ int image_encoders_compress_lz(ImageEncoders *enc,
                                SpiceImage *dest, SpiceBitmap *src,
                                compress_send_data_t* o_comp_data,
                                stat_info_t *stats);
+int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
+                                 SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                 stat_info_t *jpeg_stats,
+                                 stat_info_t *jpeg_alpha_stats);
 
 #define RED_RELEASE_BUNCH_SIZE 64
 
