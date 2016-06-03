@@ -63,6 +63,11 @@ struct RedCompressBuf {
     RedCompressBuf *send_next;
 };
 
+static inline void compress_buf_free(RedCompressBuf *buf)
+{
+    g_free(buf);
+}
+
 typedef struct GlzSharedDictionary {
     RingItem base;
     GlzEncDictContext *dict;
