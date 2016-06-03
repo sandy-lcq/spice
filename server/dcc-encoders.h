@@ -37,7 +37,7 @@ typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct ImageEncoders ImageEncoders;
 
 void             dcc_encoders_init                           (DisplayChannelClient *dcc);
-void             dcc_encoders_free                           (DisplayChannelClient *dcc);
+void image_encoders_free(ImageEncoders *enc);
 void             dcc_free_glz_drawable                       (DisplayChannelClient *dcc,
                                                               RedGlzDrawable *drawable);
 int              dcc_free_some_independent_glz_drawables     (DisplayChannelClient *dcc);

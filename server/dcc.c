@@ -499,7 +499,7 @@ void dcc_stop(DisplayChannelClient *dcc)
     free(dcc->send_data.stream_outbuf);
     free(dcc->send_data.free_list.res);
     dcc_destroy_stream_agents(dcc);
-    dcc_encoders_free(dcc);
+    image_encoders_free(&dcc->encoders);
 
     if (dcc->gl_draw_ongoing) {
         display_channel_gl_draw_done(dc);

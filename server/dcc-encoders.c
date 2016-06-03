@@ -415,9 +415,8 @@ void dcc_encoders_init(DisplayChannelClient *dcc)
     enc->zlib_level = ZLIB_DEFAULT_COMPRESSION_LEVEL;
 }
 
-void dcc_encoders_free(DisplayChannelClient *dcc)
+void image_encoders_free(ImageEncoders *enc)
 {
-    ImageEncoders *enc = &dcc->encoders;
     quic_destroy(enc->quic);
     enc->quic = NULL;
     lz_destroy(enc->lz);
