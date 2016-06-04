@@ -150,7 +150,7 @@ static pthread_mutex_t *lock_cs;
 
 /* TODO while we can technically create more than one server in a process,
  * the intended use is to support a single server per process */
-GList *servers = NULL;
+static GList *servers = NULL;
 
 /* SPICE configuration set through the public spice_server_set_xxx APIS */
 struct RedServerConfig {
