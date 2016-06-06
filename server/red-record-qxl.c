@@ -834,6 +834,9 @@ void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
     case QXL_CMD_SURFACE:
         red_record_surface_cmd(fd, slots, ext_cmd.group_id, ext_cmd.cmd.data);
         break;
+    case QXL_CMD_CURSOR:
+        red_record_cursor_cmd(fd, slots, ext_cmd.group_id, ext_cmd.cmd.data);
+        break;
     }
 }
 
