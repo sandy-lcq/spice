@@ -851,6 +851,12 @@ void red_char_device_reset(RedCharDevice *dev)
         dev_client->num_send_tokens += g_queue_get_length(dev_client->send_queue);
         g_queue_foreach(dev_client->send_queue, (GFunc)red_pipe_item_unref, NULL);
         g_queue_clear(dev_client->send_queue);
+
+        /* If device is reset, we must reset the tokens counters as well as we
+         * don't hold any data from client and upon agent's reconnection we send
+         * SPICE_MSG_MAIN_AGENT_CONNECTED_TOKENS with all free tokens we have */
+        dev_client->num_client_tokens += dev_client->num_client_tokens_free;
+        dev_client->num_client_tokens_free = 0;
     }
     red_char_device_reset_dev_instance(dev, NULL);
 }

@@ -542,23 +542,16 @@ static void reds_reset_vdp(RedsState *reds)
     dev->priv->write_filter.discard_all = TRUE;
     dev->priv->client_agent_started = FALSE;
 
-    /* resetting and not destroying the dev as a workaround for a bad
-     * tokens management in the vdagent protocol:
-     *  The client tokens' are set only once, when the main channel is initialized.
-     *  Instead, it would have been more appropriate to reset them upon AGENT_CONNECT.
+    /*  The client's tokens are set once when the main channel is initialized
+     *  and once upon agent's connection with SPICE_MSG_MAIN_AGENT_CONNECTED_TOKENS.
      *  The client tokens are tracked as part of the RedCharDeviceClient. Thus,
      *  in order to be backward compatible with the client, we need to track the tokens
      *  even if the agent is detached. We don't destroy the char_device, and
      *  instead we just reset it.
-     *  In addition, there used to be a misshandling of AGENT_TOKENS message in spice-gtk: it
-     *  overrides the amount of tokens, instead of adding the given amount.
+     *  The tokens are also reset to avoid mismatch in upon agent reconnection.
      */
-    if (red_channel_test_remote_cap(&reds->main_channel->base,
-                                    SPICE_MAIN_CAP_AGENT_CONNECTED_TOKENS)) {
-        dev->priv->agent_attached = FALSE;
-    } else {
-        red_char_device_reset(RED_CHAR_DEVICE(dev));
-    }
+    dev->priv->agent_attached = FALSE;
+    red_char_device_reset(RED_CHAR_DEVICE(dev));
 
     sif = spice_char_device_get_interface(reds->vdagent);
     if (sif->state) {
