@@ -485,7 +485,6 @@ void dcc_stop(DisplayChannelClient *dcc)
 
     pixmap_cache_unref(dcc->pixmap_cache);
     dcc->pixmap_cache = NULL;
-    image_encoders_release_glz(&dcc->encoders);
     dcc_palette_cache_reset(dcc);
     free(dcc->send_data.free_list.res);
     dcc_destroy_stream_agents(dcc);

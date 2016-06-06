@@ -28,6 +28,8 @@
 
 static void image_encoders_free_glz_drawable_instance(ImageEncoders *enc,
                                                       GlzDrawableInstanceItem *instance);
+static void image_encoders_release_glz(ImageEncoders *enc);
+
 
 static SPICE_GNUC_NORETURN SPICE_GNUC_PRINTF(2, 3) void
 quic_usr_error(QuicUsrContext *usr, const char *fmt, ...)
@@ -422,6 +424,7 @@ void image_encoders_init(ImageEncoders *enc, ImageEncoderSharedData *shared_data
 
 void image_encoders_free(ImageEncoders *enc)
 {
+    image_encoders_release_glz(enc);
     quic_destroy(enc->quic);
     enc->quic = NULL;
     lz_destroy(enc->lz);
@@ -698,7 +701,7 @@ gboolean image_encoders_glz_create(ImageEncoders *enc, uint8_t id)
 }
 
 /* destroy encoder, and dictionary if no one uses it*/
-void image_encoders_release_glz(ImageEncoders *enc)
+static void image_encoders_release_glz(ImageEncoders *enc)
 {
     GlzSharedDictionary *shared_dict;
 
