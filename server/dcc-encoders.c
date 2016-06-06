@@ -1195,6 +1195,17 @@ int image_encoders_compress_glz(ImageEncoders *enc,
     spice_info("LZ global compress fmt=%d", src->format);
 #endif
 
+    if ((src->x * src->y) >= glz_enc_dictionary_get_size(enc->glz_dict->dict)) {
+        return FALSE;
+    }
+
+    pthread_rwlock_rdlock(&enc->glz_dict->encode_lock);
+    /* using the global dictionary only if it is not frozen */
+    if (enc->glz_dict->migrate_freeze) {
+        pthread_rwlock_unlock(&enc->glz_dict->encode_lock);
+        return FALSE;
+    }
+
     encoder_data_init(&glz_data->data);
 
     glz_drawable = get_glz_drawable(enc, drawable);
@@ -1245,8 +1256,12 @@ int image_encoders_compress_glz(ImageEncoders *enc,
     o_comp_data->comp_buf_size = zlib_size;
 
     stat_compress_add(&enc->shared_data->zlib_glz_stat, start_time, glz_size, zlib_size);
+    pthread_rwlock_unlock(&enc->glz_dict->encode_lock);
     return TRUE;
+
 glz:
+    pthread_rwlock_unlock(&enc->glz_dict->encode_lock);
+
     dest->descriptor.type = SPICE_IMAGE_TYPE_GLZ_RGB;
     dest->u.lz_rgb.data_size = glz_size;
 

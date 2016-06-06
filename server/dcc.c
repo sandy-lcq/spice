@@ -735,19 +735,10 @@ int dcc_compress_image(DisplayChannelClient *dcc,
         success = image_encoders_compress_quic(&dcc->encoders, dest, src, o_comp_data);
         break;
     case SPICE_IMAGE_COMPRESSION_GLZ:
-        if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->encoders.glz_dict->dict)) {
-            int frozen;
-            /* using the global dictionary only if it is not frozen */
-            pthread_rwlock_rdlock(&dcc->encoders.glz_dict->encode_lock);
-            frozen = dcc->encoders.glz_dict->migrate_freeze;
-            if (!frozen) {
-                success = image_encoders_compress_glz(&dcc->encoders, dest, src, drawable, o_comp_data,
-                                                      display_channel->enable_zlib_glz_wrap);
-            }
-            pthread_rwlock_unlock(&dcc->encoders.glz_dict->encode_lock);
-            if (!frozen) {
-                break;
-            }
+        success = image_encoders_compress_glz(&dcc->encoders, dest, src, drawable, o_comp_data,
+                                              display_channel->enable_zlib_glz_wrap);
+        if (success) {
+            break;
         }
         goto lz_compress;
 #ifdef USE_LZ4
