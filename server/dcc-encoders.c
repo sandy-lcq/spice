@@ -1051,6 +1051,139 @@ int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
 }
 #endif
 
+/* if already exists, returns it. Otherwise allocates and adds it (1) to the ring tail
+   in the channel (2) to the Drawable*/
+static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
+{
+    RedGlzDrawable *ret;
+    RingItem *item, *next;
+
+    // TODO - I don't really understand what's going on here, so doing the technical equivalent
+    // now that we have multiple glz_dicts, so the only way to go from dcc to drawable glz is to go
+    // over the glz_ring (unless adding some better data structure then a ring)
+    DRAWABLE_FOREACH_GLZ_SAFE(drawable, item, next, ret) {
+        if (ret->encoders == enc) {
+            return ret;
+        }
+    }
+
+    ret = spice_new(RedGlzDrawable, 1);
+
+    ret->encoders = enc;
+    ret->red_drawable = red_drawable_ref(drawable->red_drawable);
+    ret->drawable = drawable;
+    ret->instances_count = 0;
+    ring_init(&ret->instances);
+
+    ring_item_init(&ret->link);
+    ring_item_init(&ret->drawable_link);
+    ring_add_before(&ret->link, &enc->glz_drawables);
+    ring_add(&drawable->glz_ring, &ret->drawable_link);
+    enc->shared_data->glz_drawable_count++;
+    return ret;
+}
+
+/* allocates new instance and adds it to instances in the given drawable.
+   NOTE - the caller should set the glz_instance returned by the encoder by itself.*/
+static GlzDrawableInstanceItem *add_glz_drawable_instance(RedGlzDrawable *glz_drawable)
+{
+    spice_assert(glz_drawable->instances_count < MAX_GLZ_DRAWABLE_INSTANCES);
+    // NOTE: We assume the additions are performed consecutively, without removals in the middle
+    GlzDrawableInstanceItem *ret = glz_drawable->instances_pool + glz_drawable->instances_count;
+    glz_drawable->instances_count++;
+
+    ring_item_init(&ret->free_link);
+    ring_item_init(&ret->glz_link);
+    ring_add(&glz_drawable->instances, &ret->glz_link);
+    ret->context = NULL;
+    ret->glz_drawable = glz_drawable;
+
+    return ret;
+}
+
+#define MIN_GLZ_SIZE_FOR_ZLIB 100
+
+int image_encoders_compress_glz(ImageEncoders *enc,
+                                SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
+                                compress_send_data_t* o_comp_data,
+                                gboolean enable_zlib_glz_wrap)
+{
+    stat_start_time_t start_time;
+    stat_start_time_init(&start_time, &enc->shared_data->zlib_glz_stat);
+    spice_assert(bitmap_fmt_is_rgb(src->format));
+    GlzData *glz_data = &enc->glz_data;
+    ZlibData *zlib_data;
+    LzImageType type = bitmap_fmt_to_lz_image_type[src->format];
+    RedGlzDrawable *glz_drawable;
+    GlzDrawableInstanceItem *glz_drawable_instance;
+    int glz_size;
+    int zlib_size;
+
+#ifdef COMPRESS_DEBUG
+    spice_info("LZ global compress fmt=%d", src->format);
+#endif
+
+    encoder_data_init(&glz_data->data);
+
+    glz_drawable = get_glz_drawable(enc, drawable);
+    glz_drawable_instance = add_glz_drawable_instance(glz_drawable);
+
+    glz_data->data.u.lines_data.chunks = src->data;
+    glz_data->data.u.lines_data.stride = src->stride;
+    glz_data->data.u.lines_data.next = 0;
+    glz_data->data.u.lines_data.reverse = 0;
+
+    glz_size = glz_encode(enc->glz, type, src->x, src->y,
+                          (src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN), NULL, 0,
+                          src->stride, glz_data->data.bufs_head->buf.bytes,
+                          sizeof(glz_data->data.bufs_head->buf),
+                          glz_drawable_instance,
+                          &glz_drawable_instance->context);
+
+    stat_compress_add(&enc->shared_data->glz_stat, start_time, src->stride * src->y, glz_size);
+
+    if (!enable_zlib_glz_wrap || (glz_size < MIN_GLZ_SIZE_FOR_ZLIB)) {
+        goto glz;
+    }
+    stat_start_time_init(&start_time, &enc->shared_data->zlib_glz_stat);
+    zlib_data = &enc->zlib_data;
+
+    encoder_data_init(&zlib_data->data);
+
+    zlib_data->data.u.compressed_data.next = glz_data->data.bufs_head;
+    zlib_data->data.u.compressed_data.size_left = glz_size;
+
+    zlib_size = zlib_encode(enc->zlib, enc->zlib_level,
+                            glz_size, zlib_data->data.bufs_head->buf.bytes,
+                            sizeof(zlib_data->data.bufs_head->buf));
+
+    // the compressed buffer is bigger than the original data
+    if (zlib_size >= glz_size) {
+        encoder_data_reset(&zlib_data->data);
+        goto glz;
+    } else {
+        encoder_data_reset(&glz_data->data);
+    }
+
+    dest->descriptor.type = SPICE_IMAGE_TYPE_ZLIB_GLZ_RGB;
+    dest->u.zlib_glz.glz_data_size = glz_size;
+    dest->u.zlib_glz.data_size = zlib_size;
+
+    o_comp_data->comp_buf = zlib_data->data.bufs_head;
+    o_comp_data->comp_buf_size = zlib_size;
+
+    stat_compress_add(&enc->shared_data->zlib_glz_stat, start_time, glz_size, zlib_size);
+    return TRUE;
+glz:
+    dest->descriptor.type = SPICE_IMAGE_TYPE_GLZ_RGB;
+    dest->u.lz_rgb.data_size = glz_size;
+
+    o_comp_data->comp_buf = glz_data->data.bufs_head;
+    o_comp_data->comp_buf_size = glz_size;
+
+    return TRUE;
+}
+
 void image_encoder_shared_init(ImageEncoderSharedData *shared_data)
 {
     clockid_t stat_clock = CLOCK_THREAD_CPUTIME_ID;
