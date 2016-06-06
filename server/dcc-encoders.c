@@ -26,7 +26,43 @@
 
 #define ZLIB_DEFAULT_COMPRESSION_LEVEL 3
 
+#define MAX_GLZ_DRAWABLE_INSTANCES 2
+
+typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
+
+/* for each qxl drawable, there may be several instances of lz drawables */
+/* TODO - reuse this stuff for the top level. I just added a second level of multiplicity
+ * at the Drawable by keeping a ring, so:
+ * Drawable -> (ring of) RedGlzDrawable -> (up to 2) GlzDrawableInstanceItem
+ * and it should probably (but need to be sure...) be
+ * Drawable -> ring of GlzDrawableInstanceItem.
+ */
+struct GlzDrawableInstanceItem {
+    RingItem glz_link;
+    RingItem free_link;
+    GlzEncDictImageContext *context;
+    RedGlzDrawable         *glz_drawable;
+};
+
+struct RedGlzDrawable {
+    RingItem link;    // ordered by the time it was encoded
+    RingItem drawable_link;
+    RedDrawable *red_drawable;
+    GlzDrawableInstanceItem instances_pool[MAX_GLZ_DRAWABLE_INSTANCES];
+    Ring instances;
+    uint8_t instances_count;
+    gboolean has_drawable;
+    ImageEncoders *encoders;
+};
+
+#define LINK_TO_GLZ(ptr) SPICE_CONTAINEROF((ptr), RedGlzDrawable, \
+                                           drawable_link)
+#define DRAWABLE_FOREACH_GLZ_SAFE(drawable, link, next, glz) \
+    SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
+
 static void glz_drawable_instance_item_free(GlzDrawableInstanceItem *instance);
+static void encoder_data_init(EncoderData *data);
+static void encoder_data_reset(EncoderData *data);
 static void image_encoders_release_glz(ImageEncoders *enc);
 
 
@@ -140,14 +176,14 @@ static void glz_usr_free(GlzEncoderUsrContext *usr, void *ptr)
     free(ptr);
 }
 
-void encoder_data_init(EncoderData *data)
+static void encoder_data_init(EncoderData *data)
 {
     data->bufs_tail = g_new(RedCompressBuf, 1);
     data->bufs_head = data->bufs_tail;
     data->bufs_head->send_next = NULL;
 }
 
-void encoder_data_reset(EncoderData *data)
+static void encoder_data_reset(EncoderData *data)
 {
     RedCompressBuf *buf = data->bufs_head;
     while (buf) {
@@ -574,6 +610,25 @@ void image_encoders_free_glz_drawables(ImageEncoders *enc)
         red_glz_drawable_free(drawable);
     }
     pthread_rwlock_unlock(&glz_dict->encode_lock);
+}
+
+void drawable_free_glz_drawables(struct Drawable *drawable)
+{
+    RingItem *glz_item, *next_item;
+    RedGlzDrawable *glz;
+    DRAWABLE_FOREACH_GLZ_SAFE(drawable, glz_item, next_item, glz) {
+        red_glz_drawable_free(glz);
+    }
+}
+
+void drawable_detach_glz_drawables(struct Drawable *drawable)
+{
+    RingItem *item, *next;
+
+    RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
+        SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->has_drawable = FALSE;
+        ring_remove(item);
+    }
 }
 
 static void image_encoders_freeze_glz(ImageEncoders *enc)

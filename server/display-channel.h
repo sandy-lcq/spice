@@ -87,11 +87,6 @@ void drawable_unref (Drawable *drawable);
 #define DRAWABLE_FOREACH_DPI_SAFE(drawable, link, next, dpi)            \
     SAFE_FOREACH(link, next, drawable,  &(drawable)->pipes, dpi, LINK_TO_DPI(link))
 
-#define LINK_TO_GLZ(ptr) SPICE_CONTAINEROF((ptr), RedGlzDrawable, \
-                                           drawable_link)
-#define DRAWABLE_FOREACH_GLZ_SAFE(drawable, link, next, glz) \
-    SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
-
 enum {
     RED_PIPE_ITEM_TYPE_DRAW = RED_PIPE_ITEM_TYPE_COMMON_LAST,
     RED_PIPE_ITEM_TYPE_IMAGE,

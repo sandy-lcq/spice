@@ -32,7 +32,6 @@
 #include "zlib-encoder.h"
 
 typedef struct RedCompressBuf RedCompressBuf;
-typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct ImageEncoders ImageEncoders;
 typedef struct ImageEncoderSharedData ImageEncoderSharedData;
@@ -50,6 +49,8 @@ void image_encoders_free_glz_drawables_to_free(ImageEncoders* enc);
 gboolean image_encoders_glz_create(ImageEncoders *enc, uint8_t id);
 void image_encoders_glz_get_restore_data(ImageEncoders *enc,
                                          uint8_t *out_id, GlzEncDictRestoreData *out_data);
+void drawable_free_glz_drawables(struct Drawable *drawable);
+void drawable_detach_glz_drawables(struct Drawable *drawable);
 
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 struct RedCompressBuf {
@@ -106,9 +107,6 @@ typedef struct  {
     char message_buf[512];
 } EncoderData;
 
-void encoder_data_init(EncoderData *data);
-void encoder_data_reset(EncoderData *data);
-
 typedef struct {
     QuicUsrContext usr;
     EncoderData data;
@@ -140,33 +138,6 @@ typedef struct {
     GlzEncoderUsrContext usr;
     EncoderData data;
 } GlzData;
-
-#define MAX_GLZ_DRAWABLE_INSTANCES 2
-
-/* for each qxl drawable, there may be several instances of lz drawables */
-/* TODO - reuse this stuff for the top level. I just added a second level of multiplicity
- * at the Drawable by keeping a ring, so:
- * Drawable -> (ring of) RedGlzDrawable -> (up to 2) GlzDrawableInstanceItem
- * and it should probably (but need to be sure...) be
- * Drawable -> ring of GlzDrawableInstanceItem.
- */
-struct GlzDrawableInstanceItem {
-    RingItem glz_link;
-    RingItem free_link;
-    GlzEncDictImageContext *context;
-    RedGlzDrawable         *glz_drawable;
-};
-
-struct RedGlzDrawable {
-    RingItem link;    // ordered by the time it was encoded
-    RingItem drawable_link;
-    RedDrawable *red_drawable;
-    GlzDrawableInstanceItem instances_pool[MAX_GLZ_DRAWABLE_INSTANCES];
-    Ring instances;
-    uint8_t instances_count;
-    gboolean has_drawable;
-    ImageEncoders *encoders;
-};
 
 struct ImageEncoderSharedData {
     uint32_t glz_drawable_count;

@@ -1179,11 +1179,7 @@ static bool free_one_drawable(DisplayChannel *display, int force_glz_free)
 
     drawable = SPICE_CONTAINEROF(ring_item, Drawable, list_link);
     if (force_glz_free) {
-        RingItem *glz_item, *next_item;
-        RedGlzDrawable *glz;
-        DRAWABLE_FOREACH_GLZ_SAFE(drawable, glz_item, next_item, glz) {
-            red_glz_drawable_free(glz);
-        }
+        drawable_free_glz_drawables(drawable);
     }
     drawable_draw(display, drawable);
     container = drawable->tree_item.base.container;
@@ -1336,7 +1332,6 @@ static void drawable_unref_surface_deps(DisplayChannel *display, Drawable *drawa
 void drawable_unref(Drawable *drawable)
 {
     DisplayChannel *display = drawable->display;
-    RingItem *item, *next;
 
     if (--drawable->refs != 0)
         return;
@@ -1353,10 +1348,8 @@ void drawable_unref(Drawable *drawable)
     drawable_unref_surface_deps(display, drawable);
     display_channel_surface_unref(display, drawable->surface_id);
 
-    RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
-        SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->has_drawable = FALSE;
-        ring_remove(item);
-    }
+    drawable_detach_glz_drawables(drawable);
+
     if (drawable->red_drawable) {
         red_drawable_unref(drawable->red_drawable);
     }
