@@ -1853,12 +1853,8 @@ static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
     memcpy(display_data.pixmap_cache_clients, dcc->pixmap_cache->sync,
            sizeof(display_data.pixmap_cache_clients));
 
-    spice_assert(dcc->encoders.glz_dict);
-    image_encoders_freeze_glz(&dcc->encoders);
-    display_data.glz_dict_id = dcc->encoders.glz_dict->id;
-    glz_enc_dictionary_get_restore_data(dcc->encoders.glz_dict->dict,
-                                        &display_data.glz_dict_data,
-                                        &dcc->encoders.glz_data.usr);
+    image_encoders_glz_get_restore_data(&dcc->encoders, &display_data.glz_dict_id,
+                                        &display_data.glz_dict_data);
 
     /* all data besided the surfaces ref */
     spice_marshaller_add(base_marshaller,

@@ -585,6 +585,16 @@ void image_encoders_freeze_glz(ImageEncoders *enc)
     pthread_rwlock_unlock(&enc->glz_dict->encode_lock);
 }
 
+void image_encoders_glz_get_restore_data(ImageEncoders *enc,
+                                         uint8_t *out_id, GlzEncDictRestoreData *out_data)
+{
+    spice_assert(enc->glz_dict);
+    image_encoders_freeze_glz(enc);
+    *out_id = enc->glz_dict->id;
+    glz_enc_dictionary_get_restore_data(enc->glz_dict->dict, out_data,
+                                        &enc->glz_data.usr);
+}
+
 static GlzSharedDictionary *glz_shared_dictionary_new(RedClient *client, uint8_t id,
                                                       GlzEncDictContext *dict)
 {

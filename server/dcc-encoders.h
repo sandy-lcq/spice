@@ -49,6 +49,8 @@ void image_encoders_free_glz_drawables(ImageEncoders *enc);
 void image_encoders_free_glz_drawables_to_free(ImageEncoders* enc);
 gboolean image_encoders_glz_create(ImageEncoders *enc, uint8_t id);
 void image_encoders_freeze_glz(ImageEncoders *enc);
+void image_encoders_glz_get_restore_data(ImageEncoders *enc,
+                                         uint8_t *out_id, GlzEncDictRestoreData *out_data);
 
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 struct RedCompressBuf {
