@@ -52,7 +52,8 @@ static gboolean print_count = FALSE;
 static guint ncommands = 0;
 static pid_t client_pid;
 static GMainLoop *loop = NULL;
-static GAsyncQueue *aqueue = NULL;
+static GAsyncQueue *display_queue = NULL;
+static GAsyncQueue *cursor_queue = NULL;
 static long total_size;
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -113,10 +114,12 @@ static gboolean fill_queue_idle(gpointer user_data)
     gboolean keep = FALSE;
     gboolean wakeup = FALSE;
 
-    while (g_async_queue_length(aqueue) < 50) {
+    while ((g_async_queue_length(display_queue) +
+            g_async_queue_length(cursor_queue)) < 50) {
         QXLCommandExt *cmd = spice_replay_next_cmd(replay, qxl_worker);
         if (!cmd) {
-            g_async_queue_push(aqueue, GINT_TO_POINTER(-1));
+            g_async_queue_push(display_queue, GINT_TO_POINTER(-1));
+            g_async_queue_push(cursor_queue, GINT_TO_POINTER(-1));
             goto end;
         }
 
@@ -127,7 +130,11 @@ static gboolean fill_queue_idle(gpointer user_data)
         }
 
         wakeup = TRUE;
-        g_async_queue_push(aqueue, cmd);
+        if (cmd->cmd.type == QXL_CMD_CURSOR) {
+            g_async_queue_push(cursor_queue, cmd);
+        } else {
+            g_async_queue_push(display_queue, cmd);
+        }
     }
 
 end:
@@ -166,17 +173,17 @@ end:
 
 
 // called from spice_server thread (i.e. red_worker thread)
-static int get_command(QXLInstance *qin, QXLCommandExt *ext)
+static int get_command_from(QXLInstance *qin, QXLCommandExt *ext, GAsyncQueue *queue)
 {
     QXLCommandExt *cmd;
 
-    if (g_async_queue_length(aqueue) == 0) {
+    if (g_async_queue_length(queue) == 0) {
         /* could use a gcondition ? */
         fill_queue();
         return FALSE;
     }
 
-    cmd = g_async_queue_try_pop(aqueue);
+    cmd = g_async_queue_try_pop(queue);
     if (GPOINTER_TO_INT(cmd) == -1) {
         g_main_loop_quit(loop);
         return FALSE;
@@ -187,9 +194,20 @@ static int get_command(QXLInstance *qin, QXLCommandExt *ext)
     return TRUE;
 }
 
-static int req_cmd_notification(QXLInstance *qin)
+static int req_notification(GAsyncQueue *queue)
 {
-    return TRUE;
+    /* check for pending messages */
+    return g_async_queue_length(queue) == 0;
+}
+
+static int get_display_command(QXLInstance *qin, QXLCommandExt *ext)
+{
+    return get_command_from(qin, ext, display_queue);
+}
+
+static int req_display_notification(QXLInstance *qin)
+{
+    return req_notification(display_queue);
 }
 
 static void end_replay(void)
@@ -214,12 +232,12 @@ static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_
 
 static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *ext)
 {
-    return FALSE;
+    return get_command_from(qin, ext, cursor_queue);
 }
 
 static int req_cursor_notification(QXLInstance *qin)
 {
-    return TRUE;
+    return req_notification(cursor_queue);
 }
 
 static void notify_update(QXLInstance *qin, uint32_t update_id)
@@ -242,8 +260,8 @@ static QXLInterface display_sif = {
     .set_compression_level = set_compression_level,
     .set_mm_time = set_mm_time,
     .get_init_info = get_init_info,
-    .get_command = get_command,
-    .req_cmd_notification = req_cmd_notification,
+    .get_command = get_display_command,
+    .req_cmd_notification = req_display_notification,
     .release_resource = release_resource,
     .get_cursor_command = get_cursor_command,
     .req_cursor_notification = req_cursor_notification,
@@ -379,7 +397,8 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    aqueue = g_async_queue_new();
+    display_queue = g_async_queue_new();
+    cursor_queue = g_async_queue_new();
     core = basic_event_loop_init();
     core->channel_event = replay_channel_event;
 
@@ -414,7 +433,8 @@ int main(int argc, char **argv)
         g_print("Counted %d commands\n", ncommands);
 
     end_replay();
-    g_async_queue_unref(aqueue);
+    g_async_queue_unref(display_queue);
+    g_async_queue_unref(cursor_queue);
 
     /* FIXME: there should be a way to join server threads before:
      * g_main_loop_unref(loop);
