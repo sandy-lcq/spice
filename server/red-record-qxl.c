@@ -763,8 +763,8 @@ static void red_record_cursor(FILE *fd, RedMemSlotInfo *slots, int group_id,
                                    &qxl->chunk);
 }
 
-void red_record_cursor_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id,
-                           QXLPHYSICAL addr)
+static void red_record_cursor_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id,
+                                  QXLPHYSICAL addr)
 {
     QXLCursorCmd *qxl;
     int error;
