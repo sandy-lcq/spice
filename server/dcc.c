@@ -907,7 +907,6 @@ static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init
                                          init->pixmap_cache_size);
     spice_return_val_if_fail(dcc->pixmap_cache, FALSE);
 
-    spice_return_val_if_fail(!dcc->encoders.glz_dict, FALSE);
     success = image_encoders_get_glz_dictionary(&dcc->encoders,
                                                 RED_CHANNEL_CLIENT(dcc)->client,
                                                 init->glz_dictionary_id,
@@ -1012,8 +1011,6 @@ int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void
 static int dcc_handle_migrate_glz_dictionary(DisplayChannelClient *dcc,
                                              SpiceMigrateDataDisplay *migrate)
 {
-    spice_return_val_if_fail(!dcc->encoders.glz_dict, FALSE);
-
     return image_encoders_restore_glz_dictionary(&dcc->encoders,
                                                  RED_CHANNEL_CLIENT(dcc)->client,
                                                  migrate->glz_dict_id,

@@ -645,6 +645,8 @@ gboolean image_encoders_get_glz_dictionary(ImageEncoders *enc,
 {
     GlzSharedDictionary *shared_dict;
 
+    spice_return_val_if_fail(!enc->glz_dict, FALSE);
+
     pthread_mutex_lock(&glz_dictionary_list_lock);
 
     shared_dict = find_glz_dictionary(client, id);
@@ -677,6 +679,8 @@ gboolean image_encoders_restore_glz_dictionary(ImageEncoders *enc,
                                                GlzEncDictRestoreData *restore_data)
 {
     GlzSharedDictionary *shared_dict = NULL;
+
+    spice_return_val_if_fail(!enc->glz_dict, FALSE);
 
     pthread_mutex_lock(&glz_dictionary_list_lock);
 
