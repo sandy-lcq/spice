@@ -698,15 +698,15 @@ static const LzImageType bitmap_fmt_to_lz_image_type[] = {
 
 #define MIN_GLZ_SIZE_FOR_ZLIB 100
 
-static int dcc_compress_image_glz(DisplayChannelClient *dcc,
-                                  SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
-                                  compress_send_data_t* o_comp_data)
+static int image_encoders_compress_glz(ImageEncoders *enc,
+                                       SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
+                                       compress_send_data_t* o_comp_data,
+                                       gboolean enable_zlib_glz_wrap)
 {
-    DisplayChannel *display_channel = DCC_TO_DC(dcc);
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, &display_channel->encoder_globals.zlib_glz_stat);
+    stat_start_time_init(&start_time, &enc->shared_data->zlib_glz_stat);
     spice_assert(bitmap_fmt_is_rgb(src->format));
-    GlzData *glz_data = &dcc->encoders.glz_data;
+    GlzData *glz_data = &enc->glz_data;
     ZlibData *zlib_data;
     LzImageType type = bitmap_fmt_to_lz_image_type[src->format];
     RedGlzDrawable *glz_drawable;
@@ -720,7 +720,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
 
     encoder_data_init(&glz_data->data);
 
-    glz_drawable = get_glz_drawable(&dcc->encoders, drawable);
+    glz_drawable = get_glz_drawable(enc, drawable);
     glz_drawable_instance = add_glz_drawable_instance(glz_drawable);
 
     glz_data->data.u.lines_data.chunks = src->data;
@@ -728,27 +728,27 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     glz_data->data.u.lines_data.next = 0;
     glz_data->data.u.lines_data.reverse = 0;
 
-    glz_size = glz_encode(dcc->encoders.glz, type, src->x, src->y,
+    glz_size = glz_encode(enc->glz, type, src->x, src->y,
                           (src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN), NULL, 0,
                           src->stride, glz_data->data.bufs_head->buf.bytes,
                           sizeof(glz_data->data.bufs_head->buf),
                           glz_drawable_instance,
                           &glz_drawable_instance->context);
 
-    stat_compress_add(&display_channel->encoder_globals.glz_stat, start_time, src->stride * src->y, glz_size);
+    stat_compress_add(&enc->shared_data->glz_stat, start_time, src->stride * src->y, glz_size);
 
-    if (!display_channel->enable_zlib_glz_wrap || (glz_size < MIN_GLZ_SIZE_FOR_ZLIB)) {
+    if (!enable_zlib_glz_wrap || (glz_size < MIN_GLZ_SIZE_FOR_ZLIB)) {
         goto glz;
     }
-    stat_start_time_init(&start_time, &display_channel->encoder_globals.zlib_glz_stat);
-    zlib_data = &dcc->encoders.zlib_data;
+    stat_start_time_init(&start_time, &enc->shared_data->zlib_glz_stat);
+    zlib_data = &enc->zlib_data;
 
     encoder_data_init(&zlib_data->data);
 
     zlib_data->data.u.compressed_data.next = glz_data->data.bufs_head;
     zlib_data->data.u.compressed_data.size_left = glz_size;
 
-    zlib_size = zlib_encode(dcc->encoders.zlib, dcc->encoders.zlib_level,
+    zlib_size = zlib_encode(enc->zlib, enc->zlib_level,
                             glz_size, zlib_data->data.bufs_head->buf.bytes,
                             sizeof(zlib_data->data.bufs_head->buf));
 
@@ -767,7 +767,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     o_comp_data->comp_buf = zlib_data->data.bufs_head;
     o_comp_data->comp_buf_size = zlib_size;
 
-    stat_compress_add(&display_channel->encoder_globals.zlib_glz_stat, start_time, glz_size, zlib_size);
+    stat_compress_add(&enc->shared_data->zlib_glz_stat, start_time, glz_size, zlib_size);
     return TRUE;
 glz:
     dest->descriptor.type = SPICE_IMAGE_TYPE_GLZ_RGB;
@@ -894,7 +894,8 @@ int dcc_compress_image(DisplayChannelClient *dcc,
             pthread_rwlock_rdlock(&dcc->encoders.glz_dict->encode_lock);
             frozen = dcc->encoders.glz_dict->migrate_freeze;
             if (!frozen) {
-                success = dcc_compress_image_glz(dcc, dest, src, drawable, o_comp_data);
+                success = image_encoders_compress_glz(&dcc->encoders, dest, src, drawable, o_comp_data,
+                                                      display_channel->enable_zlib_glz_wrap);
             }
             pthread_rwlock_unlock(&dcc->encoders.glz_dict->encode_lock);
             if (!frozen) {
