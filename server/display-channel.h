@@ -62,7 +62,7 @@ struct Drawable {
     uint32_t size_pipe_item_rest;
     RedDrawable *red_drawable;
 
-    Ring glz_ring;
+    GlzImageRetention glz_retention;
 
     red_time_t creation_time;
     red_time_t first_frame_time;

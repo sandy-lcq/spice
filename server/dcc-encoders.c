@@ -70,7 +70,7 @@ struct RedGlzDrawable {
 #define LINK_TO_GLZ(ptr) SPICE_CONTAINEROF((ptr), RedGlzDrawable, \
                                            drawable_link)
 #define DRAWABLE_FOREACH_GLZ_SAFE(drawable, link, next, glz) \
-    SAFE_FOREACH(link, next, drawable, &(drawable)->glz_ring, glz, LINK_TO_GLZ(link))
+    SAFE_FOREACH(link, next, drawable, &(drawable)->glz_retention.ring, glz, LINK_TO_GLZ(link))
 
 static void glz_drawable_instance_item_free(GlzDrawableInstanceItem *instance);
 static void encoder_data_init(EncoderData *data);
@@ -642,20 +642,20 @@ void image_encoders_free_glz_drawables(ImageEncoders *enc)
     pthread_rwlock_unlock(&glz_dict->encode_lock);
 }
 
-void drawable_free_glz_drawables(struct Drawable *drawable)
+void glz_retention_free_drawables(GlzImageRetention *ret)
 {
     RingItem *glz_item, *next_item;
     RedGlzDrawable *glz;
-    DRAWABLE_FOREACH_GLZ_SAFE(drawable, glz_item, next_item, glz) {
+    SAFE_FOREACH(glz_item, next_item, TRUE, &ret->ring, glz, LINK_TO_GLZ(glz_item)) {
         red_glz_drawable_free(glz);
     }
 }
 
-void drawable_detach_glz_drawables(struct Drawable *drawable)
+void glz_retention_detach_drawables(GlzImageRetention *ret)
 {
     RingItem *item, *next;
 
-    RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
+    RING_FOREACH_SAFE(item, next, &ret->ring) {
         SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->has_drawable = FALSE;
         ring_remove(item);
     }
@@ -1176,7 +1176,7 @@ static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
     ring_item_init(&ret->link);
     ring_item_init(&ret->drawable_link);
     ring_add_before(&ret->link, &enc->glz_drawables);
-    ring_add(&drawable->glz_ring, &ret->drawable_link);
+    ring_add(&drawable->glz_retention.ring, &ret->drawable_link);
     enc->shared_data->glz_drawable_count++;
     return ret;
 }

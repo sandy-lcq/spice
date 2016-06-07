@@ -36,6 +36,7 @@ typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct ImageEncoders ImageEncoders;
 typedef struct ImageEncoderSharedData ImageEncoderSharedData;
 typedef struct GlzSharedDictionary GlzSharedDictionary;
+typedef struct GlzImageRetention GlzImageRetention;
 
 void image_encoder_shared_init(ImageEncoderSharedData *shared_data);
 void image_encoder_shared_stat_reset(ImageEncoderSharedData *shared_data);
@@ -51,8 +52,8 @@ void image_encoders_glz_get_restore_data(ImageEncoders *enc,
                                          uint8_t *out_id, GlzEncDictRestoreData *out_data);
 gboolean image_encoders_glz_encode_lock(ImageEncoders *enc);
 void image_encoders_glz_encode_unlock(ImageEncoders *enc);
-void drawable_free_glz_drawables(struct Drawable *drawable);
-void drawable_detach_glz_drawables(struct Drawable *drawable);
+void glz_retention_free_drawables(GlzImageRetention *ret);
+void glz_retention_detach_drawables(GlzImageRetention *ret);
 
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 struct RedCompressBuf {
@@ -129,6 +130,15 @@ typedef struct {
     GlzEncoderUsrContext usr;
     EncoderData data;
 } GlzData;
+
+struct GlzImageRetention {
+    Ring ring;
+};
+
+static inline void glz_retention_init(GlzImageRetention *ret)
+{
+    ring_init(&ret->ring);
+}
 
 struct ImageEncoderSharedData {
     uint32_t glz_drawable_count;

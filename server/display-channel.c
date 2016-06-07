@@ -1179,7 +1179,7 @@ static bool free_one_drawable(DisplayChannel *display, int force_glz_free)
 
     drawable = SPICE_CONTAINEROF(ring_item, Drawable, list_link);
     if (force_glz_free) {
-        drawable_free_glz_drawables(drawable);
+        glz_retention_free_drawables(&drawable->glz_retention);
     }
     drawable_draw(display, drawable);
     container = drawable->tree_item.base.container;
@@ -1280,7 +1280,7 @@ static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
     drawable->tree_item.base.type = TREE_ITEM_TYPE_DRAWABLE;
     region_init(&drawable->tree_item.base.rgn);
     ring_init(&drawable->pipes);
-    ring_init(&drawable->glz_ring);
+    glz_retention_init(&drawable->glz_retention);
     drawable->process_commands_generation = process_commands_generation;
 
     return drawable;
@@ -1341,7 +1341,7 @@ void drawable_unref(Drawable *drawable)
     drawable_unref_surface_deps(display, drawable);
     display_channel_surface_unref(display, drawable->surface_id);
 
-    drawable_detach_glz_drawables(drawable);
+    glz_retention_detach_drawables(&drawable->glz_retention);
 
     if (drawable->red_drawable) {
         red_drawable_unref(drawable->red_drawable);
