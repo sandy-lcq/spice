@@ -32,6 +32,16 @@
 
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 
+struct GlzSharedDictionary {
+    RingItem base;
+    GlzEncDictContext *dict;
+    uint32_t refs;
+    uint8_t id;
+    pthread_rwlock_t encode_lock;
+    int migrate_freeze;
+    RedClient *client; // channel clients of the same client share the dict
+};
+
 /* for each qxl drawable, there may be several instances of lz drawables */
 /* TODO - reuse this stuff for the top level. I just added a second level of multiplicity
  * at the Drawable by keeping a ring, so:

@@ -35,6 +35,7 @@ typedef struct RedCompressBuf RedCompressBuf;
 typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct ImageEncoders ImageEncoders;
 typedef struct ImageEncoderSharedData ImageEncoderSharedData;
+typedef struct GlzSharedDictionary GlzSharedDictionary;
 
 void image_encoder_shared_init(ImageEncoderSharedData *shared_data);
 void image_encoder_shared_stat_reset(ImageEncoderSharedData *shared_data);
@@ -70,16 +71,6 @@ static inline void compress_buf_free(RedCompressBuf *buf)
 {
     g_free(buf);
 }
-
-typedef struct GlzSharedDictionary {
-    RingItem base;
-    GlzEncDictContext *dict;
-    uint32_t refs;
-    uint8_t id;
-    pthread_rwlock_t encode_lock;
-    int migrate_freeze;
-    RedClient *client; // channel clients of the same client share the dict
-} GlzSharedDictionary;
 
 gboolean image_encoders_get_glz_dictionary(ImageEncoders *enc,
                                            struct RedClient *client,
