@@ -160,10 +160,10 @@ struct RedGlzDrawable {
     RingItem link;    // ordered by the time it was encoded
     RingItem drawable_link;
     RedDrawable *red_drawable;
-    Drawable    *drawable;
     GlzDrawableInstanceItem instances_pool[MAX_GLZ_DRAWABLE_INSTANCES];
     Ring instances;
     uint8_t instances_count;
+    gboolean has_drawable;
     ImageEncoders *encoders;
 };
 

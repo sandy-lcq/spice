@@ -469,9 +469,7 @@ static void image_encoders_free_glz_drawable_instance(ImageEncoders *enc,
     if (ring_is_empty(&glz_drawable->instances)) {
         spice_assert(glz_drawable->instances_count == 0);
 
-        Drawable *drawable = glz_drawable->drawable;
-
-        if (drawable) {
+        if (glz_drawable->has_drawable) {
             ring_remove(&glz_drawable->drawable_link);
         }
         red_drawable_unref(glz_drawable->red_drawable);
@@ -533,7 +531,7 @@ int image_encoders_free_some_independent_glz_drawables(ImageEncoders *enc)
     while ((n < RED_RELEASE_BUNCH_SIZE) && (ring_link != NULL)) {
         RedGlzDrawable *glz_drawable = SPICE_CONTAINEROF(ring_link, RedGlzDrawable, link);
         ring_link = ring_next(&enc->glz_drawables, ring_link);
-        if (!glz_drawable->drawable) {
+        if (!glz_drawable->has_drawable) {
             image_encoders_free_glz_drawable(enc, glz_drawable);
             n++;
         }
@@ -1078,7 +1076,7 @@ static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
 
     ret->encoders = enc;
     ret->red_drawable = red_drawable_ref(drawable->red_drawable);
-    ret->drawable = drawable;
+    ret->has_drawable = TRUE;
     ret->instances_count = 0;
     ring_init(&ret->instances);
 

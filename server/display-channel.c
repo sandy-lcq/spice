@@ -1354,7 +1354,7 @@ void drawable_unref(Drawable *drawable)
     display_channel_surface_unref(display, drawable->surface_id);
 
     RING_FOREACH_SAFE(item, next, &drawable->glz_ring) {
-        SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->drawable = NULL;
+        SPICE_CONTAINEROF(item, RedGlzDrawable, drawable_link)->has_drawable = FALSE;
         ring_remove(item);
     }
     if (drawable->red_drawable) {
