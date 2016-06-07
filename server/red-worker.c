@@ -956,9 +956,9 @@ static void handle_dev_set_compression(void *opaque, void *payload)
 {
     RedWorkerMessageSetCompression *msg = payload;
     RedWorker *worker = opaque;
+    SpiceImageCompression image_compression = msg->image_compression;
 
-    worker->image_compression = msg->image_compression;
-    switch (worker->image_compression) {
+    switch (image_compression) {
     case SPICE_IMAGE_COMPRESSION_AUTO_LZ:
         spice_info("ic auto_lz");
         break;
@@ -984,7 +984,9 @@ static void handle_dev_set_compression(void *opaque, void *payload)
         break;
     default:
         spice_warning("ic invalid");
+        image_compression = worker->image_compression;
     }
+    worker->image_compression = image_compression;
 
     display_channel_compress_stats_print(worker->display_channel);
     display_channel_compress_stats_reset(worker->display_channel);
