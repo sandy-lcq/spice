@@ -392,6 +392,10 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 
     dcc_init_stream_agents(dcc);
 
+    ring_init(&dcc->glz_drawables);
+    ring_init(&dcc->glz_drawables_inst_to_free);
+    pthread_mutex_init(&dcc->glz_drawables_inst_to_free_lock, NULL);
+
     dcc_encoders_init(dcc);
 
     return dcc;
@@ -1371,9 +1375,6 @@ static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init
     spice_return_val_if_fail(dcc->pixmap_cache, FALSE);
 
     spice_return_val_if_fail(!dcc->glz_dict, FALSE);
-    ring_init(&dcc->glz_drawables);
-    ring_init(&dcc->glz_drawables_inst_to_free);
-    pthread_mutex_init(&dcc->glz_drawables_inst_to_free_lock, NULL);
     dcc->glz_dict = dcc_get_glz_dictionary(dcc,
                                            init->glz_dictionary_id,
                                            init->glz_dictionary_window_size);
@@ -1479,9 +1480,6 @@ static int dcc_handle_migrate_glz_dictionary(DisplayChannelClient *dcc,
 {
     spice_return_val_if_fail(!dcc->glz_dict, FALSE);
 
-    ring_init(&dcc->glz_drawables);
-    ring_init(&dcc->glz_drawables_inst_to_free);
-    pthread_mutex_init(&dcc->glz_drawables_inst_to_free_lock, NULL);
     dcc->glz_dict = dcc_restore_glz_dictionary(dcc,
                                                migrate->glz_dict_id,
                                                &migrate->glz_dict_data);
