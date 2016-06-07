@@ -20,16 +20,18 @@
 
 #include <setjmp.h>
 #include <common/quic.h>
+#include <common/lz.h>
 
-#include "red-channel.h"
+#include "stat.h"
 #include "red-parse-qxl.h"
-#include "image-cache.h"
 #include "glz-encoder.h"
 #include "jpeg-encoder.h"
 #ifdef USE_LZ4
 #include "lz4-encoder.h"
 #endif
 #include "zlib-encoder.h"
+
+struct RedClient;
 
 typedef struct RedCompressBuf RedCompressBuf;
 typedef struct RedGlzDrawable RedGlzDrawable;
