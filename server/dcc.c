@@ -392,10 +392,6 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 
     dcc_init_stream_agents(dcc);
 
-    ring_init(&dcc->glz_drawables);
-    ring_init(&dcc->glz_drawables_inst_to_free);
-    pthread_mutex_init(&dcc->glz_drawables_inst_to_free_lock, NULL);
-
     image_encoders_init(&dcc->encoders, &display->encoder_globals);
 
     return dcc;
@@ -493,7 +489,7 @@ void dcc_stop(DisplayChannelClient *dcc)
 
     pixmap_cache_unref(dcc->pixmap_cache);
     dcc->pixmap_cache = NULL;
-    dcc_release_glz(dcc);
+    image_encoders_release_glz(&dcc->encoders);
     dcc_palette_cache_reset(dcc);
     free(dcc->send_data.stream_outbuf);
     free(dcc->send_data.free_list.res);
@@ -638,7 +634,7 @@ void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
 
 /* if already exists, returns it. Otherwise allocates and adds it (1) to the ring tail
    in the channel (2) to the Drawable*/
-static RedGlzDrawable *get_glz_drawable(DisplayChannelClient *dcc, Drawable *drawable)
+static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
 {
     RedGlzDrawable *ret;
     RingItem *item, *next;
@@ -647,14 +643,14 @@ static RedGlzDrawable *get_glz_drawable(DisplayChannelClient *dcc, Drawable *dra
     // now that we have multiple glz_dicts, so the only way to go from dcc to drawable glz is to go
     // over the glz_ring (unless adding some better data structure then a ring)
     DRAWABLE_FOREACH_GLZ_SAFE(drawable, item, next, ret) {
-        if (ret->dcc == dcc) {
+        if (ret->encoders == enc) {
             return ret;
         }
     }
 
     ret = spice_new(RedGlzDrawable, 1);
 
-    ret->dcc = dcc;
+    ret->encoders = enc;
     ret->red_drawable = red_drawable_ref(drawable->red_drawable);
     ret->drawable = drawable;
     ret->instances_count = 0;
@@ -662,9 +658,9 @@ static RedGlzDrawable *get_glz_drawable(DisplayChannelClient *dcc, Drawable *dra
 
     ring_item_init(&ret->link);
     ring_item_init(&ret->drawable_link);
-    ring_add_before(&ret->link, &dcc->glz_drawables);
+    ring_add_before(&ret->link, &enc->glz_drawables);
     ring_add(&drawable->glz_ring, &ret->drawable_link);
-    DCC_TO_DC(dcc)->glz_drawable_count++;
+    enc->shared_data->glz_drawable_count++;
     return ret;
 }
 
@@ -724,7 +720,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
 
     encoder_data_init(&glz_data->data);
 
-    glz_drawable = get_glz_drawable(dcc, drawable);
+    glz_drawable = get_glz_drawable(&dcc->encoders, drawable);
     glz_drawable_instance = add_glz_drawable_instance(glz_drawable);
 
     glz_data->data.u.lines_data.chunks = src->data;

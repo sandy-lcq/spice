@@ -83,11 +83,6 @@ struct DisplayChannelClient {
         int num_pixmap_cache_items;
     } send_data;
 
-    /* global lz encoding entities */
-    Ring glz_drawables;               // all the living lz drawable, ordered by encoding time
-    Ring glz_drawables_inst_to_free;               // list of instances to be freed
-    pthread_mutex_t glz_drawables_inst_to_free_lock;
-
     uint8_t surface_client_created[NUM_SURFACES];
     QRegion surface_client_lossy_region[NUM_SURFACES];
 

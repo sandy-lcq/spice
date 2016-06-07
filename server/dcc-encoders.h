@@ -43,14 +43,13 @@ void image_encoder_shared_stat_print(const ImageEncoderSharedData *shared_data);
 
 void image_encoders_init(ImageEncoders *enc, ImageEncoderSharedData *shared_data);
 void image_encoders_free(ImageEncoders *enc);
-void             dcc_free_glz_drawable                       (DisplayChannelClient *dcc,
-                                                              RedGlzDrawable *drawable);
-int              dcc_free_some_independent_glz_drawables     (DisplayChannelClient *dcc);
-void             dcc_free_glz_drawables                      (DisplayChannelClient *dcc);
-void             dcc_free_glz_drawables_to_free              (DisplayChannelClient* dcc);
+void image_encoders_free_glz_drawable(ImageEncoders *enc, RedGlzDrawable *drawable);
+int image_encoders_free_some_independent_glz_drawables(ImageEncoders *enc);
+void image_encoders_free_glz_drawables(ImageEncoders *enc);
+void image_encoders_free_glz_drawables_to_free(ImageEncoders* enc);
 gboolean image_encoders_glz_create(ImageEncoders *enc, uint8_t id);
 void image_encoders_freeze_glz(ImageEncoders *enc);
-void             dcc_release_glz                             (DisplayChannelClient *dcc);
+void image_encoders_release_glz(ImageEncoders *enc);
 
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
 struct RedCompressBuf {
@@ -166,10 +165,12 @@ struct RedGlzDrawable {
     GlzDrawableInstanceItem instances_pool[MAX_GLZ_DRAWABLE_INSTANCES];
     Ring instances;
     uint8_t instances_count;
-    DisplayChannelClient *dcc;
+    ImageEncoders *encoders;
 };
 
 struct ImageEncoderSharedData {
+    uint32_t glz_drawable_count;
+
     stat_info_t off_stat;
     stat_info_t lz_stat;
     stat_info_t glz_stat;
@@ -208,6 +209,10 @@ struct ImageEncoders {
     GlzSharedDictionary *glz_dict;
     GlzEncoderContext *glz;
     GlzData glz_data;
+
+    Ring glz_drawables;               // all the living lz drawable, ordered by encoding time
+    Ring glz_drawables_inst_to_free;               // list of instances to be freed
+    pthread_mutex_t glz_drawables_inst_to_free_lock;
 };
 
 typedef struct compress_send_data_t {

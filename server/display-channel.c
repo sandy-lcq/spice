@@ -1143,7 +1143,7 @@ void display_channel_free_glz_drawables_to_free(DisplayChannel *display)
     spice_return_if_fail(display);
 
     FOREACH_CLIENT(display, link, next, dcc) {
-        dcc_free_glz_drawables_to_free(dcc);
+        image_encoders_free_glz_drawables_to_free(&dcc->encoders);
     }
 }
 
@@ -1155,7 +1155,7 @@ void display_channel_free_glz_drawables(DisplayChannel *display)
     spice_return_if_fail(display);
 
     FOREACH_CLIENT(display, link, next, dcc) {
-        dcc_free_glz_drawables(dcc);
+        image_encoders_free_glz_drawables(&dcc->encoders);
     }
 }
 
@@ -1174,7 +1174,7 @@ static bool free_one_drawable(DisplayChannel *display, int force_glz_free)
         RingItem *glz_item, *next_item;
         RedGlzDrawable *glz;
         DRAWABLE_FOREACH_GLZ_SAFE(drawable, glz_item, next_item, glz) {
-            dcc_free_glz_drawable(glz->dcc, glz);
+            image_encoders_free_glz_drawable(glz->encoders, glz);
         }
     }
     drawable_draw(display, drawable);
@@ -1200,7 +1200,7 @@ void display_channel_free_some(DisplayChannel *display)
     GList *link, *next;
 
     spice_debug("#draw=%d, #glz_draw=%d", display->drawable_count,
-                display->glz_drawable_count);
+                display->encoder_globals.glz_drawable_count);
     FOREACH_CLIENT(display, link, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc->encoders.glz_dict;
 
@@ -1208,7 +1208,7 @@ void display_channel_free_some(DisplayChannel *display)
             // encoding using the dictionary is prevented since the following operations might
             // change the dictionary
             pthread_rwlock_wrlock(&glz_dict->encode_lock);
-            n = dcc_free_some_independent_glz_drawables(dcc);
+            n = image_encoders_free_some_independent_glz_drawables(&dcc->encoders);
         }
     }
 
@@ -1853,7 +1853,7 @@ static void on_disconnect(RedChannelClient *rcc)
     // this was the last channel client
     spice_debug("#draw=%d, #glz_draw=%d",
                 display->drawable_count,
-                display->glz_drawable_count);
+                display->encoder_globals.glz_drawable_count);
 }
 
 static int handle_migrate_flush_mark(RedChannelClient *rcc)
