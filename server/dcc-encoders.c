@@ -552,6 +552,22 @@ static void red_glz_drawable_free(RedGlzDrawable *glz_drawable)
     }
 }
 
+gboolean image_encoders_glz_encode_lock(ImageEncoders *enc)
+{
+    if (enc->glz_dict) {
+        pthread_rwlock_wrlock(&enc->glz_dict->encode_lock);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void image_encoders_glz_encode_unlock(ImageEncoders *enc)
+{
+    if (enc->glz_dict) {
+        pthread_rwlock_unlock(&enc->glz_dict->encode_lock);
+    }
+}
+
 /*
  * Remove from the global lz dictionary some glz_drawables that have no reference to
  * Drawable (their qxl drawables are released too).

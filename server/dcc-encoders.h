@@ -48,6 +48,8 @@ void image_encoders_free_glz_drawables_to_free(ImageEncoders* enc);
 gboolean image_encoders_glz_create(ImageEncoders *enc, uint8_t id);
 void image_encoders_glz_get_restore_data(ImageEncoders *enc,
                                          uint8_t *out_id, GlzEncDictRestoreData *out_data);
+gboolean image_encoders_glz_encode_lock(ImageEncoders *enc);
+void image_encoders_glz_encode_unlock(ImageEncoders *enc);
 void drawable_free_glz_drawables(struct Drawable *drawable);
 void drawable_detach_glz_drawables(struct Drawable *drawable);
 
