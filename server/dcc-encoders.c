@@ -22,7 +22,9 @@
 #include <glib.h>
 
 #include "dcc-encoders.h"
-#include "display-channel.h"
+#include "spice-bitmap-utils.h"
+#include "red-worker.h" // red_drawable_unref
+#include "pixmap-cache.h" // MAX_CACHE_CLIENTS
 
 #define ZLIB_DEFAULT_COMPRESSION_LEVEL 3
 
@@ -1151,7 +1153,8 @@ int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
 
 /* if already exists, returns it. Otherwise allocates and adds it (1) to the ring tail
    in the channel (2) to the Drawable*/
-static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
+static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, RedDrawable *red_drawable,
+                                        GlzImageRetention *glz_retention)
 {
     RedGlzDrawable *ret;
     RingItem *item, *next;
@@ -1159,7 +1162,7 @@ static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
     // TODO - I don't really understand what's going on here, so doing the technical equivalent
     // now that we have multiple glz_dicts, so the only way to go from dcc to drawable glz is to go
     // over the glz_ring (unless adding some better data structure then a ring)
-    DRAWABLE_FOREACH_GLZ_SAFE(drawable, item, next, ret) {
+    SAFE_FOREACH(item, next, TRUE, &glz_retention->ring, ret, LINK_TO_GLZ(item)) {
         if (ret->encoders == enc) {
             return ret;
         }
@@ -1168,7 +1171,7 @@ static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
     ret = spice_new(RedGlzDrawable, 1);
 
     ret->encoders = enc;
-    ret->red_drawable = red_drawable_ref(drawable->red_drawable);
+    ret->red_drawable = red_drawable_ref(red_drawable);
     ret->has_drawable = TRUE;
     ret->instances_count = 0;
     ring_init(&ret->instances);
@@ -1176,7 +1179,7 @@ static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, Drawable *drawable)
     ring_item_init(&ret->link);
     ring_item_init(&ret->drawable_link);
     ring_add_before(&ret->link, &enc->glz_drawables);
-    ring_add(&drawable->glz_retention.ring, &ret->drawable_link);
+    ring_add(&glz_retention->ring, &ret->drawable_link);
     enc->shared_data->glz_drawable_count++;
     return ret;
 }
@@ -1202,7 +1205,9 @@ static GlzDrawableInstanceItem *add_glz_drawable_instance(RedGlzDrawable *glz_dr
 #define MIN_GLZ_SIZE_FOR_ZLIB 100
 
 int image_encoders_compress_glz(ImageEncoders *enc,
-                                SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
+                                SpiceImage *dest, SpiceBitmap *src,
+                                RedDrawable *red_drawable,
+                                GlzImageRetention *glz_retention,
                                 compress_send_data_t* o_comp_data,
                                 gboolean enable_zlib_glz_wrap)
 {
@@ -1234,7 +1239,7 @@ int image_encoders_compress_glz(ImageEncoders *enc,
 
     encoder_data_init(&glz_data->data);
 
-    glz_drawable = get_glz_drawable(enc, drawable);
+    glz_drawable = get_glz_drawable(enc, red_drawable, glz_retention);
     glz_drawable_instance = add_glz_drawable_instance(glz_drawable);
 
     glz_data->data.u.lines_data.chunks = src->data;

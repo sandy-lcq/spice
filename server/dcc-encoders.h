@@ -204,7 +204,9 @@ int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
 int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
                                 SpiceBitmap *src, compress_send_data_t* o_comp_data);
 int image_encoders_compress_glz(ImageEncoders *enc,
-                                SpiceImage *dest, SpiceBitmap *src, struct Drawable *drawable,
+                                SpiceImage *dest, SpiceBitmap *src,
+                                RedDrawable *red_drawable,
+                                GlzImageRetention *glz_retention,
                                 compress_send_data_t* o_comp_data,
                                 gboolean enable_zlib_glz_wrap);
 
