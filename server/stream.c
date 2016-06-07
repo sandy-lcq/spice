@@ -25,9 +25,7 @@
 
 #define FPS_TEST_INTERVAL 1
 #define FOREACH_STREAMS(display, item)                  \
-    for (item = ring_get_head(&(display)->priv->streams);     \
-         item != NULL;                                  \
-         item = ring_next(&(display)->priv->streams, item))
+    RING_FOREACH(item, &(display)->priv->streams)
 
 static void stream_agent_stats_print(StreamAgent *agent)
 {
