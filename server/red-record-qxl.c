@@ -804,18 +804,18 @@ void red_record_primary_surface_create(RedRecord *record,
         line_0);
 }
 
-void red_record_event(RedRecord *record, int what, uint32_t type, unsigned long ts)
+void red_record_event(RedRecord *record, int what, uint32_t type, red_time_t ts)
 {
     // TODO: record the size of the packet in the header. This would make
     // navigating it much faster (well, I can add an index while I'm at it..)
     // and make it trivial to get a histogram from a file.
     // But to implement that I would need some temporary buffer for each event.
     // (that can be up to VGA_FRAMEBUFFER large)
-    fprintf(record->fd, "event %u %d %u %lu\n", record->counter++, what, type, ts);
+    fprintf(record->fd, "event %u %d %u %"PRIu64"\n", record->counter++, what, type, ts);
 }
 
 void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
-                            QXLCommandExt ext_cmd, unsigned long ts)
+                            QXLCommandExt ext_cmd, red_time_t ts)
 {
     FILE *fd = record->fd;
 
