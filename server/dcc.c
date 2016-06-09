@@ -785,14 +785,15 @@ glz:
 }
 
 #ifdef USE_LZ4
-static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
-                                  SpiceBitmap *src, compress_send_data_t* o_comp_data)
+static int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
+                                       SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                       stat_info_t *stats)
 {
-    Lz4Data *lz4_data = &dcc->encoders.lz4_data;
-    Lz4EncoderContext *lz4 = dcc->encoders.lz4;
+    Lz4Data *lz4_data = &enc->lz4_data;
+    Lz4EncoderContext *lz4 = enc->lz4;
     int lz4_size = 0;
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz4_stat);
+    stat_start_time_init(&start_time, stats);
 
 #ifdef COMPRESS_DEBUG
     spice_info("LZ4 compress");
@@ -829,7 +830,7 @@ static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
     o_comp_data->comp_buf = lz4_data->data.bufs_head;
     o_comp_data->comp_buf_size = lz4_size;
 
-    stat_compress_add(&DCC_TO_DC(dcc)->lz4_stat, start_time, src->stride * src->y,
+    stat_compress_add(stats, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
@@ -965,7 +966,8 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     case SPICE_IMAGE_COMPRESSION_LZ4:
         if (red_channel_client_test_remote_cap(&dcc->common.base,
                                                SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-            success = dcc_compress_image_lz4(dcc, dest, src, o_comp_data);
+            success = image_encoders_compress_lz4(&dcc->encoders, dest, src, o_comp_data,
+                                                  &display_channel->lz4_stat);
             break;
         }
 #endif
