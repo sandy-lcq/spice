@@ -61,10 +61,11 @@ struct DisplayChannelClient {
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
     int jpeg_quality;
+
+    ImageEncoders encoders;
+
     int zlib_level;
 
-    QuicData quic_data;
-    QuicContext *quic;
     LzData lz_data;
     LzContext  *lz;
     JpegData jpeg_data;

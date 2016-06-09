@@ -291,19 +291,19 @@ static int zlib_usr_more_input(ZlibEncoderUsrContext *usr, uint8_t** input)
     return buf_size;
 }
 
-static void dcc_init_quic(DisplayChannelClient *dcc)
+static void image_encoders_init_quic(ImageEncoders *enc)
 {
-    dcc->quic_data.usr.error = quic_usr_error;
-    dcc->quic_data.usr.warn = quic_usr_warn;
-    dcc->quic_data.usr.info = quic_usr_warn;
-    dcc->quic_data.usr.malloc = quic_usr_malloc;
-    dcc->quic_data.usr.free = quic_usr_free;
-    dcc->quic_data.usr.more_space = quic_usr_more_space;
-    dcc->quic_data.usr.more_lines = quic_usr_more_lines;
+    enc->quic_data.usr.error = quic_usr_error;
+    enc->quic_data.usr.warn = quic_usr_warn;
+    enc->quic_data.usr.info = quic_usr_warn;
+    enc->quic_data.usr.malloc = quic_usr_malloc;
+    enc->quic_data.usr.free = quic_usr_free;
+    enc->quic_data.usr.more_space = quic_usr_more_space;
+    enc->quic_data.usr.more_lines = quic_usr_more_lines;
 
-    dcc->quic = quic_create(&dcc->quic_data.usr);
+    enc->quic = quic_create(&enc->quic_data.usr);
 
-    if (!dcc->quic) {
+    if (!enc->quic) {
         spice_critical("create quic failed");
     }
 }
@@ -400,8 +400,10 @@ static void dcc_init_zlib(DisplayChannelClient *dcc)
 
 void dcc_encoders_init(DisplayChannelClient *dcc)
 {
+    ImageEncoders *enc = &dcc->encoders;
+
     dcc_init_glz_data(dcc);
-    dcc_init_quic(dcc);
+    image_encoders_init_quic(enc);
     dcc_init_lz(dcc);
     dcc_init_jpeg(dcc);
 #ifdef USE_LZ4
@@ -415,8 +417,9 @@ void dcc_encoders_init(DisplayChannelClient *dcc)
 
 void dcc_encoders_free(DisplayChannelClient *dcc)
 {
-    quic_destroy(dcc->quic);
-    dcc->quic = NULL;
+    ImageEncoders *enc = &dcc->encoders;
+    quic_destroy(enc->quic);
+    enc->quic = NULL;
     lz_destroy(dcc->lz);
     dcc->lz = NULL;
     jpeg_encoder_destroy(dcc->jpeg);

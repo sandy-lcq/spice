@@ -1029,8 +1029,8 @@ static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
 static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
                                    SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
-    QuicData *quic_data = &dcc->quic_data;
-    QuicContext *quic = dcc->quic;
+    QuicData *quic_data = &dcc->encoders.quic_data;
+    QuicContext *quic = dcc->encoders.quic;
     volatile QuicImageType type;
     int size, stride;
     stat_start_time_t start_time;

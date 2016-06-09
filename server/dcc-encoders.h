@@ -34,6 +34,7 @@
 typedef struct RedCompressBuf RedCompressBuf;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 typedef struct RedGlzDrawable RedGlzDrawable;
+typedef struct ImageEncoders ImageEncoders;
 
 void             dcc_encoders_init                           (DisplayChannelClient *dcc);
 void             dcc_encoders_free                           (DisplayChannelClient *dcc);
@@ -158,6 +159,11 @@ struct RedGlzDrawable {
     Ring instances;
     uint8_t instances_count;
     DisplayChannelClient *dcc;
+};
+
+struct ImageEncoders {
+    QuicData quic_data;
+    QuicContext *quic;
 };
 
 #define RED_RELEASE_BUNCH_SIZE 64
