@@ -784,13 +784,15 @@ glz:
     return TRUE;
 }
 
-static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
-                                   SpiceBitmap *src, compress_send_data_t* o_comp_data)
+static int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
+                                        SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                        stat_info_t *jpeg_stats, // FIXME put all stats in a structure
+                                        stat_info_t *jpeg_alpha_stats)
 {
-    JpegData *jpeg_data = &dcc->encoders.jpeg_data;
-    LzData *lz_data = &dcc->encoders.lz_data;
-    JpegEncoderContext *jpeg = dcc->encoders.jpeg;
-    LzContext *lz = dcc->encoders.lz;
+    JpegData *jpeg_data = &enc->jpeg_data;
+    LzData *lz_data = &enc->lz_data;
+    JpegEncoderContext *jpeg = enc->jpeg;
+    LzContext *lz = enc->lz;
     volatile JpegEncoderImageType jpeg_in_type;
     int jpeg_size = 0;
     volatile int has_alpha = FALSE;
@@ -800,7 +802,7 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
     int stride;
     uint8_t *lz_out_start_byte;
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->jpeg_alpha_stat);
+    stat_start_time_init(&start_time, jpeg_alpha_stats);
 
 #ifdef COMPRESS_DEBUG
     spice_info("JPEG compress");
@@ -846,7 +848,7 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
         jpeg_data->data.u.lines_data.reverse = 1;
         stride = -src->stride;
     }
-    jpeg_size = jpeg_encode(jpeg, dcc->encoders.jpeg_quality, jpeg_in_type,
+    jpeg_size = jpeg_encode(jpeg, enc->jpeg_quality, jpeg_in_type,
                             src->x, src->y, NULL,
                             0, stride, jpeg_data->data.bufs_head->buf.bytes,
                             sizeof(jpeg_data->data.bufs_head->buf));
@@ -864,7 +866,7 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
         o_comp_data->comp_buf_size = jpeg_size;
         o_comp_data->is_lossy = TRUE;
 
-        stat_compress_add(&DCC_TO_DC(dcc)->jpeg_stat, start_time, src->stride * src->y,
+        stat_compress_add(jpeg_stats, start_time, src->stride * src->y,
                           o_comp_data->comp_buf_size);
         return TRUE;
     }
@@ -904,7 +906,7 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
     o_comp_data->comp_buf = jpeg_data->data.bufs_head;
     o_comp_data->comp_buf_size = jpeg_size + alpha_lz_size;
     o_comp_data->is_lossy = TRUE;
-    stat_compress_add(&DCC_TO_DC(dcc)->jpeg_alpha_stat, start_time, src->stride * src->y,
+    stat_compress_add(jpeg_alpha_stats, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
@@ -1063,7 +1065,9 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     case SPICE_IMAGE_COMPRESSION_QUIC:
         if (can_lossy && display_channel->enable_jpeg &&
             (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src))) {
-            success = dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
+            success = image_encoders_compress_jpeg(&dcc->encoders, dest, src, o_comp_data,
+                                                   &display_channel->jpeg_stat,
+                                                   &display_channel->jpeg_alpha_stat);
             break;
         }
         success = image_encoders_compress_quic(&dcc->encoders, dest, src, o_comp_data,
