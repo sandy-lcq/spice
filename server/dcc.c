@@ -379,7 +379,7 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
     dcc->jpeg_state = jpeg_state;
     dcc->zlib_glz_state = zlib_glz_state;
     // TODO: tune quality according to bandwidth
-    dcc->jpeg_quality = 85;
+    dcc->encoders.jpeg_quality = 85;
 
     size_t stream_buf_size;
     stream_buf_size = 32*1024;
@@ -787,9 +787,9 @@ glz:
 static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
                                    SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
-    JpegData *jpeg_data = &dcc->jpeg_data;
+    JpegData *jpeg_data = &dcc->encoders.jpeg_data;
     LzData *lz_data = &dcc->encoders.lz_data;
-    JpegEncoderContext *jpeg = dcc->jpeg;
+    JpegEncoderContext *jpeg = dcc->encoders.jpeg;
     LzContext *lz = dcc->encoders.lz;
     volatile JpegEncoderImageType jpeg_in_type;
     int jpeg_size = 0;
@@ -846,7 +846,7 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
         jpeg_data->data.u.lines_data.reverse = 1;
         stride = -src->stride;
     }
-    jpeg_size = jpeg_encode(jpeg, dcc->jpeg_quality, jpeg_in_type,
+    jpeg_size = jpeg_encode(jpeg, dcc->encoders.jpeg_quality, jpeg_in_type,
                             src->x, src->y, NULL,
                             0, stride, jpeg_data->data.bufs_head->buf.bytes,
                             sizeof(jpeg_data->data.bufs_head->buf));

@@ -167,6 +167,11 @@ struct ImageEncoders {
 
     LzData lz_data;
     LzContext  *lz;
+
+    int jpeg_quality;
+
+    JpegData jpeg_data;
+    JpegEncoderContext *jpeg;
 };
 
 typedef struct compress_send_data_t {
