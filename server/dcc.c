@@ -788,8 +788,8 @@ static int dcc_compress_image_lz(DisplayChannelClient *dcc,
                                  SpiceImage *dest, SpiceBitmap *src,
                                  compress_send_data_t* o_comp_data)
 {
-    LzData *lz_data = &dcc->lz_data;
-    LzContext *lz = dcc->lz;
+    LzData *lz_data = &dcc->encoders.lz_data;
+    LzContext *lz = dcc->encoders.lz;
     LzImageType type = bitmap_fmt_to_lz_image_type[src->format];
     int size;            // size of the compressed data
 
@@ -854,9 +854,9 @@ static int dcc_compress_image_jpeg(DisplayChannelClient *dcc, SpiceImage *dest,
                                    SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     JpegData *jpeg_data = &dcc->jpeg_data;
-    LzData *lz_data = &dcc->lz_data;
+    LzData *lz_data = &dcc->encoders.lz_data;
     JpegEncoderContext *jpeg = dcc->jpeg;
-    LzContext *lz = dcc->lz;
+    LzContext *lz = dcc->encoders.lz;
     volatile JpegEncoderImageType jpeg_in_type;
     int jpeg_size = 0;
     volatile int has_alpha = FALSE;

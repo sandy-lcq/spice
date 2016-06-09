@@ -66,8 +66,6 @@ struct DisplayChannelClient {
 
     int zlib_level;
 
-    LzData lz_data;
-    LzContext  *lz;
     JpegData jpeg_data;
     JpegEncoderContext *jpeg;
 #ifdef USE_LZ4

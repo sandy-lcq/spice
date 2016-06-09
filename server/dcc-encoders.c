@@ -308,19 +308,19 @@ static void image_encoders_init_quic(ImageEncoders *enc)
     }
 }
 
-static void dcc_init_lz(DisplayChannelClient *dcc)
+static void image_encoders_init_lz(ImageEncoders *enc)
 {
-    dcc->lz_data.usr.error = lz_usr_error;
-    dcc->lz_data.usr.warn = lz_usr_warn;
-    dcc->lz_data.usr.info = lz_usr_warn;
-    dcc->lz_data.usr.malloc = lz_usr_malloc;
-    dcc->lz_data.usr.free = lz_usr_free;
-    dcc->lz_data.usr.more_space = lz_usr_more_space;
-    dcc->lz_data.usr.more_lines = lz_usr_more_lines;
+    enc->lz_data.usr.error = lz_usr_error;
+    enc->lz_data.usr.warn = lz_usr_warn;
+    enc->lz_data.usr.info = lz_usr_warn;
+    enc->lz_data.usr.malloc = lz_usr_malloc;
+    enc->lz_data.usr.free = lz_usr_free;
+    enc->lz_data.usr.more_space = lz_usr_more_space;
+    enc->lz_data.usr.more_lines = lz_usr_more_lines;
 
-    dcc->lz = lz_create(&dcc->lz_data.usr);
+    enc->lz = lz_create(&enc->lz_data.usr);
 
-    if (!dcc->lz) {
+    if (!enc->lz) {
         spice_critical("create lz failed");
     }
 }
@@ -404,7 +404,7 @@ void dcc_encoders_init(DisplayChannelClient *dcc)
 
     dcc_init_glz_data(dcc);
     image_encoders_init_quic(enc);
-    dcc_init_lz(dcc);
+    image_encoders_init_lz(enc);
     dcc_init_jpeg(dcc);
 #ifdef USE_LZ4
     dcc_init_lz4(dcc);
@@ -420,8 +420,8 @@ void dcc_encoders_free(DisplayChannelClient *dcc)
     ImageEncoders *enc = &dcc->encoders;
     quic_destroy(enc->quic);
     enc->quic = NULL;
-    lz_destroy(dcc->lz);
-    dcc->lz = NULL;
+    lz_destroy(enc->lz);
+    enc->lz = NULL;
     jpeg_encoder_destroy(dcc->jpeg);
     dcc->jpeg = NULL;
 #ifdef USE_LZ4

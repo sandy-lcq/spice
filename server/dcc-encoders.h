@@ -164,6 +164,9 @@ struct RedGlzDrawable {
 struct ImageEncoders {
     QuicData quic_data;
     QuicContext *quic;
+
+    LzData lz_data;
+    LzContext  *lz;
 };
 
 typedef struct compress_send_data_t {
