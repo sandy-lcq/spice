@@ -1026,15 +1026,16 @@ static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
 }
 #endif
 
-static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
-                                   SpiceBitmap *src, compress_send_data_t* o_comp_data)
+static int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
+                                        SpiceBitmap *src, compress_send_data_t* o_comp_data,
+                                        stat_info_t *stats)
 {
-    QuicData *quic_data = &dcc->encoders.quic_data;
-    QuicContext *quic = dcc->encoders.quic;
+    QuicData *quic_data = &enc->quic_data;
+    QuicContext *quic = enc->quic;
     volatile QuicImageType type;
     int size, stride;
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->quic_stat);
+    stat_start_time_init(&start_time, stats);
 
 #ifdef COMPRESS_DEBUG
     spice_info("QUIC compress");
@@ -1094,7 +1095,7 @@ static int dcc_compress_image_quic(DisplayChannelClient *dcc, SpiceImage *dest,
     o_comp_data->comp_buf = quic_data->data.bufs_head;
     o_comp_data->comp_buf_size = size << 2;
 
-    stat_compress_add(&DCC_TO_DC(dcc)->quic_stat, start_time, src->stride * src->y,
+    stat_compress_add(stats, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
@@ -1205,7 +1206,8 @@ int dcc_compress_image(DisplayChannelClient *dcc,
             success = dcc_compress_image_jpeg(dcc, dest, src, o_comp_data);
             break;
         }
-        success = dcc_compress_image_quic(dcc, dest, src, o_comp_data);
+        success = image_encoders_compress_quic(&dcc->encoders, dest, src, o_comp_data,
+                                               &display_channel->quic_stat);
         break;
     case SPICE_IMAGE_COMPRESSION_GLZ:
         if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict)) {
