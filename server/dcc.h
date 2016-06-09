@@ -65,10 +65,6 @@ struct DisplayChannelClient {
 
     int zlib_level;
 
-#ifdef USE_LZ4
-    Lz4Data lz4_data;
-    Lz4EncoderContext *lz4;
-#endif
     ZlibData zlib_data;
     ZlibEncoder *zlib;
 

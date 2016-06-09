@@ -373,14 +373,14 @@ static void image_encoders_init_jpeg(ImageEncoders *enc)
 }
 
 #ifdef USE_LZ4
-static inline void dcc_init_lz4(DisplayChannelClient *dcc)
+static inline void image_encoders_init_lz4(ImageEncoders *enc)
 {
-    dcc->lz4_data.usr.more_space = lz4_usr_more_space;
-    dcc->lz4_data.usr.more_lines = lz4_usr_more_lines;
+    enc->lz4_data.usr.more_space = lz4_usr_more_space;
+    enc->lz4_data.usr.more_lines = lz4_usr_more_lines;
 
-    dcc->lz4 = lz4_encoder_create(&dcc->lz4_data.usr);
+    enc->lz4 = lz4_encoder_create(&enc->lz4_data.usr);
 
-    if (!dcc->lz4) {
+    if (!enc->lz4) {
         spice_critical("create lz4 encoder failed");
     }
 }
@@ -407,7 +407,7 @@ void dcc_encoders_init(DisplayChannelClient *dcc)
     image_encoders_init_lz(enc);
     image_encoders_init_jpeg(enc);
 #ifdef USE_LZ4
-    dcc_init_lz4(dcc);
+    image_encoders_init_lz4(enc);
 #endif
     dcc_init_zlib(dcc);
 
@@ -425,8 +425,8 @@ void dcc_encoders_free(DisplayChannelClient *dcc)
     jpeg_encoder_destroy(enc->jpeg);
     enc->jpeg = NULL;
 #ifdef USE_LZ4
-    lz4_encoder_destroy(dcc->lz4);
-    dcc->lz4 = NULL;
+    lz4_encoder_destroy(enc->lz4);
+    enc->lz4 = NULL;
 #endif
     zlib_encoder_destroy(dcc->zlib);
     dcc->zlib = NULL;

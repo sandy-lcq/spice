@@ -788,8 +788,8 @@ glz:
 static int dcc_compress_image_lz4(DisplayChannelClient *dcc, SpiceImage *dest,
                                   SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
-    Lz4Data *lz4_data = &dcc->lz4_data;
-    Lz4EncoderContext *lz4 = dcc->lz4;
+    Lz4Data *lz4_data = &dcc->encoders.lz4_data;
+    Lz4EncoderContext *lz4 = dcc->encoders.lz4;
     int lz4_size = 0;
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz4_stat);
