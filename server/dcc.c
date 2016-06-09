@@ -784,17 +784,18 @@ glz:
     return TRUE;
 }
 
-static int dcc_compress_image_lz(DisplayChannelClient *dcc,
-                                 SpiceImage *dest, SpiceBitmap *src,
-                                 compress_send_data_t* o_comp_data)
+static int image_encoders_compress_lz(ImageEncoders *enc,
+                                      SpiceImage *dest, SpiceBitmap *src,
+                                      compress_send_data_t* o_comp_data,
+                                      stat_info_t *stats)
 {
-    LzData *lz_data = &dcc->encoders.lz_data;
-    LzContext *lz = dcc->encoders.lz;
+    LzData *lz_data = &enc->lz_data;
+    LzContext *lz = enc->lz;
     LzImageType type = bitmap_fmt_to_lz_image_type[src->format];
     int size;            // size of the compressed data
 
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, &DCC_TO_DC(dcc)->lz_stat);
+    stat_start_time_init(&start_time, stats);
 
 #ifdef COMPRESS_DEBUG
     spice_info("LZ LOCAL compress");
@@ -841,11 +842,10 @@ static int dcc_compress_image_lz(DisplayChannelClient *dcc,
         o_comp_data->comp_buf = lz_data->data.bufs_head;
         o_comp_data->comp_buf_size = size;
 
-        dcc_palette_cache_palette(dcc, dest->u.lz_plt.palette, &(dest->u.lz_plt.flags));
         o_comp_data->lzplt_palette = dest->u.lz_plt.palette;
     }
 
-    stat_compress_add(&DCC_TO_DC(dcc)->lz_stat, start_time, src->stride * src->y,
+    stat_compress_add(stats, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
@@ -1160,7 +1160,10 @@ int dcc_compress_image(DisplayChannelClient *dcc,
 #endif
 lz_compress:
     case SPICE_IMAGE_COMPRESSION_LZ:
-        success = dcc_compress_image_lz(dcc, dest, src, o_comp_data);
+        success = image_encoders_compress_lz(&dcc->encoders, dest, src, o_comp_data, &display_channel->lz_stat);
+        if (success && !bitmap_fmt_is_rgb(src->format)) {
+            dcc_palette_cache_palette(dcc, dest->u.lz_plt.palette, &(dest->u.lz_plt.flags));
+        }
         break;
     default:
         spice_error("invalid image compression type %u", image_compression);
