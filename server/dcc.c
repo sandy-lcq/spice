@@ -396,7 +396,7 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
     ring_init(&dcc->glz_drawables_inst_to_free);
     pthread_mutex_init(&dcc->glz_drawables_inst_to_free_lock, NULL);
 
-    dcc_encoders_init(dcc);
+    dcc_encoders_init(dcc, &display->encoder_globals);
 
     return dcc;
 }
@@ -709,7 +709,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
 {
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, &display_channel->zlib_glz_stat);
+    stat_start_time_init(&start_time, &display_channel->encoder_globals.zlib_glz_stat);
     spice_assert(bitmap_fmt_is_rgb(src->format));
     GlzData *glz_data = &dcc->glz_data;
     ZlibData *zlib_data;
@@ -740,12 +740,12 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
                           glz_drawable_instance,
                           &glz_drawable_instance->context);
 
-    stat_compress_add(&display_channel->glz_stat, start_time, src->stride * src->y, glz_size);
+    stat_compress_add(&display_channel->encoder_globals.glz_stat, start_time, src->stride * src->y, glz_size);
 
     if (!display_channel->enable_zlib_glz_wrap || (glz_size < MIN_GLZ_SIZE_FOR_ZLIB)) {
         goto glz;
     }
-    stat_start_time_init(&start_time, &display_channel->zlib_glz_stat);
+    stat_start_time_init(&start_time, &display_channel->encoder_globals.zlib_glz_stat);
     zlib_data = &dcc->encoders.zlib_data;
 
     encoder_data_init(&zlib_data->data);
@@ -772,7 +772,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     o_comp_data->comp_buf = zlib_data->data.bufs_head;
     o_comp_data->comp_buf_size = zlib_size;
 
-    stat_compress_add(&display_channel->zlib_glz_stat, start_time, glz_size, zlib_size);
+    stat_compress_add(&display_channel->encoder_globals.zlib_glz_stat, start_time, glz_size, zlib_size);
     return TRUE;
 glz:
     dest->descriptor.type = SPICE_IMAGE_TYPE_GLZ_RGB;
@@ -878,7 +878,7 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     stat_start_time_t start_time;
     int success = FALSE;
 
-    stat_start_time_init(&start_time, &display_channel->off_stat);
+    stat_start_time_init(&start_time, &display_channel->encoder_globals.off_stat);
 
     image_compression = get_compression_for_bitmap(src, dcc->image_compression, drawable);
     switch (image_compression) {
@@ -887,13 +887,10 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     case SPICE_IMAGE_COMPRESSION_QUIC:
         if (can_lossy && display_channel->enable_jpeg &&
             (src->format != SPICE_BITMAP_FMT_RGBA || !bitmap_has_extra_stride(src))) {
-            success = image_encoders_compress_jpeg(&dcc->encoders, dest, src, o_comp_data,
-                                                   &display_channel->jpeg_stat,
-                                                   &display_channel->jpeg_alpha_stat);
+            success = image_encoders_compress_jpeg(&dcc->encoders, dest, src, o_comp_data);
             break;
         }
-        success = image_encoders_compress_quic(&dcc->encoders, dest, src, o_comp_data,
-                                               &display_channel->quic_stat);
+        success = image_encoders_compress_quic(&dcc->encoders, dest, src, o_comp_data);
         break;
     case SPICE_IMAGE_COMPRESSION_GLZ:
         if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict)) {
@@ -914,14 +911,13 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     case SPICE_IMAGE_COMPRESSION_LZ4:
         if (red_channel_client_test_remote_cap(&dcc->common.base,
                                                SPICE_DISPLAY_CAP_LZ4_COMPRESSION)) {
-            success = image_encoders_compress_lz4(&dcc->encoders, dest, src, o_comp_data,
-                                                  &display_channel->lz4_stat);
+            success = image_encoders_compress_lz4(&dcc->encoders, dest, src, o_comp_data);
             break;
         }
 #endif
 lz_compress:
     case SPICE_IMAGE_COMPRESSION_LZ:
-        success = image_encoders_compress_lz(&dcc->encoders, dest, src, o_comp_data, &display_channel->lz_stat);
+        success = image_encoders_compress_lz(&dcc->encoders, dest, src, o_comp_data);
         if (success && !bitmap_fmt_is_rgb(src->format)) {
             dcc_palette_cache_palette(dcc, dest->u.lz_plt.palette, &(dest->u.lz_plt.flags));
         }
@@ -932,7 +928,7 @@ lz_compress:
 
     if (!success) {
         uint64_t image_size = src->stride * src->y;
-        stat_compress_add(&display_channel->off_stat, start_time, image_size, image_size);
+        stat_compress_add(&display_channel->encoder_globals.off_stat, start_time, image_size, image_size);
     }
 
     return success;

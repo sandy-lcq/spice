@@ -398,9 +398,12 @@ static void image_encoders_init_zlib(ImageEncoders *enc)
     }
 }
 
-void dcc_encoders_init(DisplayChannelClient *dcc)
+void dcc_encoders_init(DisplayChannelClient *dcc, ImageEncoderSharedData *shared_data)
 {
     ImageEncoders *enc = &dcc->encoders;
+
+    spice_assert(shared_data);
+    enc->shared_data = shared_data;
 
     dcc_init_glz_data(dcc);
     image_encoders_init_quic(enc);
@@ -708,15 +711,14 @@ void dcc_release_glz(DisplayChannelClient *dcc)
 }
 
 int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
-                                 SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                 stat_info_t *stats)
+                                 SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     QuicData *quic_data = &enc->quic_data;
     QuicContext *quic = enc->quic;
     volatile QuicImageType type;
     int size, stride;
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, stats);
+    stat_start_time_init(&start_time, &enc->shared_data->quic_stat);
 
 #ifdef COMPRESS_DEBUG
     spice_info("QUIC compress");
@@ -776,7 +778,7 @@ int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
     o_comp_data->comp_buf = quic_data->data.bufs_head;
     o_comp_data->comp_buf_size = size << 2;
 
-    stat_compress_add(stats, start_time, src->stride * src->y,
+    stat_compress_add(&enc->shared_data->quic_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
@@ -797,8 +799,7 @@ static const LzImageType bitmap_fmt_to_lz_image_type[] = {
 
 int image_encoders_compress_lz(ImageEncoders *enc,
                                SpiceImage *dest, SpiceBitmap *src,
-                               compress_send_data_t* o_comp_data,
-                               stat_info_t *stats)
+                               compress_send_data_t* o_comp_data)
 {
     LzData *lz_data = &enc->lz_data;
     LzContext *lz = enc->lz;
@@ -806,7 +807,7 @@ int image_encoders_compress_lz(ImageEncoders *enc,
     int size;            // size of the compressed data
 
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, stats);
+    stat_start_time_init(&start_time, &enc->shared_data->lz_stat);
 
 #ifdef COMPRESS_DEBUG
     spice_info("LZ LOCAL compress");
@@ -856,15 +857,13 @@ int image_encoders_compress_lz(ImageEncoders *enc,
         o_comp_data->lzplt_palette = dest->u.lz_plt.palette;
     }
 
-    stat_compress_add(stats, start_time, src->stride * src->y,
+    stat_compress_add(&enc->shared_data->lz_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
 
 int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
-                                 SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                 stat_info_t *jpeg_stats, // FIXME put all stats in a structure
-                                 stat_info_t *jpeg_alpha_stats)
+                                 SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     JpegData *jpeg_data = &enc->jpeg_data;
     LzData *lz_data = &enc->lz_data;
@@ -879,7 +878,7 @@ int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
     int stride;
     uint8_t *lz_out_start_byte;
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, jpeg_alpha_stats);
+    stat_start_time_init(&start_time, &enc->shared_data->jpeg_alpha_stat);
 
 #ifdef COMPRESS_DEBUG
     spice_info("JPEG compress");
@@ -943,7 +942,7 @@ int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
         o_comp_data->comp_buf_size = jpeg_size;
         o_comp_data->is_lossy = TRUE;
 
-        stat_compress_add(jpeg_stats, start_time, src->stride * src->y,
+        stat_compress_add(&enc->shared_data->jpeg_stat, start_time, src->stride * src->y,
                           o_comp_data->comp_buf_size);
         return TRUE;
     }
@@ -983,21 +982,20 @@ int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
     o_comp_data->comp_buf = jpeg_data->data.bufs_head;
     o_comp_data->comp_buf_size = jpeg_size + alpha_lz_size;
     o_comp_data->is_lossy = TRUE;
-    stat_compress_add(jpeg_alpha_stats, start_time, src->stride * src->y,
+    stat_compress_add(&enc->shared_data->jpeg_alpha_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
 
 #ifdef USE_LZ4
 int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
-                                SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                stat_info_t *stats)
+                                SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     Lz4Data *lz4_data = &enc->lz4_data;
     Lz4EncoderContext *lz4 = enc->lz4;
     int lz4_size = 0;
     stat_start_time_t start_time;
-    stat_start_time_init(&start_time, stats);
+    stat_start_time_init(&start_time, &enc->shared_data->lz4_stat);
 
 #ifdef COMPRESS_DEBUG
     spice_info("LZ4 compress");
@@ -1034,8 +1032,93 @@ int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
     o_comp_data->comp_buf = lz4_data->data.bufs_head;
     o_comp_data->comp_buf_size = lz4_size;
 
-    stat_compress_add(stats, start_time, src->stride * src->y,
+    stat_compress_add(&enc->shared_data->lz4_stat, start_time, src->stride * src->y,
                       o_comp_data->comp_buf_size);
     return TRUE;
 }
 #endif
+
+void image_encoder_shared_init(ImageEncoderSharedData *shared_data)
+{
+    clockid_t stat_clock = CLOCK_THREAD_CPUTIME_ID;
+
+    stat_compress_init(&shared_data->off_stat, "off", stat_clock);
+    stat_compress_init(&shared_data->lz_stat, "lz", stat_clock);
+    stat_compress_init(&shared_data->glz_stat, "glz", stat_clock);
+    stat_compress_init(&shared_data->quic_stat, "quic", stat_clock);
+    stat_compress_init(&shared_data->jpeg_stat, "jpeg", stat_clock);
+    stat_compress_init(&shared_data->zlib_glz_stat, "zlib", stat_clock);
+    stat_compress_init(&shared_data->jpeg_alpha_stat, "jpeg_alpha", stat_clock);
+    stat_compress_init(&shared_data->lz4_stat, "lz4", stat_clock);
+}
+
+void image_encoder_shared_stat_reset(ImageEncoderSharedData *shared_data)
+{
+    stat_reset(&shared_data->off_stat);
+    stat_reset(&shared_data->quic_stat);
+    stat_reset(&shared_data->lz_stat);
+    stat_reset(&shared_data->glz_stat);
+    stat_reset(&shared_data->jpeg_stat);
+    stat_reset(&shared_data->zlib_glz_stat);
+    stat_reset(&shared_data->jpeg_alpha_stat);
+    stat_reset(&shared_data->lz4_stat);
+}
+
+#define STAT_FMT "%s\t%8u\t%13.8g\t%12.8g\t%12.8g"
+
+#ifdef COMPRESS_STAT
+static void stat_print_one(const char *name, const stat_info_t *stat)
+{
+    spice_info(STAT_FMT, name, stat->count,
+               stat_byte_to_mega(stat->orig_size),
+               stat_byte_to_mega(stat->comp_size),
+               stat_cpu_time_to_sec(stat->total));
+}
+
+static void stat_sum(stat_info_t *total, const stat_info_t *stat)
+{
+    total->count += stat->count;
+    total->orig_size += stat->orig_size;
+    total->comp_size += stat->comp_size;
+    total->total += stat->total;
+}
+#endif
+
+void image_encoder_shared_stat_print(const ImageEncoderSharedData *shared_data)
+{
+#ifdef COMPRESS_STAT
+    /* sum all statistics */
+    stat_info_t total = {
+        .count = 0,
+        .orig_size = 0,
+        .comp_size = 0,
+        .total = 0
+    };
+    stat_sum(&total, &shared_data->off_stat);
+    stat_sum(&total, &shared_data->quic_stat);
+    stat_sum(&total, &shared_data->glz_stat);
+    stat_sum(&total, &shared_data->lz_stat);
+    stat_sum(&total, &shared_data->jpeg_stat);
+    stat_sum(&total, &shared_data->jpeg_alpha_stat);
+    stat_sum(&total, &shared_data->lz4_stat);
+
+    /* fix for zlib glz */
+    total.total += shared_data->zlib_glz_stat.total;
+    if (shared_data->zlib_glz_stat.count) {
+        total.comp_size = total.comp_size - shared_data->glz_stat.comp_size +
+                          shared_data->zlib_glz_stat.comp_size;
+    }
+
+    spice_info("Method   \t  count  \torig_size(MB)\tenc_size(MB)\tenc_time(s)");
+    stat_print_one("OFF      ", &shared_data->off_stat);
+    stat_print_one("QUIC     ", &shared_data->quic_stat);
+    stat_print_one("GLZ      ", &shared_data->glz_stat);
+    stat_print_one("ZLIB GLZ ", &shared_data->zlib_glz_stat);
+    stat_print_one("LZ       ", &shared_data->lz_stat);
+    stat_print_one("JPEG     ", &shared_data->jpeg_stat);
+    stat_print_one("JPEG-RGBA", &shared_data->jpeg_alpha_stat);
+    stat_print_one("LZ4      ", &shared_data->lz4_stat);
+    spice_info("-------------------------------------------------------------------");
+    stat_print_one("Total    ", &total);
+#endif
+}

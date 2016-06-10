@@ -38,75 +38,16 @@ void display_channel_compress_stats_reset(DisplayChannel *display)
 {
     spice_return_if_fail(display);
 
-    stat_reset(&display->off_stat);
-    stat_reset(&display->quic_stat);
-    stat_reset(&display->lz_stat);
-    stat_reset(&display->glz_stat);
-    stat_reset(&display->jpeg_stat);
-    stat_reset(&display->zlib_glz_stat);
-    stat_reset(&display->jpeg_alpha_stat);
-    stat_reset(&display->lz4_stat);
+    image_encoder_shared_stat_reset(&display->encoder_globals);
 }
-
-#define STAT_FMT "%s\t%8u\t%13.8g\t%12.8g\t%12.8g"
-
-#ifdef COMPRESS_STAT
-static void stat_print_one(const char *name, const stat_info_t *stat)
-{
-    spice_info(STAT_FMT, name, stat->count,
-               stat_byte_to_mega(stat->orig_size),
-               stat_byte_to_mega(stat->comp_size),
-               stat_cpu_time_to_sec(stat->total));
-}
-
-static void stat_sum(stat_info_t *total, const stat_info_t *stat)
-{
-    total->count += stat->count;
-    total->orig_size += stat->orig_size;
-    total->comp_size += stat->comp_size;
-    total->total += stat->total;
-}
-#endif
 
 void display_channel_compress_stats_print(const DisplayChannel *display_channel)
 {
+#ifdef COMPRESS_STAT
     spice_return_if_fail(display_channel);
 
-#ifdef COMPRESS_STAT
-    /* sum all statistics */
-    stat_info_t total = {
-        .count = 0,
-        .orig_size = 0,
-        .comp_size = 0,
-        .total = 0
-    };
-    stat_sum(&total, &display_channel->off_stat);
-    stat_sum(&total, &display_channel->quic_stat);
-    stat_sum(&total, &display_channel->glz_stat);
-    stat_sum(&total, &display_channel->lz_stat);
-    stat_sum(&total, &display_channel->jpeg_stat);
-    stat_sum(&total, &display_channel->jpeg_alpha_stat);
-    stat_sum(&total, &display_channel->lz4_stat);
-
-    /* fix for zlib glz */
-    total.total += display_channel->zlib_glz_stat.total;
-    if (display_channel->enable_zlib_glz_wrap) {
-        total.comp_size = total.comp_size - display_channel->glz_stat.comp_size +
-                          display_channel->zlib_glz_stat.comp_size;
-    }
-
     spice_info("==> Compression stats for display %u", display_channel->common.base.id);
-    spice_info("Method   \t  count  \torig_size(MB)\tenc_size(MB)\tenc_time(s)");
-    stat_print_one("OFF      ", &display_channel->off_stat);
-    stat_print_one("QUIC     ", &display_channel->quic_stat);
-    stat_print_one("GLZ      ", &display_channel->glz_stat);
-    stat_print_one("ZLIB GLZ ", &display_channel->zlib_glz_stat);
-    stat_print_one("LZ       ", &display_channel->lz_stat);
-    stat_print_one("JPEG     ", &display_channel->jpeg_stat);
-    stat_print_one("JPEG-RGBA", &display_channel->jpeg_alpha_stat);
-    stat_print_one("LZ4      ", &display_channel->lz4_stat);
-    spice_info("-------------------------------------------------------------------");
-    stat_print_one("Total    ", &total);
+    image_encoder_shared_stat_print(&display_channel->encoder_globals);
 #endif
 }
 
@@ -1984,13 +1925,7 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
     display->non_cache_counter = stat_add_counter(reds, channel->stat,
                                                   "non_cache", TRUE);
 #endif
-    stat_compress_init(&display->lz_stat, "lz", stat_clock);
-    stat_compress_init(&display->glz_stat, "glz", stat_clock);
-    stat_compress_init(&display->quic_stat, "quic", stat_clock);
-    stat_compress_init(&display->jpeg_stat, "jpeg", stat_clock);
-    stat_compress_init(&display->zlib_glz_stat, "zlib", stat_clock);
-    stat_compress_init(&display->jpeg_alpha_stat, "jpeg_alpha", stat_clock);
-    stat_compress_init(&display->lz4_stat, "lz4", stat_clock);
+    image_encoder_shared_init(&display->encoder_globals);
 
     display->n_surfaces = n_surfaces;
     display->renderer = RED_RENDERER_INVALID;

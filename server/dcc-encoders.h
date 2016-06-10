@@ -35,8 +35,13 @@ typedef struct RedCompressBuf RedCompressBuf;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct ImageEncoders ImageEncoders;
+typedef struct ImageEncoderSharedData ImageEncoderSharedData;
 
-void             dcc_encoders_init                           (DisplayChannelClient *dcc);
+void image_encoder_shared_init(ImageEncoderSharedData *shared_data);
+void image_encoder_shared_stat_reset(ImageEncoderSharedData *shared_data);
+void image_encoder_shared_stat_print(const ImageEncoderSharedData *shared_data);
+
+void dcc_encoders_init(DisplayChannelClient *dcc, ImageEncoderSharedData *shared_data);
 void image_encoders_free(ImageEncoders *enc);
 void             dcc_free_glz_drawable                       (DisplayChannelClient *dcc,
                                                               RedGlzDrawable *drawable);
@@ -161,7 +166,20 @@ struct RedGlzDrawable {
     DisplayChannelClient *dcc;
 };
 
+struct ImageEncoderSharedData {
+    stat_info_t off_stat;
+    stat_info_t lz_stat;
+    stat_info_t glz_stat;
+    stat_info_t quic_stat;
+    stat_info_t jpeg_stat;
+    stat_info_t zlib_glz_stat;
+    stat_info_t jpeg_alpha_stat;
+    stat_info_t lz4_stat;
+};
+
 struct ImageEncoders {
+    ImageEncoderSharedData *shared_data;
+
     QuicData quic_data;
     QuicContext *quic;
 
@@ -192,19 +210,14 @@ typedef struct compress_send_data_t {
 } compress_send_data_t;
 
 int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
-                                 SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                 stat_info_t *stats);
+                                 SpiceBitmap *src, compress_send_data_t* o_comp_data);
 int image_encoders_compress_lz(ImageEncoders *enc,
                                SpiceImage *dest, SpiceBitmap *src,
-                               compress_send_data_t* o_comp_data,
-                               stat_info_t *stats);
+                               compress_send_data_t* o_comp_data);
 int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
-                                 SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                 stat_info_t *jpeg_stats,
-                                 stat_info_t *jpeg_alpha_stats);
+                                 SpiceBitmap *src, compress_send_data_t* o_comp_data);
 int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
-                                SpiceBitmap *src, compress_send_data_t* o_comp_data,
-                                stat_info_t *stats);
+                                SpiceBitmap *src, compress_send_data_t* o_comp_data);
 
 #define RED_RELEASE_BUNCH_SIZE 64
 

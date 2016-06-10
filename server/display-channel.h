@@ -216,14 +216,7 @@ struct DisplayChannel {
     uint64_t *add_to_cache_counter;
     uint64_t *non_cache_counter;
 #endif
-    stat_info_t off_stat;
-    stat_info_t lz_stat;
-    stat_info_t glz_stat;
-    stat_info_t quic_stat;
-    stat_info_t jpeg_stat;
-    stat_info_t zlib_glz_stat;
-    stat_info_t jpeg_alpha_stat;
-    stat_info_t lz4_stat;
+    ImageEncoderSharedData encoder_globals;
 };
 
 static inline int get_stream_id(DisplayChannel *display, Stream *stream)
