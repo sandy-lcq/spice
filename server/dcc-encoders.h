@@ -103,7 +103,6 @@ typedef struct  {
             int size_left;
         } compressed_data; // for encoding data that was already compressed by another method
     } u;
-    char message_buf[512];
 } EncoderData;
 
 typedef struct {

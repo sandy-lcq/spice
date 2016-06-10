@@ -26,6 +26,8 @@
 
 #define ZLIB_DEFAULT_COMPRESSION_LEVEL 3
 
+#define ENCODER_MESSAGE_SIZE 512
+
 #define MAX_GLZ_DRAWABLE_INSTANCES 2
 
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
@@ -71,11 +73,12 @@ quic_usr_error(QuicUsrContext *usr, const char *fmt, ...)
 {
     EncoderData *usr_data = &(((QuicData *)usr)->data);
     va_list ap;
+    char message_buf[ENCODER_MESSAGE_SIZE];
 
     va_start(ap, fmt);
-    vsnprintf(usr_data->message_buf, sizeof(usr_data->message_buf), fmt, ap);
+    vsnprintf(message_buf, sizeof(message_buf), fmt, ap);
     va_end(ap);
-    spice_critical("%s", usr_data->message_buf);
+    spice_critical("%s", message_buf);
 
     longjmp(usr_data->jmp_env, 1);
 }
@@ -85,11 +88,12 @@ lz_usr_error(LzUsrContext *usr, const char *fmt, ...)
 {
     EncoderData *usr_data = &(((LzData *)usr)->data);
     va_list ap;
+    char message_buf[ENCODER_MESSAGE_SIZE];
 
     va_start(ap, fmt);
-    vsnprintf(usr_data->message_buf, sizeof(usr_data->message_buf), fmt, ap);
+    vsnprintf(message_buf, sizeof(message_buf), fmt, ap);
     va_end(ap);
-    spice_critical("%s", usr_data->message_buf);
+    spice_critical("%s", message_buf);
 
     longjmp(usr_data->jmp_env, 1);
 }
@@ -97,14 +101,14 @@ lz_usr_error(LzUsrContext *usr, const char *fmt, ...)
 static SPICE_GNUC_PRINTF(2, 3) void
 glz_usr_error(GlzEncoderUsrContext *usr, const char *fmt, ...)
 {
-    EncoderData *usr_data = &(((GlzData *)usr)->data);
     va_list ap;
+    char message_buf[ENCODER_MESSAGE_SIZE];
 
     va_start(ap, fmt);
-    vsnprintf(usr_data->message_buf, sizeof(usr_data->message_buf), fmt, ap);
+    vsnprintf(message_buf, sizeof(message_buf), fmt, ap);
     va_end(ap);
 
-    spice_critical("%s", usr_data->message_buf); // if global lz fails in the middle
+    spice_critical("%s", message_buf); // if global lz fails in the middle
                                         // the consequences are not predictable since the window
                                         // can turn to be unsynchronized between the server and
                                         // and the client
@@ -113,37 +117,37 @@ glz_usr_error(GlzEncoderUsrContext *usr, const char *fmt, ...)
 static SPICE_GNUC_PRINTF(2, 3) void
 quic_usr_warn(QuicUsrContext *usr, const char *fmt, ...)
 {
-    EncoderData *usr_data = &(((QuicData *)usr)->data);
     va_list ap;
+    char message_buf[ENCODER_MESSAGE_SIZE];
 
     va_start(ap, fmt);
-    vsnprintf(usr_data->message_buf, sizeof(usr_data->message_buf), fmt, ap);
+    vsnprintf(message_buf, sizeof(message_buf), fmt, ap);
     va_end(ap);
-    spice_warning("%s", usr_data->message_buf);
+    spice_warning("%s", message_buf);
 }
 
 static SPICE_GNUC_PRINTF(2, 3) void
 lz_usr_warn(LzUsrContext *usr, const char *fmt, ...)
 {
-    EncoderData *usr_data = &(((LzData *)usr)->data);
     va_list ap;
+    char message_buf[ENCODER_MESSAGE_SIZE];
 
     va_start(ap, fmt);
-    vsnprintf(usr_data->message_buf, sizeof(usr_data->message_buf), fmt, ap);
+    vsnprintf(message_buf, sizeof(message_buf), fmt, ap);
     va_end(ap);
-    spice_warning("%s", usr_data->message_buf);
+    spice_warning("%s", message_buf);
 }
 
 static SPICE_GNUC_PRINTF(2, 3) void
 glz_usr_warn(GlzEncoderUsrContext *usr, const char *fmt, ...)
 {
-    EncoderData *usr_data = &(((GlzData *)usr)->data);
     va_list ap;
+    char message_buf[ENCODER_MESSAGE_SIZE];
 
     va_start(ap, fmt);
-    vsnprintf(usr_data->message_buf, sizeof(usr_data->message_buf), fmt, ap);
+    vsnprintf(message_buf, sizeof(message_buf), fmt, ap);
     va_end(ap);
-    spice_warning("%s", usr_data->message_buf);
+    spice_warning("%s", message_buf);
 }
 
 static void *quic_usr_malloc(QuicUsrContext *usr, int size)
