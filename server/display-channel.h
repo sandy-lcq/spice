@@ -192,7 +192,6 @@ struct DisplayChannel {
     SpiceImageSurfaces image_surfaces;
 
     ImageCache image_cache;
-    RedCompressBuf *free_compress_bufs;
 
     int gl_draw_async_count;
 
