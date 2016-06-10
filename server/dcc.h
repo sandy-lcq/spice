@@ -102,8 +102,6 @@ struct DisplayChannelClient {
     bool gl_draw_ongoing;
 };
 
-#define DCC_TO_WORKER(dcc)                                              \
-    (SPICE_CONTAINEROF((dcc)->common.base.channel, CommonGraphicsChannel, base)->worker)
 #define DCC_TO_DC(dcc)                                                  \
      SPICE_CONTAINEROF((dcc)->common.base.channel, DisplayChannel, common.base)
 #define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)
