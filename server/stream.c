@@ -216,24 +216,24 @@ static void update_copy_graduality(DisplayChannel *display, Drawable *drawable)
     }
 }
 
-static int is_next_stream_frame(DisplayChannel *display,
-                                const Drawable *candidate,
-                                const int other_src_width,
-                                const int other_src_height,
-                                const SpiceRect *other_dest,
-                                const red_time_t other_time,
-                                const Stream *stream,
-                                int container_candidate_allowed)
+static bool is_next_stream_frame(DisplayChannel *display,
+                                 const Drawable *candidate,
+                                 const int other_src_width,
+                                 const int other_src_height,
+                                 const SpiceRect *other_dest,
+                                 const red_time_t other_time,
+                                 const Stream *stream,
+                                 int container_candidate_allowed)
 {
     RedDrawable *red_drawable;
 
     if (!candidate->streamable) {
-        return STREAM_FRAME_NONE;
+        return FALSE;
     }
 
     if (candidate->creation_time - other_time >
             (stream ? RED_STREAM_CONTINUS_MAX_DELTA : RED_STREAM_DETACTION_MAX_DELTA)) {
-        return STREAM_FRAME_NONE;
+        return FALSE;
     }
 
     red_drawable = candidate->red_drawable;
@@ -241,13 +241,13 @@ static int is_next_stream_frame(DisplayChannel *display,
         SpiceRect* candidate_src;
 
         if (!rect_is_equal(&red_drawable->bbox, other_dest)) {
-            return STREAM_FRAME_NONE;
+            return FALSE;
         }
 
         candidate_src = &red_drawable->u.copy.src_area;
         if (candidate_src->right - candidate_src->left != other_src_width ||
             candidate_src->bottom - candidate_src->top != other_src_height) {
-            return STREAM_FRAME_NONE;
+            return FALSE;
         }
     } else {
         if (rect_contains(&red_drawable->bbox, other_dest)) {
@@ -261,20 +261,20 @@ static int is_next_stream_frame(DisplayChannel *display,
                 rect_debug(other_dest);
                 spice_debug("new box ==>");
                 rect_debug(&red_drawable->bbox);
-                return STREAM_FRAME_NONE;
+                return FALSE;
             }
         } else {
-            return STREAM_FRAME_NONE;
+            return FALSE;
         }
     }
 
     if (stream) {
         SpiceBitmap *bitmap = &red_drawable->u.copy.src_bitmap->u.bitmap;
         if (stream->top_down != !!(bitmap->flags & SPICE_BITMAP_FLAGS_TOP_DOWN)) {
-            return STREAM_FRAME_NONE;
+            return FALSE;
         }
     }
-    return STREAM_FRAME_NATIVE;
+    return TRUE;
 }
 
 static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream)
@@ -513,15 +513,15 @@ void stream_trace_update(DisplayChannel *display, Drawable *drawable)
 
     FOREACH_STREAMS(display, item) {
         Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
-        int is_next_frame = is_next_stream_frame(display,
-                                                 drawable,
-                                                 stream->width,
-                                                 stream->height,
-                                                 &stream->dest_area,
-                                                 stream->last_time,
-                                                 stream,
-                                                 TRUE);
-        if (is_next_frame != STREAM_FRAME_NONE) {
+        bool is_next_frame = is_next_stream_frame(display,
+                                                  drawable,
+                                                  stream->width,
+                                                  stream->height,
+                                                  &stream->dest_area,
+                                                  stream->last_time,
+                                                  stream,
+                                                  TRUE);
+        if (is_next_frame) {
             if (stream->current) {
                 stream->current->streamable = FALSE; //prevent item trace
                 before_reattach_stream(display, stream, drawable);
@@ -536,8 +536,7 @@ void stream_trace_update(DisplayChannel *display, Drawable *drawable)
     trace_end = trace + NUM_TRACE_ITEMS;
     for (; trace < trace_end; trace++) {
         if (is_next_stream_frame(display, drawable, trace->width, trace->height,
-                                       &trace->dest_area, trace->time, NULL, FALSE) !=
-                                       STREAM_FRAME_NONE) {
+                                 &trace->dest_area, trace->time, NULL, FALSE)) {
             if (stream_add_frame(display, drawable,
                                  trace->first_frame_time,
                                  trace->frames_count,
@@ -552,7 +551,7 @@ void stream_trace_update(DisplayChannel *display, Drawable *drawable)
 void stream_maintenance(DisplayChannel *display,
                         Drawable *candidate, Drawable *prev)
 {
-    int is_next_frame;
+    bool is_next_frame;
 
     if (candidate->stream) {
         return;
@@ -565,7 +564,7 @@ void stream_maintenance(DisplayChannel *display,
                                              stream->width, stream->height,
                                              &stream->dest_area, stream->last_time,
                                              stream, TRUE);
-        if (is_next_frame != STREAM_FRAME_NONE) {
+        if (is_next_frame) {
             before_reattach_stream(display, stream, candidate);
             detach_stream(display, stream);
             prev->streamable = FALSE; //prevent item trace
@@ -580,7 +579,7 @@ void stream_maintenance(DisplayChannel *display,
                                  &prev->red_drawable->bbox, prev->creation_time,
                                  prev->stream,
                                  FALSE);
-        if (is_next_frame != STREAM_FRAME_NONE) {
+        if (is_next_frame) {
             stream_add_frame(display, candidate,
                              prev->first_frame_time,
                              prev->frames_count,

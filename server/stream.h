@@ -52,12 +52,6 @@ typedef struct RedStreamActivateReportItem {
     uint32_t stream_id;
 } RedStreamActivateReportItem;
 
-enum {
-    STREAM_FRAME_NONE,
-    STREAM_FRAME_NATIVE,
-    STREAM_FRAME_CONTAINER,
-};
-
 #define STREAM_STATS
 #ifdef STREAM_STATS
 typedef struct StreamStats {
