@@ -1677,10 +1677,10 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     DisplayChannel *display = DCC_TO_DC(dcc);
     Stream *stream = drawable->stream;
-    SpiceImage *image;
+    SpiceCopy *copy;
     uint32_t frame_mm_time;
     uint32_t n;
-    int width, height;
+    int is_sized, width, height;
     int ret;
 
     if (!stream) {
@@ -1689,22 +1689,20 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     }
     spice_assert(drawable->red_drawable->type == QXL_DRAW_COPY);
 
-    image = drawable->red_drawable->u.copy.src_bitmap;
-
-    if (image->descriptor.type != SPICE_IMAGE_TYPE_BITMAP) {
+    copy = &drawable->red_drawable->u.copy;
+    if (copy->src_bitmap->descriptor.type != SPICE_IMAGE_TYPE_BITMAP) {
         return FALSE;
     }
 
-    if (drawable->sized_stream) {
-        if (red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_SIZED_STREAM)) {
-            SpiceRect *src_rect = &drawable->red_drawable->u.copy.src_area;
+    width = copy->src_area.right - copy->src_area.left;
+    height = copy->src_area.bottom - copy->src_area.top;
+    is_sized = (drawable->sized_stream != NULL);
 
-            width = src_rect->right - src_rect->left;
-            height = src_rect->bottom - src_rect->top;
-        } else {
-            return FALSE;
-        }
-    } else {
+    if (is_sized &&
+        !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_SIZED_STREAM)) {
+        return FALSE;
+    }
+    if (!is_sized) {
         width = stream->width;
         height = stream->height;
     }
@@ -1730,8 +1728,8 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     outbuf_size = dcc->send_data.stream_outbuf_size;
     ret = agent->video_encoder->encode_frame(agent->video_encoder,
                                              frame_mm_time,
-                                             &image->u.bitmap, width, height,
-                                             &drawable->red_drawable->u.copy.src_area,
+                                             &copy->src_bitmap->u.bitmap,
+                                             width, height, &copy->src_area,
                                              stream->top_down,
                                              &dcc->send_data.stream_outbuf,
                                              &outbuf_size, &n);
@@ -1752,7 +1750,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     }
     dcc->send_data.stream_outbuf_size = outbuf_size;
 
-    if (!drawable->sized_stream) {
+    if (!is_sized) {
         SpiceMsgDisplayStreamData stream_data;
 
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA, NULL);
