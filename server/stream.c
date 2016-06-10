@@ -226,7 +226,6 @@ static int is_next_stream_frame(DisplayChannel *display,
                                 int container_candidate_allowed)
 {
     RedDrawable *red_drawable;
-    int is_frame_container = FALSE;
 
     if (!candidate->streamable) {
         return STREAM_FRAME_NONE;
@@ -252,7 +251,6 @@ static int is_next_stream_frame(DisplayChannel *display,
         }
     } else {
         if (rect_contains(&red_drawable->bbox, other_dest)) {
-            SpiceRect* candidate_src;
             int candidate_area = rect_get_area(&red_drawable->bbox);
             int other_area = rect_get_area(other_dest);
             /* do not stream drawables that are significantly
@@ -265,13 +263,6 @@ static int is_next_stream_frame(DisplayChannel *display,
                 rect_debug(&red_drawable->bbox);
                 return STREAM_FRAME_NONE;
             }
-
-            candidate_src = &red_drawable->u.copy.src_area;
-            if (candidate_area > other_area ||
-                candidate_src->right - candidate_src->left != other_src_width ||
-                candidate_src->bottom - candidate_src->top != other_src_height) {
-                is_frame_container = TRUE;
-            }
         } else {
             return STREAM_FRAME_NONE;
         }
@@ -283,11 +274,7 @@ static int is_next_stream_frame(DisplayChannel *display,
             return STREAM_FRAME_NONE;
         }
     }
-    if (is_frame_container) {
-        return STREAM_FRAME_CONTAINER;
-    } else {
-        return STREAM_FRAME_NATIVE;
-    }
+    return STREAM_FRAME_NATIVE;
 }
 
 static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *stream)
@@ -340,9 +327,6 @@ void detach_stream(DisplayChannel *display, Stream *stream,
     spice_assert(stream->current && stream->current->stream);
     spice_assert(stream->current->stream == stream);
     stream->current->stream = NULL;
-    if (detach_sized) {
-        stream->current->sized_stream = NULL;
-    }
     stream->current = NULL;
 }
 
@@ -545,9 +529,6 @@ void stream_trace_update(DisplayChannel *display, Drawable *drawable)
                 detach_stream(display, stream, FALSE);
             }
             attach_stream(display, drawable, stream);
-            if (is_next_frame == STREAM_FRAME_CONTAINER) {
-                drawable->sized_stream = stream;
-            }
             return;
         }
     }
@@ -590,9 +571,6 @@ void stream_maintenance(DisplayChannel *display,
             detach_stream(display, stream, FALSE);
             prev->streamable = FALSE; //prevent item trace
             attach_stream(display, candidate, stream);
-            if (is_next_frame == STREAM_FRAME_CONTAINER) {
-                candidate->sized_stream = stream;
-            }
         }
     } else if (candidate->streamable) {
         SpiceRect* prev_src = &prev->red_drawable->u.copy.src_area;
@@ -833,13 +811,12 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
         /* (1) The caller should detach the drawable from the stream. This will
          * lead to sending the drawable losslessly, as an ordinary drawable. */
         if (dcc_drawable_is_in_pipe(dcc, stream->current)) {
-            spice_debug("stream %d: upgrade by linked drawable. sized %d, box ==>",
-                        stream_id, stream->current->sized_stream != NULL);
+            spice_debug("stream %d: upgrade by linked drawable. box ==>",
+                        stream_id);
             rect_debug(&stream->current->red_drawable->bbox);
             goto clear_vis_region;
         }
-        spice_debug("stream %d: upgrade by drawable. sized %d, box ==>",
-                    stream_id, stream->current->sized_stream != NULL);
+        spice_debug("stream %d: upgrade by drawable. box ==>", stream_id);
         rect_debug(&stream->current->red_drawable->bbox);
         rcc = RED_CHANNEL_CLIENT(dcc);
         upgrade_item = spice_new(RedUpgradeItem, 1);

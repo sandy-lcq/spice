@@ -70,7 +70,6 @@ struct Drawable {
     int gradual_frames_count;
     int last_gradual_frame;
     Stream *stream;
-    Stream *sized_stream;
     int streamable;
     BitmapGradualType copy_bitmap_graduality;
     DependItem depend_items[3];

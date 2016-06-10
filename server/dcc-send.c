@@ -1683,10 +1683,6 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
     int is_sized, width, height;
     int ret;
 
-    if (!stream) {
-        spice_assert(drawable->sized_stream);
-        stream = drawable->sized_stream;
-    }
     spice_assert(drawable->red_drawable->type == QXL_DRAW_COPY);
 
     copy = &drawable->red_drawable->u.copy;
@@ -1696,15 +1692,12 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
 
     width = copy->src_area.right - copy->src_area.left;
     height = copy->src_area.bottom - copy->src_area.top;
-    is_sized = (drawable->sized_stream != NULL);
+    is_sized = (width != stream->width) || (height != stream->height) ||
+               !rect_is_equal(&drawable->red_drawable->bbox, &stream->dest_area);
 
     if (is_sized &&
         !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_SIZED_STREAM)) {
         return FALSE;
-    }
-    if (!is_sized) {
-        width = stream->width;
-        height = stream->height;
     }
 
     StreamAgent *agent = &dcc->stream_agents[get_stream_id(display, stream)];
@@ -2150,7 +2143,7 @@ static void marshall_qxl_drawable(RedChannelClient *rcc,
     spice_return_if_fail(display);
     /* allow sized frames to be streamed, even if they where replaced by another frame, since
      * newer frames might not cover sized frames completely if they are bigger */
-    if ((item->stream || item->sized_stream) && red_marshall_stream_data(rcc, m, item)) {
+    if (item->stream && red_marshall_stream_data(rcc, m, item)) {
         return;
     }
     if (display->enable_jpeg)
