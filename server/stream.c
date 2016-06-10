@@ -321,8 +321,7 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *s
     }
 }
 
-void detach_stream(DisplayChannel *display, Stream *stream,
-                   int detach_sized)
+void detach_stream(DisplayChannel *display, Stream *stream)
 {
     spice_assert(stream->current && stream->current->stream);
     spice_assert(stream->current->stream == stream);
@@ -526,7 +525,7 @@ void stream_trace_update(DisplayChannel *display, Drawable *drawable)
             if (stream->current) {
                 stream->current->streamable = FALSE; //prevent item trace
                 before_reattach_stream(display, stream, drawable);
-                detach_stream(display, stream, FALSE);
+                detach_stream(display, stream);
             }
             attach_stream(display, drawable, stream);
             return;
@@ -568,7 +567,7 @@ void stream_maintenance(DisplayChannel *display,
                                              stream, TRUE);
         if (is_next_frame != STREAM_FRAME_NONE) {
             before_reattach_stream(display, stream, candidate);
-            detach_stream(display, stream, FALSE);
+            detach_stream(display, stream);
             prev->streamable = FALSE; //prevent item trace
             attach_stream(display, candidate, stream);
         }
@@ -859,7 +858,7 @@ static void detach_stream_gracefully(DisplayChannel *display, Stream *stream,
         dcc_detach_stream_gracefully(dcc, stream, update_area_limit);
     }
     if (stream->current) {
-        detach_stream(display, stream, TRUE);
+        detach_stream(display, stream);
     }
 }
 
@@ -896,11 +895,11 @@ void stream_detach_behind(DisplayChannel *display, QRegion *region, Drawable *dr
             }
         }
         if (detach && stream->current) {
-            detach_stream(display, stream, TRUE);
+            detach_stream(display, stream);
         } else if (!is_connected) {
             if (stream->current &&
                 region_intersects(&stream->current->tree_item.base.rgn, region)) {
-                detach_stream(display, stream, TRUE);
+                detach_stream(display, stream);
             }
         }
     }

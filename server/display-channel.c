@@ -1337,7 +1337,7 @@ void drawable_unref(Drawable *drawable)
     spice_warn_if_fail(ring_is_empty(&drawable->pipes));
 
     if (drawable->stream) {
-        detach_stream(display, drawable->stream, TRUE);
+        detach_stream(display, drawable->stream);
     }
     region_destroy(&drawable->tree_item.base.rgn);
 
