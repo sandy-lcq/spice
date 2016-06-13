@@ -34,6 +34,9 @@
 #include "red-channel.h"
 #include "reds.h"
 #include "migration-protocol.h"
+#ifdef USE_LZ4
+#include <lz4.h>
+#endif
 
 /* todo: add flow control. i.e.,
  * (a) limit the tokens available for the client
@@ -41,10 +44,13 @@
  */
 /* 64K should be enough for all but the largest writes + 32 bytes hdr */
 #define BUF_SIZE (64 * 1024 + 32)
+#define COMPRESS_THRESHOLD 1000
 
 typedef struct RedVmcPipeItem {
     RedPipeItem base;
 
+    SpiceDataCompressionType type;
+    uint32_t uncompressed_data_size;
     /* writes which don't fit this will get split, this is not a problem */
     uint8_t buf[BUF_SIZE];
     uint32_t buf_used;
@@ -105,6 +111,53 @@ enum {
     RED_PIPE_ITEM_TYPE_PORT_EVENT,
 };
 
+static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
+                                                     uint16_t type,
+                                                     uint32_t size,
+                                                     uint8_t *msg);
+/* n is the data size (uncompressed)
+ * msg_item -- the current pipe item with the uncompressed data
+ * This function returns:
+ *  - NULL upon failure.
+ *  - a new pipe item with the compressed data in it upon success
+ */
+static RedVmcPipeItem* try_compress_lz4(SpiceVmcState *state, int n, RedVmcPipeItem *msg_item)
+{
+    RedVmcPipeItem *msg_item_compressed;
+    int compressed_data_count;
+
+    if (reds_stream_get_family(state->rcc->stream) == AF_UNIX) {
+        /* AF_LOCAL - data will not be compressed */
+        return NULL;
+    }
+    if (n <= COMPRESS_THRESHOLD) {
+        /* n <= threshold - data will not be compressed */
+        return NULL;
+    }
+    if (!red_channel_test_remote_cap(&state->channel, SPICE_SPICEVMC_CAP_DATA_COMPRESS_LZ4)) {
+        /* Client doesn't have compression cap - data will not be compressed */
+        return NULL;
+    }
+    msg_item_compressed = spice_new0(RedVmcPipeItem, 1);
+    red_pipe_item_init(&msg_item_compressed->base, RED_PIPE_ITEM_TYPE_SPICEVMC_DATA);
+    compressed_data_count = LZ4_compress_default((char*)&msg_item->buf,
+                                                 (char*)&msg_item_compressed->buf,
+                                                 n,
+                                                 BUF_SIZE);
+
+    if (compressed_data_count > 0 && compressed_data_count < n) {
+        msg_item_compressed->type = SPICE_DATA_COMPRESSION_TYPE_LZ4;
+        msg_item_compressed->uncompressed_data_size = n;
+        msg_item_compressed->buf_used = compressed_data_count;
+        free(msg_item);
+        return msg_item_compressed;
+    }
+
+    /* LZ4 compression failed or did non compress, fallback a non-compressed data is to be sent */
+    free(msg_item_compressed);
+    return NULL;
+}
+
 static RedPipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
                                                        void *opaque)
 {
@@ -121,6 +174,7 @@ static RedPipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *
 
     if (!state->pipe_item) {
         msg_item = spice_new0(RedVmcPipeItem, 1);
+        msg_item->type = SPICE_DATA_COMPRESSION_TYPE_NONE;
         red_pipe_item_init(&msg_item->base, RED_PIPE_ITEM_TYPE_SPICEVMC_DATA);
     } else {
         spice_assert(state->pipe_item->buf_used == 0);
@@ -132,6 +186,15 @@ static RedPipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *
                   sizeof(msg_item->buf));
     if (n > 0) {
         spice_debug("read from dev %d", n);
+#ifdef USE_LZ4
+        RedVmcPipeItem *msg_item_compressed;
+
+        msg_item_compressed = try_compress_lz4(state, n, msg_item);
+        if (msg_item_compressed != NULL) {
+            return &msg_item_compressed->base;
+        }
+#endif
+        msg_item->uncompressed_data_size = n;
         msg_item->buf_used = n;
         return &msg_item->base;
     } else {
@@ -275,11 +338,52 @@ static int spicevmc_channel_client_handle_migrate_data(RedChannelClient *rcc,
     return red_char_device_restore(state->chardev, &mig_data->base);
 }
 
-static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
-                                                      uint16_t type,
-                                                      uint32_t size,
-                                                      uint8_t *msg)
+static int handle_compressed_msg(SpiceVmcState *state, RedChannelClient *rcc,
+                                 SpiceMsgCompressedData *compressed_data_msg)
 {
+    /* NOTE: *decompressed is free by the char-device */
+    int decompressed_size;
+    uint8_t *decompressed;
+    RedCharDeviceWriteBuffer *write_buf;
+
+    write_buf = red_char_device_write_buffer_get(state->chardev, rcc->client,
+                                                 compressed_data_msg->uncompressed_size);
+    if (!write_buf) {
+        return FALSE;
+    }
+    decompressed = write_buf->buf;
+
+    switch (compressed_data_msg->type) {
+#ifdef USE_LZ4
+    case SPICE_DATA_COMPRESSION_TYPE_LZ4:
+        decompressed_size = LZ4_decompress_safe ((char *)compressed_data_msg->compressed_data,
+                                                 (char *)decompressed,
+                                                 compressed_data_msg->compressed_size,
+                                                 compressed_data_msg->uncompressed_size);
+        break;
+#endif
+    default:
+        spice_warning("Invalid Compression Type");
+        red_char_device_write_buffer_release(state->chardev, &write_buf);
+        return FALSE;
+    }
+    if (decompressed_size != compressed_data_msg->uncompressed_size) {
+        spice_warning("Decompression Error");
+        red_char_device_write_buffer_release(state->chardev, &write_buf);
+        return FALSE;
+    }
+    write_buf->buf_used = decompressed_size;
+    red_char_device_write_buffer_add(state->chardev, write_buf);
+    return TRUE;
+}
+
+static int spicevmc_red_channel_client_handle_message_parsed(RedChannelClient *rcc,
+                                                             uint32_t size,
+                                                             uint16_t type,
+                                                             void *msg)
+{
+    /* NOTE: *msg free by free() (when cb to spicevmc_red_channel_release_msg_rcv_buf
+     * with the compressed msg type) */
     SpiceVmcState *state;
     SpiceCharDeviceInterface *sif;
 
@@ -293,16 +397,19 @@ static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
         red_char_device_write_buffer_add(state->chardev, state->recv_from_client_buf);
         state->recv_from_client_buf = NULL;
         break;
+    case SPICE_MSGC_SPICEVMC_COMPRESSED_DATA:
+        return handle_compressed_msg(state, rcc, (SpiceMsgCompressedData*)msg);
+        break;
     case SPICE_MSGC_PORT_EVENT:
         if (size != sizeof(uint8_t)) {
             spice_warning("bad port event message size");
             return FALSE;
         }
         if (sif->base.minor_version >= 2 && sif->event != NULL)
-            sif->event(state->chardev_sin, *msg);
+            sif->event(state->chardev_sin, *(uint8_t*)msg);
         break;
     default:
-        return red_channel_client_handle_message(rcc, size, type, msg);
+        return red_channel_client_handle_message(rcc, size, type, (uint8_t*)msg);
     }
 
     return TRUE;
@@ -360,7 +467,18 @@ static void spicevmc_red_channel_send_data(RedChannelClient *rcc,
 {
     RedVmcPipeItem *i = SPICE_UPCAST(RedVmcPipeItem, item);
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_DATA, item);
+    /* for compatibility send using not compressed data message */
+    if (i->type == SPICE_DATA_COMPRESSION_TYPE_NONE) {
+        red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_DATA, item);
+    } else {
+        /* send as compressed */
+        red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_COMPRESSED_DATA, item);
+        SpiceMsgCompressedData compressed_msg = {
+            .type = i->type,
+            .uncompressed_size = i->uncompressed_data_size
+        };
+        spice_marshall_SpiceMsgCompressedData(m, &compressed_msg);
+    }
     spice_marshaller_add_ref(m, i->buf, i->buf_used);
 }
 
@@ -494,16 +612,20 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
     channel_cbs.handle_migrate_flush_mark = spicevmc_channel_client_handle_migrate_flush_mark;
     channel_cbs.handle_migrate_data = spicevmc_channel_client_handle_migrate_data;
 
-    state = (SpiceVmcState*)red_channel_create(sizeof(SpiceVmcState), reds,
+    state = (SpiceVmcState*)red_channel_create_parser(sizeof(SpiceVmcState), reds,
                                    reds_get_core_interface(reds), channel_type, id[channel_type]++,
                                    FALSE /* handle_acks */,
-                                   spicevmc_red_channel_client_handle_message,
+                                   spice_get_client_channel_parser(SPICE_CHANNEL_USBREDIR, NULL),
+                                   spicevmc_red_channel_client_handle_message_parsed,
                                    &channel_cbs,
                                    SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER);
     red_channel_init_outgoing_messages_window(&state->channel);
 
     client_cbs.connect = spicevmc_connect;
     red_channel_register_client_cbs(&state->channel, &client_cbs, NULL);
+#ifdef USE_LZ4
+    red_channel_set_cap(&state->channel, SPICE_SPICEVMC_CAP_DATA_COMPRESS_LZ4);
+#endif
 
     state->chardev = red_char_device_spicevmc_new(sin, reds, state);
     state->chardev_sin = sin;
