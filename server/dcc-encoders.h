@@ -43,7 +43,7 @@ void image_encoder_shared_stat_print(const ImageEncoderSharedData *shared_data);
 
 void image_encoders_init(ImageEncoders *enc, ImageEncoderSharedData *shared_data);
 void image_encoders_free(ImageEncoders *enc);
-void image_encoders_free_glz_drawable(ImageEncoders *enc, RedGlzDrawable *drawable);
+void red_glz_drawable_free(RedGlzDrawable *drawable);
 int image_encoders_free_some_independent_glz_drawables(ImageEncoders *enc);
 void image_encoders_free_glz_drawables(ImageEncoders *enc);
 void image_encoders_free_glz_drawables_to_free(ImageEncoders* enc);

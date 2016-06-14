@@ -1182,7 +1182,7 @@ static bool free_one_drawable(DisplayChannel *display, int force_glz_free)
         RingItem *glz_item, *next_item;
         RedGlzDrawable *glz;
         DRAWABLE_FOREACH_GLZ_SAFE(drawable, glz_item, next_item, glz) {
-            image_encoders_free_glz_drawable(glz->encoders, glz);
+            red_glz_drawable_free(glz);
         }
     }
     drawable_draw(display, drawable);

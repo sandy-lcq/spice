@@ -484,14 +484,15 @@ static void glz_drawable_instance_item_free(GlzDrawableInstanceItem *instance)
  * if possible.
  * NOTE - the caller should prevent encoding using the dictionary during this operation
  */
-void image_encoders_free_glz_drawable(ImageEncoders *enc, RedGlzDrawable *drawable)
+void red_glz_drawable_free(RedGlzDrawable *glz_drawable)
 {
-    RingItem *head_instance = ring_get_head(&drawable->instances);
+    ImageEncoders *enc = glz_drawable->encoders;
+    RingItem *head_instance = ring_get_head(&glz_drawable->instances);
     int cont = (head_instance != NULL);
 
     while (cont) {
-        if (drawable->instances_count == 1) {
-            /* Last instance: image_encoders_free_glz_drawable_instance will free the drawable */
+        if (glz_drawable->instances_count == 1) {
+            /* Last instance: glz_drawable_instance_item_free will free the glz_drawable */
             cont = FALSE;
         }
         GlzDrawableInstanceItem *instance = SPICE_CONTAINEROF(head_instance,
@@ -506,7 +507,7 @@ void image_encoders_free_glz_drawable(ImageEncoders *enc, RedGlzDrawable *drawab
         glz_drawable_instance_item_free(instance);
 
         if (cont) {
-            head_instance = ring_get_head(&drawable->instances);
+            head_instance = ring_get_head(&glz_drawable->instances);
         }
     }
 }
@@ -529,7 +530,7 @@ int image_encoders_free_some_independent_glz_drawables(ImageEncoders *enc)
         RedGlzDrawable *glz_drawable = SPICE_CONTAINEROF(ring_link, RedGlzDrawable, link);
         ring_link = ring_next(&enc->glz_drawables, ring_link);
         if (!glz_drawable->has_drawable) {
-            image_encoders_free_glz_drawable(enc, glz_drawable);
+            red_glz_drawable_free(glz_drawable);
             n++;
         }
     }
@@ -570,7 +571,7 @@ void image_encoders_free_glz_drawables(ImageEncoders *enc)
         RedGlzDrawable *drawable = SPICE_CONTAINEROF(ring_link, RedGlzDrawable, link);
         // no need to lock the to_free list, since we assured no other thread is encoding and
         // thus not other thread access the to_free list of the channel
-        image_encoders_free_glz_drawable(enc, drawable);
+        red_glz_drawable_free(drawable);
     }
     pthread_rwlock_unlock(&glz_dict->encode_lock);
 }
