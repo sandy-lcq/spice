@@ -422,12 +422,11 @@ static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
         if (!red_channel_client_is_connected(RED_CHANNEL_CLIENT(dcc))) {
             break;
         }
-        if (dcc->pixmap_cache && dcc->glz_dict) {
+        if (dcc->pixmap_cache && dcc->encoders.glz_dict) {
             dcc->pixmap_cache_generation = dcc->pixmap_cache->generation;
             /* TODO: move common.id? if it's used for a per client structure.. */
             spice_info("creating encoder with id == %d", dcc->id);
-            dcc->glz = glz_encoder_create(dcc->id, dcc->glz_dict->dict, &dcc->glz_data.usr);
-            if (!dcc->glz) {
+            if (!image_encoders_glz_create(&dcc->encoders, dcc->id)) {
                 spice_critical("create global lz failed");
             }
             return TRUE;
@@ -711,7 +710,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &display_channel->encoder_globals.zlib_glz_stat);
     spice_assert(bitmap_fmt_is_rgb(src->format));
-    GlzData *glz_data = &dcc->glz_data;
+    GlzData *glz_data = &dcc->encoders.glz_data;
     ZlibData *zlib_data;
     LzImageType type = bitmap_fmt_to_lz_image_type[src->format];
     RedGlzDrawable *glz_drawable;
@@ -733,7 +732,7 @@ static int dcc_compress_image_glz(DisplayChannelClient *dcc,
     glz_data->data.u.lines_data.next = 0;
     glz_data->data.u.lines_data.reverse = 0;
 
-    glz_size = glz_encode(dcc->glz, type, src->x, src->y,
+    glz_size = glz_encode(dcc->encoders.glz, type, src->x, src->y,
                           (src->flags & SPICE_BITMAP_FLAGS_TOP_DOWN), NULL, 0,
                           src->stride, glz_data->data.bufs_head->buf.bytes,
                           sizeof(glz_data->data.bufs_head->buf),
@@ -893,15 +892,15 @@ int dcc_compress_image(DisplayChannelClient *dcc,
         success = image_encoders_compress_quic(&dcc->encoders, dest, src, o_comp_data);
         break;
     case SPICE_IMAGE_COMPRESSION_GLZ:
-        if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->glz_dict->dict)) {
+        if ((src->x * src->y) < glz_enc_dictionary_get_size(dcc->encoders.glz_dict->dict)) {
             int frozen;
             /* using the global dictionary only if it is not frozen */
-            pthread_rwlock_rdlock(&dcc->glz_dict->encode_lock);
-            frozen = dcc->glz_dict->migrate_freeze;
+            pthread_rwlock_rdlock(&dcc->encoders.glz_dict->encode_lock);
+            frozen = dcc->encoders.glz_dict->migrate_freeze;
             if (!frozen) {
                 success = dcc_compress_image_glz(dcc, dest, src, drawable, o_comp_data);
             }
-            pthread_rwlock_unlock(&dcc->glz_dict->encode_lock);
+            pthread_rwlock_unlock(&dcc->encoders.glz_dict->encode_lock);
             if (!frozen) {
                 break;
             }
@@ -1053,6 +1052,8 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
 
 static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init)
 {
+    gboolean success;
+
     spice_return_val_if_fail(dcc->expect_init, FALSE);
     dcc->expect_init = FALSE;
 
@@ -1062,11 +1063,12 @@ static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init
                                          init->pixmap_cache_size);
     spice_return_val_if_fail(dcc->pixmap_cache, FALSE);
 
-    spice_return_val_if_fail(!dcc->glz_dict, FALSE);
-    dcc->glz_dict = dcc_get_glz_dictionary(dcc,
-                                           init->glz_dictionary_id,
-                                           init->glz_dictionary_window_size);
-    spice_return_val_if_fail(dcc->glz_dict, FALSE);
+    spice_return_val_if_fail(!dcc->encoders.glz_dict, FALSE);
+    success = image_encoders_get_glz_dictionary(&dcc->encoders,
+                                                RED_CHANNEL_CLIENT(dcc)->client,
+                                                init->glz_dictionary_id,
+                                                init->glz_dictionary_window_size);
+    spice_return_val_if_fail(success, FALSE);
 
     return TRUE;
 }
@@ -1166,12 +1168,12 @@ int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void
 static int dcc_handle_migrate_glz_dictionary(DisplayChannelClient *dcc,
                                              SpiceMigrateDataDisplay *migrate)
 {
-    spice_return_val_if_fail(!dcc->glz_dict, FALSE);
+    spice_return_val_if_fail(!dcc->encoders.glz_dict, FALSE);
 
-    dcc->glz_dict = dcc_restore_glz_dictionary(dcc,
-                                               migrate->glz_dict_id,
-                                               &migrate->glz_dict_data);
-    return dcc->glz_dict != NULL;
+    return image_encoders_restore_glz_dictionary(&dcc->encoders,
+                                                 RED_CHANNEL_CLIENT(dcc)->client,
+                                                 migrate->glz_dict_id,
+                                                 &migrate->glz_dict_data);
 }
 
 static int restore_surface(DisplayChannelClient *dcc, uint32_t surface_id)
@@ -1264,8 +1266,7 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     }
 
     if (dcc_handle_migrate_glz_dictionary(dcc, migrate_data)) {
-        dcc->glz =
-            glz_encoder_create(dcc->id, dcc->glz_dict->dict, &dcc->glz_data.usr);
+        image_encoders_glz_create(&dcc->encoders, dcc->id);
     } else {
         spice_critical("restoring global lz dictionary failed");
     }

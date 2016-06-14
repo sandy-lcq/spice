@@ -330,7 +330,7 @@ static void glz_usr_free_image(GlzEncoderUsrContext *usr, GlzUsrImageContext *im
     GlzData *lz_data = (GlzData *)usr;
     GlzDrawableInstanceItem *glz_drawable_instance = (GlzDrawableInstanceItem *)image;
     DisplayChannelClient *drawable_cc = glz_drawable_instance->glz_drawable->dcc;
-    DisplayChannelClient *this_cc = SPICE_CONTAINEROF(lz_data, DisplayChannelClient, glz_data);
+    DisplayChannelClient *this_cc = SPICE_CONTAINEROF(lz_data, DisplayChannelClient, encoders.glz_data);
     if (this_cc == drawable_cc) {
         dcc_free_glz_drawable_instance(drawable_cc, glz_drawable_instance);
     } else {
@@ -348,16 +348,16 @@ static void glz_usr_free_image(GlzEncoderUsrContext *usr, GlzUsrImageContext *im
     }
 }
 
-static void dcc_init_glz_data(DisplayChannelClient *dcc)
+static void image_encoders_init_glz_data(ImageEncoders *enc)
 {
-    dcc->glz_data.usr.error = glz_usr_error;
-    dcc->glz_data.usr.warn = glz_usr_warn;
-    dcc->glz_data.usr.info = glz_usr_warn;
-    dcc->glz_data.usr.malloc = glz_usr_malloc;
-    dcc->glz_data.usr.free = glz_usr_free;
-    dcc->glz_data.usr.more_space = glz_usr_more_space;
-    dcc->glz_data.usr.more_lines = glz_usr_more_lines;
-    dcc->glz_data.usr.free_image = glz_usr_free_image;
+    enc->glz_data.usr.error = glz_usr_error;
+    enc->glz_data.usr.warn = glz_usr_warn;
+    enc->glz_data.usr.info = glz_usr_warn;
+    enc->glz_data.usr.malloc = glz_usr_malloc;
+    enc->glz_data.usr.free = glz_usr_free;
+    enc->glz_data.usr.more_space = glz_usr_more_space;
+    enc->glz_data.usr.more_lines = glz_usr_more_lines;
+    enc->glz_data.usr.free_image = glz_usr_free_image;
 }
 
 static void image_encoders_init_jpeg(ImageEncoders *enc)
@@ -405,7 +405,7 @@ void dcc_encoders_init(DisplayChannelClient *dcc, ImageEncoderSharedData *shared
     spice_assert(shared_data);
     enc->shared_data = shared_data;
 
-    dcc_init_glz_data(dcc);
+    image_encoders_init_glz_data(enc);
     image_encoders_init_quic(enc);
     image_encoders_init_lz(enc);
     image_encoders_init_jpeg(enc);
@@ -500,9 +500,9 @@ void dcc_free_glz_drawable(DisplayChannelClient *dcc, RedGlzDrawable *drawable)
                                                         glz_link);
         if (!ring_item_is_linked(&instance->free_link)) {
             // the instance didn't get out from window yet
-            glz_enc_dictionary_remove_image(dcc->glz_dict->dict,
+            glz_enc_dictionary_remove_image(dcc->encoders.glz_dict->dict,
                                             instance->context,
-                                            &dcc->glz_data.usr);
+                                            &dcc->encoders.glz_data.usr);
         }
         dcc_free_glz_drawable_instance(dcc, instance);
 
@@ -541,7 +541,7 @@ void dcc_free_glz_drawables_to_free(DisplayChannelClient* dcc)
 {
     RingItem *ring_link;
 
-    if (!dcc->glz_dict) {
+    if (!dcc->encoders.glz_dict) {
         return;
     }
     pthread_mutex_lock(&dcc->glz_drawables_inst_to_free_lock);
@@ -559,7 +559,7 @@ void dcc_free_glz_drawables_to_free(DisplayChannelClient* dcc)
 void dcc_free_glz_drawables(DisplayChannelClient *dcc)
 {
     RingItem *ring_link;
-    GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
+    GlzSharedDictionary *glz_dict = dcc ? dcc->encoders.glz_dict : NULL;
 
     if (!glz_dict) {
         return;
@@ -576,11 +576,11 @@ void dcc_free_glz_drawables(DisplayChannelClient *dcc)
     pthread_rwlock_unlock(&glz_dict->encode_lock);
 }
 
-void dcc_freeze_glz(DisplayChannelClient *dcc)
+void image_encoders_freeze_glz(ImageEncoders *enc)
 {
-    pthread_rwlock_wrlock(&dcc->glz_dict->encode_lock);
-    dcc->glz_dict->migrate_freeze = TRUE;
-    pthread_rwlock_unlock(&dcc->glz_dict->encode_lock);
+    pthread_rwlock_wrlock(&enc->glz_dict->encode_lock);
+    enc->glz_dict->migrate_freeze = TRUE;
+    pthread_rwlock_unlock(&enc->glz_dict->encode_lock);
 }
 
 static GlzSharedDictionary *glz_shared_dictionary_new(RedClient *client, uint8_t id,
@@ -623,82 +623,95 @@ static GlzSharedDictionary *find_glz_dictionary(RedClient *client, uint8_t dict_
 
 #define MAX_LZ_ENCODERS MAX_CACHE_CLIENTS
 
-static GlzSharedDictionary *create_glz_dictionary(DisplayChannelClient *dcc,
+static GlzSharedDictionary *create_glz_dictionary(ImageEncoders *enc,
+                                                  RedClient *client,
                                                   uint8_t id, int window_size)
 {
     spice_info("Lz Window %d Size=%d", id, window_size);
 
     GlzEncDictContext *glz_dict =
-        glz_enc_dictionary_create(window_size, MAX_LZ_ENCODERS, &dcc->glz_data.usr);
+        glz_enc_dictionary_create(window_size, MAX_LZ_ENCODERS, &enc->glz_data.usr);
 
-    return glz_shared_dictionary_new(RED_CHANNEL_CLIENT(dcc)->client, id, glz_dict);
+    return glz_shared_dictionary_new(client, id, glz_dict);
 }
 
-GlzSharedDictionary *dcc_get_glz_dictionary(DisplayChannelClient *dcc,
-                                            uint8_t id, int window_size)
+gboolean image_encoders_get_glz_dictionary(ImageEncoders *enc,
+                                           RedClient *client,
+                                           uint8_t id, int window_size)
 {
     GlzSharedDictionary *shared_dict;
 
     pthread_mutex_lock(&glz_dictionary_list_lock);
 
-    shared_dict = find_glz_dictionary(RED_CHANNEL_CLIENT(dcc)->client, id);
+    shared_dict = find_glz_dictionary(client, id);
     if (shared_dict) {
         shared_dict->refs++;
     } else {
-        shared_dict = create_glz_dictionary(dcc, id, window_size);
+        shared_dict = create_glz_dictionary(enc, client, id, window_size);
         ring_add(&glz_dictionary_list, &shared_dict->base);
     }
 
     pthread_mutex_unlock(&glz_dictionary_list_lock);
-    return shared_dict;
+    enc->glz_dict = shared_dict;
+    return shared_dict != NULL;
 }
 
-static GlzSharedDictionary *restore_glz_dictionary(DisplayChannelClient *dcc,
+static GlzSharedDictionary *restore_glz_dictionary(ImageEncoders *enc,
+                                                   RedClient *client,
                                                    uint8_t id,
                                                    GlzEncDictRestoreData *restore_data)
 {
     GlzEncDictContext *glz_dict =
-        glz_enc_dictionary_restore(restore_data, &dcc->glz_data.usr);
+        glz_enc_dictionary_restore(restore_data, &enc->glz_data.usr);
 
-    return glz_shared_dictionary_new(RED_CHANNEL_CLIENT(dcc)->client, id, glz_dict);
+    return glz_shared_dictionary_new(client, id, glz_dict);
 }
 
-GlzSharedDictionary *dcc_restore_glz_dictionary(DisplayChannelClient *dcc,
-                                                uint8_t id,
-                                                GlzEncDictRestoreData *restore_data)
+gboolean image_encoders_restore_glz_dictionary(ImageEncoders *enc,
+                                               RedClient *client,
+                                               uint8_t id,
+                                               GlzEncDictRestoreData *restore_data)
 {
     GlzSharedDictionary *shared_dict = NULL;
 
     pthread_mutex_lock(&glz_dictionary_list_lock);
 
-    shared_dict = find_glz_dictionary(RED_CHANNEL_CLIENT(dcc)->client, id);
+    shared_dict = find_glz_dictionary(client, id);
 
     if (shared_dict) {
         shared_dict->refs++;
     } else {
-        shared_dict = restore_glz_dictionary(dcc, id, restore_data);
+        shared_dict = restore_glz_dictionary(enc, client, id, restore_data);
         ring_add(&glz_dictionary_list, &shared_dict->base);
     }
 
     pthread_mutex_unlock(&glz_dictionary_list_lock);
-    return shared_dict;
+    enc->glz_dict = shared_dict;
+    return shared_dict != NULL;
+}
+
+gboolean image_encoders_glz_create(ImageEncoders *enc, uint8_t id)
+{
+    enc->glz = glz_encoder_create(id, enc->glz_dict->dict, &enc->glz_data.usr);
+    return enc->glz != NULL;
 }
 
 /* destroy encoder, and dictionary if no one uses it*/
 void dcc_release_glz(DisplayChannelClient *dcc)
 {
+    ImageEncoders *enc = &dcc->encoders;
     GlzSharedDictionary *shared_dict;
 
     dcc_free_glz_drawables(dcc);
 
-    glz_encoder_destroy(dcc->glz);
-    dcc->glz = NULL;
+    glz_encoder_destroy(enc->glz);
+    enc->glz = NULL;
 
-    if (!(shared_dict = dcc->glz_dict)) {
+    if (!(shared_dict = enc->glz_dict)) {
         return;
     }
 
-    dcc->glz_dict = NULL;
+    enc->glz_dict = NULL;
     pthread_mutex_lock(&glz_dictionary_list_lock);
     if (--shared_dict->refs != 0) {
         pthread_mutex_unlock(&glz_dictionary_list_lock);
@@ -706,7 +719,7 @@ void dcc_release_glz(DisplayChannelClient *dcc)
     }
     ring_remove(&shared_dict->base);
     pthread_mutex_unlock(&glz_dictionary_list_lock);
-    glz_enc_dictionary_destroy(shared_dict->dict, &dcc->glz_data.usr);
+    glz_enc_dictionary_destroy(shared_dict->dict, &enc->glz_data.usr);
     free(shared_dict);
 }
 

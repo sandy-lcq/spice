@@ -48,7 +48,8 @@ void             dcc_free_glz_drawable                       (DisplayChannelClie
 int              dcc_free_some_independent_glz_drawables     (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawables                      (DisplayChannelClient *dcc);
 void             dcc_free_glz_drawables_to_free              (DisplayChannelClient* dcc);
-void             dcc_freeze_glz                              (DisplayChannelClient *dcc);
+gboolean image_encoders_glz_create(ImageEncoders *enc, uint8_t id);
+void image_encoders_freeze_glz(ImageEncoders *enc);
 void             dcc_release_glz                             (DisplayChannelClient *dcc);
 
 #define RED_COMPRESS_BUF_SIZE (1024 * 64)
@@ -79,11 +80,13 @@ typedef struct GlzSharedDictionary {
     RedClient *client; // channel clients of the same client share the dict
 } GlzSharedDictionary;
 
-GlzSharedDictionary* dcc_get_glz_dictionary                  (DisplayChannelClient *dcc,
-                                                              uint8_t id, int window_size);
-GlzSharedDictionary* dcc_restore_glz_dictionary              (DisplayChannelClient *dcc,
-                                                              uint8_t id,
-                                                              GlzEncDictRestoreData *restore_data);
+gboolean image_encoders_get_glz_dictionary(ImageEncoders *enc,
+                                           struct RedClient *client,
+                                           uint8_t id, int window_size);
+gboolean image_encoders_restore_glz_dictionary(ImageEncoders *enc,
+                                               struct RedClient *client,
+                                               uint8_t id,
+                                               GlzEncDictRestoreData *restore_data);
 
 typedef struct  {
     RedCompressBuf *bufs_head;
@@ -200,6 +203,11 @@ struct ImageEncoders {
 
     ZlibData zlib_data;
     ZlibEncoder *zlib;
+
+    /* global lz encoding entities */
+    GlzSharedDictionary *glz_dict;
+    GlzEncoderContext *glz;
+    GlzData glz_data;
 };
 
 typedef struct compress_send_data_t {

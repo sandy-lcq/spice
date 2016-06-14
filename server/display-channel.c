@@ -1202,7 +1202,7 @@ void display_channel_free_some(DisplayChannel *display)
     spice_debug("#draw=%d, #glz_draw=%d", display->drawable_count,
                 display->glz_drawable_count);
     FOREACH_CLIENT(display, link, next, dcc) {
-        GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
+        GlzSharedDictionary *glz_dict = dcc->encoders.glz_dict;
 
         if (glz_dict) {
             // encoding using the dictionary is prevented since the following operations might
@@ -1217,7 +1217,7 @@ void display_channel_free_some(DisplayChannel *display)
     }
 
     FOREACH_CLIENT(display, link, next, dcc) {
-        GlzSharedDictionary *glz_dict = dcc ? dcc->glz_dict : NULL;
+        GlzSharedDictionary *glz_dict = dcc->encoders.glz_dict;
 
         if (glz_dict) {
             pthread_rwlock_unlock(&glz_dict->encode_lock);

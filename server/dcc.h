@@ -84,10 +84,6 @@ struct DisplayChannelClient {
     } send_data;
 
     /* global lz encoding entities */
-    GlzSharedDictionary *glz_dict;
-    GlzEncoderContext   *glz;
-    GlzData glz_data;
-
     Ring glz_drawables;               // all the living lz drawable, ordered by encoding time
     Ring glz_drawables_inst_to_free;               // list of instances to be freed
     pthread_mutex_t glz_drawables_inst_to_free_lock;
