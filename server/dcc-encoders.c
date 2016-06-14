@@ -26,8 +26,7 @@
 
 #define ZLIB_DEFAULT_COMPRESSION_LEVEL 3
 
-static void image_encoders_free_glz_drawable_instance(ImageEncoders *enc,
-                                                      GlzDrawableInstanceItem *instance);
+static void glz_drawable_instance_item_free(GlzDrawableInstanceItem *instance);
 static void image_encoders_release_glz(ImageEncoders *enc);
 
 
@@ -334,7 +333,7 @@ static void glz_usr_free_image(GlzEncoderUsrContext *usr, GlzUsrImageContext *im
     ImageEncoders *drawable_enc = glz_drawable_instance->glz_drawable->encoders;
     ImageEncoders *this_enc = SPICE_CONTAINEROF(lz_data, ImageEncoders, glz_data);
     if (this_enc == drawable_enc) {
-        image_encoders_free_glz_drawable_instance(drawable_enc, glz_drawable_instance);
+        glz_drawable_instance_item_free(glz_drawable_instance);
     } else {
         /* The glz dictionary is shared between all DisplayChannelClient
          * instances that belong to the same client, and glz_usr_free_image
@@ -444,8 +443,7 @@ void image_encoders_free(ImageEncoders *enc)
    it is not used by Drawable).
    NOTE - 1) can be called only by the display channel that created the drawable
           2) it is assumed that the instance was already removed from the dictionary*/
-static void image_encoders_free_glz_drawable_instance(ImageEncoders *enc,
-                                                      GlzDrawableInstanceItem *instance)
+static void glz_drawable_instance_item_free(GlzDrawableInstanceItem *instance)
 {
     RedGlzDrawable *glz_drawable;
 
@@ -454,7 +452,6 @@ static void image_encoders_free_glz_drawable_instance(ImageEncoders *enc,
 
     glz_drawable = instance->glz_drawable;
 
-    spice_assert(glz_drawable->encoders == enc);
     spice_assert(glz_drawable->instances_count > 0);
 
     ring_remove(&instance->glz_link);
@@ -473,7 +470,7 @@ static void image_encoders_free_glz_drawable_instance(ImageEncoders *enc,
             ring_remove(&glz_drawable->drawable_link);
         }
         red_drawable_unref(glz_drawable->red_drawable);
-        enc->shared_data->glz_drawable_count--;
+        glz_drawable->encoders->shared_data->glz_drawable_count--;
         if (ring_item_is_linked(&glz_drawable->link)) {
             ring_remove(&glz_drawable->link);
         }
@@ -506,7 +503,7 @@ void image_encoders_free_glz_drawable(ImageEncoders *enc, RedGlzDrawable *drawab
                                             instance->context,
                                             &enc->glz_data.usr);
         }
-        image_encoders_free_glz_drawable_instance(enc, instance);
+        glz_drawable_instance_item_free(instance);
 
         if (cont) {
             head_instance = ring_get_head(&drawable->instances);
@@ -551,7 +548,7 @@ void image_encoders_free_glz_drawables_to_free(ImageEncoders* enc)
         GlzDrawableInstanceItem *drawable_instance = SPICE_CONTAINEROF(ring_link,
                                                                  GlzDrawableInstanceItem,
                                                                  free_link);
-        image_encoders_free_glz_drawable_instance(enc, drawable_instance);
+        glz_drawable_instance_item_free(drawable_instance);
     }
     pthread_mutex_unlock(&enc->glz_drawables_inst_to_free_lock);
 }
