@@ -396,7 +396,7 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
     ring_init(&dcc->glz_drawables_inst_to_free);
     pthread_mutex_init(&dcc->glz_drawables_inst_to_free_lock, NULL);
 
-    dcc_encoders_init(dcc, &display->encoder_globals);
+    image_encoders_init(&dcc->encoders, &display->encoder_globals);
 
     return dcc;
 }

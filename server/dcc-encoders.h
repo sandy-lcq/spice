@@ -41,7 +41,7 @@ void image_encoder_shared_init(ImageEncoderSharedData *shared_data);
 void image_encoder_shared_stat_reset(ImageEncoderSharedData *shared_data);
 void image_encoder_shared_stat_print(const ImageEncoderSharedData *shared_data);
 
-void dcc_encoders_init(DisplayChannelClient *dcc, ImageEncoderSharedData *shared_data);
+void image_encoders_init(ImageEncoders *enc, ImageEncoderSharedData *shared_data);
 void image_encoders_free(ImageEncoders *enc);
 void             dcc_free_glz_drawable                       (DisplayChannelClient *dcc,
                                                               RedGlzDrawable *drawable);

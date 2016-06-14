@@ -398,10 +398,8 @@ static void image_encoders_init_zlib(ImageEncoders *enc)
     }
 }
 
-void dcc_encoders_init(DisplayChannelClient *dcc, ImageEncoderSharedData *shared_data)
+void image_encoders_init(ImageEncoders *enc, ImageEncoderSharedData *shared_data)
 {
-    ImageEncoders *enc = &dcc->encoders;
-
     spice_assert(shared_data);
     enc->shared_data = shared_data;
 
