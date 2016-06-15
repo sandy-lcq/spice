@@ -1657,12 +1657,6 @@ static void reds_send_link_result(RedLinkInfo *link, uint32_t error)
     reds_stream_write_all(link->stream, &error, sizeof(error));
 }
 
-int reds_expects_link_id(uint32_t connection_id)
-{
-    spice_info("TODO: keep a list of connection_id's from migration, compare to them");
-    return 1;
-}
-
 static void reds_mig_target_client_add(RedsState *reds, RedClient *client)
 {
     RedsMigTargetClient *mig_client;
