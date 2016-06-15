@@ -345,7 +345,6 @@ static int handle_compressed_msg(SpiceVmcState *state, RedChannelClient *rcc,
 {
     /* NOTE: *decompressed is free by the char-device */
     int decompressed_size;
-    uint8_t *decompressed;
     RedCharDeviceWriteBuffer *write_buf;
 
     write_buf = red_char_device_write_buffer_get(state->chardev, rcc->client,
@@ -353,16 +352,17 @@ static int handle_compressed_msg(SpiceVmcState *state, RedChannelClient *rcc,
     if (!write_buf) {
         return FALSE;
     }
-    decompressed = write_buf->buf;
 
     switch (compressed_data_msg->type) {
 #ifdef USE_LZ4
-    case SPICE_DATA_COMPRESSION_TYPE_LZ4:
+    case SPICE_DATA_COMPRESSION_TYPE_LZ4: {
+        uint8_t *decompressed = write_buf->buf;
         decompressed_size = LZ4_decompress_safe ((char *)compressed_data_msg->compressed_data,
                                                  (char *)decompressed,
                                                  compressed_data_msg->compressed_size,
                                                  compressed_data_msg->uncompressed_size);
         break;
+    }
 #endif
     default:
         spice_warning("Invalid Compression Type");
