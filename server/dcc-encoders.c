@@ -520,7 +520,7 @@ static void glz_drawable_instance_item_free(GlzDrawableInstanceItem *instance)
  * if possible.
  * NOTE - the caller should prevent encoding using the dictionary during this operation
  */
-void red_glz_drawable_free(RedGlzDrawable *glz_drawable)
+static void red_glz_drawable_free(RedGlzDrawable *glz_drawable)
 {
     ImageEncoders *enc = glz_drawable->encoders;
     RingItem *head_instance = ring_get_head(&glz_drawable->instances);
