@@ -121,6 +121,7 @@ static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
  *  - NULL upon failure.
  *  - a new pipe item with the compressed data in it upon success
  */
+#ifdef USE_LZ4
 static RedVmcPipeItem* try_compress_lz4(SpiceVmcState *state, int n, RedVmcPipeItem *msg_item)
 {
     RedVmcPipeItem *msg_item_compressed;
@@ -157,6 +158,7 @@ static RedVmcPipeItem* try_compress_lz4(SpiceVmcState *state, int n, RedVmcPipeI
     free(msg_item_compressed);
     return NULL;
 }
+#endif
 
 static RedPipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
                                                        void *opaque)
