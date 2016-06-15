@@ -388,7 +388,7 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 
     dcc_init_stream_agents(dcc);
 
-    image_encoders_init(&dcc->encoders, &display->encoder_globals);
+    image_encoders_init(&dcc->encoders, &display->encoder_shared_data);
 
     return dcc;
 }
@@ -720,7 +720,7 @@ int dcc_compress_image(DisplayChannelClient *dcc,
     stat_start_time_t start_time;
     int success = FALSE;
 
-    stat_start_time_init(&start_time, &display_channel->encoder_globals.off_stat);
+    stat_start_time_init(&start_time, &display_channel->encoder_shared_data.off_stat);
 
     image_compression = get_compression_for_bitmap(src, dcc->image_compression, drawable);
     switch (image_compression) {
@@ -771,7 +771,7 @@ lz_compress:
 
     if (!success) {
         uint64_t image_size = src->stride * src->y;
-        stat_compress_add(&display_channel->encoder_globals.off_stat, start_time, image_size, image_size);
+        stat_compress_add(&display_channel->encoder_shared_data.off_stat, start_time, image_size, image_size);
     }
 
     return success;

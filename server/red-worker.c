@@ -823,7 +823,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     // streams? but without streams also leak
     spice_debug("OOM1 #draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
-                display->encoder_globals.glz_drawable_count,
+                display->encoder_shared_data.glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
     while (red_process_display(worker, &ring_is_empty)) {
@@ -835,7 +835,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     }
     spice_debug("OOM2 #draw=%u, #glz_draw=%u current %u pipes %u",
                 display->drawable_count,
-                display->encoder_globals.glz_drawable_count,
+                display->encoder_shared_data.glz_drawable_count,
                 display->current_size,
                 red_channel_sum_pipes_size(display_red_channel));
     red_qxl_clear_pending(worker->qxl->st, RED_DISPATCHER_PENDING_OOM);

@@ -38,7 +38,7 @@ void display_channel_compress_stats_reset(DisplayChannel *display)
 {
     spice_return_if_fail(display);
 
-    image_encoder_shared_stat_reset(&display->encoder_globals);
+    image_encoder_shared_stat_reset(&display->encoder_shared_data);
 }
 
 void display_channel_compress_stats_print(const DisplayChannel *display_channel)
@@ -47,7 +47,7 @@ void display_channel_compress_stats_print(const DisplayChannel *display_channel)
     spice_return_if_fail(display_channel);
 
     spice_info("==> Compression stats for display %u", display_channel->common.base.id);
-    image_encoder_shared_stat_print(&display_channel->encoder_globals);
+    image_encoder_shared_stat_print(&display_channel->encoder_shared_data);
 #endif
 }
 
@@ -1204,7 +1204,7 @@ void display_channel_free_some(DisplayChannel *display)
     GList *link, *next;
 
     spice_debug("#draw=%d, #glz_draw=%d", display->drawable_count,
-                display->encoder_globals.glz_drawable_count);
+                display->encoder_shared_data.glz_drawable_count);
     FOREACH_CLIENT(display, link, next, dcc) {
         GlzSharedDictionary *glz_dict = dcc->encoders.glz_dict;
 
@@ -1854,7 +1854,7 @@ static void on_disconnect(RedChannelClient *rcc)
     // this was the last channel client
     spice_debug("#draw=%d, #glz_draw=%d",
                 display->drawable_count,
-                display->encoder_globals.glz_drawable_count);
+                display->encoder_shared_data.glz_drawable_count);
 }
 
 static int handle_migrate_flush_mark(RedChannelClient *rcc)
@@ -1927,7 +1927,7 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
     display->non_cache_counter = stat_add_counter(reds, channel->stat,
                                                   "non_cache", TRUE);
 #endif
-    image_encoder_shared_init(&display->encoder_globals);
+    image_encoder_shared_init(&display->encoder_shared_data);
 
     display->n_surfaces = n_surfaces;
     display->renderer = RED_RENDERER_INVALID;

@@ -208,7 +208,7 @@ struct DisplayChannel {
     uint64_t *add_to_cache_counter;
     uint64_t *non_cache_counter;
 #endif
-    ImageEncoderSharedData encoder_globals;
+    ImageEncoderSharedData encoder_shared_data;
 };
 
 static inline int get_stream_id(DisplayChannel *display, Stream *stream)
