@@ -88,8 +88,6 @@ libserver_la_SOURCES =				\
 	inputs-channel-client.h		\
 	jpeg-encoder.c				\
 	jpeg-encoder.h				\
-	lz4-encoder.c				\
-	lz4-encoder.h				\
 	main-channel.c				\
 	main-channel.h				\
 	main-channel-client.c			\
@@ -153,6 +151,13 @@ libserver_la_SOURCES =				\
 	dcc-encoders.c					\
 	dcc-encoders.h					\
 	$(NULL)
+
+if HAVE_LZ4
+libserver_la_SOURCES +=	\
+	lz4-encoder.c				\
+	lz4-encoder.h				\
+	$(NULL)
+endif
 
 if HAVE_SMARTCARD
 libserver_la_SOURCES +=	\

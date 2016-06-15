@@ -18,8 +18,6 @@
 #include <config.h>
 #endif
 
-#ifdef USE_LZ4
-
 #define SPICE_LOG_DOMAIN "SpiceLz4Encoder"
 
 #include <arpa/inet.h>
@@ -119,5 +117,3 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
 
     return out_size;
 }
-
-#endif // USE_LZ4
