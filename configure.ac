@@ -282,7 +282,7 @@ AC_MSG_NOTICE([
         prefix:                   ${prefix}
         C compiler:               ${CC}
 
-        LZ4 support:              ${enable_lz4}
+        LZ4 support:              ${have_lz4}
         Smartcard:                ${have_smartcard}
         GStreamer:                ${enable_gstreamer}
         SASL support:             ${have_sasl}
