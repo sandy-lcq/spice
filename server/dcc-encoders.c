@@ -578,7 +578,7 @@ void image_encoders_free_glz_drawables(ImageEncoders *enc)
     pthread_rwlock_unlock(&glz_dict->encode_lock);
 }
 
-void image_encoders_freeze_glz(ImageEncoders *enc)
+static void image_encoders_freeze_glz(ImageEncoders *enc)
 {
     pthread_rwlock_wrlock(&enc->glz_dict->encode_lock);
     enc->glz_dict->migrate_freeze = TRUE;
