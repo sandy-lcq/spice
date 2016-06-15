@@ -61,7 +61,7 @@ case $host_cpu in
   x86_64)
         ;;
   *)
-        SPICE_WARNING([spice-server on non-x86_64 architectures hasn't been extensively tested])
+        SPICE_WARNING([spice-server on non-x86_64 architectures has not been extensively tested])
 esac
 
 dnl =========================================================================
