@@ -1059,7 +1059,7 @@ static void handle_dev_set_streaming_video(void *opaque, void *payload)
     display_channel_set_stream_video(worker->display_channel, msg->streaming_video);
 }
 
-void handle_dev_set_video_codecs(void *opaque, void *payload)
+static void handle_dev_set_video_codecs(void *opaque, void *payload)
 {
     RedWorkerMessageSetVideoCodecs *msg = payload;
     RedWorker *worker = opaque;

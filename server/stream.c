@@ -706,13 +706,13 @@ static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
                                         agent->dcc->streams_max_latency);
 }
 
-void bitmap_ref(gpointer data)
+static void bitmap_ref(gpointer data)
 {
     RedDrawable *red_drawable = (RedDrawable*)data;
     red_drawable_ref(red_drawable);
 }
 
-void bitmap_unref(gpointer data)
+static void bitmap_unref(gpointer data)
 {
     RedDrawable *red_drawable = (RedDrawable*)data;
     red_drawable_unref(red_drawable);

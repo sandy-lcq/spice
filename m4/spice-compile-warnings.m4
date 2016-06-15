@@ -64,7 +64,6 @@ AC_DEFUN([SPICE_COMPILE_WARNINGS],[
 
     # We want to enable thse, but need to sort out the
     # decl mess with  gtk/generated_*.c
-    dontwarn="$dontwarn -Wmissing-prototypes"
     dontwarn="$dontwarn -Wmissing-declarations"
 
     # Stuff that C++ won't allow. Turn them back on later

@@ -1670,8 +1670,8 @@ int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc,
     return ring_item_is_linked(&item->link);
 }
 
-void red_channel_client_pipe_add_tail(RedChannelClient *rcc,
-                                              RedPipeItem *item)
+static void red_channel_client_pipe_add_tail(RedChannelClient *rcc,
+                                             RedPipeItem *item)
 {
     client_pipe_add(rcc, item, rcc->pipe.prev);
 }
