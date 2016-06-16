@@ -22,6 +22,7 @@
 #define _H_VIDEO_ENCODER
 
 #include <inttypes.h>
+#include <glib.h>
 #include <common/draw.h>
 
 
