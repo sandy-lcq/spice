@@ -34,7 +34,6 @@
 struct RedClient;
 
 typedef struct RedCompressBuf RedCompressBuf;
-typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct ImageEncoders ImageEncoders;
 typedef struct ImageEncoderSharedData ImageEncoderSharedData;
 typedef struct GlzSharedDictionary GlzSharedDictionary;

@@ -32,6 +32,7 @@
 
 #define MAX_GLZ_DRAWABLE_INSTANCES 2
 
+typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 
 struct GlzSharedDictionary {
