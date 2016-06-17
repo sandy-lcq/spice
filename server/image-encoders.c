@@ -488,6 +488,7 @@ void image_encoders_free(ImageEncoders *enc)
 #endif
     zlib_encoder_destroy(enc->zlib);
     enc->zlib = NULL;
+    pthread_mutex_destroy(&enc->glz_drawables_inst_to_free_lock);
 }
 
 /* Remove from the to_free list and the instances_list.
@@ -820,6 +821,7 @@ static void image_encoders_release_glz(ImageEncoders *enc)
     ring_remove(&shared_dict->base);
     pthread_mutex_unlock(&glz_dictionary_list_lock);
     glz_enc_dictionary_destroy(shared_dict->dict, &enc->glz_data.usr);
+    pthread_rwlock_destroy(&shared_dict->encode_lock);
     free(shared_dict);
 }
 
