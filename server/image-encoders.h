@@ -189,10 +189,10 @@ struct ImageEncoders {
 };
 
 typedef struct compress_send_data_t {
-    void* comp_buf;
+    RedCompressBuf *comp_buf;
     uint32_t comp_buf_size;
     SpicePalette *lzplt_palette;
-    int is_lossy;
+    gboolean is_lossy;
 } compress_send_data_t;
 
 int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
