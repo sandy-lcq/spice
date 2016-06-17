@@ -21,7 +21,7 @@
 #include "red-worker.h"
 #include "pixmap-cache.h"
 #include "cache-item.h"
-#include "dcc-encoders.h"
+#include "image-encoders.h"
 #include "stream.h"
 #include "display-limits.h"
 

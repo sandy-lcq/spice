@@ -15,8 +15,8 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef DCC_ENCODERS_H_
-#define DCC_ENCODERS_H_
+#ifndef IMAGE_ENCODERS_H_
+#define IMAGE_ENCODERS_H_
 
 #include <setjmp.h>
 #include <common/quic.h>
@@ -214,4 +214,4 @@ int image_encoders_compress_glz(ImageEncoders *enc,
 
 #define RED_RELEASE_BUNCH_SIZE 64
 
-#endif /* DCC_ENCODERS_H_ */
+#endif /* IMAGE_ENCODERS_H_ */

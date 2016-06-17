@@ -21,7 +21,7 @@
 
 #include <glib.h>
 
-#include "dcc-encoders.h"
+#include "image-encoders.h"
 #include "spice-bitmap-utils.h"
 #include "red-worker.h" // red_drawable_unref
 #include "pixmap-cache.h" // MAX_CACHE_CLIENTS

@@ -148,8 +148,8 @@ libserver_la_SOURCES =				\
 	dcc-send.c					\
 	dcc.h					\
 	display-limits.h			\
-	dcc-encoders.c					\
-	dcc-encoders.h					\
+	image-encoders.c					\
+	image-encoders.h					\
 	$(NULL)
 
 if HAVE_LZ4
