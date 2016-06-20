@@ -3570,7 +3570,7 @@ static const EnumNames video_encoder_names[] = {
     {0, NULL},
 };
 
-static new_video_encoder_t video_encoder_procs[] = {
+static const new_video_encoder_t video_encoder_procs[] = {
     &mjpeg_encoder_new,
 #if defined(HAVE_GSTREAMER_1_0) || defined(HAVE_GSTREAMER_0_10)
     &gstreamer_encoder_new,
