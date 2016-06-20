@@ -2801,8 +2801,19 @@ static void openssl_thread_setup(void)
     CRYPTO_set_locking_callback(pthreads_locking_callback);
 }
 
+static gpointer openssl_global_init(gpointer arg)
+{
+    SSL_library_init();
+    SSL_load_error_strings();
+
+    openssl_thread_setup();
+
+    return NULL;
+}
+
 static int reds_init_ssl(RedsState *reds)
 {
+    static GOnce openssl_once = G_ONCE_INIT;
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
     const SSL_METHOD *ssl_method;
 #else
@@ -2814,8 +2825,7 @@ static int reds_init_ssl(RedsState *reds)
     long ssl_options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 
     /* Global system initialization*/
-    SSL_library_init();
-    SSL_load_error_strings();
+    g_once(&openssl_once, openssl_global_init, NULL);
 
     /* Create our context*/
     /* SSLv23_method() handles TLSv1.x in addition to SSLv2/v3 */
@@ -2878,8 +2888,6 @@ static int reds_init_ssl(RedsState *reds)
             return -1;
         }
     }
-
-    openssl_thread_setup();
 
 #ifndef SSL_OP_NO_COMPRESSION
     STACK *cmp_stack = SSL_COMP_get_compression_methods();
