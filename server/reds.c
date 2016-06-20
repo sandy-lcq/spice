@@ -151,6 +151,7 @@ static pthread_mutex_t *lock_cs;
 /* TODO while we can technically create more than one server in a process,
  * the intended use is to support a single server per process */
 static GList *servers = NULL;
+static pthread_mutex_t global_reds_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* SPICE configuration set through the public spice_server_set_xxx APIS */
 struct RedServerConfig {
@@ -2912,10 +2913,12 @@ SPICE_DESTRUCTOR_FUNC(reds_exit)
 {
     GList *l;
 
+    pthread_mutex_lock(&global_reds_lock);
     for (l = servers; l != NULL; l = l->next) {
         RedsState *reds = l->data;
         reds_cleanup(reds);
     }
+    pthread_mutex_unlock(&global_reds_lock);
 }
 
 static inline void on_activating_ticketing(RedsState *reds)
@@ -3486,7 +3489,9 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     if (reds->allow_multiple_clients) {
         spice_warning("spice: allowing multiple client connections");
     }
+    pthread_mutex_lock(&global_reds_lock);
     servers = g_list_prepend(servers, reds);
+    pthread_mutex_unlock(&global_reds_lock);
     return 0;
 
 err:
@@ -3683,7 +3688,9 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
 
     /* remove the server from the list of servers so that we don't attempt to
      * free it again at exit */
+    pthread_mutex_lock(&global_reds_lock);
     servers = g_list_remove(servers, reds);
+    pthread_mutex_unlock(&global_reds_lock);
 }
 
 SPICE_GNUC_VISIBLE spice_compat_version_t spice_get_current_compat_version(void)
