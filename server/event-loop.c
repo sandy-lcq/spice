@@ -17,9 +17,9 @@
 */
 
 /*
- *This file export a global variable:
+ * This file exports a global variable:
  *
- * SpiceCoreInterfaceInternal event_loop_core;
+ * const SpiceCoreInterfaceInternal event_loop_core;
  */
 
 #include "red-common.h"
@@ -168,7 +168,7 @@ static void watch_remove(SpiceWatch *watch)
     free(watch);
 }
 
-SpiceCoreInterfaceInternal event_loop_core = {
+const SpiceCoreInterfaceInternal event_loop_core = {
     .timer_add = timer_add,
     .timer_start = timer_start,
     .timer_cancel = timer_cancel,

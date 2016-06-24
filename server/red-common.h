@@ -58,7 +58,7 @@ struct SpiceCoreInterfaceInternal {
     GMainContext *main_context;
 };
 
-extern SpiceCoreInterfaceInternal event_loop_core;
+extern const SpiceCoreInterfaceInternal event_loop_core;
 
 typedef struct RedsState RedsState;
 

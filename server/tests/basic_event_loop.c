@@ -36,6 +36,7 @@ int debug = 0;
     } \
 }
 
+static SpiceCoreInterfaceInternal base_core_interface;
 static GMainContext *main_context = NULL;
 
 GMainContext *basic_event_loop_get_context(void)
@@ -69,12 +70,12 @@ static void ignore_sigpipe(void)
 
 static SpiceTimer* base_timer_add(SpiceTimerFunc func, void *opaque)
 {
-    return event_loop_core.timer_add(&event_loop_core, func, opaque);
+    return base_core_interface.timer_add(&base_core_interface, func, opaque);
 }
 
 static SpiceWatch *base_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
-    return event_loop_core.watch_add(&event_loop_core, fd, event_mask, func, opaque);
+    return base_core_interface.watch_add(&base_core_interface, fd, event_mask, func, opaque);
 }
 
 static SpiceCoreInterface core = {
@@ -91,13 +92,14 @@ SpiceCoreInterface *basic_event_loop_init(void)
     ignore_sigpipe();
     spice_assert(main_context == NULL);
     main_context = g_main_context_new();
-    core.timer_start = event_loop_core.timer_start;
-    core.timer_cancel = event_loop_core.timer_cancel;
-    core.timer_remove = event_loop_core.timer_remove;
-    core.watch_update_mask = event_loop_core.watch_update_mask;
-    core.watch_remove = event_loop_core.watch_remove;
-    event_loop_core.channel_event = core.channel_event = event_loop_channel_event;
-    event_loop_core.main_context = main_context;
+    base_core_interface = event_loop_core;
+    core.timer_start = base_core_interface.timer_start;
+    core.timer_cancel = base_core_interface.timer_cancel;
+    core.timer_remove = base_core_interface.timer_remove;
+    core.watch_update_mask = base_core_interface.watch_update_mask;
+    core.watch_remove = base_core_interface.watch_remove;
+    base_core_interface.channel_event = core.channel_event = event_loop_channel_event;
+    base_core_interface.main_context = main_context;
 
     return &core;
 }
