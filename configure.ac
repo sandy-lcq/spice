@@ -11,6 +11,7 @@ AC_PREREQ([2.57])
 # - If any interfaces have been removed or changed since the last public release,
 #   then set age to 0.
 #
+dnl TODO see server/spice-char.h TODO comment for API breakage
 m4_define([SPICE_CURRENT], [12])
 m4_define([SPICE_REVISION], [0])
 m4_define([SPICE_AGE], [11])

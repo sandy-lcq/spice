@@ -56,6 +56,7 @@ struct SpiceCharDeviceInstance {
 
 void spice_server_char_device_wakeup(SpiceCharDeviceInstance *sin);
 void spice_server_port_event(SpiceCharDeviceInstance *char_device, uint8_t event);
+/* TODO change return to const char *const * when API break */
 const char** spice_server_char_device_recognized_subtypes(void);
 
 #endif /* SPICE_CHAR_H_ */

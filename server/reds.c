@@ -3161,7 +3161,7 @@ SPICE_GNUC_VISIBLE void spice_server_char_device_wakeup(SpiceCharDeviceInstance*
 #define SUBTYPE_USBREDIR "usbredir"
 #define SUBTYPE_PORT "port"
 
-static const char *spice_server_char_device_recognized_subtypes_list[] = {
+static const char *const spice_server_char_device_recognized_subtypes_list[] = {
     SUBTYPE_VDAGENT,
 #ifdef USE_SMARTCARD
     SUBTYPE_SMARTCARD,
@@ -3172,7 +3172,7 @@ static const char *spice_server_char_device_recognized_subtypes_list[] = {
 
 SPICE_GNUC_VISIBLE const char** spice_server_char_device_recognized_subtypes(void)
 {
-    return spice_server_char_device_recognized_subtypes_list;
+    return (const char **) spice_server_char_device_recognized_subtypes_list;
 }
 
 static void reds_add_char_device(RedsState *reds, RedCharDevice *dev)
