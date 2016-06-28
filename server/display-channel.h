@@ -270,7 +270,7 @@ void                       display_channel_destroy_surfaces          (DisplayCha
 uint32_t                   display_channel_generate_uid              (DisplayChannel *display);
 void                       display_channel_process_draw              (DisplayChannel *display,
                                                                       RedDrawable *red_drawable,
-                                                                      int process_commands_generation);
+                                                                      uint32_t process_commands_generation);
 void                       display_channel_process_surface_cmd       (DisplayChannel *display,
                                                                       RedSurfaceCmd *surface,
                                                                       int loadvm);

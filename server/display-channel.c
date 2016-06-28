@@ -24,7 +24,7 @@
 
 static void drawable_draw(DisplayChannel *display, Drawable *drawable);
 static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
-                                                  int process_commands_generation);
+                                                  uint32_t process_commands_generation);
 
 uint32_t display_channel_generate_uid(DisplayChannel *display)
 {
@@ -1081,7 +1081,7 @@ static void display_channel_add_drawable(DisplayChannel *display, Drawable *draw
 }
 
 void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_drawable,
-                                  int process_commands_generation)
+                                  uint32_t process_commands_generation)
 {
     Drawable *drawable =
         display_channel_get_drawable(display, red_drawable->effect, red_drawable,
@@ -1264,7 +1264,7 @@ static void drawables_init(DisplayChannel *display)
  * @return pointer to uninitialized Drawable or NULL on failure
  */
 static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
-                                                  int process_commands_generation)
+                                                  uint32_t process_commands_generation)
 {
     Drawable *drawable;
 
