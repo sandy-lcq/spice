@@ -52,7 +52,6 @@ typedef struct RedStreamActivateReportItem {
     uint32_t stream_id;
 } RedStreamActivateReportItem;
 
-#define STREAM_STATS
 #ifdef STREAM_STATS
 typedef struct StreamStats {
     uint64_t num_drops_pipe;
