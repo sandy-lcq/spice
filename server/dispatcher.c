@@ -36,6 +36,8 @@
 
 #ifdef DEBUG_DISPATCHER
 #include <signal.h>
+
+static void setup_dummy_signal_handler(void);
 #endif
 
 G_DEFINE_TYPE(Dispatcher, dispatcher, G_TYPE_OBJECT)
