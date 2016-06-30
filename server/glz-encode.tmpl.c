@@ -365,7 +365,7 @@ static void FNAME(compress_seg)(Encoder *encoder, uint32_t seg_idx, PIXEL *from,
 
 match:        // RLE or dictionary (both are encoded by distance from ref (-1) and length)
 #ifdef DEBUG_ENCODE
-        printf(", match(%d, %d, %d)", image_dist, pix_dist, len);
+        printf(", match(%zu, %zu, %zu)", image_dist, pix_dist, len);
         n_encoded += len;
 #endif
 
