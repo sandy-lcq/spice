@@ -1,3 +1,7 @@
+Changes in 0.12.8:
+==================
+* Fixes for CVE-2016-0749 and CVE-2016-2150
+
 Changes in 0.12.7:
 ==================
 * spice-server will now send TCP keepalive probes on the TCP connections it
