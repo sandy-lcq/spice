@@ -1,3 +1,18 @@
+Major Changes in 0.13.2:
+========================
+
+*** IMPORTANT ***
+The 0.13.x release series is an unstable release series, if you are looking for
+stability for daily use, please use the latest 0.12.x release. We are trying to
+keep the code as functional as 0.12, but regressions or bugs could still happen.
+
+* Fixes for various CVEs
+* Added GStreamer support to the video streaming code
+* Fix old migration bug causing migration to never end in some cases
+* Fix some vdagent-related regressions introduced in 0.13.1
+* Added lz4 compression to the spicevmc channel
+* Ongoing code cleanups
+
 Major changes in 0.13.1:
 ========================
 
