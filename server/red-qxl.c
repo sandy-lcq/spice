@@ -905,7 +905,11 @@ void spice_qxl_gl_draw_async(QXLInstance *qxl,
 
     spice_return_if_fail(qxl != NULL);
     qxl_state = qxl->st;
-    spice_return_if_fail(qxl_state->scanout.drm_dma_buf_fd != -1);
+    if (qxl_state->scanout.drm_dma_buf_fd == -1) {
+        spice_warning("called spice_qxl_gl_draw_async without a buffer");
+        red_qxl_async_complete(qxl, async_command_alloc(qxl_state, message, cookie));
+        return;
+    }
     spice_return_if_fail(qxl_state->gl_draw_async == NULL);
 
     qxl_state->gl_draw_async = async_command_alloc(qxl_state, message, cookie);
