@@ -2521,7 +2521,7 @@ static void reds_accept_ssl_connection(int fd, int event, void *data)
     RedLinkInfo *link;
     int socket;
 
-    if ((socket = accept(reds->secure_listen_socket, NULL, 0)) == -1) {
+    if ((socket = accept(fd, NULL, 0)) == -1) {
         spice_warning("accept failed, %s", strerror(errno));
         return;
     }
@@ -2538,7 +2538,7 @@ static void reds_accept(int fd, int event, void *data)
     RedsState *reds = data;
     int socket;
 
-    if ((socket = accept(reds->listen_socket, NULL, 0)) == -1) {
+    if ((socket = accept(fd, NULL, 0)) == -1) {
         spice_warning("accept failed, %s", strerror(errno));
         return;
     }
