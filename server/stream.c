@@ -463,7 +463,6 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
                 stream->height, stream->dest_area.left, stream->dest_area.top,
                 stream->dest_area.right, stream->dest_area.bottom,
                 stream->input_fps);
-    return;
 }
 
 // returns whether a stream was created
