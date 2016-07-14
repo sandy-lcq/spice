@@ -617,7 +617,7 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
     state = (SpiceVmcState*)red_channel_create_parser(sizeof(SpiceVmcState), reds,
                                    reds_get_core_interface(reds), channel_type, id[channel_type]++,
                                    FALSE /* handle_acks */,
-                                   spice_get_client_channel_parser(SPICE_CHANNEL_USBREDIR, NULL),
+                                   spice_get_client_channel_parser(channel_type, NULL),
                                    spicevmc_red_channel_client_handle_message_parsed,
                                    &channel_cbs,
                                    SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER);
