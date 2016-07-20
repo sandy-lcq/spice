@@ -2987,6 +2987,7 @@ static void reds_mig_fill_wait_disconnect(RedsState *reds)
 
         reds->mig_wait_disconnect_clients = g_list_append(reds->mig_wait_disconnect_clients, client);
     }
+    reds->mig_wait_connect = FALSE;
     reds->mig_wait_disconnect = TRUE;
     reds->core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
 }
