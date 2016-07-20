@@ -2816,6 +2816,7 @@ static void reds_mig_fill_wait_disconnect(void)
         wait_client->client = client;
         ring_add(&reds->mig_wait_disconnect_clients, &wait_client->link);
     }
+    reds->mig_wait_connect = FALSE;
     reds->mig_wait_disconnect = TRUE;
     core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
 }
