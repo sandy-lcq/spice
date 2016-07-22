@@ -4507,8 +4507,8 @@ static RedCharDeviceVDIPort *red_char_device_vdi_port_new(RedsState *reds)
 {
     return g_object_new(RED_TYPE_CHAR_DEVICE_VDIPORT,
                         "spice-server", reds,
-                        "client-tokens-interval", REDS_TOKENS_TO_SEND,
-                        "self-tokens", REDS_NUM_INTERNAL_AGENT_MESSAGES,
+                        "client-tokens-interval", (guint64)REDS_TOKENS_TO_SEND,
+                        "self-tokens", (guint64)REDS_NUM_INTERNAL_AGENT_MESSAGES,
                         "opaque", reds,
                         NULL);
 }
