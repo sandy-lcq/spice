@@ -2159,6 +2159,10 @@ static void marshall_stream_start(RedChannelClient *rcc,
 
     agent->last_send_time = 0;
     spice_assert(stream);
+    if (!agent->video_encoder) {
+        /* Without a video encoder nothing will be streamed */
+        return;
+    }
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_CREATE, NULL);
     SpiceMsgDisplayStreamCreate stream_create;
     SpiceClipRects clip_rects;
