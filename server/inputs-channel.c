@@ -60,8 +60,8 @@ struct SpiceKbdState {
     bool push_ext;
 
     /* track key press state */
-    bool key[0x7f];
-    bool key_ext[0x7f];
+    bool key[0x80];
+    bool key_ext[0x80];
     RedsState *reds;
 };
 
