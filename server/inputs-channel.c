@@ -57,7 +57,7 @@
     (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
 
 struct SpiceKbdState {
-    bool push_ext;
+    uint8_t push_ext_type;
 
     /* track key press state */
     bool key[0x80];
@@ -200,12 +200,14 @@ static void kbd_push_scan(SpiceKbdInstance *sin, uint8_t scan)
     sif = SPICE_CONTAINEROF(sin->base.sif, SpiceKbdInterface, base);
 
     /* track XT scan code set 1 key state */
-    if (scan == 0xe0) {
-        sin->st->push_ext = TRUE;
+    if (scan >= 0xe0 && scan <= 0xe2) {
+        sin->st->push_ext_type = scan;
     } else {
-        bool *state = sin->st->push_ext ? sin->st->key : sin->st->key_ext;
-        sin->st->push_ext = FALSE;
-        state[scan & 0x7f] = !(scan & 0x80);
+        if (sin->st->push_ext_type == 0 || sin->st->push_ext_type == 0xe0) {
+            bool *state = sin->st->push_ext_type ? sin->st->key_ext : sin->st->key;
+            state[scan & 0x7f] = !(scan & 0x80);
+        }
+        sin->st->push_ext_type = 0;
     }
 
     sif->push_scan_freg(sin, scan);
