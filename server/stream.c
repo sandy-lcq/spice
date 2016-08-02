@@ -250,20 +250,19 @@ static bool is_next_stream_frame(DisplayChannel *display,
             return FALSE;
         }
     } else {
-        if (rect_contains(&red_drawable->bbox, other_dest)) {
-            int candidate_area = rect_get_area(&red_drawable->bbox);
-            int other_area = rect_get_area(other_dest);
-            /* do not stream drawables that are significantly
-             * bigger than the original frame */
-            if (candidate_area > 2 * other_area) {
-                spice_debug("too big candidate:");
-                spice_debug("prev box ==>");
-                rect_debug(other_dest);
-                spice_debug("new box ==>");
-                rect_debug(&red_drawable->bbox);
-                return FALSE;
-            }
-        } else {
+        if (!rect_contains(&red_drawable->bbox, other_dest)) {
+            return FALSE;
+        }
+        int candidate_area = rect_get_area(&red_drawable->bbox);
+        int other_area = rect_get_area(other_dest);
+        /* do not stream drawables that are significantly
+         * bigger than the original frame */
+        if (candidate_area > 2 * other_area) {
+            spice_debug("too big candidate:");
+            spice_debug("prev box ==>");
+            rect_debug(other_dest);
+            spice_debug("new box ==>");
+            rect_debug(&red_drawable->bbox);
             return FALSE;
         }
     }
