@@ -939,7 +939,9 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
     }
 
     GError *err = NULL;
-    gchar *desc = g_strdup_printf("appsrc is-live=true format=time do-timestamp=true name=src ! %s ! %s %s name=encoder ! appsink name=sink", converter, gstenc_name, gstenc_opts);
+    gchar *desc = g_strdup_printf("appsrc is-live=true format=time do-timestamp=true name=src !"
+                                  " %s ! %s name=encoder %s ! appsink name=sink",
+                                  converter, gstenc_name, gstenc_opts);
     spice_debug("GStreamer pipeline: %s", desc);
     encoder->pipeline = gst_parse_launch_full(desc, NULL, GST_PARSE_FLAG_FATAL_ERRORS, &err);
     g_free(gstenc_opts);
