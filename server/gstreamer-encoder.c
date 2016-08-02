@@ -434,19 +434,20 @@ static uint64_t get_period_bit_rate(SpiceGstEncoder *encoder, uint32_t from,
             sum += encoder->history[index].size;
             return (sum - 1) * 8 * MSEC_PER_SEC / (last_mm_time - from);
 
-        } else if (index == encoder->history_first) {
+        } else if (sum > 0) {
+            sum += encoder->history[index].size;
+
+        } else {
+            last_mm_time = encoder->history[index].mm_time;
+        }
+
+        if (index == encoder->history_first) {
             /* This period is outside the recorded history */
             spice_debug("period (%u-%u) outside known history (%u-%u)",
                         from, to,
                         encoder->history[encoder->history_first].mm_time,
                         encoder->history[encoder->history_last].mm_time);
            return 0;
-
-        } else if (sum > 0) {
-            sum += encoder->history[index].size;
-
-        } else {
-            last_mm_time = encoder->history[index].mm_time;
         }
         index = (index ? index : SPICE_GST_HISTORY_SIZE) - 1;
     }
