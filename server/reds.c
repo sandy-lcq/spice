@@ -2607,6 +2607,24 @@ void reds_set_client_mm_time_latency(RedsState *reds, RedClient *client, uint32_
     }
 }
 
+static void reds_cleanup_net(SpiceServer *reds)
+{
+    if (reds->listen_socket != -1) {
+       reds_core_watch_remove(reds, reds->listen_watch);
+       if (reds->config->spice_listen_socket_fd != reds->listen_socket) {
+          close(reds->listen_socket);
+       }
+       reds->listen_watch = NULL;
+       reds->listen_socket = -1;
+    }
+    if (reds->secure_listen_socket != -1) {
+       reds_core_watch_remove(reds, reds->secure_listen_watch);
+       close(reds->secure_listen_socket);
+       reds->secure_listen_watch = NULL;
+       reds->secure_listen_socket = -1;
+    }
+}
+
 static int reds_init_net(RedsState *reds)
 {
     if (reds->config->spice_port != -1 || reds->config->spice_family == AF_UNIX) {
@@ -2618,7 +2636,6 @@ static int reds_init_net(RedsState *reds)
                                                  SPICE_WATCH_EVENT_READ,
                                                  reds_accept, reds);
         if (reds->listen_watch == NULL) {
-            spice_warning("set fd handle failed");
             return -1;
         }
     }
@@ -2633,7 +2650,6 @@ static int reds_init_net(RedsState *reds)
                                                         SPICE_WATCH_EVENT_READ,
                                                         reds_accept_ssl_connection, reds);
         if (reds->secure_listen_watch == NULL) {
-            spice_warning("set fd handle failed");
             return -1;
         }
     }
@@ -2644,7 +2660,6 @@ static int reds_init_net(RedsState *reds)
                                                  SPICE_WATCH_EVENT_READ,
                                                  reds_accept, reds);
         if (reds->listen_watch == NULL) {
-            spice_warning("set fd handle failed");
             return -1;
         }
     }
@@ -3362,6 +3377,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     }
 
     if (reds_init_net(reds) < 0) {
+        spice_warning("Failed to open SPICE sockets");
         goto err;
     }
     if (reds->secure_listen_socket != -1) {
@@ -3396,6 +3412,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     return 0;
 
 err:
+    reds_cleanup_net(reds);
     return -1;
 }
 
@@ -3655,16 +3672,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     if (reds->main_dispatcher) {
         g_object_unref(reds->main_dispatcher);
     }
-    if (reds->listen_socket != -1) {
-       reds_core_watch_remove(reds, reds->listen_watch);
-       if (reds->config->spice_listen_socket_fd != reds->listen_socket) {
-          close(reds->listen_socket);
-       }
-    }
-    if (reds->secure_listen_socket != -1) {
-       reds_core_watch_remove(reds, reds->secure_listen_watch);
-       close(reds->secure_listen_socket);
-    }
+    reds_cleanup_net(reds);
     g_clear_object(&reds->agent_dev);
     spice_buffer_free(&reds->client_monitors_config);
     red_record_unref(reds->record);
