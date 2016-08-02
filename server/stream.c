@@ -232,7 +232,7 @@ static bool is_next_stream_frame(DisplayChannel *display,
     }
 
     if (candidate->creation_time - other_time >
-            (stream ? RED_STREAM_CONTINUS_MAX_DELTA : RED_STREAM_DETACTION_MAX_DELTA)) {
+            (stream ? RED_STREAM_CONTINUOUS_MAX_DELTA : RED_STREAM_DETECTION_MAX_DELTA)) {
         return FALSE;
     }
 
