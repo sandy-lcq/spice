@@ -59,8 +59,8 @@ typedef struct SpiceGstVideoBuffer {
 
 typedef struct {
     uint32_t mm_time;
-    uint64_t duration;
     uint32_t size;
+    uint64_t duration;
 } SpiceGstFrameInformation;
 
 typedef enum SpiceGstBitRateStatus {
