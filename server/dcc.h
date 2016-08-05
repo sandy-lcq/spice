@@ -18,11 +18,10 @@
 #ifndef DCC_H_
 # define DCC_H_
 
-#include "red-worker.h"
-#include "pixmap-cache.h"
-#include "cache-item.h"
 #include "image-encoders.h"
-#include "stream.h"
+#include "image-cache.h"
+#include "pixmap-cache.h"
+#include "red-worker.h"
 #include "display-limits.h"
 
 #define PALETTE_CACHE_HASH_SHIFT 8
@@ -42,6 +41,10 @@
 
 #define MAX_PIPE_SIZE 50
 
+typedef struct DisplayChannel DisplayChannel;
+typedef struct Stream Stream;
+typedef struct StreamAgent StreamAgent;
+
 typedef struct WaitForChannels {
     SpiceMsgWaitForChannels header;
     SpiceWaitForChannel buf[MAX_CACHE_CLIENTS];
@@ -54,45 +57,10 @@ typedef struct FreeList {
     WaitForChannels wait;
 } FreeList;
 
-struct DisplayChannelClient {
-    CommonGraphicsChannelClient common;
-    uint32_t id;
-    SpiceImageCompression image_compression;
-    spice_wan_compression_t jpeg_state;
-    spice_wan_compression_t zlib_glz_state;
+typedef struct DisplayChannelClient DisplayChannelClient;
 
-    ImageEncoders encoders;
-
-    int expect_init;
-
-    PixmapCache *pixmap_cache;
-    uint32_t pixmap_cache_generation;
-    int pending_pixmaps_sync;
-
-    RedCacheItem *palette_cache[PALETTE_CACHE_HASH_SIZE];
-    Ring palette_cache_lru;
-    long palette_cache_available;
-    uint32_t palette_cache_items;
-
-    struct {
-        FreeList free_list;
-        uint64_t pixmap_cache_items[MAX_DRAWABLE_PIXMAP_CACHE_ITEMS];
-        int num_pixmap_cache_items;
-    } send_data;
-
-    uint8_t surface_client_created[NUM_SURFACES];
-    QRegion surface_client_lossy_region[NUM_SURFACES];
-
-    StreamAgent stream_agents[NUM_STREAMS];
-    int use_video_encoder_rate_control;
-    uint32_t streams_max_latency;
-    uint64_t streams_max_bit_rate;
-    bool gl_draw_ongoing;
-};
-
-#define DCC_TO_DC(dcc)                                                  \
-     SPICE_CONTAINEROF((dcc)->common.base.channel, DisplayChannel, common.base)
-#define RCC_TO_DCC(rcc) SPICE_CONTAINEROF((rcc), DisplayChannelClient, common.base)
+#define DCC_TO_DC(dcc) ((DisplayChannel*)((RedChannelClient*)dcc)->channel)
+#define RCC_TO_DCC(rcc) ((DisplayChannelClient*)rcc)
 
 typedef struct RedSurfaceCreateItem {
     RedPipeItem pipe_item;
@@ -192,5 +160,15 @@ int                        dcc_compress_image                        (DisplayCha
                                                                       SpiceImage *dest, SpiceBitmap *src, Drawable *drawable,
                                                                       int can_lossy,
                                                                       compress_send_data_t* o_comp_data);
+
+StreamAgent *              dcc_get_stream_agent                      (DisplayChannelClient *dcc, int stream_id);
+ImageEncoders *dcc_get_encoders(DisplayChannelClient *dcc);
+spice_wan_compression_t    dcc_get_jpeg_state                        (DisplayChannelClient *dcc);
+spice_wan_compression_t    dcc_get_zlib_glz_state                    (DisplayChannelClient *dcc);
+gboolean                   dcc_use_video_encoder_rate_control        (DisplayChannelClient *dcc);
+uint32_t dcc_get_max_stream_latency(DisplayChannelClient *dcc);
+void dcc_set_max_stream_latency(DisplayChannelClient *dcc, uint32_t latency);
+uint64_t dcc_get_max_stream_bit_rate(DisplayChannelClient *dcc);
+void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate);
 
 #endif /* DCC_H_ */

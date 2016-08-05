@@ -44,8 +44,7 @@
 #include "tree.h"
 #include "stream.h"
 #include "dcc.h"
-#include "display-limits.h"
-
+#include "image-encoders.h"
 
 typedef struct DependItem {
     Drawable *drawable;

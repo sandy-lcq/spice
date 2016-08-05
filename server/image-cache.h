@@ -25,7 +25,6 @@
 
 /* FIXME: move back to display-channel.h (once structs are private) */
 typedef struct Drawable Drawable;
-typedef struct DisplayChannelClient DisplayChannelClient;
 
 typedef struct ImageCacheItem {
     RingItem lru_link;

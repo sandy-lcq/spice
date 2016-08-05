@@ -66,7 +66,7 @@ static void stream_agent_stats_print(StreamAgent *agent)
 static void stream_create_destroy_item_release(RedPipeItem *base)
 {
     StreamCreateDestroyItem *item = SPICE_UPCAST(StreamCreateDestroyItem, base);
-    DisplayChannel *display = (DisplayChannel*)item->agent->dcc->common.base.channel;
+    DisplayChannel *display = DCC_TO_DC(item->agent->dcc);
     stream_agent_unref(display, item->agent);
     free(item);
 }
@@ -105,17 +105,17 @@ void stream_stop(DisplayChannel *display, Stream *stream)
     FOREACH_CLIENT(display, link, next, dcc) {
         StreamAgent *stream_agent;
 
-        stream_agent = &dcc->stream_agents[get_stream_id(display, stream)];
+        stream_agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
         region_clear(&stream_agent->vis_region);
         region_clear(&stream_agent->clip);
-        if (stream_agent->video_encoder && dcc->use_video_encoder_rate_control) {
+        if (stream_agent->video_encoder && dcc_use_video_encoder_rate_control(dcc)) {
             uint64_t stream_bit_rate = stream_agent->video_encoder->get_bit_rate(stream_agent->video_encoder);
 
-            if (stream_bit_rate > dcc->streams_max_bit_rate) {
+            if (stream_bit_rate > dcc_get_max_stream_bit_rate(dcc)) {
                 spice_debug("old max-bit-rate=%.2f new=%.2f",
-                            dcc->streams_max_bit_rate / 8.0 / 1024.0 / 1024.0,
+                            dcc_get_max_stream_bit_rate(dcc) / 8.0 / 1024.0 / 1024.0,
                             stream_bit_rate / 8.0 / 1024.0 / 1024.0);
-                dcc->streams_max_bit_rate = stream_bit_rate;
+                dcc_set_max_stream_bit_rate(dcc, stream_bit_rate);
             }
         }
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), stream_destroy_item_new(stream_agent));
@@ -302,7 +302,7 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *s
         StreamAgent *agent;
         QRegion clip_in_draw_dest;
 
-        agent = &dcc->stream_agents[get_stream_id(display, stream)];
+        agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
         region_or(&agent->vis_region, &drawable->tree_item.base.rgn);
 
         region_init(&clip_in_draw_dest);
@@ -352,10 +352,10 @@ static void before_reattach_stream(DisplayChannel *display,
     index = get_stream_id(display, stream);
     DRAWABLE_FOREACH_DPI_SAFE(stream->current, ring_item, next, dpi) {
         dcc = dpi->dcc;
-        agent = &dcc->stream_agents[index];
+        agent = dcc_get_stream_agent(dcc, index);
 
-        if (!dcc->use_video_encoder_rate_control &&
-            !dcc->common.is_low_bandwidth) {
+        if (!dcc_use_video_encoder_rate_control(dcc) &&
+            !((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth) {
             continue;
         }
 
@@ -363,7 +363,7 @@ static void before_reattach_stream(DisplayChannel *display,
 #ifdef STREAM_STATS
             agent->stats.num_drops_pipe++;
 #endif
-            if (dcc->use_video_encoder_rate_control) {
+            if (dcc_use_video_encoder_rate_control(dcc)) {
                 agent->video_encoder->notify_server_frame_drop(agent->video_encoder);
             } else {
                 ++agent->drops;
@@ -375,9 +375,9 @@ static void before_reattach_stream(DisplayChannel *display,
     FOREACH_CLIENT(display, link, link_next, dcc) {
         double drop_factor;
 
-        agent = &dcc->stream_agents[index];
+        agent = dcc_get_stream_agent(dcc, index);
 
-        if (dcc->use_video_encoder_rate_control) {
+        if (dcc_use_video_encoder_rate_control(dcc)) {
             continue;
         }
         if (agent->frames / agent->fps < FPS_TEST_INTERVAL) {
@@ -592,16 +592,16 @@ static void dcc_update_streams_max_latency(DisplayChannelClient *dcc, StreamAgen
     uint32_t new_max_latency = 0;
     int i;
 
-    if (dcc->streams_max_latency != remove_agent->client_required_latency) {
+    if (dcc_get_max_stream_latency(dcc) != remove_agent->client_required_latency) {
         return;
     }
 
-    dcc->streams_max_latency = 0;
+    dcc_set_max_stream_latency(dcc, 0);
     if (DCC_TO_DC(dcc)->stream_count == 1) {
         return;
     }
     for (i = 0; i < NUM_STREAMS; i++) {
-        StreamAgent *other_agent = &dcc->stream_agents[i];
+        StreamAgent *other_agent = dcc_get_stream_agent(dcc, i);
         if (other_agent == remove_agent || !other_agent->video_encoder) {
             continue;
         }
@@ -609,7 +609,7 @@ static void dcc_update_streams_max_latency(DisplayChannelClient *dcc, StreamAgen
             new_max_latency = other_agent->client_required_latency;
         }
     }
-    dcc->streams_max_latency = new_max_latency;
+    dcc_set_max_stream_latency(dcc, new_max_latency);
 }
 
 static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, Stream *stream)
@@ -638,7 +638,7 @@ static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, Stream *stream)
         net_test_bit_rate = main_channel_client_is_network_info_initialized(mcc) ?
                                 main_channel_client_get_bitrate_per_sec(mcc) :
                                 0;
-        bit_rate = MAX(dcc->streams_max_bit_rate, net_test_bit_rate);
+        bit_rate = MAX(dcc_get_max_stream_bit_rate(dcc), net_test_bit_rate);
         if (bit_rate == 0) {
             /*
              * In case we are after a spice session migration,
@@ -646,7 +646,7 @@ static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, Stream *stream)
              * If the network info is not initialized due to another reason,
              * the low_bandwidth flag is FALSE.
              */
-            bit_rate = dcc->common.is_low_bandwidth ?
+            bit_rate = ((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth ?
                 RED_STREAM_DEFAULT_LOW_START_BIT_RATE :
                 RED_STREAM_DEFAULT_HIGH_START_BIT_RATE;
         }
@@ -690,18 +690,18 @@ static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
 {
     StreamAgent *agent = opaque;
     DisplayChannelClient *dcc = agent->dcc;
-    RedsState *reds = red_channel_get_server(dcc->common.base.channel);
+    RedsState *reds = red_channel_get_server(((RedChannelClient*)dcc)->channel);
 
     dcc_update_streams_max_latency(dcc, agent);
 
     agent->client_required_latency = delay_ms;
-    if (delay_ms > agent->dcc->streams_max_latency) {
-        agent->dcc->streams_max_latency = delay_ms;
+    if (delay_ms > dcc_get_max_stream_latency(agent->dcc)) {
+        dcc_set_max_stream_latency(agent->dcc, delay_ms);
     }
-    spice_debug("resetting client latency: %u", agent->dcc->streams_max_latency);
+    spice_debug("resetting client latency: %u", dcc_get_max_stream_latency(agent->dcc));
     main_dispatcher_set_mm_time_latency(reds_get_main_dispatcher(reds),
                                         RED_CHANNEL_CLIENT(agent->dcc)->client,
-                                        agent->dcc->streams_max_latency);
+                                        dcc_get_max_stream_latency(agent->dcc));
 }
 
 static void bitmap_ref(gpointer data)
@@ -756,7 +756,7 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
 
 void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
 {
-    StreamAgent *agent = &dcc->stream_agents[get_stream_id(DCC_TO_DC(dcc), stream)];
+    StreamAgent *agent = dcc_get_stream_agent(dcc, get_stream_id(DCC_TO_DC(dcc), stream));
 
     spice_return_if_fail(region_is_empty(&agent->vis_region));
 
@@ -771,7 +771,7 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
     agent->fps = MAX_FPS;
     agent->dcc = dcc;
 
-    if (dcc->use_video_encoder_rate_control) {
+    if (dcc_use_video_encoder_rate_control(dcc)) {
         VideoEncoderRateControlCbs video_cbs;
         uint64_t initial_bit_rate;
 
@@ -837,7 +837,7 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
     int stream_id = get_stream_id(display, stream);
-    StreamAgent *agent = &dcc->stream_agents[stream_id];
+    StreamAgent *agent = dcc_get_stream_agent(dcc, stream_id);
 
     /* stopping the client from playing older frames at once*/
     region_clear(&agent->clip);
@@ -933,7 +933,7 @@ void stream_detach_behind(DisplayChannel *display, QRegion *region, Drawable *dr
         item = ring_next(ring, item);
 
         FOREACH_CLIENT(display, link, next, dcc) {
-            StreamAgent *agent = &dcc->stream_agents[get_stream_id(display, stream)];
+            StreamAgent *agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
 
             if (region_intersects(&agent->vis_region, region)) {
                 dcc_detach_stream_gracefully(dcc, stream, drawable);

@@ -19,7 +19,7 @@
 #include <config.h>
 #endif
 
-#include "dcc.h"
+#include "dcc-private.h"
 #include "display-channel.h"
 
 #define DISPLAY_CLIENT_SHORT_TIMEOUT 15000000000ULL //nano
@@ -1128,4 +1128,49 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
     /* enable sending messages */
     red_channel_client_ack_zero_messages_window(RED_CHANNEL_CLIENT(dcc));
     return TRUE;
+}
+
+StreamAgent* dcc_get_stream_agent(DisplayChannelClient *dcc, int stream_id)
+{
+    return &dcc->stream_agents[stream_id];
+}
+
+ImageEncoders* dcc_get_encoders(DisplayChannelClient *dcc)
+{
+    return &dcc->encoders;
+}
+
+spice_wan_compression_t dcc_get_jpeg_state(DisplayChannelClient *dcc)
+{
+    return dcc->jpeg_state;
+}
+
+spice_wan_compression_t dcc_get_zlib_glz_state(DisplayChannelClient *dcc)
+{
+    return dcc->zlib_glz_state;
+}
+
+gboolean dcc_use_video_encoder_rate_control(DisplayChannelClient *dcc)
+{
+    return dcc->use_video_encoder_rate_control;
+}
+
+uint32_t dcc_get_max_stream_latency(DisplayChannelClient *dcc)
+{
+    return dcc->streams_max_latency;
+}
+
+void dcc_set_max_stream_latency(DisplayChannelClient *dcc, uint32_t latency)
+{
+    dcc->streams_max_latency = latency;
+}
+
+uint64_t dcc_get_max_stream_bit_rate(DisplayChannelClient *dcc)
+{
+    return dcc->streams_max_bit_rate;
+}
+
+void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate)
+{
+    dcc->streams_max_bit_rate = rate;
 }

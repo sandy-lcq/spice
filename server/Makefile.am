@@ -148,6 +148,7 @@ libserver_la_SOURCES =				\
 	dcc-send.c					\
 	dcc.h					\
 	display-limits.h			\
+	dcc-private.h				\
 	image-encoders.c					\
 	image-encoders.h					\
 	$(NULL)

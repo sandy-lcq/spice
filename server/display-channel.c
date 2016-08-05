@@ -230,7 +230,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
         }
 
         FOREACH_CLIENT(display, link, next, dcc) {
-            agent = &dcc->stream_agents[get_stream_id(display, stream)];
+            agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
                 region_exclude(&agent->vis_region, &drawable->tree_item.base.rgn);
@@ -1151,7 +1151,7 @@ void display_channel_free_glz_drawables_to_free(DisplayChannel *display)
     spice_return_if_fail(display);
 
     FOREACH_CLIENT(display, link, next, dcc) {
-        image_encoders_free_glz_drawables_to_free(&dcc->encoders);
+        image_encoders_free_glz_drawables_to_free(dcc_get_encoders(dcc));
     }
 }
 
@@ -1163,7 +1163,7 @@ void display_channel_free_glz_drawables(DisplayChannel *display)
     spice_return_if_fail(display);
 
     FOREACH_CLIENT(display, link, next, dcc) {
-        image_encoders_free_glz_drawables(&dcc->encoders);
+        image_encoders_free_glz_drawables(dcc_get_encoders(dcc));
     }
 }
 
@@ -1206,10 +1206,12 @@ void display_channel_free_some(DisplayChannel *display)
     spice_debug("#draw=%d, #glz_draw=%d", display->drawable_count,
                 display->encoder_shared_data.glz_drawable_count);
     FOREACH_CLIENT(display, link, next, dcc) {
+        ImageEncoders *encoders = dcc_get_encoders(dcc);
+
         // encoding using the dictionary is prevented since the following operations might
         // change the dictionary
-        if (image_encoders_glz_encode_lock(&dcc->encoders)) {
-            n = image_encoders_free_some_independent_glz_drawables(&dcc->encoders);
+        if (image_encoders_glz_encode_lock(encoders)) {
+            n = image_encoders_free_some_independent_glz_drawables(encoders);
         }
     }
 
@@ -1218,7 +1220,9 @@ void display_channel_free_some(DisplayChannel *display)
     }
 
     FOREACH_CLIENT(display, link, next, dcc) {
-        image_encoders_glz_encode_unlock(&dcc->encoders);
+        ImageEncoders *encoders = dcc_get_encoders(dcc);
+
+        image_encoders_glz_encode_unlock(encoders);
     }
 }
 
@@ -1987,16 +1991,16 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
 
 void display_channel_update_compression(DisplayChannel *display, DisplayChannelClient *dcc)
 {
-    if (dcc->jpeg_state == SPICE_WAN_COMPRESSION_AUTO) {
-        display->enable_jpeg = dcc->common.is_low_bandwidth;
+    if (dcc_get_jpeg_state(dcc) == SPICE_WAN_COMPRESSION_AUTO) {
+        display->enable_jpeg = ((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth;
     } else {
-        display->enable_jpeg = (dcc->jpeg_state == SPICE_WAN_COMPRESSION_ALWAYS);
+        display->enable_jpeg = (dcc_get_jpeg_state(dcc) == SPICE_WAN_COMPRESSION_ALWAYS);
     }
 
-    if (dcc->zlib_glz_state == SPICE_WAN_COMPRESSION_AUTO) {
-        display->enable_zlib_glz_wrap = dcc->common.is_low_bandwidth;
+    if (dcc_get_zlib_glz_state(dcc) == SPICE_WAN_COMPRESSION_AUTO) {
+        display->enable_zlib_glz_wrap = ((CommonGraphicsChannelClient*)dcc)->is_low_bandwidth;
     } else {
-        display->enable_zlib_glz_wrap = (dcc->zlib_glz_state == SPICE_WAN_COMPRESSION_ALWAYS);
+        display->enable_zlib_glz_wrap = (dcc_get_zlib_glz_state(dcc) == SPICE_WAN_COMPRESSION_ALWAYS);
     }
     spice_info("jpeg %s", display->enable_jpeg ? "enabled" : "disabled");
     spice_info("zlib-over-glz %s", display->enable_zlib_glz_wrap ? "enabled" : "disabled");

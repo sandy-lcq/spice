@@ -19,7 +19,7 @@
 #include <config.h>
 #endif
 
-#include "dcc.h"
+#include "dcc-private.h"
 #include "display-channel.h"
 
 #include <common/marshaller.h>

@@ -24,7 +24,7 @@
 #include "utils.h"
 #include "video-encoder.h"
 #include "red-channel.h"
-#include "image-cache.h"
+#include "dcc.h"
 
 #define RED_STREAM_DETECTION_MAX_DELTA (NSEC_PER_SEC / 5)
 #define RED_STREAM_CONTINUOUS_MAX_DELTA NSEC_PER_SEC
