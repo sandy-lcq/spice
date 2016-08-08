@@ -2792,6 +2792,13 @@ static void openssl_thread_setup(void)
 {
     int i;
 
+    /* Somebody else already setup threading for OpenSSL,
+     * don't do it twice to avoid possible races.
+     */
+    if (CRYPTO_get_locking_callback() != NULL) {
+        return;
+    }
+
     lock_cs = OPENSSL_malloc(CRYPTO_num_locks() * sizeof(pthread_mutex_t));
 
     for (i = 0; i < CRYPTO_num_locks(); i++) {
