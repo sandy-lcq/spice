@@ -1681,7 +1681,7 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
                                     bitmap_ref_t bitmap_ref,
                                     bitmap_unref_t bitmap_unref)
 {
-    spice_return_val_if_fail(SPICE_GST_FRAME_STATISTICS_COUNT <= SPICE_GST_HISTORY_SIZE, NULL);
+    verify(SPICE_GST_FRAME_STATISTICS_COUNT <= SPICE_GST_HISTORY_SIZE);
     spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG ||
                              codec_type == SPICE_VIDEO_CODEC_TYPE_VP8 ||
                              codec_type == SPICE_VIDEO_CODEC_TYPE_H264, NULL);
