@@ -2771,6 +2771,7 @@ static int ssl_password_cb(char *buf, int size, int flags, void *userdata)
     return (strlen(pass));
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x1010000FL
 static unsigned long pthreads_thread_id(void)
 {
     unsigned long ret;
@@ -2808,6 +2809,11 @@ static void openssl_thread_setup(void)
     CRYPTO_set_id_callback(pthreads_thread_id);
     CRYPTO_set_locking_callback(pthreads_locking_callback);
 }
+#else
+static inline void openssl_thread_setup(void)
+{
+}
+#endif
 
 static gpointer openssl_global_init(gpointer arg)
 {
