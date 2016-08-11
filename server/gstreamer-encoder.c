@@ -747,31 +747,36 @@ static inline void server_increase_bit_rate(SpiceGstEncoder *encoder,
 
 /* ---------- GStreamer pipeline ---------- */
 
+/* See GStreamer's part-mediatype-video-raw.txt and
+ * section-types-definitions.html documents.
+ */
+static const SpiceFormatForGStreamer format_map[] =  {
+    /* First item is invalid.
+     * It's located first so the loop catch invalid values.
+     */
+    {SPICE_BITMAP_FMT_INVALID, "", 0, 0, 0, 0, 0, 0},
+    {SPICE_BITMAP_FMT_RGBA, "BGRA", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
+    {SPICE_BITMAP_FMT_16BIT, "RGB15", 16, 15, 4321, 0x001f, 0x03E0, 0x7C00},
+    /* TODO: Test the other formats */
+    {SPICE_BITMAP_FMT_32BIT, "BGRx", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
+    {SPICE_BITMAP_FMT_24BIT, "BGR", 24, 24, 4321, 0xff0000, 0xff00, 0xff},
+};
+#define GSTREAMER_FORMAT_INVALID (&format_map[0])
+
 /* A helper for spice_gst_encoder_encode_frame() */
 static const SpiceFormatForGStreamer *map_format(SpiceBitmapFmt format)
 {
-    /* See GStreamer's part-mediatype-video-raw.txt and
-     * section-types-definitions.html documents.
-     */
-    static const SpiceFormatForGStreamer format_map[] =  {
-        {SPICE_BITMAP_FMT_RGBA, "BGRA", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
-        {SPICE_BITMAP_FMT_16BIT, "RGB15", 16, 15, 4321, 0x001f, 0x03E0, 0x7C00},
-        /* TODO: Test the other formats */
-        {SPICE_BITMAP_FMT_32BIT, "BGRx", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
-        {SPICE_BITMAP_FMT_24BIT, "BGR", 24, 24, 4321, 0xff0000, 0xff00, 0xff},
-    };
-
     int i;
     for (i = 0; i < G_N_ELEMENTS(format_map); i++) {
         if (format_map[i].spice_format == format) {
-            if (i > 1) {
+            if (i > 2) {
                 spice_warning("The %d format has not been tested yet", format);
             }
             return &format_map[i];
         }
     }
 
-    return NULL;
+    return GSTREAMER_FORMAT_INVALID;
 }
 
 static void set_appsrc_caps(SpiceGstEncoder *encoder)
@@ -1457,7 +1462,7 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
                     encoder->width, width, encoder->height, height,
                     encoder->spice_format, bitmap->format);
         encoder->format = map_format(bitmap->format);
-        if (!encoder->format) {
+        if (encoder->format == GSTREAMER_FORMAT_INVALID) {
             spice_warning("unable to map format type %d", bitmap->format);
             encoder->errors = 4;
             return VIDEO_ENCODER_FRAME_UNSUPPORTED;
@@ -1663,7 +1668,7 @@ static void spice_gst_encoder_get_stats(VideoEncoder *video_encoder,
                                         VideoEncoderStats *stats)
 {
     SpiceGstEncoder *encoder = (SpiceGstEncoder*)video_encoder;
-    uint64_t raw_bit_rate = encoder->width * encoder->height * (encoder->format ? encoder->format->bpp : 0) * get_source_fps(encoder);
+    uint64_t raw_bit_rate = encoder->width * encoder->height * encoder->format->bpp * get_source_fps(encoder);
 
     spice_return_if_fail(stats != NULL);
     stats->starting_bit_rate = encoder->starting_bit_rate;
@@ -1712,6 +1717,7 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
     encoder->starting_bit_rate = starting_bit_rate;
     encoder->bitmap_ref = bitmap_ref;
     encoder->bitmap_unref = bitmap_unref;
+    encoder->format = GSTREAMER_FORMAT_INVALID;
     g_mutex_init(&encoder->outbuf_mutex);
     g_cond_init(&encoder->outbuf_cond);
 
