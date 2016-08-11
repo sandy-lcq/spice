@@ -40,7 +40,7 @@
 
 typedef struct {
     SpiceBitmapFmt spice_format;
-    const char *format;
+    char format[8];
     uint32_t bpp;
     uint32_t depth;
     uint32_t endianness;
