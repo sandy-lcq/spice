@@ -22,8 +22,6 @@
 #error "Only spice.h can be included directly."
 #endif
 
-#include <glib.h>
-
 #include "spice-core.h"
 
 /* Don't use features incompatible with a specific spice
@@ -50,7 +48,7 @@ int spice_server_set_compat_version(SpiceServer *s,
                                     spice_compat_version_t version);
 int spice_server_set_port(SpiceServer *s, int port);
 void spice_server_set_addr(SpiceServer *s, const char *addr, int flags);
-int spice_server_set_listen_socket_fd(SpiceServer *s, int listen_fd) G_GNUC_DEPRECATED;
+int spice_server_set_listen_socket_fd(SpiceServer *s, int listen_fd) SPICE_GNUC_DEPRECATED;
 int spice_server_set_exit_on_disconnect(SpiceServer *s, int flag);
 int spice_server_set_noauth(SpiceServer *s);
 int spice_server_set_sasl(SpiceServer *s, int enabled);
@@ -104,7 +102,7 @@ int spice_server_set_zlib_glz_compression(SpiceServer *s, spice_wan_compression_
 
 int spice_server_set_channel_security(SpiceServer *s, const char *channel, int security);
 
-int spice_server_add_renderer(SpiceServer *s, const char *name) G_GNUC_DEPRECATED;
+int spice_server_add_renderer(SpiceServer *s, const char *name) SPICE_GNUC_DEPRECATED;
 
 enum {
     SPICE_STREAM_VIDEO_INVALID,
@@ -127,8 +125,8 @@ int spice_server_set_agent_mouse(SpiceServer *s, int enable);
 int spice_server_set_agent_copypaste(SpiceServer *s, int enable);
 int spice_server_set_agent_file_xfer(SpiceServer *s, int enable);
 
-int spice_server_get_sock_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen) G_GNUC_DEPRECATED;
-int spice_server_get_peer_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen) G_GNUC_DEPRECATED;
+int spice_server_get_sock_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen) SPICE_GNUC_DEPRECATED;
+int spice_server_get_peer_info(SpiceServer *s, struct sockaddr *sa, socklen_t *salen) SPICE_GNUC_DEPRECATED;
 
 int spice_server_is_server_mouse(SpiceServer *s);
 
@@ -138,6 +136,6 @@ void spice_server_set_uuid(SpiceServer *s, const uint8_t uuid[16]);
 void spice_server_vm_start(SpiceServer *s);
 void spice_server_vm_stop(SpiceServer *s);
 
-int spice_server_get_num_clients(SpiceServer *s) G_GNUC_DEPRECATED;
+int spice_server_get_num_clients(SpiceServer *s) SPICE_GNUC_DEPRECATED;
 
 #endif /* SPICE_SERVER_H_ */
