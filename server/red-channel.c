@@ -2069,6 +2069,7 @@ void red_client_migrate(RedClient *client)
 {
     GList *link, *next;
     RedChannelClient *rcc;
+    RedChannel *channel;
 
     spice_printerr("migrate client with #channels %d", g_list_length(client->channels));
     if (!pthread_equal(pthread_self(), client->thread_id)) {
@@ -2081,8 +2082,9 @@ void red_client_migrate(RedClient *client)
     while (link) {
         next = link->next;
         rcc = link->data;
+        channel = red_channel_client_get_channel(rcc);
         if (red_channel_client_is_connected(rcc)) {
-            rcc->channel->client_cbs.migrate(rcc);
+            channel->client_cbs.migrate(rcc);
         }
         link = next;
     }
@@ -2103,17 +2105,19 @@ void red_client_destroy(RedClient *client)
     }
     link = client->channels;
     while (link) {
+        RedChannel *channel;
         next = link->next;
         // some channels may be in other threads, so disconnection
         // is not synchronous.
         rcc = link->data;
+        channel = red_channel_client_get_channel(rcc);
         rcc->destroying = 1;
         // some channels may be in other threads. However we currently
         // assume disconnect is synchronous (we changed the dispatcher
         // to wait for disconnection)
         // TODO: should we go back to async. For this we need to use
         // ref count for channel clients.
-        rcc->channel->client_cbs.disconnect(rcc);
+        channel->client_cbs.disconnect(rcc);
         spice_assert(ring_is_empty(&rcc->pipe));
         spice_assert(rcc->pipe_size == 0);
         spice_assert(rcc->send_data.size == 0);
@@ -2131,8 +2135,10 @@ static RedChannelClient *red_client_get_channel(RedClient *client, int type, int
     RedChannelClient *ret = NULL;
 
     for (link = client->channels; link != NULL; link = link->next) {
+        RedChannel *channel;
         rcc = link->data;
-        if (rcc->channel->type == type && rcc->channel->id == id) {
+        channel = red_channel_client_get_channel(rcc);
+        if (channel->type == type && channel->id == id) {
             ret = rcc;
             break;
         }
@@ -2436,4 +2442,9 @@ void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc)
 RedsState* red_channel_get_server(RedChannel *channel)
 {
     return channel->reds;
+}
+
+RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
+{
+    return rcc->channel;
 }

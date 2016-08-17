@@ -1858,8 +1858,7 @@ static void on_disconnect(RedChannelClient *rcc)
 
 static int handle_migrate_flush_mark(RedChannelClient *rcc)
 {
-    DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
-    RedChannel *channel = RED_CHANNEL(display_channel);
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
     red_channel_pipes_add_type(channel, RED_PIPE_ITEM_TYPE_MIGRATE_DATA);
     return TRUE;

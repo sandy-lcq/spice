@@ -157,7 +157,7 @@ void dcc_create_surface(DisplayChannelClient *dcc, int surface_id)
         return;
     }
     surface = &display->surfaces[surface_id];
-    create = red_surface_create_item_new(RED_CHANNEL_CLIENT(dcc)->channel,
+    create = red_surface_create_item_new(RED_CHANNEL(display),
                                          surface_id, surface->context.width,
                                          surface->context.height,
                                          surface->context.format, flags);
@@ -549,7 +549,7 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
         return;
     }
 
-    mci = red_monitors_config_item_new(dcc->base.channel,
+    mci = red_monitors_config_item_new(red_channel_client_get_channel(&dcc->base),
                                        monitors_config_ref(dc->monitors_config));
     red_channel_client_pipe_add(&dcc->base, &mci->pipe_item);
     red_channel_client_push(&dcc->base);

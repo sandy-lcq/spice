@@ -218,7 +218,8 @@ static void spicevmc_chardev_send_msg_to_client(RedPipeItem *msg,
 
 static SpiceVmcState *spicevmc_red_channel_client_get_state(RedChannelClient *rcc)
 {
-    return SPICE_CONTAINEROF(rcc->channel, SpiceVmcState, channel);
+    RedChannel *channel = red_channel_client_get_channel(rcc);
+    return SPICE_CONTAINEROF(channel, SpiceVmcState, channel);
 }
 
 static void spicevmc_port_send_init(RedChannelClient *rcc)
@@ -263,8 +264,9 @@ static int spicevmc_red_channel_client_config_socket(RedChannelClient *rcc)
 {
     int delay_val = 1;
     RedsStream *stream = red_channel_client_get_stream(rcc);
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    if (rcc->channel->type == SPICE_CHANNEL_USBREDIR) {
+    if (channel->type == SPICE_CHANNEL_USBREDIR) {
         if (setsockopt(stream->socket, IPPROTO_TCP, TCP_NODELAY,
                 &delay_val, sizeof(delay_val)) != 0) {
             if (errno != ENOTSUP && errno != ENOPROTOOPT) {

@@ -195,8 +195,8 @@ static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
                                                   SpiceImage *image, SpiceImage *io_image,
                                                   int is_lossy)
 {
-    DisplayChannel *display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    DisplayChannel *display_channel = DCC_TO_DC(dcc);
 
     if ((image->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_ME)) {
         spice_assert(image->descriptor.width * image->descriptor.height > 0);
@@ -1834,7 +1834,7 @@ static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     SpiceMigrateDataDisplay display_data = {0,};
 
-    display_channel = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
+    display_channel = DCC_TO_DC(dcc);
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, NULL);
     spice_marshaller_add_uint32(base_marshaller, SPICE_MIGRATE_DATA_DISPLAY_MAGIC);
@@ -2137,7 +2137,8 @@ static void marshall_qxl_drawable(RedChannelClient *rcc,
     spice_return_if_fail(rcc);
 
     Drawable *item = dpi->drawable;
-    DisplayChannel *display = SPICE_CONTAINEROF(rcc->channel, DisplayChannel, common.base);
+    DisplayChannel *display = SPICE_CONTAINEROF(red_channel_client_get_channel(rcc),
+                                                DisplayChannel, common.base);
 
     spice_return_if_fail(display);
     /* allow sized frames to be streamed, even if they where replaced by another frame, since
@@ -2227,11 +2228,12 @@ static void marshall_upgrade(RedChannelClient *rcc, SpiceMarshaller *m,
                              RedUpgradeItem *item)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    RedChannel *channel = red_channel_client_get_channel(rcc);
     RedDrawable *red_drawable;
     SpiceMsgDisplayDrawCopy copy;
     SpiceMarshaller *src_bitmap_out, *mask_bitmap_out;
 
-    spice_assert(rcc && rcc->channel && item && item->drawable);
+    spice_assert(channel && item && item->drawable);
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, &item->base);
 
     red_drawable = item->drawable->red_drawable;

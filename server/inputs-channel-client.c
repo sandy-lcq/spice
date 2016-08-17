@@ -75,7 +75,7 @@ void inputs_channel_client_handle_migrate_data(InputsChannelClient *icc,
 
 void inputs_channel_client_on_mouse_motion(InputsChannelClient *icc)
 {
-    InputsChannel *inputs_channel = (InputsChannel *)icc->base.channel;
+    InputsChannel *inputs_channel = (InputsChannel *)red_channel_client_get_channel(&icc->base);
 
     if (++icc->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
         !inputs_channel_is_src_during_migrate(inputs_channel)) {

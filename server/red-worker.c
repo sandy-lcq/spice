@@ -101,7 +101,8 @@ static int display_is_connected(RedWorker *worker)
 
 static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
 {
-    CommonGraphicsChannel *common = SPICE_CONTAINEROF(rcc->channel, CommonGraphicsChannel, base);
+    RedChannel *channel = red_channel_client_get_channel(rcc);
+    CommonGraphicsChannel *common = SPICE_CONTAINEROF(channel, CommonGraphicsChannel, base);
 
     /* SPICE_MSGC_MIGRATE_DATA is the only client message whose size is dynamic */
     if (type == SPICE_MSGC_MIGRATE_DATA) {

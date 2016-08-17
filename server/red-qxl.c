@@ -102,12 +102,13 @@ static void red_qxl_disconnect_display_peer(RedChannelClient *rcc)
 {
     RedWorkerMessageDisplayDisconnect payload;
     Dispatcher *dispatcher;
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    if (!rcc->channel) {
+    if (!channel) {
         return;
     }
 
-    dispatcher = (Dispatcher *)rcc->channel->data;
+    dispatcher = (Dispatcher *)channel->data;
 
     spice_printerr("");
     payload.rcc = rcc;
@@ -123,11 +124,12 @@ static void red_qxl_display_migrate(RedChannelClient *rcc)
 {
     RedWorkerMessageDisplayMigrate payload;
     Dispatcher *dispatcher;
-    if (!rcc->channel) {
+    RedChannel *channel = red_channel_client_get_channel(rcc);
+    if (!channel) {
         return;
     }
-    dispatcher = (Dispatcher *)rcc->channel->data;
-    spice_printerr("channel type %u id %u", rcc->channel->type, rcc->channel->id);
+    dispatcher = (Dispatcher *)channel->data;
+    spice_printerr("channel type %u id %u", channel->type, channel->id);
     payload.rcc = rcc;
     dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_DISPLAY_MIGRATE,
@@ -162,12 +164,13 @@ static void red_qxl_disconnect_cursor_peer(RedChannelClient *rcc)
 {
     RedWorkerMessageCursorDisconnect payload;
     Dispatcher *dispatcher;
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    if (!rcc->channel) {
+    if (!channel) {
         return;
     }
 
-    dispatcher = (Dispatcher *)rcc->channel->data;
+    dispatcher = (Dispatcher *)channel->data;
     spice_printerr("");
     payload.rcc = rcc;
 
@@ -180,12 +183,13 @@ static void red_qxl_cursor_migrate(RedChannelClient *rcc)
 {
     RedWorkerMessageCursorMigrate payload;
     Dispatcher *dispatcher;
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    if (!rcc->channel) {
+    if (!channel) {
         return;
     }
-    dispatcher = (Dispatcher *)rcc->channel->data;
-    spice_printerr("channel type %u id %u", rcc->channel->type, rcc->channel->id);
+    dispatcher = (Dispatcher *)channel->data;
+    spice_printerr("channel type %u id %u", channel->type, channel->id);
     payload.rcc = rcc;
     dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_CURSOR_MIGRATE,

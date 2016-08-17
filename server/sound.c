@@ -212,14 +212,16 @@ static void snd_disconnect_channel(SndChannel *channel)
 {
     SndWorker *worker;
     RedsState *reds;
+    RedChannel *red_channel;
 
     if (!channel || !channel->stream) {
         spice_debug("not connected");
         return;
     }
+    red_channel = red_channel_client_get_channel(channel->channel_client);
     reds = snd_channel_get_server(channel);
     spice_debug("SndChannel=%p rcc=%p type=%d",
-                 channel, channel->channel_client, channel->channel_client->channel->type);
+                 channel, channel->channel_client, red_channel->type);
     worker = channel->worker;
     channel->cleanup(channel);
     red_channel_client_disconnect(worker->connection->channel_client);
@@ -992,12 +994,13 @@ error1:
 static void snd_disconnect_channel_client(RedChannelClient *rcc)
 {
     SndWorker *worker;
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    spice_assert(rcc->channel);
-    spice_assert(rcc->channel->data);
-    worker = (SndWorker *)rcc->channel->data;
+    spice_assert(channel);
+    spice_assert(channel->data);
+    worker = (SndWorker *)channel->data;
 
-    spice_debug("channel-type=%d", rcc->channel->type);
+    spice_debug("channel-type=%d", channel->type);
     if (worker->connection) {
         spice_assert(worker->connection->channel_client == rcc);
         snd_disconnect_channel(worker->connection);
@@ -1261,11 +1264,12 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
 static void snd_record_migrate_channel_client(RedChannelClient *rcc)
 {
     SndWorker *worker;
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
     spice_debug(NULL);
-    spice_assert(rcc->channel);
-    spice_assert(rcc->channel->data);
-    worker = (SndWorker *)rcc->channel->data;
+    spice_assert(channel);
+    spice_assert(channel->data);
+    worker = (SndWorker *)channel->data;
 
     if (worker->connection) {
         spice_assert(worker->connection->channel_client == rcc);
@@ -1490,10 +1494,11 @@ static void snd_set_record_peer(RedChannel *channel, RedClient *client, RedsStre
 static void snd_playback_migrate_channel_client(RedChannelClient *rcc)
 {
     SndWorker *worker;
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    spice_assert(rcc->channel);
-    spice_assert(rcc->channel->data);
-    worker = (SndWorker *)rcc->channel->data;
+    spice_assert(channel);
+    spice_assert(channel->data);
+    worker = (SndWorker *)channel->data;
     spice_debug(NULL);
 
     if (worker->connection) {

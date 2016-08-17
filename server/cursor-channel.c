@@ -235,7 +235,7 @@ static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *
     AddBufInfo info;
 
     spice_assert(rcc);
-    cursor_channel = SPICE_CONTAINEROF(rcc->channel, CursorChannel, common.base);
+    cursor_channel = (CursorChannel*)red_channel_client_get_channel(rcc);
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_INIT, NULL);
     msg.visible = cursor_channel->cursor_visible;
@@ -253,7 +253,7 @@ static void cursor_marshall(CursorChannelClient *ccc,
                             RedCursorPipeItem *cursor_pipe_item)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
-    CursorChannel *cursor_channel = SPICE_CONTAINEROF(rcc->channel, CursorChannel, common.base);
+    CursorChannel *cursor_channel = (CursorChannel*)red_channel_client_get_channel(rcc);
     CursorItem *item = cursor_pipe_item->cursor_item;
     RedPipeItem *pipe_item = &cursor_pipe_item->base;
     RedCursorCmd *cmd;
