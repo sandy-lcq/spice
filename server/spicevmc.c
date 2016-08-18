@@ -211,7 +211,7 @@ static void spicevmc_chardev_send_msg_to_client(RedPipeItem *msg,
 {
     SpiceVmcState *state = opaque;
 
-    spice_assert(state->rcc->client == client);
+    spice_assert(red_channel_client_get_client(state->rcc) == client);
     red_pipe_item_ref(msg);
     red_channel_client_pipe_add_push(state->rcc, msg);
 }
@@ -255,7 +255,8 @@ static void spicevmc_char_dev_remove_client(RedClient *client, void *opaque)
     SpiceVmcState *state = opaque;
 
     spice_printerr("vmc state %p, client %p", state, client);
-    spice_assert(state->rcc && state->rcc->client == client);
+    spice_assert(state->rcc &&
+                 red_channel_client_get_client(state->rcc) == client);
 
     red_channel_client_shutdown(state->rcc);
 }
@@ -283,6 +284,7 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     SpiceVmcState *state;
     SpiceCharDeviceInterface *sif;
+    RedClient *client = red_channel_client_get_client(rcc);
 
     if (!rcc) {
         return;
@@ -294,11 +296,11 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
     red_char_device_write_buffer_release(state->chardev, &state->recv_from_client_buf);
 
     if (state->chardev) {
-        if (red_char_device_client_exists(state->chardev, rcc->client)) {
-            red_char_device_client_remove(state->chardev, rcc->client);
+        if (red_char_device_client_exists(state->chardev, client)) {
+            red_char_device_client_remove(state->chardev, client);
         } else {
             spice_printerr("client %p have already been removed from char dev %p",
-                           rcc->client, state->chardev);
+                           client, state->chardev);
         }
     }
 
@@ -349,7 +351,8 @@ static int handle_compressed_msg(SpiceVmcState *state, RedChannelClient *rcc,
     int decompressed_size;
     RedCharDeviceWriteBuffer *write_buf;
 
-    write_buf = red_char_device_write_buffer_get(state->chardev, rcc->client,
+    write_buf = red_char_device_write_buffer_get(state->chardev,
+                                                 red_channel_client_get_client(rcc),
                                                  compressed_data_msg->uncompressed_size);
     if (!write_buf) {
         return FALSE;
@@ -424,6 +427,7 @@ static uint8_t *spicevmc_red_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                        uint32_t size)
 {
     SpiceVmcState *state;
+    RedClient *client = red_channel_client_get_client(rcc);
 
     state = spicevmc_red_channel_client_get_state(rcc);
 
@@ -432,7 +436,7 @@ static uint8_t *spicevmc_red_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
         assert(!state->recv_from_client_buf);
 
         state->recv_from_client_buf = red_char_device_write_buffer_get(state->chardev,
-                                                                       rcc->client,
+                                                                       client,
                                                                        size);
         if (!state->recv_from_client_buf) {
             spice_error("failed to allocate write buffer");

@@ -1042,12 +1042,14 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
 {
     RedCharDevice *dev_state = RED_CHAR_DEVICE(reds->agent_dev);
     RedChannelClient *rcc;
+    RedClient *client;
 
     if (!reds->vdagent) {
         return;
     }
     spice_assert(reds->vdagent->st && reds->vdagent->st == dev_state);
     rcc = main_channel_client_get_base(mcc);
+    client = red_channel_client_get_client(rcc);
     reds->agent_dev->priv->client_agent_started = TRUE;
     /*
      * Note that in older releases, send_tokens were set to ~0 on both client
@@ -1056,11 +1058,11 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
      * and vice versa, the sending from the server to the client won't have
      * flow control, but will have no other problem.
      */
-    if (!red_char_device_client_exists(dev_state, rcc->client)) {
+    if (!red_char_device_client_exists(dev_state, client)) {
         int client_added;
 
         client_added = red_char_device_client_add(dev_state,
-                                                  rcc->client,
+                                                  client,
                                                   TRUE, /* flow control */
                                                   REDS_VDI_PORT_NUM_RECEIVE_BUFFS,
                                                   REDS_AGENT_WINDOW_SIZE,
@@ -1074,7 +1076,7 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
         }
     } else {
         red_char_device_send_to_client_tokens_set(dev_state,
-                                                  rcc->client,
+                                                  client,
                                                   num_tokens);
     }
 
@@ -1086,12 +1088,13 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
 
 void reds_on_main_agent_tokens(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens)
 {
+    RedClient *client = red_channel_client_get_client(main_channel_client_get_base(mcc));
     if (!reds->vdagent) {
         return;
     }
     spice_assert(reds->vdagent->st);
     red_char_device_send_to_client_tokens_add(reds->vdagent->st,
-                                                main_channel_client_get_base(mcc)->client,
+                                                client,
                                                 num_tokens);
 }
 
@@ -1112,7 +1115,7 @@ uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, siz
     }
 
     spice_assert(dev->priv->recv_from_client_buf == NULL);
-    client = main_channel_client_get_base(mcc)->client;
+    client = red_channel_client_get_client(main_channel_client_get_base(mcc));
     dev->priv->recv_from_client_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev),
                                                                        client,
                                                                        size + sizeof(VDIChunkHeader));
@@ -1483,9 +1486,9 @@ int reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
     } else {
         spice_debug("agent was not attached on the source host");
         if (reds->vdagent) {
+            RedClient *client = red_channel_client_get_client(main_channel_client_get_base(mcc));
             /* red_char_device_client_remove disables waiting for migration data */
-            red_char_device_client_remove(RED_CHAR_DEVICE(agent_dev),
-                                          main_channel_client_get_base(mcc)->client);
+            red_char_device_client_remove(RED_CHAR_DEVICE(agent_dev), client);
             main_channel_push_agent_connected(reds->main_channel);
         }
     }
@@ -1929,10 +1932,11 @@ int reds_on_migrate_dst_set_seamless(RedsState *reds, MainChannelClient *mcc, ui
         reds->dst_do_seamless_migrate = FALSE;
     } else {
         RedChannelClient *rcc = main_channel_client_get_base(mcc);
+        RedClient *client = red_channel_client_get_client(rcc);
 
-        red_client_set_migration_seamless(rcc->client);
+        red_client_set_migration_seamless(client);
         /* linking all the channels that have been connected before migration handshake */
-        reds->dst_do_seamless_migrate = reds_link_mig_target_channels(reds, rcc->client);
+        reds->dst_do_seamless_migrate = reds_link_mig_target_channels(reds, client);
     }
     return reds->dst_do_seamless_migrate;
 }

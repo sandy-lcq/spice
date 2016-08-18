@@ -172,7 +172,8 @@ static void smartcard_send_msg_to_client(RedPipeItem *msg,
 {
     RedCharDeviceSmartcard *dev = opaque;
 
-    spice_assert(dev->priv->scc && dev->priv->scc->base.client == client);
+    spice_assert(dev->priv->scc &&
+                 red_channel_client_get_client(&dev->priv->scc->base) == client);
     red_pipe_item_ref(msg);
     smartcard_channel_client_pipe_add_push(&dev->priv->scc->base, msg);
 }
@@ -187,7 +188,8 @@ static void smartcard_remove_client(RedClient *client, void *opaque)
     RedCharDeviceSmartcard *dev = opaque;
 
     spice_printerr("smartcard  dev %p, client %p", dev, client);
-    spice_assert(dev->priv->scc && dev->priv->scc->base.client == client);
+    spice_assert(dev->priv->scc &&
+                 red_channel_client_get_client(&dev->priv->scc->base) == client);
     red_channel_client_shutdown(&dev->priv->scc->base);
 }
 
@@ -318,7 +320,7 @@ static void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_de
     dev->priv->scc = scc;
     scc->smartcard = dev;
     client_added = red_char_device_client_add(RED_CHAR_DEVICE(dev),
-                                              scc->base.client,
+                                              red_channel_client_get_client(&scc->base),
                                               FALSE, /* no flow control yet */
                                               0, /* send queue size */
                                               ~0,
@@ -364,7 +366,8 @@ static void smartcard_char_device_detach_client(SmartCardChannelClient *scc)
     }
     dev = scc->smartcard;
     spice_assert(dev->priv->scc == scc);
-    red_char_device_client_remove(RED_CHAR_DEVICE(dev), scc->base.client);
+    red_char_device_client_remove(RED_CHAR_DEVICE(dev),
+                                  red_channel_client_get_client(&scc->base));
     scc->smartcard = NULL;
     dev->priv->scc = NULL;
 }
@@ -393,7 +396,9 @@ static uint8_t *smartcard_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
         dev = scc->smartcard;
         spice_assert(dev->priv->scc || scc->smartcard);
         spice_assert(!scc->write_buf);
-        scc->write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev), rcc->client, size);
+        scc->write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev),
+                                                          red_channel_client_get_client(rcc),
+                                                          size);
 
         if (!scc->write_buf) {
             spice_error("failed to allocate write buffer");

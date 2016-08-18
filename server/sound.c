@@ -1143,7 +1143,7 @@ void snd_set_playback_latency(RedClient *client, uint32_t latency)
 
     for (; now; now = now->next) {
         if (now->base_channel->type == SPICE_CHANNEL_PLAYBACK && now->connection &&
-            now->connection->channel_client->client == client) {
+            red_channel_client_get_client(now->connection->channel_client) == client) {
 
             if (red_channel_client_test_remote_cap(now->connection->channel_client,
                 SPICE_PLAYBACK_CAP_LATENCY)) {

@@ -37,7 +37,8 @@ static void main_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     RedsState *reds = red_channel_get_server(red_channel_client_get_channel(rcc));
     spice_printerr("rcc=%p", rcc);
-    main_dispatcher_client_disconnect(reds_get_main_dispatcher(reds), rcc->client);
+    main_dispatcher_client_disconnect(reds_get_main_dispatcher(reds),
+                                      red_channel_client_get_client(rcc));
 }
 
 RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t connection_id)
@@ -48,7 +49,7 @@ RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t c
     FOREACH_CLIENT(main_chan, link, next, rcc) {
         MainChannelClient *mcc = (MainChannelClient*) rcc;
         if (main_channel_client_get_connection_id(mcc) == connection_id) {
-            return rcc->client;
+            return red_channel_client_get_client(rcc);
         }
     }
     return NULL;
@@ -56,7 +57,8 @@ RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t c
 
 static void main_channel_push_channels(MainChannelClient *mcc)
 {
-    if (red_client_during_migrate_at_target((main_channel_client_get_base(mcc))->client)) {
+    RedChannelClient *rcc = main_channel_client_get_base(mcc);
+    if (red_client_during_migrate_at_target(red_channel_client_get_client(rcc))) {
         spice_printerr("warning: ignoring unexpected SPICE_MSGC_MAIN_ATTACH_CHANNELS"
                    "during migration");
         return;

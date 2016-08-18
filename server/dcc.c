@@ -892,18 +892,19 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
 static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init)
 {
     gboolean success;
+    RedClient *client = red_channel_client_get_client(RED_CHANNEL_CLIENT(dcc));
 
     spice_return_val_if_fail(dcc->expect_init, FALSE);
     dcc->expect_init = FALSE;
 
     spice_return_val_if_fail(!dcc->pixmap_cache, FALSE);
-    dcc->pixmap_cache = pixmap_cache_get(RED_CHANNEL_CLIENT(dcc)->client,
+    dcc->pixmap_cache = pixmap_cache_get(client,
                                          init->pixmap_cache_id,
                                          init->pixmap_cache_size);
     spice_return_val_if_fail(dcc->pixmap_cache, FALSE);
 
     success = image_encoders_get_glz_dictionary(&dcc->encoders,
-                                                RED_CHANNEL_CLIENT(dcc)->client,
+                                                client,
                                                 init->glz_dictionary_id,
                                                 init->glz_dictionary_window_size);
     spice_return_val_if_fail(success, FALSE);
@@ -1007,7 +1008,7 @@ static int dcc_handle_migrate_glz_dictionary(DisplayChannelClient *dcc,
                                              SpiceMigrateDataDisplay *migrate)
 {
     return image_encoders_restore_glz_dictionary(&dcc->encoders,
-                                                 RED_CHANNEL_CLIENT(dcc)->client,
+                                                 red_channel_client_get_client(RED_CHANNEL_CLIENT(dcc)),
                                                  migrate->glz_dict_id,
                                                  &migrate->glz_dict_data);
 }
@@ -1083,7 +1084,7 @@ int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mess
      * channel client that froze the cache on the src size receives the migrate
      * data and unfreezes the cache by setting its size > 0 and by triggering
      * pixmap_cache_reset */
-    dcc->pixmap_cache = pixmap_cache_get(RED_CHANNEL_CLIENT(dcc)->client,
+    dcc->pixmap_cache = pixmap_cache_get(red_channel_client_get_client(RED_CHANNEL_CLIENT(dcc)),
                                          migrate_data->pixmap_cache_id, -1);
     spice_return_val_if_fail(dcc->pixmap_cache, FALSE);
 

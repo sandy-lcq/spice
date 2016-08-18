@@ -634,7 +634,7 @@ static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, Stream *stream)
         MainChannelClient *mcc;
         uint64_t net_test_bit_rate;
 
-        mcc = red_client_get_main(RED_CHANNEL_CLIENT(dcc)->client);
+        mcc = red_client_get_main(red_channel_client_get_client(RED_CHANNEL_CLIENT(dcc)));
         net_test_bit_rate = main_channel_client_is_network_info_initialized(mcc) ?
                                 main_channel_client_get_bitrate_per_sec(mcc) :
                                 0;
@@ -663,10 +663,11 @@ static uint32_t get_roundtrip_ms(void *opaque)
 {
     StreamAgent *agent = opaque;
     int roundtrip;
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(agent->dcc);
 
-    roundtrip = red_channel_client_get_roundtrip_ms(RED_CHANNEL_CLIENT(agent->dcc));
+    roundtrip = red_channel_client_get_roundtrip_ms(rcc);
     if (roundtrip < 0) {
-        MainChannelClient *mcc = red_client_get_main(RED_CHANNEL_CLIENT(agent->dcc)->client);
+        MainChannelClient *mcc = red_client_get_main(red_channel_client_get_client(rcc));
 
         /*
          * the main channel client roundtrip might not have been
@@ -697,10 +698,10 @@ static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
     dcc_update_streams_max_latency(dcc, agent);
 
     agent->client_required_latency = delay_ms;
-    if (delay_ms > dcc_get_max_stream_latency(agent->dcc)) {
-        dcc_set_max_stream_latency(agent->dcc, delay_ms);
+    if (delay_ms > dcc_get_max_stream_latency(dcc)) {
+        dcc_set_max_stream_latency(dcc, delay_ms);
     }
-    spice_debug("resetting client latency: %u", dcc_get_max_stream_latency(agent->dcc));
+    spice_debug("resetting client latency: %u", dcc_get_max_stream_latency(dcc));
     main_dispatcher_set_mm_time_latency(reds_get_main_dispatcher(reds),
                                         client,
                                         dcc_get_max_stream_latency(agent->dcc));
