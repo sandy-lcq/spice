@@ -500,7 +500,7 @@ int red_channel_all_blocked(RedChannel *channel);
 /* return TRUE if any of the connected clients to this channel are blocked */
 int red_channel_any_blocked(RedChannel *channel);
 
-int red_channel_client_blocked(RedChannelClient *rcc);
+int red_channel_client_is_blocked(RedChannelClient *rcc);
 
 /* helper for channels that have complex logic that can possibly ready a send */
 int red_channel_client_send_message_pending(RedChannelClient *rcc);

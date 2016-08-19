@@ -1908,7 +1908,7 @@ int red_channel_all_blocked(RedChannel *channel)
     }
     for (link = channel->clients; link != NULL; link = link->next) {
         rcc = link->data;
-        if (!rcc->send_data.blocked) {
+        if (!red_channel_client_is_blocked(rcc)) {
             return FALSE;
         }
     }
@@ -1921,14 +1921,14 @@ int red_channel_any_blocked(RedChannel *channel)
     RedChannelClient *rcc;
 
     FOREACH_CLIENT(channel, link, next, rcc) {
-        if (rcc->send_data.blocked) {
+        if (red_channel_client_is_blocked(rcc)) {
             return TRUE;
         }
     }
     return FALSE;
 }
 
-int red_channel_client_blocked(RedChannelClient *rcc)
+int red_channel_client_is_blocked(RedChannelClient *rcc)
 {
     return rcc && rcc->send_data.blocked;
 }
@@ -2311,7 +2311,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
     uint64_t end_time;
     int blocked;
 
-    if (!red_channel_client_blocked(rcc)) {
+    if (!red_channel_client_is_blocked(rcc)) {
         return TRUE;
     }
     if (timeout != -1) {
@@ -2325,7 +2325,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
         usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
         red_channel_client_receive(rcc);
         red_channel_client_send(rcc);
-    } while ((blocked = red_channel_client_blocked(rcc)) &&
+    } while ((blocked = red_channel_client_is_blocked(rcc)) &&
              (timeout == -1 || spice_get_monotonic_time_ns() < end_time));
 
     if (blocked) {
@@ -2371,7 +2371,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     mark_item->item_in_pipe = &item_in_pipe;
     red_channel_client_pipe_add_after(rcc, &mark_item->base, item);
 
-    if (red_channel_client_blocked(rcc)) {
+    if (red_channel_client_is_blocked(rcc)) {
         red_channel_client_receive(rcc);
         red_channel_client_send(rcc);
     }
@@ -2432,7 +2432,7 @@ int red_channel_wait_all_sent(RedChannel *channel,
 
 void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc)
 {
-    if (red_channel_client_blocked(rcc) || rcc->pipe_size > 0) {
+    if (red_channel_client_is_blocked(rcc) || rcc->pipe_size > 0) {
         red_channel_client_disconnect(rcc);
     } else {
         spice_assert(red_channel_client_no_item_being_sent(rcc));
