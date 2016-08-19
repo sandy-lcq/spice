@@ -629,5 +629,7 @@ int red_channel_wait_all_sent(RedChannel *channel,
                               int64_t timeout);
 void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc);
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc);
+gboolean red_channel_client_is_destroying(RedChannelClient *rcc);
+void red_channel_client_set_destroying(RedChannelClient *rcc);
 
 #endif

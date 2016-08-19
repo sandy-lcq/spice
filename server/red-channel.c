@@ -2111,7 +2111,7 @@ void red_client_destroy(RedClient *client)
         // is not synchronous.
         rcc = link->data;
         channel = red_channel_client_get_channel(rcc);
-        rcc->destroying = 1;
+        red_channel_client_set_destroying(rcc);
         // some channels may be in other threads. However we currently
         // assume disconnect is synchronous (we changed the dispatcher
         // to wait for disconnection)
@@ -2447,4 +2447,14 @@ RedsState* red_channel_get_server(RedChannel *channel)
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
 {
     return rcc->channel;
+}
+
+gboolean red_channel_client_is_destroying(RedChannelClient *rcc)
+{
+    return rcc->destroying;
+}
+
+void red_channel_client_set_destroying(RedChannelClient *rcc)
+{
+    rcc->destroying = TRUE;
 }
