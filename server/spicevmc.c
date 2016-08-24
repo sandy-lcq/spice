@@ -127,7 +127,7 @@ static RedVmcPipeItem* try_compress_lz4(SpiceVmcState *state, int n, RedVmcPipeI
     RedVmcPipeItem *msg_item_compressed;
     int compressed_data_count;
 
-    if (reds_stream_get_family(state->rcc->stream) == AF_UNIX) {
+    if (reds_stream_get_family(red_channel_client_get_stream(state->rcc)) == AF_UNIX) {
         /* AF_LOCAL - data will not be compressed */
         return NULL;
     }
