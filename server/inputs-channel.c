@@ -116,10 +116,6 @@ struct InputsChannel {
     SpiceTabletInstance *tablet;
 };
 
-typedef struct RedInputsPipeItem {
-    RedPipeItem base;
-} RedInputsPipeItem;
-
 typedef struct RedKeyModifiersPipeItem {
     RedPipeItem base;
     uint8_t modifiers;
