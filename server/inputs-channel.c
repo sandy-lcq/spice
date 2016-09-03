@@ -110,6 +110,7 @@ struct InputsChannel {
     uint8_t recv_buf[RECEIVE_BUF_SIZE];
     VDAgentMouseState mouse_state;
     int src_during_migrate;
+    SpiceTimer *key_modifiers_timer;
 
     SpiceKbdInstance *keyboard;
     SpiceMouseInstance *mouse;
@@ -125,8 +126,6 @@ typedef struct RedInputsInitPipeItem {
     RedPipeItem base;
     uint8_t modifiers;
 } RedInputsInitPipeItem;
-
-static SpiceTimer *key_modifiers_timer;
 
 
 #define KEY_MODIFIERS_TTL (MSEC_PER_SEC * 2)
@@ -182,9 +181,9 @@ static void inputs_channel_release_msg_rcv_buf(RedChannelClient *rcc,
      ((state & SPICE_MOUSE_BUTTON_MASK_MIDDLE) ? VD_AGENT_MBUTTON_MASK : 0) |    \
      ((state & SPICE_MOUSE_BUTTON_MASK_RIGHT) ? VD_AGENT_RBUTTON_MASK : 0))
 
-static void activate_modifiers_watch(RedsState *reds)
+static void activate_modifiers_watch(InputsChannel *inputs, RedsState *reds)
 {
-    reds_core_timer_start(reds, key_modifiers_timer, KEY_MODIFIERS_TTL);
+    reds_core_timer_start(reds, inputs->key_modifiers_timer, KEY_MODIFIERS_TTL);
 }
 
 static void kbd_push_scan(SpiceKbdInstance *sin, uint8_t scan)
@@ -284,7 +283,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
         if (key_down->code == CAPS_LOCK_SCAN_CODE ||
             key_down->code == NUM_LOCK_SCAN_CODE ||
             key_down->code == SCROLL_LOCK_SCAN_CODE) {
-            activate_modifiers_watch(reds);
+            activate_modifiers_watch(inputs_channel, reds);
         }
     }
     case SPICE_MSGC_INPUTS_KEY_UP: {
@@ -414,7 +413,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
             kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE);
             kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE | 0x80);
         }
-        activate_modifiers_watch(reds);
+        activate_modifiers_watch(inputs_channel, reds);
         break;
     }
     case SPICE_MSGC_DISCONNECTING:
@@ -603,7 +602,7 @@ InputsChannel* inputs_channel_new(RedsState *reds)
     red_channel_set_cap(&inputs->base, SPICE_INPUTS_CAP_KEY_SCANCODE);
     reds_register_channel(reds, &inputs->base);
 
-    if (!(key_modifiers_timer = reds_core_timer_add(reds, key_modifiers_sender, inputs))) {
+    if (!(inputs->key_modifiers_timer = reds_core_timer_add(reds, key_modifiers_sender, inputs))) {
         spice_error("key modifiers timer create failed");
     }
     return inputs;
