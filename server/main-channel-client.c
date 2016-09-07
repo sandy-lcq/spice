@@ -150,16 +150,18 @@ void main_channel_client_start_net_test(MainChannelClient *mcc, int test_rate)
     if (!mcc || mcc->priv->net_test_id) {
         return;
     }
-    if (test_rate) {
-        if (main_channel_client_push_ping(mcc, NET_TEST_WARMUP_BYTES)
-            && main_channel_client_push_ping(mcc, 0)
-            && main_channel_client_push_ping(mcc, NET_TEST_BYTES)) {
-            mcc->priv->net_test_id = mcc->priv->ping_id - 2;
-            mcc->priv->net_test_stage = NET_TEST_STAGE_WARMUP;
-        }
-    } else {
+
+    if (!test_rate) {
         red_channel_client_start_connectivity_monitoring(&mcc->base, CLIENT_CONNECTIVITY_TIMEOUT);
+        return;
     }
+
+    main_channel_client_push_ping(mcc, NET_TEST_WARMUP_BYTES);
+    main_channel_client_push_ping(mcc, 0);
+    main_channel_client_push_ping(mcc, NET_TEST_BYTES);
+
+    mcc->priv->net_test_id = mcc->priv->ping_id - 2;
+    mcc->priv->net_test_stage = NET_TEST_STAGE_WARMUP;
 }
 
 static RedPipeItem *red_ping_item_new(int size)
