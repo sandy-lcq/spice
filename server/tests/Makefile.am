@@ -37,6 +37,7 @@ LDADD =								\
 	$(NULL)
 
 TESTS =						\
+	spice-options-test			\
 	stat_test				\
 	stream-test				\
 	test-loop				\
