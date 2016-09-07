@@ -23,9 +23,17 @@
 #include "migration-protocol.h"
 #include "red-channel-client.h"
 
-struct InputsChannelClient {
-    RedChannelClient base;
+typedef struct InputsChannelClientPrivate InputsChannelClientPrivate;
+struct InputsChannelClientPrivate
+{
     uint16_t motion_count;
+};
+
+struct InputsChannelClient
+{
+    RedChannelClient base;
+
+    InputsChannelClientPrivate priv[1];
 };
 
 RedChannelClient* inputs_channel_client_create(RedChannel *channel,
@@ -45,8 +53,9 @@ RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                         num_common_caps,
                                                         common_caps, num_caps,
                                                         caps);
-    if (icc)
-        icc->motion_count = 0;
+    if (icc) {
+        icc->priv->motion_count = 0;
+    }
     return &icc->base;
 }
 
@@ -60,16 +69,16 @@ void inputs_channel_client_send_migrate_data(RedChannelClient *rcc,
 
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_INPUTS_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_INPUTS_VERSION);
-    spice_marshaller_add_uint16(m, icc->motion_count);
+    spice_marshaller_add_uint16(m, icc->priv->motion_count);
 }
 
 void inputs_channel_client_handle_migrate_data(InputsChannelClient *icc,
                                                uint16_t motion_count)
 {
-    icc->motion_count = motion_count;
+    icc->priv->motion_count = motion_count;
 
-    for (; icc->motion_count >= SPICE_INPUT_MOTION_ACK_BUNCH;
-           icc->motion_count -= SPICE_INPUT_MOTION_ACK_BUNCH) {
+    for (; icc->priv->motion_count >= SPICE_INPUT_MOTION_ACK_BUNCH;
+           icc->priv->motion_count -= SPICE_INPUT_MOTION_ACK_BUNCH) {
         red_channel_client_pipe_add_type(&icc->base, RED_PIPE_ITEM_MOUSE_MOTION_ACK);
     }
 }
@@ -78,9 +87,9 @@ void inputs_channel_client_on_mouse_motion(InputsChannelClient *icc)
 {
     InputsChannel *inputs_channel = (InputsChannel *)red_channel_client_get_channel(&icc->base);
 
-    if (++icc->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
+    if (++icc->priv->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
         !inputs_channel_is_src_during_migrate(inputs_channel)) {
         red_channel_client_pipe_add_type(&icc->base, RED_PIPE_ITEM_MOUSE_MOTION_ACK);
-        icc->motion_count = 0;
+        icc->priv->motion_count = 0;
     }
 }
