@@ -326,18 +326,18 @@ static void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_de
     dev->priv->scc = scc;
     scc->priv->smartcard = dev;
     client_added = red_char_device_client_add(RED_CHAR_DEVICE(dev),
-                                              red_channel_client_get_client(&scc->base),
+                                              red_channel_client_get_client(RED_CHANNEL_CLIENT(scc)),
                                               FALSE, /* no flow control yet */
                                               0, /* send queue size */
                                               ~0,
                                               ~0,
                                               red_channel_client_is_waiting_for_migrate_data(
-                                                  &scc->base));
+                                                  RED_CHANNEL_CLIENT(scc)));
     if (!client_added) {
         spice_warning("failed");
         dev->priv->scc = NULL;
         scc->priv->smartcard = NULL;
-        red_channel_client_disconnect(&scc->base);
+        red_channel_client_disconnect(RED_CHANNEL_CLIENT(scc));
     }
 }
 
@@ -373,7 +373,7 @@ static void smartcard_char_device_detach_client(SmartCardChannelClient *scc)
     dev = scc->priv->smartcard;
     spice_assert(dev->priv->scc == scc);
     red_char_device_client_remove(RED_CHAR_DEVICE(dev),
-                                  red_channel_client_get_client(&scc->base));
+                                  red_channel_client_get_client(RED_CHANNEL_CLIENT(scc)));
     scc->priv->smartcard = NULL;
     dev->priv->scc = NULL;
 }
@@ -573,14 +573,14 @@ static void smartcard_remove_reader(SmartCardChannelClient *scc, uint32_t reader
     RedCharDeviceSmartcard *dev;
 
     if (char_device == NULL) {
-        smartcard_push_error(&scc->base, reader_id,
+        smartcard_push_error(RED_CHANNEL_CLIENT(scc), reader_id,
             VSC_GENERAL_ERROR);
         return;
     }
 
     dev = red_char_device_opaque_get(char_device->st);
     if (dev->priv->reader_added == FALSE) {
-        smartcard_push_error(&scc->base, reader_id,
+        smartcard_push_error(RED_CHANNEL_CLIENT(scc), reader_id,
             VSC_GENERAL_ERROR);
         return;
     }
@@ -595,7 +595,8 @@ static void smartcard_add_reader(SmartCardChannelClient *scc, uint8_t *name)
         SpiceCharDeviceInstance *char_device = smartcard_readers_get_unattached();
 
         if (!char_device) {
-            smartcard_push_error(&scc->base, VSCARD_UNDEFINED_READER_ID,
+            smartcard_push_error(RED_CHANNEL_CLIENT(scc),
+                                 VSCARD_UNDEFINED_READER_ID,
                                 VSC_CANNOT_ADD_MORE_READERS);
             return;
         }
@@ -769,7 +770,7 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
     if (!scc) {
         return;
     }
-    red_channel_client_ack_zero_messages_window(&scc->base);
+    red_channel_client_ack_zero_messages_window(RED_CHANNEL_CLIENT(scc));
 
     if (char_device) {
         smartcard_char_device_attach_client(char_device, scc);

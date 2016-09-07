@@ -56,7 +56,7 @@ RedChannelClient* inputs_channel_client_create(RedChannel *channel,
     if (icc) {
         icc->priv->motion_count = 0;
     }
-    return &icc->base;
+    return RED_CHANNEL_CLIENT(icc);
 }
 
 void inputs_channel_client_send_migrate_data(RedChannelClient *rcc,
@@ -79,17 +79,19 @@ void inputs_channel_client_handle_migrate_data(InputsChannelClient *icc,
 
     for (; icc->priv->motion_count >= SPICE_INPUT_MOTION_ACK_BUNCH;
            icc->priv->motion_count -= SPICE_INPUT_MOTION_ACK_BUNCH) {
-        red_channel_client_pipe_add_type(&icc->base, RED_PIPE_ITEM_MOUSE_MOTION_ACK);
+        red_channel_client_pipe_add_type(RED_CHANNEL_CLIENT(icc),
+                                         RED_PIPE_ITEM_MOUSE_MOTION_ACK);
     }
 }
 
 void inputs_channel_client_on_mouse_motion(InputsChannelClient *icc)
 {
-    InputsChannel *inputs_channel = (InputsChannel *)red_channel_client_get_channel(&icc->base);
+    InputsChannel *inputs_channel = (InputsChannel *)red_channel_client_get_channel(RED_CHANNEL_CLIENT(icc));
 
     if (++icc->priv->motion_count % SPICE_INPUT_MOTION_ACK_BUNCH == 0 &&
         !inputs_channel_is_src_during_migrate(inputs_channel)) {
-        red_channel_client_pipe_add_type(&icc->base, RED_PIPE_ITEM_MOUSE_MOTION_ACK);
+        red_channel_client_pipe_add_type(RED_CHANNEL_CLIENT(icc),
+                                         RED_PIPE_ITEM_MOUSE_MOTION_ACK);
         icc->priv->motion_count = 0;
     }
 }

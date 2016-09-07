@@ -66,8 +66,6 @@ int main_channel_client_is_low_bandwidth(MainChannelClient *mcc);
 uint64_t main_channel_client_get_bitrate_per_sec(MainChannelClient *mcc);
 uint64_t main_channel_client_get_roundtrip_ms(MainChannelClient *mcc);
 
-RedChannelClient* main_channel_client_get_base(MainChannelClient* mcc);
-
 void main_channel_client_push_name(MainChannelClient *mcc, const char *name);
 void main_channel_client_push_uuid(MainChannelClient *mcc, const uint8_t uuid[16]);
 
