@@ -384,59 +384,59 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
 
     roundtrip = g_get_monotonic_time() - ping->timestamp;
 
-    if (ping->id == mcc->priv->net_test_id) {
-        switch (mcc->priv->net_test_stage) {
-            case NET_TEST_STAGE_WARMUP:
-                mcc->priv->net_test_id++;
-                mcc->priv->net_test_stage = NET_TEST_STAGE_LATENCY;
-                mcc->priv->latency = roundtrip;
-                break;
-            case NET_TEST_STAGE_LATENCY:
-                mcc->priv->net_test_id++;
-                mcc->priv->net_test_stage = NET_TEST_STAGE_RATE;
-                mcc->priv->latency = MIN(mcc->priv->latency, roundtrip);
-                break;
-            case NET_TEST_STAGE_RATE:
-                mcc->priv->net_test_id = 0;
-                if (roundtrip <= mcc->priv->latency) {
-                    // probably high load on client or server result with incorrect values
-                    spice_printerr("net test: invalid values, latency %" PRIu64
-                                   " roundtrip %" PRIu64 ". assuming high"
-                                   "bandwidth", mcc->priv->latency, roundtrip);
-                    mcc->priv->latency = 0;
-                    mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
-                    red_channel_client_start_connectivity_monitoring(&mcc->base,
-                                                                     CLIENT_CONNECTIVITY_TIMEOUT);
-                    break;
-                }
-                mcc->priv->bitrate_per_sec = (uint64_t)(NET_TEST_BYTES * 8) * 1000000
-                    / (roundtrip - mcc->priv->latency);
-                mcc->priv->net_test_stage = NET_TEST_STAGE_COMPLETE;
-                spice_printerr("net test: latency %f ms, bitrate %"PRIu64" bps (%f Mbps)%s",
-                               (double)mcc->priv->latency / 1000,
-                               mcc->priv->bitrate_per_sec,
-                               (double)mcc->priv->bitrate_per_sec / 1024 / 1024,
-                               main_channel_client_is_low_bandwidth(mcc) ? " LOW BANDWIDTH" : "");
-                red_channel_client_start_connectivity_monitoring(&mcc->base,
-                                                                 CLIENT_CONNECTIVITY_TIMEOUT);
-                break;
-            default:
-                spice_printerr("invalid net test stage, ping id %d test id %d stage %d",
-                               ping->id,
-                               mcc->priv->net_test_id,
-                               mcc->priv->net_test_stage);
-                mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
-        }
-        return;
-    } else {
+    if (ping->id != mcc->priv->net_test_id) {
         /*
          * channel client monitors the connectivity using ping-pong messages
          */
         red_channel_client_handle_message(rcc, size, SPICE_MSGC_PONG, ping);
-    }
 #ifdef RED_STATISTICS
-    stat_update_value(red_channel_client_get_channel(rcc)->reds, roundtrip);
+        stat_update_value(red_channel_client_get_channel(rcc)->reds, roundtrip);
 #endif
+        return;
+    }
+
+    switch (mcc->priv->net_test_stage) {
+    case NET_TEST_STAGE_WARMUP:
+        mcc->priv->net_test_id++;
+        mcc->priv->net_test_stage = NET_TEST_STAGE_LATENCY;
+        mcc->priv->latency = roundtrip;
+        break;
+    case NET_TEST_STAGE_LATENCY:
+        mcc->priv->net_test_id++;
+        mcc->priv->net_test_stage = NET_TEST_STAGE_RATE;
+        mcc->priv->latency = MIN(mcc->priv->latency, roundtrip);
+        break;
+    case NET_TEST_STAGE_RATE:
+        mcc->priv->net_test_id = 0;
+        if (roundtrip <= mcc->priv->latency) {
+            // probably high load on client or server result with incorrect values
+            spice_printerr("net test: invalid values, latency %" PRIu64
+                           " roundtrip %" PRIu64 ". assuming high"
+                           "bandwidth", mcc->priv->latency, roundtrip);
+            mcc->priv->latency = 0;
+            mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
+            red_channel_client_start_connectivity_monitoring(&mcc->base,
+                                                             CLIENT_CONNECTIVITY_TIMEOUT);
+            break;
+        }
+        mcc->priv->bitrate_per_sec = (uint64_t)(NET_TEST_BYTES * 8) * 1000000
+            / (roundtrip - mcc->priv->latency);
+        mcc->priv->net_test_stage = NET_TEST_STAGE_COMPLETE;
+        spice_printerr("net test: latency %f ms, bitrate %"PRIu64" bps (%f Mbps)%s",
+                       (double)mcc->priv->latency / 1000,
+                       mcc->priv->bitrate_per_sec,
+                       (double)mcc->priv->bitrate_per_sec / 1024 / 1024,
+                       main_channel_client_is_low_bandwidth(mcc) ? " LOW BANDWIDTH" : "");
+        red_channel_client_start_connectivity_monitoring(&mcc->base,
+                                                         CLIENT_CONNECTIVITY_TIMEOUT);
+        break;
+    default:
+        spice_printerr("invalid net test stage, ping id %d test id %d stage %d",
+                       ping->id,
+                       mcc->priv->net_test_id,
+                       mcc->priv->net_test_stage);
+        mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
+    }
 }
 
 void main_channel_client_handle_migrate_end(MainChannelClient *mcc)
