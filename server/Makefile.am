@@ -97,6 +97,7 @@ libserver_la_SOURCES =				\
 	red-channel.h				\
 	red-channel-client.c			\
 	red-channel-client.h			\
+	red-channel-client-private.h		\
 	red-common.h				\
 	dispatcher.c				\
 	dispatcher.h				\

@@ -21,6 +21,7 @@
 
 #include "dcc-private.h"
 #include "display-channel.h"
+#include "red-channel-client-private.h"
 
 #define DISPLAY_CLIENT_SHORT_TIMEOUT 15000000000ULL //nano
 
@@ -76,7 +77,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
        no other drawable depends on them */
 
     rcc = RED_CHANNEL_CLIENT(dcc);
-    ring = &rcc->pipe;
+    ring = &rcc->priv->pipe;
     item = (RedPipeItem *) ring;
     while ((item = (RedPipeItem *)ring_next(ring, &item->link))) {
         Drawable *drawable;
@@ -459,7 +460,7 @@ void dcc_start(DisplayChannelClient *dcc)
         dcc_create_all_streams(dcc);
     }
 
-    if (reds_stream_is_plain_unix(rcc->stream) &&
+    if (reds_stream_is_plain_unix(red_channel_client_get_stream(rcc)) &&
         red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
         red_channel_client_pipe_add(rcc, dcc_gl_scanout_item_new(rcc, NULL, 0));
         dcc_push_monitors_config(dcc);
@@ -573,7 +574,7 @@ RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
     spice_return_val_if_fail(item != NULL, NULL);
 
     /* FIXME: on !unix peer, start streaming with a video codec */
-    if (!reds_stream_is_plain_unix(rcc->stream) ||
+    if (!reds_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
         !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
         spice_printerr("FIXME: client does not support GL scanout");
         red_channel_client_disconnect(rcc);

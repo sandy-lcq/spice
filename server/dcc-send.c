@@ -21,6 +21,7 @@
 
 #include "dcc-private.h"
 #include "display-channel.h"
+#include "red-channel-client-private.h"
 
 #include <common/marshaller.h>
 #include <common/generated_server_marshallers.h>
@@ -188,7 +189,7 @@ static int is_brush_lossy(RedChannelClient *rcc, SpiceBrush *brush,
 
 static RedPipeItem *dcc_get_tail(DisplayChannelClient *dcc)
 {
-    return (RedPipeItem*)ring_get_tail(&RED_CHANNEL_CLIENT(dcc)->pipe);
+    return (RedPipeItem*)ring_get_tail(red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc)));
 }
 
 static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
@@ -441,7 +442,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         /* Images must be added to the cache only after they are compressed
            in order to prevent starvation in the client between pixmap_cache and
            global dictionary (in cases of multiple monitors) */
-        if (reds_stream_get_family(rcc->stream) == AF_UNIX ||
+        if (reds_stream_get_family(red_channel_client_get_stream(rcc)) == AF_UNIX ||
             !dcc_compress_image(dcc, &image, &simage->u.bitmap,
                                 drawable, can_lossy, &comp_send_data)) {
             SpicePalette *palette;
@@ -620,7 +621,7 @@ static int pipe_rendered_drawables_intersect_with_areas(DisplayChannelClient *dc
     Ring *pipe;
 
     spice_assert(num_surfaces);
-    pipe = &RED_CHANNEL_CLIENT(dcc)->pipe;
+    pipe = red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc));
 
     for (pipe_item = (RedPipeItem *)ring_get_head(pipe);
          pipe_item;
@@ -712,7 +713,7 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
     resent_areas[0] = *first_area;
     num_resent = 1;
 
-    pipe = &RED_CHANNEL_CLIENT(dcc)->pipe;
+    pipe = red_channel_client_get_pipe(RED_CHANNEL_CLIENT(dcc));
 
     // going from the oldest to the newest
     for (pipe_item = (RedPipeItem *)ring_get_tail(pipe);
@@ -2367,7 +2368,7 @@ static void begin_send_message(RedChannelClient *rcc)
         }
         free_list->wait.header.wait_count = sync_count;
 
-        if (rcc->is_mini_header) {
+        if (red_channel_client_is_mini_header(rcc)) {
             send_free_list(rcc);
         } else {
             send_free_list_legacy(rcc);

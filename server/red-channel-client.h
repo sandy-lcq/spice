@@ -23,12 +23,15 @@
 #include "red-pipe-item.h"
 #include "reds-stream.h"
 #include "red-channel.h"
+/* FIXME: remove */
+#include "red-channel-client-private.h"
 
 typedef struct RedChannel RedChannel;
 typedef struct RedClient RedClient;
 typedef struct IncomingHandler IncomingHandler;
 
 typedef struct RedChannelClient RedChannelClient;
+typedef struct RedChannelClientPrivate RedChannelClientPrivate;
 
 /*
  * When an error occurs over a channel, we treat it as a warning
@@ -111,6 +114,8 @@ void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
 void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type);
 gboolean red_channel_client_pipe_is_empty(RedChannelClient *rcc);
 uint32_t red_channel_client_get_pipe_size(RedChannelClient *rcc);
+Ring* red_channel_client_get_pipe(RedChannelClient *rcc);
+gboolean red_channel_client_is_mini_header(RedChannelClient *rcc);
 
 void red_channel_client_ack_zero_messages_window(RedChannelClient *rcc);
 void red_channel_client_ack_set_client_window(RedChannelClient *rcc, int client_window);
@@ -192,57 +197,11 @@ typedef struct IncomingHandler {
 } IncomingHandler;
 
 struct RedChannelClient {
-    RedChannel *channel;
-    RedClient  *client;
-    RedsStream *stream;
-    int dummy;
-    int dummy_connected;
-
-    uint32_t refs;
-
-    struct {
-        uint32_t generation;
-        uint32_t client_generation;
-        uint32_t messages_window;
-        uint32_t client_window;
-    } ack_data;
-
-    struct {
-        SpiceMarshaller *marshaller;
-        SpiceDataHeaderOpaque header;
-        uint32_t size;
-        RedPipeItem *item;
-        int blocked;
-        uint64_t serial;
-        uint64_t last_sent_serial;
-
-        struct {
-            SpiceMarshaller *marshaller;
-            uint8_t *header_data;
-            RedPipeItem *item;
-        } main;
-
-        struct {
-            SpiceMarshaller *marshaller;
-        } urgent;
-    } send_data;
-
+    /* protected */
     OutgoingHandler outgoing;
     IncomingHandler incoming;
-    int during_send;
-    int id; // debugging purposes
-    Ring pipe;
-    uint32_t pipe_size;
 
-    RedChannelCapabilities remote_caps;
-    int is_mini_header;
-    gboolean destroying;
-
-    int wait_migrate_data;
-    int wait_migrate_flush_mark;
-
-    RedChannelClientLatencyMonitor latency_monitor;
-    RedChannelClientConnectivityMonitor connectivity_monitor;
+    RedChannelClientPrivate priv[1];
 };
 
 #endif /* _H_RED_CHANNEL_CLIENT */

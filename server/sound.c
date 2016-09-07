@@ -35,6 +35,8 @@
 #include "reds.h"
 #include "red-qxl.h"
 #include "red-channel-client.h"
+/* FIXME: for now, allow sound channel access to private RedChannelClient data */
+#include "red-channel-client-private.h"
 #include "sound.h"
 #include <common/snd_codec.h>
 #include "demarshallers.h"
@@ -522,7 +524,7 @@ static inline int snd_reset_send_data(SndChannel *channel, uint16_t verb)
         return FALSE;
     }
 
-    header = &channel->channel_client->send_data.header;
+    header = &channel->channel_client->priv->send_data.header;
     spice_marshaller_reset(channel->send_data.marshaller);
     header->data = spice_marshaller_reserve_space(channel->send_data.marshaller,
                                                   header->header_size);
@@ -532,7 +534,7 @@ static inline int snd_reset_send_data(SndChannel *channel, uint16_t verb)
     header->set_msg_size(header, 0);
     header->set_msg_type(header, verb);
     channel->send_data.serial++;
-    if (!channel->channel_client->is_mini_header) {
+    if (!channel->channel_client->priv->is_mini_header) {
         header->set_msg_serial(header, channel->send_data.serial);
         header->set_msg_sub_list(header, 0);
     }
@@ -542,7 +544,7 @@ static inline int snd_reset_send_data(SndChannel *channel, uint16_t verb)
 
 static int snd_begin_send_message(SndChannel *channel)
 {
-    SpiceDataHeaderOpaque *header = &channel->channel_client->send_data.header;
+    SpiceDataHeaderOpaque *header = &channel->channel_client->priv->send_data.header;
 
     spice_marshaller_flush(channel->send_data.marshaller);
     channel->send_data.size = spice_marshaller_get_total_size(channel->send_data.marshaller);
