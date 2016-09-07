@@ -1844,7 +1844,7 @@ static void on_disconnect(RedChannelClient *rcc)
     spice_info(NULL);
     spice_return_if_fail(rcc != NULL);
 
-    dcc = RCC_TO_DCC(rcc);
+    dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     display = DCC_TO_DC(dcc);
 
     dcc_stop(dcc); // TODO: start/stop -> connect/disconnect?
@@ -1875,7 +1875,7 @@ static uint64_t handle_migrate_data_get_serial(RedChannelClient *rcc, uint32_t s
 
 static int handle_migrate_data(RedChannelClient *rcc, uint32_t size, void *message)
 {
-    return dcc_handle_migrate_data(RCC_TO_DCC(rcc), size, message);
+    return dcc_handle_migrate_data(DISPLAY_CHANNEL_CLIENT(rcc), size, message);
 }
 
 static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t surface_id)

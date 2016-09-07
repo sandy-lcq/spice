@@ -589,7 +589,7 @@ RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
 
 RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
 {
-    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     const SpiceMsgDisplayGlDraw *draw = data;
     RedGlDrawItem *item = spice_new(RedGlDrawItem, 1);
     spice_return_val_if_fail(item != NULL, NULL);
@@ -989,7 +989,7 @@ static int dcc_handle_gl_draw_done(DisplayChannelClient *dcc)
 
 int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void *msg)
 {
-    DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
 
     switch (type) {
     case SPICE_MSGC_DISPLAY_INIT:
@@ -1185,7 +1185,7 @@ int dcc_config_socket(RedChannelClient *rcc)
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
 
-    RCC_TO_DCC(rcc)->is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
+    DISPLAY_CHANNEL_CLIENT(rcc)->is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
 
     return common_channel_config_socket(rcc);
 }

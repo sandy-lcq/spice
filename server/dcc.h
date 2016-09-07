@@ -60,7 +60,7 @@ typedef struct FreeList {
 typedef struct DisplayChannelClient DisplayChannelClient;
 
 #define DCC_TO_DC(dcc) ((DisplayChannel*)red_channel_client_get_channel((RedChannelClient*)dcc))
-#define RCC_TO_DCC(rcc) ((DisplayChannelClient*)rcc)
+#define DISPLAY_CHANNEL_CLIENT(rcc) ((DisplayChannelClient*)rcc)
 
 typedef struct RedSurfaceCreateItem {
     RedPipeItem pipe_item;
