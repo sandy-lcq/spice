@@ -24,6 +24,7 @@
 #include "red-common.h"
 #include "main-channel.h"
 #include "reds.h"
+#include "red-channel-client.h"
 
 int main_channel_is_connected(MainChannel *main_chan)
 {

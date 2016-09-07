@@ -30,7 +30,7 @@
 
 #include "reds.h"
 #include "char-device.h"
-#include "red-channel.h"
+#include "red-channel-client.h"
 #include "smartcard.h"
 #include "migration-protocol.h"
 

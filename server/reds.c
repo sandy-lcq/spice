@@ -72,6 +72,7 @@
 
 #include "reds-private.h"
 #include "video-encoder.h"
+#include "red-channel-client.h"
 
 static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
 static gboolean reds_use_client_monitors_config(RedsState *reds);

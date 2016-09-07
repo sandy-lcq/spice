@@ -23,7 +23,9 @@
 #include "main-channel-client.h"
 #include <common/generated_server_marshallers.h>
 
+#include "main-channel-client.h"
 #include "main-channel.h"
+#include "red-channel-client.h"
 #include "reds.h"
 
 #define NET_TEST_WARMUP_BYTES 0

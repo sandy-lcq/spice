@@ -89,17 +89,6 @@ typedef struct IncomingHandlerInterface {
     on_input_proc on_input;
 } IncomingHandlerInterface;
 
-typedef struct IncomingHandler {
-    IncomingHandlerInterface *cb;
-    void *opaque;
-    uint8_t header_buf[MAX_HEADER_SIZE];
-    SpiceDataHeaderOpaque header;
-    uint32_t header_pos;
-    uint8_t *msg; // data of the msg following the header. allocated by alloc_msg_buf.
-    uint32_t msg_pos;
-    uint64_t serial;
-} IncomingHandler;
-
 typedef int (*get_outgoing_msg_size_proc)(void *opaque);
 typedef void (*prepare_outgoing_proc)(void *opaque, struct iovec *vec, int *vec_size, int pos);
 typedef void (*on_outgoing_error_proc)(void *opaque);
@@ -115,16 +104,6 @@ typedef struct OutgoingHandlerInterface {
     on_outgoing_msg_done_proc on_msg_done;
     on_output_proc on_output;
 } OutgoingHandlerInterface;
-
-typedef struct OutgoingHandler {
-    OutgoingHandlerInterface *cb;
-    void *opaque;
-    struct iovec vec_buf[IOV_MAX];
-    int vec_size;
-    struct iovec *vec;
-    int pos;
-    int size;
-} OutgoingHandler;
 
 /* Red Channel interface */
 
@@ -231,62 +210,6 @@ typedef struct RedChannelClientConnectivityMonitor {
     SpiceTimer *timer;
 } RedChannelClientConnectivityMonitor;
 
-struct RedChannelClient {
-    RedChannel *channel;
-    RedClient  *client;
-    RedsStream *stream;
-    int dummy;
-    int dummy_connected;
-
-    uint32_t refs;
-
-    struct {
-        uint32_t generation;
-        uint32_t client_generation;
-        uint32_t messages_window;
-        uint32_t client_window;
-    } ack_data;
-
-    struct {
-        SpiceMarshaller *marshaller;
-        SpiceDataHeaderOpaque header;
-        uint32_t size;
-        RedPipeItem *item;
-        int blocked;
-        uint64_t serial;
-        uint64_t last_sent_serial;
-
-        struct {
-            SpiceMarshaller *marshaller;
-            uint8_t *header_data;
-            RedPipeItem *item;
-        } main;
-
-        struct {
-            SpiceMarshaller *marshaller;
-        } urgent;
-    } send_data;
-
-    OutgoingHandler outgoing;
-    IncomingHandler incoming;
-    int during_send;
-    int id; // debugging purposes
-    Ring pipe;
-    uint32_t pipe_size;
-
-    RedChannelCapabilities remote_caps;
-    int is_mini_header;
-    int destroying;
-
-    int wait_migrate_data;
-    int wait_migrate_flush_mark;
-
-    RedChannelClientLatencyMonitor latency_monitor;
-    RedChannelClientConnectivityMonitor connectivity_monitor;
-};
-
-#define RED_CHANNEL_CLIENT(Client) ((RedChannelClient *)(Client))
-
 struct RedChannel {
     uint32_t type;
     uint32_t id;
@@ -339,17 +262,6 @@ struct RedChannel {
 
 #define RED_CHANNEL(Channel) ((RedChannel *)(Channel))
 
-/*
- * When an error occurs over a channel, we treat it as a warning
- * for spice-server and shutdown the channel.
- */
-#define spice_channel_client_error(rcc, format, ...)                                     \
-    do {                                                                                 \
-        spice_warning("rcc %p type %u id %u: " format, rcc,                              \
-                    rcc->channel->type, rcc->channel->id, ## __VA_ARGS__);               \
-        red_channel_client_shutdown(rcc);                                                \
-    } while (0)
-
 /* if one of the callbacks should cause disconnect, use red_channel_shutdown and don't
  * explicitly destroy the channel */
 RedChannel *red_channel_create(int size,
@@ -372,6 +284,11 @@ RedChannel *red_channel_create_parser(int size,
                                       channel_handle_parsed_proc handle_parsed,
                                       const ChannelCbs *channel_cbs,
                                       uint32_t migration_flags);
+void red_channel_ref(RedChannel *channel);
+void red_channel_unref(RedChannel *channel);
+void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc);
+void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc);
+
 void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat);
 
 void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs, gpointer cbs_data);
@@ -379,26 +296,13 @@ void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *clien
 void red_channel_set_common_cap(RedChannel *channel, uint32_t cap);
 void red_channel_set_cap(RedChannel *channel, uint32_t cap);
 
-RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedClient *client,
-                                            RedsStream *stream,
-                                            int monitor_latency,
-                                            int num_common_caps, uint32_t *common_caps,
-                                            int num_caps, uint32_t *caps);
 // TODO: tmp, for channels that don't use RedChannel yet (e.g., snd channel), but
 // do use the client callbacks. So the channel clients are not connected (the channel doesn't
 // have list of them, but they do have a link to the channel, and the client has a list of them)
 RedChannel *red_channel_create_dummy(int size, RedsState *reds, uint32_t type, uint32_t id);
-RedChannelClient *red_channel_client_create_dummy(int size,
-                                                  RedChannel *channel,
-                                                  RedClient  *client,
-                                                  int num_common_caps, uint32_t *common_caps,
-                                                  int num_caps, uint32_t *caps);
 
 int red_channel_is_connected(RedChannel *channel);
-int red_channel_client_is_connected(RedChannelClient *rcc);
 
-void red_channel_client_default_migrate(RedChannelClient *rcc);
-int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc);
 /* seamless migration is supported for only one client. This routine
  * checks if the only channel client associated with channel is
  * waiting for migration data */
@@ -411,60 +315,14 @@ int red_channel_is_waiting_for_migrate_data(RedChannel *channel);
  * from red_client_destroy.
  */
 
-void red_channel_client_destroy(RedChannelClient *rcc);
 void red_channel_destroy(RedChannel *channel);
-void red_channel_client_ref(RedChannelClient *rcc);
-void red_channel_client_unref(RedChannelClient *rcc);
-
-int red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t cap);
-int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap);
 
 /* return true if all the channel clients support the cap */
 int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap);
 int red_channel_test_remote_cap(RedChannel *channel, uint32_t cap);
 
-/* shutdown is the only safe thing to do out of the client/channel
- * thread. It will not touch the rings, just shutdown the socket.
- * It should be followed by some way to gurantee a disconnection. */
-void red_channel_client_shutdown(RedChannelClient *rcc);
-
 /* should be called when a new channel is ready to send messages */
 void red_channel_init_outgoing_messages_window(RedChannel *channel);
-
-/* handles general channel msgs from the client */
-int red_channel_client_handle_message(RedChannelClient *rcc, uint32_t size,
-                                      uint16_t type, void *message);
-
-/* when preparing send_data: should call init and then use marshaller */
-void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type, RedPipeItem *item);
-
-uint64_t red_channel_client_get_message_serial(RedChannelClient *channel);
-void red_channel_client_set_message_serial(RedChannelClient *channel, uint64_t);
-
-/* When sending a msg. Should first call red_channel_client_begin_send_message.
- * It will first send the pending urgent data, if there is any, and then
- * the rest of the data.
- */
-void red_channel_client_begin_send_message(RedChannelClient *rcc);
-
-/*
- * Stores the current send data, and switches to urgent send data.
- * When it begins the actual send, it will send first the urgent data
- * and afterward the rest of the data.
- * Should be called only if during the marshalling of on message,
- * the need to send another message, before, rises.
- * Important: the serial of the non-urgent sent data, will be succeeded.
- * return: the urgent send data marshaller
- */
-SpiceMarshaller *red_channel_client_switch_to_urgent_sender(RedChannelClient *rcc);
-
-/* returns -1 if we don't have an estimation */
-int red_channel_client_get_roundtrip_ms(RedChannelClient *rcc);
-
-/*
- * Checks periodically if the connection is still alive
- */
-void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uint32_t timeout_ms);
 
 // TODO: add back the channel_pipe_add functionality - by adding reference counting
 // to the RedPipeItem.
@@ -475,22 +333,9 @@ int red_channel_pipes_new_add_push(RedChannel *channel, new_pipe_item_t creator,
 void red_channel_pipes_new_add(RedChannel *channel, new_pipe_item_t creator, void *data);
 void red_channel_pipes_new_add_tail(RedChannel *channel, new_pipe_item_t creator, void *data);
 
-void red_channel_client_pipe_add_push(RedChannelClient *rcc, RedPipeItem *item);
-void red_channel_client_pipe_add(RedChannelClient *rcc, RedPipeItem *item);
-void red_channel_client_pipe_add_after(RedChannelClient *rcc, RedPipeItem *item, RedPipeItem *pos);
-int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc, RedPipeItem *item);
-void red_channel_client_pipe_remove_and_release(RedChannelClient *rcc, RedPipeItem *item);
-void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, RedPipeItem *item);
-/* for types that use this routine -> the pipe item should be freed */
-void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type);
 void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type);
 
-void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type);
 void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type);
-
-void red_channel_client_ack_zero_messages_window(RedChannelClient *rcc);
-void red_channel_client_ack_set_client_window(RedChannelClient *rcc, int client_window);
-void red_channel_client_push_set_ack(RedChannelClient *rcc);
 
 int red_channel_get_first_socket(RedChannel *channel);
 
@@ -500,24 +345,13 @@ int red_channel_all_blocked(RedChannel *channel);
 /* return TRUE if any of the connected clients to this channel are blocked */
 int red_channel_any_blocked(RedChannel *channel);
 
-int red_channel_client_is_blocked(RedChannelClient *rcc);
-
-/* helper for channels that have complex logic that can possibly ready a send */
-int red_channel_client_send_message_pending(RedChannelClient *rcc);
-
 int red_channel_no_item_being_sent(RedChannel *channel);
-int red_channel_client_no_item_being_sent(RedChannelClient *rcc);
 
 // TODO: unstaticed for display/cursor channels. they do some specific pushes not through
 // adding elements or on events. but not sure if this is actually required (only result
 // should be that they ""try"" a little harder, but if the event system is correct it
 // should not make any difference.
 void red_channel_push(RedChannel *channel);
-void red_channel_client_push(RedChannelClient *rcc);
-// TODO: again - what is the context exactly? this happens in channel disconnect. but our
-// current red_channel_shutdown also closes the socket - is there a socket to close?
-// are we reading from an fd here? arghh
-void red_channel_client_pipe_clear(RedChannelClient *rcc);
 // Again, used in various places outside of event handler context (or in other event handler
 // contexts):
 //  flush_display_commands/flush_cursor_commands
@@ -526,23 +360,10 @@ void red_channel_client_pipe_clear(RedChannelClient *rcc);
 //  red_wait_pipe_item_sent
 //  handle_channel_events - this is the only one that was used before, and was in red-channel.c
 void red_channel_receive(RedChannel *channel);
-void red_channel_client_receive(RedChannelClient *rcc);
 // For red_worker
 void red_channel_send(RedChannel *channel);
-void red_channel_client_send(RedChannelClient *rcc);
 // For red_worker
 void red_channel_disconnect(RedChannel *channel);
-void red_channel_client_disconnect(RedChannelClient *rcc);
-
-/* accessors for RedChannelClient */
-/* Note: the valid times to call red_channel_get_marshaller are just during send_item callback. */
-SpiceMarshaller *red_channel_client_get_marshaller(RedChannelClient *rcc);
-RedsStream *red_channel_client_get_stream(RedChannelClient *rcc);
-RedClient *red_channel_client_get_client(RedChannelClient *rcc);
-
-/* Note that the header is valid only between red_channel_reset_send_data and
- * red_channel_begin_send_message.*/
-void red_channel_client_set_header_sub_list(RedChannelClient *rcc, uint32_t sub_list);
 
 /* return the sum of all the rcc pipe size */
 uint32_t red_channel_max_pipe_size(RedChannel *channel);
@@ -596,6 +417,11 @@ RedClient *red_client_ref(RedClient *client);
  */
 RedClient *red_client_unref(RedClient *client);
 
+/* client->lock should be locked */
+void red_client_add_channel(RedClient *client, RedChannelClient *rcc);
+void red_client_remove_channel(RedChannelClient *rcc);
+RedChannelClient *red_client_get_channel(RedClient *client, int type, int id);
+
 MainChannelClient *red_client_get_main(RedClient *client);
 // main should be set once before all the other channels are created
 void red_client_set_main(RedClient *client, MainChannelClient *mcc);
@@ -611,7 +437,7 @@ void red_client_semi_seamless_migrate_complete(RedClient *client); /* dst side *
 int red_client_during_migrate_at_target(RedClient *client);
 
 void red_client_migrate(RedClient *client);
-
+gboolean red_client_seamless_migration_done_for_channel(RedClient *client);
 /*
  * blocking functions.
  *
@@ -620,16 +446,9 @@ void red_client_migrate(RedClient *client);
  * Return: TRUE if waiting succeeded. FALSE if timeout expired.
  */
 
-int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
-                                           RedPipeItem *item,
-                                           int64_t timeout);
-int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
-                                          int64_t timeout);
 int red_channel_wait_all_sent(RedChannel *channel,
                               int64_t timeout);
-void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc);
-RedChannel* red_channel_client_get_channel(RedChannelClient *rcc);
-gboolean red_channel_client_is_destroying(RedChannelClient *rcc);
-void red_channel_client_set_destroying(RedChannelClient *rcc);
+
+#define CHANNEL_BLOCKED_SLEEP_DURATION 10000 //micro
 
 #endif

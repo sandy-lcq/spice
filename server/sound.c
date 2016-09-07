@@ -34,6 +34,7 @@
 #include "main-channel.h"
 #include "reds.h"
 #include "red-qxl.h"
+#include "red-channel-client.h"
 #include "sound.h"
 #include <common/snd_codec.h>
 #include "demarshallers.h"

@@ -21,6 +21,7 @@
 #include "inputs-channel-client.h"
 #include "inputs-channel.h"
 #include "migration-protocol.h"
+#include "red-channel-client.h"
 
 struct InputsChannelClient {
     RedChannelClient base;

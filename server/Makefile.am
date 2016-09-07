@@ -95,6 +95,8 @@ libserver_la_SOURCES =				\
 	mjpeg-encoder.c				\
 	red-channel.c				\
 	red-channel.h				\
+	red-channel-client.c			\
+	red-channel-client.h			\
 	red-common.h				\
 	dispatcher.c				\
 	dispatcher.h				\

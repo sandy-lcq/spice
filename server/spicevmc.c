@@ -32,6 +32,7 @@
 
 #include "char-device.h"
 #include "red-channel.h"
+#include "red-channel-client.h"
 #include "reds.h"
 #include "migration-protocol.h"
 #ifdef USE_LZ4

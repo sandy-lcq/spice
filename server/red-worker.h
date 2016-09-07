@@ -21,6 +21,7 @@
 #include "red-common.h"
 #include "red-qxl.h"
 #include "red-parse-qxl.h"
+#include "red-channel-client.h"
 
 typedef struct RedWorker RedWorker;
 

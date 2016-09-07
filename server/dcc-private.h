@@ -22,6 +22,7 @@
 #include "dcc.h"
 #include "image-encoders.h"
 #include "stream.h"
+#include "red-channel-client.h"
 
 struct DisplayChannelClient {
     RedChannelClient base;
