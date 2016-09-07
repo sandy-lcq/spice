@@ -18,10 +18,7 @@
 #ifndef CURSOR_CHANNEL_H_
 # define CURSOR_CHANNEL_H_
 
-#include "spice.h"
-#include "reds.h"
 #include "red-worker.h"
-#include "red-parse-qxl.h"
 
 /**
  * This type it's a RedChannel class which implement cursor (mouse)
