@@ -24,9 +24,9 @@
 #include "stream.h"
 #include "red-channel-client.h"
 
-struct DisplayChannelClient {
-    RedChannelClient base;
-    int is_low_bandwidth;
+typedef struct DisplayChannelClientPrivate DisplayChannelClientPrivate;
+struct DisplayChannelClientPrivate
+{
     uint32_t id;
     SpiceImageCompression image_compression;
     spice_wan_compression_t jpeg_state;
@@ -59,6 +59,14 @@ struct DisplayChannelClient {
     uint32_t streams_max_latency;
     uint64_t streams_max_bit_rate;
     bool gl_draw_ongoing;
+};
+
+struct DisplayChannelClient
+{
+    RedChannelClient base;
+    int is_low_bandwidth;
+
+    DisplayChannelClientPrivate priv[1];
 };
 
 #endif /* DCC_PRIVATE_H_ */

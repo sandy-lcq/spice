@@ -40,15 +40,21 @@ enum {
     RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE,
 };
 
-struct CursorChannelClient {
-    RedChannelClient base;
-
+typedef struct CursorChannelClientPrivate CursorChannelClientPrivate;
+struct CursorChannelClientPrivate
+{
     RedCacheItem *cursor_cache[CURSOR_CACHE_HASH_SIZE];
     Ring cursor_cache_lru;
     long cursor_cache_available;
     uint32_t cursor_cache_items;
 };
 
+struct CursorChannelClient
+{
+    RedChannelClient base;
+
+    CursorChannelClientPrivate priv[1];
+};
 
 #define CLIENT_CURSOR_CACHE
 #include "cache-item.tmpl.c"
@@ -102,8 +108,8 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
     spice_return_val_if_fail(ccc != NULL, NULL);
     COMMON_GRAPHICS_CHANNEL(cursor)->during_target_migrate = mig_target;
 
-    ring_init(&ccc->cursor_cache_lru);
-    ccc->cursor_cache_available = CLIENT_CURSOR_CACHE_SIZE;
+    ring_init(&ccc->priv->cursor_cache_lru);
+    ccc->priv->cursor_cache_available = CLIENT_CURSOR_CACHE_SIZE;
 
     return ccc;
 }

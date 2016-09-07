@@ -51,7 +51,7 @@ typedef struct BitmapData {
 
 static int dcc_pixmap_cache_unlocked_hit(DisplayChannelClient *dcc, uint64_t id, int *lossy)
 {
-    PixmapCache *cache = dcc->pixmap_cache;
+    PixmapCache *cache = dcc->priv->pixmap_cache;
     NewCacheItem *item;
     uint64_t serial;
 
@@ -62,9 +62,9 @@ static int dcc_pixmap_cache_unlocked_hit(DisplayChannelClient *dcc, uint64_t id,
         if (item->id == id) {
             ring_remove(&item->lru_link);
             ring_add(&cache->lru, &item->lru_link);
-            spice_assert(dcc->id < MAX_CACHE_CLIENTS);
-            item->sync[dcc->id] = serial;
-            cache->sync[dcc->id] = serial;
+            spice_assert(dcc->priv->id < MAX_CACHE_CLIENTS);
+            item->sync[dcc->priv->id] = serial;
+            cache->sync[dcc->priv->id] = serial;
             *lossy = item->lossy;
             break;
         }
@@ -77,7 +77,7 @@ static int dcc_pixmap_cache_unlocked_hit(DisplayChannelClient *dcc, uint64_t id,
 static int dcc_pixmap_cache_hit(DisplayChannelClient *dcc, uint64_t id, int *lossy)
 {
     int hit;
-    PixmapCache *cache = dcc->pixmap_cache;
+    PixmapCache *cache = dcc->priv->pixmap_cache;
 
     pthread_mutex_lock(&cache->lock);
     hit = dcc_pixmap_cache_unlocked_hit(dcc, id, lossy);
@@ -97,7 +97,7 @@ static int is_surface_area_lossy(DisplayChannelClient *dcc, uint32_t surface_id,
     spice_return_val_if_fail(validate_surface(display, surface_id), FALSE);
 
     surface = &display->surfaces[surface_id];
-    surface_lossy_region = &dcc->surface_client_lossy_region[surface_id];
+    surface_lossy_region = &dcc->priv->surface_client_lossy_region[surface_id];
 
     if (!area) {
         if (region_is_empty(surface_lossy_region)) {
@@ -206,7 +206,7 @@ static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
                                               image->descriptor.width * image->descriptor.height,
                                               is_lossy)) {
                 io_image->descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_ME;
-                dcc->send_data.pixmap_cache_items[dcc->send_data.num_pixmap_cache_items++] =
+                dcc->priv->send_data.pixmap_cache_items[dcc->priv->send_data.num_pixmap_cache_items++] =
                                                                                image->descriptor.id;
                 stat_inc_counter(reds, display_channel->add_to_cache_counter, 1);
             }
@@ -242,7 +242,7 @@ static void marshal_sub_msg_inval_list_wait(SpiceMarshaller *m,
 static void send_free_list_legacy(RedChannelClient *rcc)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
-    FreeList *free_list = &dcc->send_data.free_list;
+    FreeList *free_list = &dcc->priv->send_data.free_list;
     SpiceMarshaller *marshaller;
     int sub_list_len = 1;
     SpiceMarshaller *wait_m = NULL;
@@ -273,7 +273,7 @@ static void send_free_list_legacy(RedChannelClient *rcc)
 static void send_free_list(RedChannelClient *rcc)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
-    FreeList *free_list = &dcc->send_data.free_list;
+    FreeList *free_list = &dcc->priv->send_data.free_list;
     int sub_list_len = 1;
     SpiceMarshaller *urgent_marshaller;
     SpiceMarshaller *wait_m = NULL;
@@ -284,14 +284,14 @@ static void send_free_list(RedChannelClient *rcc)
     int i;
 
     urgent_marshaller = red_channel_client_switch_to_urgent_sender(rcc);
-    for (i = 0; i < dcc->send_data.num_pixmap_cache_items; i++) {
+    for (i = 0; i < dcc->priv->send_data.num_pixmap_cache_items; i++) {
         int dummy;
         /* When using the urgent marshaller, the serial number of the message that is
          * going to be sent right after the SPICE_MSG_LIST, is increased by one.
          * But all this message pixmaps cache references used its old serial.
          * we use pixmap_cache_items to collect these pixmaps, and we update their serial
          * by calling pixmap_cache_hit. */
-        dcc_pixmap_cache_hit(dcc, dcc->send_data.pixmap_cache_items[i], &dummy);
+        dcc_pixmap_cache_hit(dcc, dcc->priv->send_data.pixmap_cache_items[i], &dummy);
     }
 
     if (free_list->wait.header.wait_count) {
@@ -377,13 +377,13 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
     if (simage->descriptor.flags & SPICE_IMAGE_FLAGS_HIGH_BITS_SET) {
         image.descriptor.flags = SPICE_IMAGE_FLAGS_HIGH_BITS_SET;
     }
-    pthread_mutex_lock(&dcc->pixmap_cache->lock);
+    pthread_mutex_lock(&dcc->priv->pixmap_cache->lock);
 
     if ((simage->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_ME)) {
         int lossy_cache_item;
         if (dcc_pixmap_cache_unlocked_hit(dcc, image.descriptor.id, &lossy_cache_item)) {
-            dcc->send_data.pixmap_cache_items[dcc->send_data.num_pixmap_cache_items++] =
-                                                                               image.descriptor.id;
+            dcc->priv->send_data.pixmap_cache_items[dcc->priv->send_data.num_pixmap_cache_items++] =
+                image.descriptor.id;
             if (can_lossy || !lossy_cache_item) {
                 if (!display->enable_jpeg || lossy_cache_item) {
                     image.descriptor.type = SPICE_IMAGE_TYPE_FROM_CACHE;
@@ -398,10 +398,10 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                 spice_assert(bitmap_palette_out == NULL);
                 spice_assert(lzplt_palette_out == NULL);
                 stat_inc_counter(reds, display->cache_hits_counter, 1);
-                pthread_mutex_unlock(&dcc->pixmap_cache->lock);
+                pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
                 return FILL_BITS_TYPE_CACHE;
             } else {
-                pixmap_cache_unlocked_set_lossy(dcc->pixmap_cache, simage->descriptor.id,
+                pixmap_cache_unlocked_set_lossy(dcc->priv->pixmap_cache, simage->descriptor.id,
                                                 FALSE);
                 image.descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_REPLACE_ME;
             }
@@ -416,7 +416,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         surface_id = simage->u.surface.surface_id;
         if (!validate_surface(display, surface_id)) {
             spice_warning("Invalid surface in SPICE_IMAGE_TYPE_SURFACE");
-            pthread_mutex_unlock(&dcc->pixmap_cache->lock);
+            pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
             return FILL_BITS_TYPE_SURFACE;
         }
 
@@ -431,7 +431,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                              &bitmap_palette_out, &lzplt_palette_out);
         spice_assert(bitmap_palette_out == NULL);
         spice_assert(lzplt_palette_out == NULL);
-        pthread_mutex_unlock(&dcc->pixmap_cache->lock);
+        pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
         return FILL_BITS_TYPE_SURFACE;
     }
     case SPICE_IMAGE_TYPE_BITMAP: {
@@ -463,7 +463,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
             }
 
             spice_marshaller_add_ref_chunks(m, bitmap->data);
-            pthread_mutex_unlock(&dcc->pixmap_cache->lock);
+            pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
             return FILL_BITS_TYPE_BITMAP;
         } else {
             red_display_add_image_to_pixmap_cache(rcc, simage, &image,
@@ -481,7 +481,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
             }
 
             spice_assert(!comp_send_data.is_lossy || can_lossy);
-            pthread_mutex_unlock(&dcc->pixmap_cache->lock);
+            pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
             return (comp_send_data.is_lossy ? FILL_BITS_TYPE_COMPRESS_LOSSY :
                                               FILL_BITS_TYPE_COMPRESS_LOSSLESS);
         }
@@ -495,12 +495,12 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         spice_assert(bitmap_palette_out == NULL);
         spice_assert(lzplt_palette_out == NULL);
         spice_marshaller_add_ref_chunks(m, image.u.quic.data);
-        pthread_mutex_unlock(&dcc->pixmap_cache->lock);
+        pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
         return FILL_BITS_TYPE_COMPRESS_LOSSLESS;
     default:
         spice_error("invalid image type %u", image.descriptor.type);
     }
-    pthread_mutex_unlock(&dcc->pixmap_cache->lock);
+    pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
     return FILL_BITS_TYPE_INVALID;
 }
 
@@ -510,12 +510,12 @@ static void fill_mask(RedChannelClient *rcc, SpiceMarshaller *m,
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
 
     if (mask_bitmap && m) {
-        if (dcc->image_compression != SPICE_IMAGE_COMPRESSION_OFF) {
+        if (dcc->priv->image_compression != SPICE_IMAGE_COMPRESSION_OFF) {
             /* todo: pass compression argument */
-            SpiceImageCompression save_img_comp = dcc->image_compression;
-            dcc->image_compression = SPICE_IMAGE_COMPRESSION_OFF;
+            SpiceImageCompression save_img_comp = dcc->priv->image_compression;
+            dcc->priv->image_compression = SPICE_IMAGE_COMPRESSION_OFF;
             fill_bits(dcc, m, mask_bitmap, drawable, FALSE);
-            dcc->image_compression = save_img_comp;
+            dcc->priv->image_compression = save_img_comp;
         } else {
             fill_bits(dcc, m, mask_bitmap, drawable, FALSE);
         }
@@ -569,7 +569,7 @@ static void surface_lossy_region_update(DisplayChannelClient *dcc,
         return;
     }
 
-    surface_lossy_region = &dcc->surface_client_lossy_region[item->surface_id];
+    surface_lossy_region = &dcc->priv->surface_client_lossy_region[item->surface_id];
     drawable = item->red_drawable;
 
     if (drawable->clip.type == SPICE_CLIP_TYPE_RECTS ) {
@@ -1706,10 +1706,10 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
         return FALSE;
     }
 
-    StreamAgent *agent = &dcc->stream_agents[get_stream_id(display, stream)];
+    StreamAgent *agent = &dcc->priv->stream_agents[get_stream_id(display, stream)];
     uint64_t time_now = spice_get_monotonic_time_ns();
 
-    if (!dcc->use_video_encoder_rate_control) {
+    if (!dcc->priv->use_video_encoder_rate_control) {
         if (time_now - agent->last_send_time < (1000 * 1000 * 1000) / agent->fps) {
             agent->frames--;
 #ifdef STREAM_STATS
@@ -1733,7 +1733,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
                                              &outbuf);
     switch (ret) {
     case VIDEO_ENCODER_FRAME_DROP:
-        spice_assert(dcc->use_video_encoder_rate_control);
+        spice_assert(dcc->priv->use_video_encoder_rate_control);
 #ifdef STREAM_STATS
         agent->stats.num_drops_fps++;
 #endif
@@ -1811,7 +1811,7 @@ static void display_channel_marshall_migrate_data_surfaces(DisplayChannelClient 
     for (i = 0; i < NUM_SURFACES; i++) {
         SpiceRect lossy_rect;
 
-        if (!dcc->surface_client_created[i]) {
+        if (!dcc->priv->surface_client_created[i]) {
             continue;
         }
         spice_marshaller_add_uint32(m2, i);
@@ -1820,7 +1820,7 @@ static void display_channel_marshall_migrate_data_surfaces(DisplayChannelClient 
         if (!lossy) {
             continue;
         }
-        region_extents(&dcc->surface_client_lossy_region[i], &lossy_rect);
+        region_extents(&dcc->priv->surface_client_lossy_region[i], &lossy_rect);
         spice_marshaller_add_int32(m2, lossy_rect.left);
         spice_marshaller_add_int32(m2, lossy_rect.top);
         spice_marshaller_add_int32(m2, lossy_rect.right);
@@ -1833,6 +1833,7 @@ static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
 {
     DisplayChannel *display_channel;
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
+    ImageEncoders *encoders = dcc_get_encoders(dcc);
     SpiceMigrateDataDisplay display_data = {0,};
 
     display_channel = DCC_TO_DC(dcc);
@@ -1841,20 +1842,20 @@ static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
     spice_marshaller_add_uint32(base_marshaller, SPICE_MIGRATE_DATA_DISPLAY_MAGIC);
     spice_marshaller_add_uint32(base_marshaller, SPICE_MIGRATE_DATA_DISPLAY_VERSION);
 
-    spice_assert(dcc->pixmap_cache);
+    spice_assert(dcc->priv->pixmap_cache);
     spice_assert(MIGRATE_DATA_DISPLAY_MAX_CACHE_CLIENTS == 4 &&
                  MIGRATE_DATA_DISPLAY_MAX_CACHE_CLIENTS == MAX_CACHE_CLIENTS);
 
     display_data.message_serial = red_channel_client_get_message_serial(rcc);
-    display_data.low_bandwidth_setting = dcc->is_low_bandwidth;
+    display_data.low_bandwidth_setting = dcc_is_low_bandwidth(dcc);
 
-    display_data.pixmap_cache_freezer = pixmap_cache_freeze(dcc->pixmap_cache);
-    display_data.pixmap_cache_id = dcc->pixmap_cache->id;
-    display_data.pixmap_cache_size = dcc->pixmap_cache->size;
-    memcpy(display_data.pixmap_cache_clients, dcc->pixmap_cache->sync,
+    display_data.pixmap_cache_freezer = pixmap_cache_freeze(dcc->priv->pixmap_cache);
+    display_data.pixmap_cache_id = dcc->priv->pixmap_cache->id;
+    display_data.pixmap_cache_size = dcc->priv->pixmap_cache->size;
+    memcpy(display_data.pixmap_cache_clients, dcc->priv->pixmap_cache->sync,
            sizeof(display_data.pixmap_cache_clients));
 
-    image_encoders_glz_get_restore_data(&dcc->encoders, &display_data.glz_dict_id,
+    image_encoders_glz_get_restore_data(encoders, &display_data.glz_dict_id,
                                         &display_data.glz_dict_data);
 
     /* all data besided the surfaces ref */
@@ -1872,7 +1873,7 @@ static void display_channel_marshall_pixmap_sync(RedChannelClient *rcc,
     PixmapCache *pixmap_cache;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_WAIT_FOR_CHANNELS, NULL);
-    pixmap_cache = dcc->pixmap_cache;
+    pixmap_cache = dcc->priv->pixmap_cache;
 
     pthread_mutex_lock(&pixmap_cache->lock);
 
@@ -1880,8 +1881,8 @@ static void display_channel_marshall_pixmap_sync(RedChannelClient *rcc,
     wait.wait_list[0].channel_type = SPICE_CHANNEL_DISPLAY;
     wait.wait_list[0].channel_id = pixmap_cache->generation_initiator.client;
     wait.wait_list[0].message_serial = pixmap_cache->generation_initiator.message;
-    dcc->pixmap_cache_generation = pixmap_cache->generation;
-    dcc->pending_pixmaps_sync = FALSE;
+    dcc->priv->pixmap_cache_generation = pixmap_cache->generation;
+    dcc->priv->pending_pixmaps_sync = FALSE;
 
     pthread_mutex_unlock(&pixmap_cache->lock);
 
@@ -1890,7 +1891,7 @@ static void display_channel_marshall_pixmap_sync(RedChannelClient *rcc,
 
 static void dcc_pixmap_cache_reset(DisplayChannelClient *dcc, SpiceMsgWaitForChannels* sync_data)
 {
-    PixmapCache *cache = dcc->pixmap_cache;
+    PixmapCache *cache = dcc->priv->pixmap_cache;
     uint8_t wait_count;
     uint64_t serial;
     uint32_t i;
@@ -1899,14 +1900,14 @@ static void dcc_pixmap_cache_reset(DisplayChannelClient *dcc, SpiceMsgWaitForCha
     pthread_mutex_lock(&cache->lock);
     pixmap_cache_clear(cache);
 
-    dcc->pixmap_cache_generation = ++cache->generation;
-    cache->generation_initiator.client = dcc->id;
+    dcc->priv->pixmap_cache_generation = ++cache->generation;
+    cache->generation_initiator.client = dcc->priv->id;
     cache->generation_initiator.message = serial;
-    cache->sync[dcc->id] = serial;
+    cache->sync[dcc->priv->id] = serial;
 
     wait_count = 0;
     for (i = 0; i < MAX_CACHE_CLIENTS; i++) {
-        if (cache->sync[i] && i != dcc->id) {
+        if (cache->sync[i] && i != dcc->priv->id) {
             sync_data->wait_list[wait_count].channel_type = SPICE_CHANNEL_DISPLAY;
             sync_data->wait_list[wait_count].channel_id = i;
             sync_data->wait_list[wait_count++].message_serial = cache->sync[i];
@@ -1993,7 +1994,7 @@ static void red_marshall_image(RedChannelClient *rcc,
 
     int comp_succeeded = dcc_compress_image(dcc, &red_image, &bitmap, NULL, item->can_lossy, &comp_send_data);
 
-    surface_lossy_region = &dcc->surface_client_lossy_region[item->surface_id];
+    surface_lossy_region = &dcc->priv->surface_client_lossy_region[item->surface_id];
     if (comp_succeeded) {
         spice_marshall_Image(src_bitmap_out, &red_image,
                              &bitmap_palette_out, &lzplt_palette_out);
@@ -2260,7 +2261,7 @@ static void marshall_surface_create(RedChannelClient *rcc,
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
 
-    region_init(&dcc->surface_client_lossy_region[surface_create->surface_id]);
+    region_init(&dcc->priv->surface_client_lossy_region[surface_create->surface_id]);
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_SURFACE_CREATE, NULL);
 
     spice_marshall_msg_display_surface_create(base_marshaller, surface_create);
@@ -2272,7 +2273,7 @@ static void marshall_surface_destroy(RedChannelClient *rcc,
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
     SpiceMsgSurfaceDestroy surface_destroy;
 
-    region_destroy(&dcc->surface_client_lossy_region[surface_id]);
+    region_destroy(&dcc->priv->surface_client_lossy_region[surface_id]);
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_SURFACE_DESTROY, NULL);
 
     surface_destroy.surface_id = surface_id;
@@ -2312,7 +2313,7 @@ static void marshall_stream_activate_report(RedChannelClient *rcc,
                                             uint32_t stream_id)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
-    StreamAgent *agent = &dcc->stream_agents[stream_id];
+    StreamAgent *agent = &dcc->priv->stream_agents[stream_id];
     SpiceMsgDisplayStreamActivateReport msg;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_ACTIVATE_REPORT, NULL);
@@ -2353,14 +2354,14 @@ static void marshall_gl_draw(RedChannelClient *rcc,
 static void begin_send_message(RedChannelClient *rcc)
 {
     DisplayChannelClient *dcc = RCC_TO_DCC(rcc);
-    FreeList *free_list = &dcc->send_data.free_list;
+    FreeList *free_list = &dcc->priv->send_data.free_list;
 
     if (free_list->res->count) {
         int sync_count = 0;
         int i;
 
         for (i = 0; i < MAX_CACHE_CLIENTS; i++) {
-            if (i != dcc->id && free_list->sync[i] != 0) {
+            if (i != dcc->priv->id && free_list->sync[i] != 0) {
                 free_list->wait.header.wait_list[sync_count].channel_type = SPICE_CHANNEL_DISPLAY;
                 free_list->wait.header.wait_list[sync_count].channel_id = i;
                 free_list->wait.header.wait_list[sync_count++].message_serial = free_list->sync[i];
@@ -2379,9 +2380,10 @@ static void begin_send_message(RedChannelClient *rcc)
 
 static void reset_send_data(DisplayChannelClient *dcc)
 {
-    dcc->send_data.free_list.res->count = 0;
-    dcc->send_data.num_pixmap_cache_items = 0;
-    memset(dcc->send_data.free_list.sync, 0, sizeof(dcc->send_data.free_list.sync));
+    dcc->priv->send_data.free_list.res->count = 0;
+    dcc->priv->send_data.num_pixmap_cache_items = 0;
+    memset(dcc->priv->send_data.free_list.sync, 0,
+           sizeof(dcc->priv->send_data.free_list.sync));
 }
 
 void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
