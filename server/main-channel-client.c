@@ -42,8 +42,8 @@ enum NetTestStage {
 #define CLIENT_CONNECTIVITY_TIMEOUT (MSEC_PER_SEC * 30)
 #define PING_INTERVAL (MSEC_PER_SEC * 10)
 
-struct MainChannelClient {
-    RedChannelClient base;
+typedef struct MainChannelClientPrivate MainChannelClientPrivate;
+struct MainChannelClientPrivate {
     uint32_t connection_id;
     uint32_t ping_id;
     uint32_t net_test_id;
@@ -60,6 +60,12 @@ struct MainChannelClient {
     int mig_wait_prev_try_seamless;
     int init_sent;
     int seamless_mig_dst;
+};
+
+struct MainChannelClient {
+    RedChannelClient base;
+
+    MainChannelClientPrivate priv[1];
 };
 
 typedef struct RedPingPipeItem {
@@ -141,15 +147,15 @@ static RedPipeItem *main_notify_item_new(const char *msg, int num)
 
 void main_channel_client_start_net_test(MainChannelClient *mcc, int test_rate)
 {
-    if (!mcc || mcc->net_test_id) {
+    if (!mcc || mcc->priv->net_test_id) {
         return;
     }
     if (test_rate) {
         if (main_channel_client_push_ping(mcc, NET_TEST_WARMUP_BYTES)
             && main_channel_client_push_ping(mcc, 0)
             && main_channel_client_push_ping(mcc, NET_TEST_BYTES)) {
-            mcc->net_test_id = mcc->ping_id - 2;
-            mcc->net_test_stage = NET_TEST_STAGE_WARMUP;
+            mcc->priv->net_test_id = mcc->priv->ping_id - 2;
+            mcc->priv->net_test_stage = NET_TEST_STAGE_WARMUP;
         }
     } else {
         red_channel_client_start_connectivity_monitoring(&mcc->base, CLIENT_CONNECTIVITY_TIMEOUT);
@@ -253,7 +259,7 @@ void main_channel_client_push_init(MainChannelClient *mcc,
 {
     RedPipeItem *item;
 
-    item = main_init_item_new(mcc->connection_id, display_channels_hint,
+    item = main_init_item_new(mcc->priv->connection_id, display_channels_hint,
                               current_mouse_mode, is_client_mouse_allowed,
                               multi_media_time, ram_hint);
     red_channel_client_pipe_add_push(&mcc->base, item);
@@ -339,12 +345,12 @@ void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
 {
     RedClient *client = red_channel_client_get_client(&mcc->base);
     spice_printerr("client %p connected: %d seamless %d", client, success, seamless);
-    if (mcc->mig_wait_connect) {
+    if (mcc->priv->mig_wait_connect) {
         RedChannel *channel = red_channel_client_get_channel(&mcc->base);
         MainChannel *main_channel = SPICE_CONTAINEROF(channel, MainChannel, base);
 
-        mcc->mig_wait_connect = FALSE;
-        mcc->mig_connect_ok = success;
+        mcc->priv->mig_wait_connect = FALSE;
+        mcc->priv->mig_connect_ok = success;
         spice_assert(main_channel->num_clients_mig_wait);
         spice_assert(!seamless || main_channel->num_clients_mig_wait == 1);
         if (!--main_channel->num_clients_mig_wait) {
@@ -363,7 +369,7 @@ void main_channel_client_handle_migrate_dst_do_seamless(MainChannelClient *mcc,
 {
     RedChannel *channel = red_channel_client_get_channel(&mcc->base);
     if (reds_on_migrate_dst_set_seamless(channel->reds, mcc, src_version)) {
-        mcc->seamless_mig_dst = TRUE;
+        mcc->priv->seamless_mig_dst = TRUE;
         red_channel_client_pipe_add_empty_msg(&mcc->base,
                                              SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_ACK);
     } else {
@@ -378,38 +384,38 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
 
     roundtrip = g_get_monotonic_time() - ping->timestamp;
 
-    if (ping->id == mcc->net_test_id) {
-        switch (mcc->net_test_stage) {
+    if (ping->id == mcc->priv->net_test_id) {
+        switch (mcc->priv->net_test_stage) {
             case NET_TEST_STAGE_WARMUP:
-                mcc->net_test_id++;
-                mcc->net_test_stage = NET_TEST_STAGE_LATENCY;
-                mcc->latency = roundtrip;
+                mcc->priv->net_test_id++;
+                mcc->priv->net_test_stage = NET_TEST_STAGE_LATENCY;
+                mcc->priv->latency = roundtrip;
                 break;
             case NET_TEST_STAGE_LATENCY:
-                mcc->net_test_id++;
-                mcc->net_test_stage = NET_TEST_STAGE_RATE;
-                mcc->latency = MIN(mcc->latency, roundtrip);
+                mcc->priv->net_test_id++;
+                mcc->priv->net_test_stage = NET_TEST_STAGE_RATE;
+                mcc->priv->latency = MIN(mcc->priv->latency, roundtrip);
                 break;
             case NET_TEST_STAGE_RATE:
-                mcc->net_test_id = 0;
-                if (roundtrip <= mcc->latency) {
+                mcc->priv->net_test_id = 0;
+                if (roundtrip <= mcc->priv->latency) {
                     // probably high load on client or server result with incorrect values
                     spice_printerr("net test: invalid values, latency %" PRIu64
                                    " roundtrip %" PRIu64 ". assuming high"
-                                   "bandwidth", mcc->latency, roundtrip);
-                    mcc->latency = 0;
-                    mcc->net_test_stage = NET_TEST_STAGE_INVALID;
+                                   "bandwidth", mcc->priv->latency, roundtrip);
+                    mcc->priv->latency = 0;
+                    mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
                     red_channel_client_start_connectivity_monitoring(&mcc->base,
                                                                      CLIENT_CONNECTIVITY_TIMEOUT);
                     break;
                 }
-                mcc->bitrate_per_sec = (uint64_t)(NET_TEST_BYTES * 8) * 1000000
-                    / (roundtrip - mcc->latency);
-                mcc->net_test_stage = NET_TEST_STAGE_COMPLETE;
+                mcc->priv->bitrate_per_sec = (uint64_t)(NET_TEST_BYTES * 8) * 1000000
+                    / (roundtrip - mcc->priv->latency);
+                mcc->priv->net_test_stage = NET_TEST_STAGE_COMPLETE;
                 spice_printerr("net test: latency %f ms, bitrate %"PRIu64" bps (%f Mbps)%s",
-                               (double)mcc->latency / 1000,
-                               mcc->bitrate_per_sec,
-                               (double)mcc->bitrate_per_sec / 1024 / 1024,
+                               (double)mcc->priv->latency / 1000,
+                               mcc->priv->bitrate_per_sec,
+                               (double)mcc->priv->bitrate_per_sec / 1024 / 1024,
                                main_channel_client_is_low_bandwidth(mcc) ? " LOW BANDWIDTH" : "");
                 red_channel_client_start_connectivity_monitoring(&mcc->base,
                                                                  CLIENT_CONNECTIVITY_TIMEOUT);
@@ -417,9 +423,9 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
             default:
                 spice_printerr("invalid net test stage, ping id %d test id %d stage %d",
                                ping->id,
-                               mcc->net_test_id,
-                               mcc->net_test_stage);
-                mcc->net_test_stage = NET_TEST_STAGE_INVALID;
+                               mcc->priv->net_test_id,
+                               mcc->priv->net_test_stage);
+                mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
         }
         return;
     } else {
@@ -451,19 +457,19 @@ void main_channel_client_handle_migrate_end(MainChannelClient *mcc)
 
 void main_channel_client_migrate_cancel_wait(MainChannelClient *mcc)
 {
-    if (mcc->mig_wait_connect) {
+    if (mcc->priv->mig_wait_connect) {
         spice_printerr("client %p cancel wait connect",
                        red_channel_client_get_client(&mcc->base));
-        mcc->mig_wait_connect = FALSE;
-        mcc->mig_connect_ok = FALSE;
+        mcc->priv->mig_wait_connect = FALSE;
+        mcc->priv->mig_connect_ok = FALSE;
     }
-    mcc->mig_wait_prev_complete = FALSE;
+    mcc->priv->mig_wait_prev_complete = FALSE;
 }
 
 void main_channel_client_migrate_dst_complete(MainChannelClient *mcc)
 {
-    if (mcc->mig_wait_prev_complete) {
-        if (mcc->mig_wait_prev_try_seamless) {
+    if (mcc->priv->mig_wait_prev_complete) {
+        if (mcc->priv->mig_wait_prev_try_seamless) {
             RedChannel *channel = red_channel_client_get_channel(&mcc->base);
             spice_assert(g_list_length(channel->clients) == 1);
             red_channel_client_pipe_add_type(&mcc->base,
@@ -471,8 +477,8 @@ void main_channel_client_migrate_dst_complete(MainChannelClient *mcc)
         } else {
             red_channel_client_pipe_add_type(&mcc->base, RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_BEGIN);
         }
-        mcc->mig_wait_connect = TRUE;
-        mcc->mig_wait_prev_complete = FALSE;
+        mcc->priv->mig_wait_connect = TRUE;
+        mcc->priv->mig_wait_prev_complete = FALSE;
     }
 }
 
@@ -483,7 +489,7 @@ gboolean main_channel_client_migrate_src_complete(MainChannelClient *mcc,
     RedClient *client = red_channel_client_get_client(&mcc->base);
     int semi_seamless_support = red_channel_client_test_remote_cap(&mcc->base,
                                                                    SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE);
-    if (semi_seamless_support && mcc->mig_connect_ok) {
+    if (semi_seamless_support && mcc->priv->mig_connect_ok) {
         if (success) {
             spice_printerr("client %p MIGRATE_END", client);
             red_channel_client_pipe_add_empty_msg(&mcc->base, SPICE_MSG_MAIN_MIGRATE_END);
@@ -498,8 +504,8 @@ gboolean main_channel_client_migrate_src_complete(MainChannelClient *mcc,
             red_channel_client_pipe_add_type(&mcc->base, RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_SWITCH_HOST);
         }
     }
-    mcc->mig_connect_ok = FALSE;
-    mcc->mig_wait_connect = FALSE;
+    mcc->priv->mig_connect_ok = FALSE;
+    mcc->priv->mig_wait_connect = FALSE;
 
     return ret;
 }
@@ -514,11 +520,11 @@ static void do_ping_client(MainChannelClient *mcc,
         main_channel_client_push_ping(mcc, 0);
     } else if (!strcmp(opt, "on")) {
         if (has_interval && interval > 0) {
-            mcc->ping_interval = interval * MSEC_PER_SEC;
+            mcc->priv->ping_interval = interval * MSEC_PER_SEC;
         }
-        reds_core_timer_start(channel->reds, mcc->ping_timer, mcc->ping_interval);
+        reds_core_timer_start(channel->reds, mcc->priv->ping_timer, mcc->priv->ping_interval);
     } else if (!strcmp(opt, "off")) {
-        reds_core_timer_cancel(channel->reds, mcc->ping_timer);
+        reds_core_timer_cancel(channel->reds, mcc->priv->ping_timer);
     } else {
         return;
     }
@@ -531,11 +537,11 @@ static void ping_timer_cb(void *opaque)
 
     if (!red_channel_client_is_connected(&mcc->base)) {
         spice_printerr("not connected to peer, ping off");
-        reds_core_timer_cancel(channel->reds, mcc->ping_timer);
+        reds_core_timer_cancel(channel->reds, mcc->priv->ping_timer);
         return;
     }
     do_ping_client(mcc, NULL, 0, 0);
-    reds_core_timer_start(channel->reds, mcc->ping_timer, mcc->ping_interval);
+    reds_core_timer_start(channel->reds, mcc->priv->ping_timer, mcc->priv->ping_interval);
 }
 #endif /* RED_STATISTICS */
 
@@ -549,36 +555,36 @@ MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient 
                                                        client, stream, FALSE, num_common_caps,
                                                        common_caps, num_caps, caps);
     spice_assert(mcc != NULL);
-    mcc->connection_id = connection_id;
-    mcc->bitrate_per_sec = ~0;
+    mcc->priv->connection_id = connection_id;
+    mcc->priv->bitrate_per_sec = ~0;
 #ifdef RED_STATISTICS
-    if (!(mcc->ping_timer = reds_core_timer_add(red_channel_get_server(&main_chan->base), ping_timer_cb, mcc))) {
+    if (!(mcc->priv->ping_timer = reds_core_timer_add(red_channel_get_server(&main_chan->base), ping_timer_cb, mcc))) {
         spice_error("ping timer create failed");
     }
-    mcc->ping_interval = PING_INTERVAL;
+    mcc->priv->ping_interval = PING_INTERVAL;
 #endif
     return mcc;
 }
 
 int main_channel_client_is_network_info_initialized(MainChannelClient *mcc)
 {
-    return mcc->net_test_stage == NET_TEST_STAGE_COMPLETE;
+    return mcc->priv->net_test_stage == NET_TEST_STAGE_COMPLETE;
 }
 
 int main_channel_client_is_low_bandwidth(MainChannelClient *mcc)
 {
     // TODO: configurable?
-    return mcc->bitrate_per_sec < 10 * 1024 * 1024;
+    return mcc->priv->bitrate_per_sec < 10 * 1024 * 1024;
 }
 
 uint64_t main_channel_client_get_bitrate_per_sec(MainChannelClient *mcc)
 {
-    return mcc->bitrate_per_sec;
+    return mcc->priv->bitrate_per_sec;
 }
 
 uint64_t main_channel_client_get_roundtrip_ms(MainChannelClient *mcc)
 {
-    return mcc->latency / 1000;
+    return mcc->priv->latency / 1000;
 }
 
 void main_channel_client_migrate(RedChannelClient *rcc)
@@ -597,14 +603,14 @@ gboolean main_channel_client_connect_semi_seamless(MainChannelClient *mcc)
         RedClient *client = red_channel_client_get_client(rcc);
         if (red_client_during_migrate_at_target(client)) {
             spice_printerr("client %p: wait till previous migration completes", client);
-            mcc->mig_wait_prev_complete = TRUE;
-            mcc->mig_wait_prev_try_seamless = FALSE;
+            mcc->priv->mig_wait_prev_complete = TRUE;
+            mcc->priv->mig_wait_prev_try_seamless = FALSE;
         } else {
             red_channel_client_pipe_add_type(rcc,
                                              RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_BEGIN);
-            mcc->mig_wait_connect = TRUE;
+            mcc->priv->mig_wait_connect = TRUE;
         }
-        mcc->mig_connect_ok = FALSE;
+        mcc->priv->mig_connect_ok = FALSE;
         main_channel->num_clients_mig_wait++;
         return TRUE;
     }
@@ -618,14 +624,14 @@ void main_channel_client_connect_seamless(MainChannelClient *mcc)
                                                     SPICE_MAIN_CAP_SEAMLESS_MIGRATE));
     if (red_client_during_migrate_at_target(client)) {
         spice_printerr("client %p: wait till previous migration completes", client);
-        mcc->mig_wait_prev_complete = TRUE;
-        mcc->mig_wait_prev_try_seamless = TRUE;
+        mcc->priv->mig_wait_prev_complete = TRUE;
+        mcc->priv->mig_wait_prev_try_seamless = TRUE;
     } else {
         red_channel_client_pipe_add_type(&mcc->base,
                                          RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_BEGIN_SEAMLESS);
-        mcc->mig_wait_connect = TRUE;
+        mcc->priv->mig_wait_connect = TRUE;
     }
-    mcc->mig_connect_ok = FALSE;
+    mcc->priv->mig_connect_ok = FALSE;
 }
 
 RedChannelClient* main_channel_client_get_base(MainChannelClient* mcc)
@@ -636,12 +642,12 @@ RedChannelClient* main_channel_client_get_base(MainChannelClient* mcc)
 
 uint32_t main_channel_client_get_connection_id(MainChannelClient *mcc)
 {
-    return mcc->connection_id;
+    return mcc->priv->connection_id;
 }
 
 static uint32_t main_channel_client_next_ping_id(MainChannelClient *mcc)
 {
-    return ++mcc->ping_id;
+    return ++mcc->priv->ping_id;
 }
 
 static void main_channel_marshall_channels(RedChannelClient *rcc,
@@ -867,8 +873,8 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
      * we ignore any pipe item that arrives before the INIT msg is sent.
      * For seamless we don't send INIT, and the connection continues from the same place
      * it stopped on the src side. */
-    if (!mcc->init_sent &&
-        !mcc->seamless_mig_dst &&
+    if (!mcc->priv->init_sent &&
+        !mcc->priv->seamless_mig_dst &&
         base->type != RED_PIPE_ITEM_TYPE_MAIN_INIT) {
         spice_printerr("Init msg for client %p was not sent yet "
                        "(client is probably during semi-seamless migration). Ignoring msg type %d",
@@ -902,7 +908,7 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
             main_channel_marshall_migrate_data_item(rcc, m, base);
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_INIT:
-            mcc->init_sent = TRUE;
+            mcc->priv->init_sent = TRUE;
             main_channel_marshall_init(rcc, m,
                 SPICE_UPCAST(RedInitPipeItem, base));
             break;
