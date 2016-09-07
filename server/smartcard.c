@@ -49,8 +49,8 @@
 // Maximal length of APDU
 #define APDUBufSize 270
 
-typedef struct SmartCardChannelClient {
-    RedChannelClient base;
+typedef struct SmartCardChannelClientPrivate SmartCardChannelClientPrivate;
+struct SmartCardChannelClientPrivate {
     RedCharDeviceSmartcard *smartcard;
 
     /* read_from_client/write_to_device buffer.
@@ -58,6 +58,12 @@ typedef struct SmartCardChannelClient {
     RedCharDeviceWriteBuffer *write_buf;
     int msg_in_write_buf; /* was the client msg received into a RedCharDeviceWriteBuffer
                            * or was it explicitly malloced */
+};
+
+typedef struct SmartCardChannelClient {
+    RedChannelClient base;
+
+    SmartCardChannelClientPrivate priv[1];
 } SmartCardChannelClient;
 
 G_DEFINE_TYPE(RedCharDeviceSmartcard, red_char_device_smartcard, RED_TYPE_CHAR_DEVICE)
@@ -316,9 +322,9 @@ static void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_de
     RedCharDeviceSmartcard *dev = red_char_device_opaque_get(char_device->st);
     int client_added;
 
-    spice_assert(!scc->smartcard && !dev->priv->scc);
+    spice_assert(!scc->priv->smartcard && !dev->priv->scc);
     dev->priv->scc = scc;
-    scc->smartcard = dev;
+    scc->priv->smartcard = dev;
     client_added = red_char_device_client_add(RED_CHAR_DEVICE(dev),
                                               red_channel_client_get_client(&scc->base),
                                               FALSE, /* no flow control yet */
@@ -330,7 +336,7 @@ static void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_de
     if (!client_added) {
         spice_warning("failed");
         dev->priv->scc = NULL;
-        scc->smartcard = NULL;
+        scc->priv->smartcard = NULL;
         red_channel_client_disconnect(&scc->base);
     }
 }
@@ -361,14 +367,14 @@ static void smartcard_char_device_detach_client(SmartCardChannelClient *scc)
 {
     RedCharDeviceSmartcard *dev;
 
-    if (!scc->smartcard) {
+    if (!scc->priv->smartcard) {
         return;
     }
-    dev = scc->smartcard;
+    dev = scc->priv->smartcard;
     spice_assert(dev->priv->scc == scc);
     red_char_device_client_remove(RED_CHAR_DEVICE(dev),
                                   red_channel_client_get_client(&scc->base));
-    scc->smartcard = NULL;
+    scc->priv->smartcard = NULL;
     dev->priv->scc = NULL;
 }
 
@@ -386,26 +392,26 @@ static uint8_t *smartcard_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
     /* todo: only one reader is actually supported. When we fix the code to support
      * multiple readers, we will porbably associate different devices to
      * differenc channels */
-    if (!scc->smartcard) {
-        scc->msg_in_write_buf = FALSE;
+    if (!scc->priv->smartcard) {
+        scc->priv->msg_in_write_buf = FALSE;
         return spice_malloc(size);
     } else {
         RedCharDeviceSmartcard *dev;
 
         spice_assert(g_smartcard_readers.num == 1);
-        dev = scc->smartcard;
-        spice_assert(dev->priv->scc || scc->smartcard);
-        spice_assert(!scc->write_buf);
-        scc->write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev),
-                                                          red_channel_client_get_client(rcc),
-                                                          size);
+        dev = scc->priv->smartcard;
+        spice_assert(dev->priv->scc || scc->priv->smartcard);
+        spice_assert(!scc->priv->write_buf);
+        scc->priv->write_buf = red_char_device_write_buffer_get(RED_CHAR_DEVICE(dev),
+                                                                red_channel_client_get_client(rcc),
+                                                                size);
 
-        if (!scc->write_buf) {
+        if (!scc->priv->write_buf) {
             spice_error("failed to allocate write buffer");
             return NULL;
         }
-        scc->msg_in_write_buf = TRUE;
-        return scc->write_buf->buf;
+        scc->priv->msg_in_write_buf = TRUE;
+        return scc->priv->write_buf->buf;
     }
 }
 
@@ -420,13 +426,13 @@ static void smartcard_channel_release_msg_rcv_buf(RedChannelClient *rcc,
      * multiple readers, we will porbably associate different devices to
      * differenc channels */
 
-    if (!scc->msg_in_write_buf) {
-        spice_assert(!scc->write_buf);
+    if (!scc->priv->msg_in_write_buf) {
+        spice_assert(!scc->priv->write_buf);
         free(msg);
     } else {
-        if (scc->write_buf) { /* msg hasn't been pushed to the guest */
-            spice_assert(scc->write_buf->buf == msg);
-            red_char_device_write_buffer_release(RED_CHAR_DEVICE(scc->smartcard), &scc->write_buf);
+        if (scc->priv->write_buf) { /* msg hasn't been pushed to the guest */
+            spice_assert(scc->priv->write_buf->buf == msg);
+            red_char_device_write_buffer_release(RED_CHAR_DEVICE(scc->priv->smartcard), &scc->priv->write_buf);
         }
     }
 }
@@ -467,7 +473,7 @@ static void smartcard_channel_send_migrate_data(RedChannelClient *rcc,
     SpiceMarshaller *m2;
 
     scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
-    dev = scc->smartcard;
+    dev = scc->priv->smartcard;
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SMARTCARD_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SMARTCARD_VERSION);
@@ -513,8 +519,8 @@ static void smartcard_channel_on_disconnect(RedChannelClient *rcc)
 {
     SmartCardChannelClient *scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
 
-    if (scc->smartcard) {
-        RedCharDeviceSmartcard *dev = scc->smartcard;
+    if (scc->priv->smartcard) {
+        RedCharDeviceSmartcard *dev = scc->priv->smartcard;
 
         smartcard_char_device_detach_client(scc);
         smartcard_char_device_notify_reader_remove(dev);
@@ -578,13 +584,13 @@ static void smartcard_remove_reader(SmartCardChannelClient *scc, uint32_t reader
             VSC_GENERAL_ERROR);
         return;
     }
-    spice_assert(scc->smartcard == dev);
+    spice_assert(scc->priv->smartcard == dev);
     smartcard_char_device_notify_reader_remove(dev);
 }
 
 static void smartcard_add_reader(SmartCardChannelClient *scc, uint8_t *name)
 {
-    if (!scc->smartcard) { /* we already tried to attach a reader to the client
+    if (!scc->priv->smartcard) { /* we already tried to attach a reader to the client
                                     when it connected */
         SpiceCharDeviceInstance *char_device = smartcard_readers_get_unattached();
 
@@ -595,7 +601,7 @@ static void smartcard_add_reader(SmartCardChannelClient *scc, uint8_t *name)
         }
         smartcard_char_device_attach_client(char_device, scc);
     }
-    smartcard_char_device_notify_reader_add(scc->smartcard);
+    smartcard_char_device_notify_reader_add(scc->priv->smartcard);
     // The device sends a VSC_Error message, we will let it through, no
     // need to send our own. We already set the correct reader_id, from
     // our RedCharDeviceSmartcard.
@@ -614,7 +620,7 @@ static void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_bu
     spice_assert(vheader->reader_id <= g_smartcard_readers.num);
     sin = g_smartcard_readers.sin[vheader->reader_id];
     dev = (RedCharDeviceSmartcard *)red_char_device_opaque_get(sin->st);
-    spice_assert(!dev->priv->scc || dev == dev->priv->scc->smartcard);
+    spice_assert(!dev->priv->scc || dev == dev->priv->scc->priv->smartcard);
     /* protocol requires messages to be in network endianess */
     vheader->type = htonl(vheader->type);
     vheader->length = htonl(vheader->length);
@@ -623,8 +629,8 @@ static void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_bu
     /* pushing the buffer to the write queue; It will be released
      * when it will be fully consumed by the device */
     red_char_device_write_buffer_add(sin->st, write_buf);
-    if (dev->priv->scc && write_buf == dev->priv->scc->write_buf) {
-        dev->priv->scc->write_buf = NULL;
+    if (dev->priv->scc && write_buf == dev->priv->scc->priv->write_buf) {
+        dev->priv->scc->priv->write_buf = NULL;
     }
 }
 
@@ -676,7 +682,7 @@ static int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
         return TRUE;
     }
 
-    if (!scc->smartcard) {
+    if (!scc->priv->smartcard) {
         SpiceCharDeviceInstance *char_device = smartcard_readers_get_unattached();
 
         if (!char_device) {
@@ -687,10 +693,10 @@ static int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
         }
     }
     spice_debug("reader added %d partial read_size %u", mig_data->reader_added, mig_data->read_size);
-    scc->smartcard->priv->reader_added = mig_data->reader_added;
+    scc->priv->smartcard->priv->reader_added = mig_data->reader_added;
 
-    smartcard_device_restore_partial_read(scc->smartcard, mig_data);
-    return red_char_device_restore(RED_CHAR_DEVICE(scc->smartcard), &mig_data->base);
+    smartcard_device_restore_partial_read(scc->priv->smartcard, mig_data);
+    return red_char_device_restore(RED_CHAR_DEVICE(scc->priv->smartcard), &mig_data->base);
 }
 
 static int smartcard_channel_handle_message(RedChannelClient *rcc,
@@ -737,8 +743,8 @@ static int smartcard_channel_handle_message(RedChannelClient *rcc,
             vheader->type, vheader->length);
         return FALSE;
     }
-    spice_assert(scc->write_buf->buf == msg);
-    smartcard_channel_write_to_reader(scc->write_buf);
+    spice_assert(scc->priv->write_buf->buf == msg);
+    smartcard_channel_write_to_reader(scc->priv->write_buf);
 
     return TRUE;
 }
@@ -760,7 +766,6 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
                                                               FALSE,
                                                               num_common_caps, common_caps,
                                                               num_caps, caps);
-
     if (!scc) {
         return;
     }
@@ -818,7 +823,7 @@ red_char_device_smartcard_finalize(GObject *object)
 
     free(self->priv->buf);
     if (self->priv->scc) {
-        self->priv->scc->smartcard = NULL;
+        self->priv->scc->priv->smartcard = NULL;
     }
 
     G_OBJECT_CLASS(red_char_device_smartcard_parent_class)->finalize(object);
