@@ -730,6 +730,19 @@ static void reds_update_mouse_mode(RedsState *reds)
     }
 }
 
+static void reds_update_agent_properties(RedsState *reds)
+{
+    if (reds->agent_dev == NULL || reds->config == NULL) {
+        return;
+    }
+    /* copy & paste */
+    reds->agent_dev->priv->write_filter.copy_paste_enabled = reds->config->agent_copypaste;
+    reds->agent_dev->priv->read_filter.copy_paste_enabled = reds->config->agent_copypaste;
+    /* file transfer */
+    reds->agent_dev->priv->write_filter.file_xfer_enabled = reds->config->agent_file_xfer;
+    reds->agent_dev->priv->read_filter.file_xfer_enabled = reds->config->agent_file_xfer;
+}
+
 static void reds_agent_remove(RedsState *reds)
 {
     // TODO: agent is broken with multiple clients. also need to figure out what to do when
@@ -3438,6 +3451,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
     reds->agent_dev = red_char_device_vdi_port_new(reds);
+    reds_update_agent_properties(reds);
     ring_init(&reds->clients);
     reds->num_clients = 0;
     reds->main_dispatcher = main_dispatcher_new(reds, reds->core);
@@ -4030,16 +4044,14 @@ SPICE_GNUC_VISIBLE int spice_server_set_agent_mouse(SpiceServer *reds, int enabl
 SPICE_GNUC_VISIBLE int spice_server_set_agent_copypaste(SpiceServer *reds, int enable)
 {
     reds->config->agent_copypaste = enable;
-    reds->agent_dev->priv->write_filter.copy_paste_enabled = reds->config->agent_copypaste;
-    reds->agent_dev->priv->read_filter.copy_paste_enabled = reds->config->agent_copypaste;
+    reds_update_agent_properties(reds);
     return 0;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_agent_file_xfer(SpiceServer *reds, int enable)
 {
     reds->config->agent_file_xfer = enable;
-    reds->agent_dev->priv->write_filter.file_xfer_enabled = reds->config->agent_file_xfer;
-    reds->agent_dev->priv->read_filter.file_xfer_enabled = reds->config->agent_file_xfer;
+    reds_update_agent_properties(reds);
     return 0;
 }
 
