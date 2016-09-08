@@ -3254,7 +3254,10 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
     }
 
     if (dev_state) {
-        spice_assert(char_device->st);
+        /* When spicevmc_device_connect() is called to create a RedCharDevice,
+         * it also assigns that as the internal state for char_device. This is
+         * just a sanity check to ensure that assumption is correct */
+        spice_assert(dev_state == char_device->st);
 
         g_object_weak_ref(G_OBJECT(dev_state),
                           (GWeakNotify)reds_on_char_device_destroy,
@@ -3262,9 +3265,9 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
         /* setting the char_device state to "started" for backward compatibily with
          * qemu releases that don't call spice api for start/stop (not implemented yet) */
         if (reds->vm_running) {
-            red_char_device_start(char_device->st);
+            red_char_device_start(dev_state);
         }
-        reds_add_char_device(reds, char_device->st);
+        reds_add_char_device(reds, dev_state);
     } else {
         spice_warning("failed to create device state for %s", char_device->subtype);
         return -1;
