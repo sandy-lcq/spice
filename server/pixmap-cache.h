@@ -50,9 +50,9 @@ struct PixmapCache {
     int64_t size;
     int32_t items;
 
-    int freezed;
-    RingItem *freezed_head;
-    RingItem *freezed_tail;
+    int frozen;
+    RingItem *frozen_head;
+    RingItem *frozen_tail;
 
     uint32_t generation;
     struct {

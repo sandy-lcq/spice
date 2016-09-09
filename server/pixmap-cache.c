@@ -40,10 +40,10 @@ void pixmap_cache_clear(PixmapCache *cache)
 {
     NewCacheItem *item;
 
-    if (cache->freezed) {
-        cache->lru.next = cache->freezed_head;
-        cache->lru.prev = cache->freezed_tail;
-        cache->freezed = FALSE;
+    if (cache->frozen) {
+        cache->lru.next = cache->frozen_head;
+        cache->lru.prev = cache->frozen_tail;
+        cache->frozen = FALSE;
     }
 
     verify(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
@@ -61,17 +61,17 @@ int pixmap_cache_freeze(PixmapCache *cache)
 {
     pthread_mutex_lock(&cache->lock);
 
-    if (cache->freezed) {
+    if (cache->frozen) {
         pthread_mutex_unlock(&cache->lock);
         return FALSE;
     }
 
-    cache->freezed_head = cache->lru.next;
-    cache->freezed_tail = cache->lru.prev;
+    cache->frozen_head = cache->lru.next;
+    cache->frozen_tail = cache->lru.prev;
     ring_init(&cache->lru);
     memset(cache->hash_table, 0, sizeof(*cache->hash_table) * BITS_CACHE_HASH_SIZE);
     cache->available = -1;
-    cache->freezed = TRUE;
+    cache->frozen = TRUE;
 
     pthread_mutex_unlock(&cache->lock);
     return TRUE;

@@ -137,7 +137,7 @@ typedef struct __attribute__ ((__packed__)) SpiceMigrateDataDisplay {
      * For now, the cache is not migrated, and instead, we reset it and send
      * SPICE_MSG_DISPLAY_INVAL_ALL_PIXMAPS to the client.
      * In order to keep the client and server caches consistent:
-     * The channel which freezed the cache on the src side, unfreezes it
+     * The channel which froze the cache on the src side, unfreezes it
      * on the dest side, and increases its generation (see 'reset' in red_client_shared_cach.h).
      * In order to enforce that images that are added to the cache by other channels
      * will reach the client only after SPICE_MSG_DISPLAY_INVAL_ALL_PIXMAPS,
