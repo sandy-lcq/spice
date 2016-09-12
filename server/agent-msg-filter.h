@@ -50,6 +50,6 @@ void agent_msg_filter_config(AgentMsgFilter *filter,
                              gboolean copy_paste, gboolean file_xfer,
                              gboolean use_client_monitors_config);
 int agent_msg_filter_process_data(AgentMsgFilter *filter,
-                                  uint8_t *data, uint32_t len);
+                                  const uint8_t *data, uint32_t len);
 
 #endif

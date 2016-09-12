@@ -49,7 +49,7 @@ void agent_msg_filter_init(AgentMsgFilter *filter,
 }
 
 int agent_msg_filter_process_data(AgentMsgFilter *filter,
-                                  uint8_t *data, uint32_t len)
+                                  const uint8_t *data, uint32_t len)
 {
     struct VDAgentMessage msg_header;
 
