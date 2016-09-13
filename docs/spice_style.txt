@@ -19,7 +19,7 @@ Use standard file extension for C source and header files.
 Line width
 ~~~~~~~~~~
 
-No more then 100 character on a single line
+No more than 100 characters on a single line
 
 Tabs
 ~~~~
