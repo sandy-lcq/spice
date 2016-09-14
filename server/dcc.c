@@ -767,7 +767,7 @@ lz_compress:
     }
 
     if (!success) {
-        uint64_t image_size = src->stride * src->y;
+        uint64_t image_size = src->stride * (uint64_t)src->y;
         stat_compress_add(&display_channel->encoder_shared_data.off_stat, start_time, image_size, image_size);
     }
 
