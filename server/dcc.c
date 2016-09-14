@@ -571,7 +571,7 @@ static RedSurfaceDestroyItem *red_surface_destroy_item_new(RedChannel *channel,
 
 RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
 {
-    RedGlScanoutUnixItem *item = spice_new(RedGlScanoutUnixItem, 1);
+    RedGlScanoutUnixItem *item;
 
     /* FIXME: on !unix peer, start streaming with a video codec */
     if (!reds_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
@@ -581,6 +581,7 @@ RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
         return NULL;
     }
 
+    item = spice_new(RedGlScanoutUnixItem, 1);
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_GL_SCANOUT);
 
     return &item->base;
