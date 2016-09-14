@@ -36,7 +36,6 @@ typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 
 struct GlzSharedDictionary {
-    RingItem base;
     GlzEncDictContext *dict;
     uint32_t refs;
     uint8_t id;
@@ -694,23 +693,21 @@ static GlzSharedDictionary *glz_shared_dictionary_new(RedClient *client, uint8_t
     shared_dict->refs = 1;
     shared_dict->migrate_freeze = FALSE;
     shared_dict->client = client;
-    ring_item_init(&shared_dict->base);
     pthread_rwlock_init(&shared_dict->encode_lock, NULL);
 
     return shared_dict;
 }
 
 static pthread_mutex_t glz_dictionary_list_lock = PTHREAD_MUTEX_INITIALIZER;
-static Ring glz_dictionary_list = {&glz_dictionary_list, &glz_dictionary_list};
+static GList *glz_dictionary_list;
 
 static GlzSharedDictionary *find_glz_dictionary(RedClient *client, uint8_t dict_id)
 {
-    RingItem *now;
+    GList *l;
     GlzSharedDictionary *ret = NULL;
 
-    now = &glz_dictionary_list;
-    while ((now = ring_next(&glz_dictionary_list, now))) {
-        GlzSharedDictionary *dict = SPICE_UPCAST(GlzSharedDictionary, now);
+    for (l = glz_dictionary_list; l != NULL; l = l->next) {
+        GlzSharedDictionary *dict = l->data;
         if ((dict->client == client) && (dict->id == dict_id)) {
             ret = dict;
             break;
@@ -749,7 +746,7 @@ gboolean image_encoders_get_glz_dictionary(ImageEncoders *enc,
         shared_dict->refs++;
     } else {
         shared_dict = create_glz_dictionary(enc, client, id, window_size);
-        ring_add(&glz_dictionary_list, &shared_dict->base);
+        glz_dictionary_list = g_list_prepend(glz_dictionary_list, shared_dict);
     }
 
     pthread_mutex_unlock(&glz_dictionary_list_lock);
@@ -785,7 +782,7 @@ gboolean image_encoders_restore_glz_dictionary(ImageEncoders *enc,
         shared_dict->refs++;
     } else {
         shared_dict = restore_glz_dictionary(enc, client, id, restore_data);
-        ring_add(&glz_dictionary_list, &shared_dict->base);
+        glz_dictionary_list = g_list_prepend(glz_dictionary_list, shared_dict);
     }
 
     pthread_mutex_unlock(&glz_dictionary_list_lock);
@@ -819,7 +816,7 @@ static void image_encoders_release_glz(ImageEncoders *enc)
         pthread_mutex_unlock(&glz_dictionary_list_lock);
         return;
     }
-    ring_remove(&shared_dict->base);
+    glz_dictionary_list = g_list_remove(glz_dictionary_list, shared_dict);
     pthread_mutex_unlock(&glz_dictionary_list_lock);
     glz_enc_dictionary_destroy(shared_dict->dict, &enc->glz_data.usr);
     pthread_rwlock_destroy(&shared_dict->encode_lock);
