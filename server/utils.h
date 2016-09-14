@@ -18,7 +18,8 @@
 #ifndef UTILS_H_
 # define UTILS_H_
 
-#include "red-common.h"
+#include <stdint.h>
+#include <glib.h>
 
 #define SPICE_GNUC_VISIBLE __attribute__ ((visibility ("default")))
 
