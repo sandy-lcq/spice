@@ -591,7 +591,7 @@ RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     const SpiceMsgDisplayGlDraw *draw = data;
-    RedGlDrawItem *item = spice_new(RedGlDrawItem, 1);
+    RedGlDrawItem *item;
 
     if (!red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
         spice_printerr("FIXME: client does not support GL scanout");
@@ -600,6 +600,7 @@ RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
     }
 
     dcc->priv->gl_draw_ongoing = TRUE;
+    item = spice_new(RedGlDrawItem, 1);
     item->draw = *draw;
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_GL_DRAW);
 
