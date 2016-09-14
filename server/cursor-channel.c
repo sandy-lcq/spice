@@ -47,9 +47,8 @@ typedef struct RedCursorPipeItem {
     CursorItem *cursor_item;
 } RedCursorPipeItem;
 
-struct CursorChannel {
-    CommonGraphicsChannel common; // Must be the first thing
-
+typedef struct CursorChannelPrivate CursorChannelPrivate;
+struct CursorChannelPrivate {
     CursorItem *item;
     int cursor_visible;
     SpicePoint16 cursor_position;
@@ -60,6 +59,12 @@ struct CursorChannel {
 #ifdef RED_STATISTICS
     StatNodeRef stat;
 #endif
+};
+
+struct CursorChannel {
+    CommonGraphicsChannel common; // Must be the first thing
+
+    CursorChannelPrivate priv[1];
 };
 
 static void cursor_pipe_item_free(RedPipeItem *pipe_item);
@@ -108,10 +113,10 @@ static void cursor_item_unref(CursorItem *item)
 
 static void cursor_set_item(CursorChannel *cursor, CursorItem *item)
 {
-    if (cursor->item)
-        cursor_item_unref(cursor->item);
+    if (cursor->priv->item)
+        cursor_item_unref(cursor->priv->item);
 
-    cursor->item = item ? cursor_item_ref(item) : NULL;
+    cursor->priv->item = item ? cursor_item_ref(item) : NULL;
 }
 
 static RedPipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int num)
@@ -202,12 +207,12 @@ static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *
     cursor_channel = (CursorChannel*)red_channel_client_get_channel(rcc);
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_INIT, NULL);
-    msg.visible = cursor_channel->cursor_visible;
-    msg.position = cursor_channel->cursor_position;
-    msg.trail_length = cursor_channel->cursor_trail_length;
-    msg.trail_frequency = cursor_channel->cursor_trail_frequency;
+    msg.visible = cursor_channel->priv->cursor_visible;
+    msg.position = cursor_channel->priv->cursor_position;
+    msg.trail_length = cursor_channel->priv->cursor_trail_length;
+    msg.trail_frequency = cursor_channel->priv->cursor_trail_frequency;
 
-    cursor_fill(ccc, &msg.cursor, cursor_channel->item, &info);
+    cursor_fill(ccc, &msg.cursor, cursor_channel->priv->item, &info);
     spice_marshall_msg_cursor_init(base_marshaller, &msg);
     add_buf_from_info(base_marshaller, &info);
 }
@@ -242,7 +247,7 @@ static void cursor_marshall(CursorChannelClient *ccc,
 
             red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_SET, pipe_item);
             cursor_set.position = cmd->u.set.position;
-            cursor_set.visible = cursor_channel->cursor_visible;
+            cursor_set.visible = cursor_channel->priv->cursor_visible;
 
             cursor_fill(ccc, &cursor_set.cursor, item, &info);
             spice_marshall_msg_cursor_set(m, &cursor_set);
@@ -324,8 +329,8 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
                                      &cbs, red_channel_client_handle_message);
 
     cursor_channel = (CursorChannel *)channel;
-    cursor_channel->cursor_visible = TRUE;
-    cursor_channel->mouse_mode = SPICE_MOUSE_MODE_SERVER;
+    cursor_channel->priv->cursor_visible = TRUE;
+    cursor_channel->priv->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 
     return cursor_channel;
 }
@@ -342,20 +347,20 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
-        cursor->cursor_visible = cursor_cmd->u.set.visible;
+        cursor->priv->cursor_visible = cursor_cmd->u.set.visible;
         cursor_set_item(cursor, cursor_item);
         break;
     case QXL_CURSOR_MOVE:
-        cursor_show = !cursor->cursor_visible;
-        cursor->cursor_visible = TRUE;
-        cursor->cursor_position = cursor_cmd->u.position;
+        cursor_show = !cursor->priv->cursor_visible;
+        cursor->priv->cursor_visible = TRUE;
+        cursor->priv->cursor_position = cursor_cmd->u.position;
         break;
     case QXL_CURSOR_HIDE:
-        cursor->cursor_visible = FALSE;
+        cursor->priv->cursor_visible = FALSE;
         break;
     case QXL_CURSOR_TRAIL:
-        cursor->cursor_trail_length = cursor_cmd->u.trail.length;
-        cursor->cursor_trail_frequency = cursor_cmd->u.trail.frequency;
+        cursor->priv->cursor_trail_length = cursor_cmd->u.trail.length;
+        cursor->priv->cursor_trail_frequency = cursor_cmd->u.trail.frequency;
         break;
     default:
         spice_warning("invalid cursor command %u", cursor_cmd->type);
@@ -363,7 +368,7 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
     }
 
     if (red_channel_is_connected(&cursor->common.base) &&
-        (cursor->mouse_mode == SPICE_MOUSE_MODE_SERVER
+        (cursor->priv->mouse_mode == SPICE_MOUSE_MODE_SERVER
          || cursor_cmd->type != QXL_CURSOR_MOVE
          || cursor_show)) {
         red_channel_pipes_new_add(&cursor->common.base,
@@ -380,9 +385,9 @@ void cursor_channel_reset(CursorChannel *cursor)
     spice_return_if_fail(cursor);
 
     cursor_set_item(cursor, NULL);
-    cursor->cursor_visible = TRUE;
-    cursor->cursor_position.x = cursor->cursor_position.y = 0;
-    cursor->cursor_trail_length = cursor->cursor_trail_frequency = 0;
+    cursor->priv->cursor_visible = TRUE;
+    cursor->priv->cursor_position.x = cursor->priv->cursor_position.y = 0;
+    cursor->priv->cursor_trail_length = cursor->priv->cursor_trail_frequency = 0;
 
     if (red_channel_is_connected(channel)) {
         red_channel_pipes_add_type(channel, RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
@@ -423,7 +428,7 @@ void cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32_t mode)
 {
     spice_return_if_fail(cursor);
 
-    cursor->mouse_mode = mode;
+    cursor->priv->mouse_mode = mode;
 }
 
 void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream *stream,
