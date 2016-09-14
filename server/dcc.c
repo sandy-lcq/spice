@@ -572,7 +572,6 @@ static RedSurfaceDestroyItem *red_surface_destroy_item_new(RedChannel *channel,
 RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
 {
     RedGlScanoutUnixItem *item = spice_new(RedGlScanoutUnixItem, 1);
-    spice_return_val_if_fail(item != NULL, NULL);
 
     /* FIXME: on !unix peer, start streaming with a video codec */
     if (!reds_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
@@ -592,7 +591,6 @@ RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     const SpiceMsgDisplayGlDraw *draw = data;
     RedGlDrawItem *item = spice_new(RedGlDrawItem, 1);
-    spice_return_val_if_fail(item != NULL, NULL);
 
     if (!red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
         spice_printerr("FIXME: client does not support GL scanout");
