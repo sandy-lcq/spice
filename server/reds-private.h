@@ -61,16 +61,14 @@ typedef struct RedsStatValue {
 #endif
 
 typedef struct RedsMigPendingLink {
-    RingItem ring_link; // list of links that belongs to the same client
     SpiceLinkMess *link_msg;
     RedsStream *stream;
 } RedsMigPendingLink;
 
 typedef struct RedsMigTargetClient {
     RedsState *reds;
-    RingItem link;
     RedClient *client;
-    Ring pending_links;
+    GList *pending_links;
 } RedsMigTargetClient;
 
 /* Intermediate state for on going monitors config message from a single
@@ -122,7 +120,7 @@ struct RedsState {
                                     between the 2 servers */
     int dst_do_seamless_migrate; /* per migration. Updated after the migration handshake
                                     between the 2 servers */
-    Ring mig_target_clients;
+    GList *mig_target_clients;
 
     int num_of_channels;
     Ring channels;

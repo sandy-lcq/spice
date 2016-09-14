@@ -295,7 +295,7 @@ static RedCharDeviceVDIPort *red_char_device_vdi_port_new(RedsState *reds);
 
 static void migrate_timeout(void *opaque);
 static RedsMigTargetClient* reds_mig_target_client_find(RedsState *reds, RedClient *client);
-static void reds_mig_target_client_free(RedsMigTargetClient *mig_client);
+static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mig_client);
 static void reds_mig_cleanup_wait_disconnect(RedsState *reds);
 static void reds_mig_remove_wait_disconnect_client(RedsState *reds, RedClient *client);
 static void reds_add_char_device(RedsState *reds, RedCharDevice *dev);
@@ -596,7 +596,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
 
     mig_client = reds_mig_target_client_find(reds, client);
     if (mig_client) {
-        reds_mig_target_client_free(mig_client);
+        reds_mig_target_client_free(reds, mig_client);
     }
 
     if (reds->mig_wait_disconnect) {
@@ -1678,24 +1678,21 @@ static void reds_mig_target_client_add(RedsState *reds, RedClient *client)
 {
     RedsMigTargetClient *mig_client;
 
-    spice_assert(reds);
+    g_return_if_fail(reds);
     spice_info(NULL);
-    mig_client = spice_malloc0(sizeof(RedsMigTargetClient));
+    mig_client = spice_new0(RedsMigTargetClient, 1);
     mig_client->client = client;
     mig_client->reds = reds;
-    ring_init(&mig_client->pending_links);
-    ring_add(&reds->mig_target_clients, &mig_client->link);
-
+    reds->mig_target_clients = g_list_append(reds->mig_target_clients, mig_client);
 }
 
 static RedsMigTargetClient* reds_mig_target_client_find(RedsState *reds, RedClient *client)
 {
-    RingItem *item;
+    GList *l;
 
-    RING_FOREACH(item, &reds->mig_target_clients) {
-        RedsMigTargetClient *mig_client;
+    for (l = reds->mig_target_clients; l != NULL; l = l->next) {
+        RedsMigTargetClient *mig_client = l->data;
 
-        mig_client = SPICE_CONTAINEROF(item, RedsMigTargetClient, link);
         if (mig_client->client == client) {
             return mig_client;
         }
@@ -1710,34 +1707,30 @@ static void reds_mig_target_client_add_pending_link(RedsMigTargetClient *client,
     RedsMigPendingLink *mig_link;
 
     spice_assert(client);
-    mig_link = spice_malloc0(sizeof(RedsMigPendingLink));
+    mig_link = spice_new0(RedsMigPendingLink, 1);
     mig_link->link_msg = link_msg;
     mig_link->stream = stream;
 
-    ring_add(&client->pending_links, &mig_link->ring_link);
+    client->pending_links = g_list_append(client->pending_links, mig_link);
 }
 
-static void reds_mig_target_client_free(RedsMigTargetClient *mig_client)
+static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mig_client)
 {
-    RingItem *now, *next;
-
-    ring_remove(&mig_client->link);
-
-    RING_FOREACH_SAFE(now, next, &mig_client->pending_links) {
-        RedsMigPendingLink *mig_link = SPICE_CONTAINEROF(now, RedsMigPendingLink, ring_link);
-        ring_remove(now);
-        free(mig_link);
-    }
+    reds->mig_target_clients = g_list_remove(reds->mig_target_clients, mig_client);
+    g_list_free_full(mig_client->pending_links, g_free);
     free(mig_client);
 }
 
 static void reds_mig_target_client_disconnect_all(RedsState *reds)
 {
-    RingItem *now, *next;
+    GList *l, *next;
 
-    RING_FOREACH_SAFE(now, next, &reds->mig_target_clients) {
-        RedsMigTargetClient *mig_client = SPICE_CONTAINEROF(now, RedsMigTargetClient, link);
+    l = reds->mig_target_clients;
+    while (l) {
+        next = l->next;
+        RedsMigTargetClient *mig_client = l->data;
         reds_client_disconnect(reds, mig_client->client);
+        l = next;
     }
 }
 
@@ -1905,7 +1898,7 @@ static void reds_channel_do_link(RedChannel *channel, RedClient *client,
 static int reds_link_mig_target_channels(RedsState *reds, RedClient *client)
 {
     RedsMigTargetClient *mig_client;
-    RingItem *item;
+    GList *item;
 
     spice_info("%p", client);
     mig_client = reds_mig_target_client_find(reds, client);
@@ -1916,11 +1909,10 @@ static int reds_link_mig_target_channels(RedsState *reds, RedClient *client)
 
     /* Each channel should check if we are during migration, and
      * act accordingly. */
-    RING_FOREACH(item, &mig_client->pending_links) {
-        RedsMigPendingLink *mig_link;
+    for(item = mig_client->pending_links; item != NULL; item = item->next) {
+        RedsMigPendingLink *mig_link = item->data;
         RedChannel *channel;
 
-        mig_link = SPICE_CONTAINEROF(item, RedsMigPendingLink, ring_link);
         channel = reds_find_channel(reds, mig_link->link_msg->channel_type,
                                     mig_link->link_msg->channel_id);
         if (!channel) {
@@ -1933,7 +1925,7 @@ static int reds_link_mig_target_channels(RedsState *reds, RedClient *client)
         reds_channel_do_link(channel, client, mig_link->link_msg, mig_link->stream);
     }
 
-    reds_mig_target_client_free(mig_client);
+    reds_mig_target_client_free(reds, mig_client);
 
     return TRUE;
 }
@@ -3459,7 +3451,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     reds->num_clients = 0;
     reds->main_dispatcher = main_dispatcher_new(reds, reds->core);
     ring_init(&reds->channels);
-    ring_init(&reds->mig_target_clients);
+    reds->mig_target_clients = NULL;
     reds->char_devices = NULL;
     reds->mig_wait_disconnect_clients = NULL;
     reds->vm_running = TRUE; /* for backward compatibility */
