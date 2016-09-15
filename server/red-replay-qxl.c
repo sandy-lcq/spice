@@ -49,6 +49,7 @@ struct SpiceReplay {
     GArray *id_map_inv; // replay id -> record id
     GArray *id_free; // free list
     int nsurfaces;
+    int end_pos;
 
     GList *allocated;
 
@@ -69,10 +70,12 @@ static int replay_fread(SpiceReplay *replay, uint8_t *buf, size_t size)
 }
 
 __attribute__((format(scanf, 2, 3)))
-static replay_t replay_fscanf(SpiceReplay *replay, const char *fmt, ...)
+static replay_t replay_fscanf_check(SpiceReplay *replay, const char *fmt, ...)
 {
     va_list ap;
     int ret;
+
+    replay->end_pos = -1;
 
     if (replay->error) {
         return REPLAY_ERROR;
@@ -84,11 +87,13 @@ static replay_t replay_fscanf(SpiceReplay *replay, const char *fmt, ...)
     va_start(ap, fmt);
     ret = vfscanf(replay->fd, fmt, ap);
     va_end(ap);
-    if (ret == EOF) {
+    if (ret == EOF || replay->end_pos < 0) {
         replay->error = TRUE;
     }
     return replay->error ? REPLAY_ERROR : REPLAY_OK;
 }
+#define replay_fscanf(r, fmt, ...) \
+    replay_fscanf_check(r, fmt "%n", ## __VA_ARGS__, &r->end_pos)
 
 static inline void *replay_malloc(SpiceReplay *replay, size_t size)
 {
@@ -216,9 +221,11 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
     uint8_t *zlib_buffer;
     z_stream strm;
 
-    snprintf(template, sizeof(template), "binary %%d %s %%ld:", prefix);
-    if (replay_fscanf(replay, template, &with_zlib, size) == REPLAY_ERROR)
+    snprintf(template, sizeof(template), "binary %%d %s %%ld:%%n", prefix);
+    replay_fscanf_check(replay, template, &with_zlib, size, &replay->end_pos);
+    if (replay->error) {
         return REPLAY_ERROR;
+    }
 
     if (*buf == NULL) {
         *buf = replay_malloc(replay, *size + base_size);
@@ -230,13 +237,17 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
         hexdump(*buf + base_size, *size);
     }
 #else
-    spice_return_val_if_fail(with_zlib != -1, REPLAY_ERROR);
     if (with_zlib) {
         int ret;
 
         replay_fscanf(replay, "%d:", &zlib_size);
+        if (replay->error) {
+            return REPLAY_ERROR;
+        }
         zlib_buffer = replay_malloc(replay, zlib_size);
-        replay_fread(replay, zlib_buffer, zlib_size);
+        if (replay_fread(replay, zlib_buffer, zlib_size) != zlib_size) {
+            return REPLAY_ERROR;
+        }
         strm.zalloc = Z_NULL;
         strm.zfree = Z_NULL;
         strm.opaque = Z_NULL;
@@ -268,8 +279,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
         replay_fread(replay, *buf + base_size, *size);
     }
 #endif
-    replay_fscanf(replay, "\n");
-    return REPLAY_OK;
+    return replay_fscanf(replay, "\n");
 }
 
 static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
@@ -340,8 +350,9 @@ static void red_replay_rect_ptr(SpiceReplay *replay, const char *prefix, QXLRect
 {
     char template[1024];
 
-    snprintf(template, sizeof(template), "rect %s %%d %%d %%d %%d\n", prefix);
-    replay_fscanf(replay, template, &qxl->top, &qxl->left, &qxl->bottom, &qxl->right);
+    snprintf(template, sizeof(template), "rect %s %%d %%d %%d %%d\n%%n", prefix);
+    replay_fscanf_check(replay, template, &qxl->top, &qxl->left, &qxl->bottom, &qxl->right,
+                        &replay->end_pos);
 }
 
 static QXLPath *red_replay_path(SpiceReplay *replay)
@@ -367,6 +378,9 @@ static QXLClipRects *red_replay_clip_rects(SpiceReplay *replay)
     int num_rects;
 
     replay_fscanf(replay, "num_rects %d\n", &num_rects);
+    if (replay->error) {
+        return NULL;
+    }
     red_replay_data_chunks(replay, "clip_rects", (uint8_t**)&qxl, sizeof(QXLClipRects));
     qxl->num_rects = num_rects;
     return qxl;
@@ -395,6 +409,9 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
     int has_image;
 
     replay_fscanf(replay, "image %d\n", &has_image);
+    if (replay->error) {
+        return NULL;
+    }
     if (!has_image) {
         return NULL;
     }
@@ -405,6 +422,9 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
     replay_fscanf(replay, "descriptor.flags %d\n", &temp); qxl->descriptor.flags = temp;
     replay_fscanf(replay, "descriptor.width %d\n", &qxl->descriptor.width);
     replay_fscanf(replay, "descriptor.height %d\n", &qxl->descriptor.height);
+    if (replay->error) {
+        return NULL;
+    }
 
     switch (qxl->descriptor.type) {
     case SPICE_IMAGE_TYPE_BITMAP:
@@ -420,6 +440,9 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
             int i, num_ents;
 
             replay_fscanf(replay, "qp.num_ents %d\n", &num_ents);
+            if (replay->error) {
+                return NULL;
+            }
             qp = replay_malloc(replay, sizeof(QXLPalette) + num_ents * sizeof(qp->ents[0]));
             qp->num_ents = num_ents;
             qxl->bitmap.palette = QXLPHYSICAL_FROM_PTR(qp);
@@ -444,12 +467,18 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         break;
     case SPICE_IMAGE_TYPE_SURFACE:
         replay_fscanf(replay, "surface_image.surface_id %d\n", &qxl->surface_image.surface_id);
+        if (replay->error) {
+            return NULL;
+        }
         qxl->surface_image.surface_id = replay_id_get(replay, qxl->surface_image.surface_id);
         break;
     case SPICE_IMAGE_TYPE_QUIC:
         // TODO - make this much nicer (precompute size and allocs, store them during
         // record, then reread into them. and use MPEG-4).
         replay_fscanf(replay, "quic.data_size %d\n", &qxl->quic.data_size);
+        if (replay->error) {
+            return NULL;
+        }
         qxl = realloc(qxl, sizeof(QXLImageDescriptor) + sizeof(QXLQUICData) +
                       qxl->quic.data_size);
         size = red_replay_data_chunks(replay, "quic.data", (uint8_t**)&qxl->quic.data, 0);
@@ -491,6 +520,10 @@ static void red_replay_image_free(SpiceReplay *replay, QXLPHYSICAL p, uint32_t f
 static void red_replay_brush_ptr(SpiceReplay *replay, QXLBrush *qxl, uint32_t flags)
 {
     replay_fscanf(replay, "type %d\n", &qxl->type);
+    if (replay->error) {
+        return;
+    }
+
     switch (qxl->type) {
     case SPICE_BRUSH_TYPE_SOLID:
         replay_fscanf(replay, "u.color %d\n", &qxl->u.color);
@@ -655,6 +688,9 @@ static void red_replay_stroke_ptr(SpiceReplay *replay, QXLStroke *qxl, uint32_t 
 
     qxl->path = QXLPHYSICAL_FROM_PTR(red_replay_path(replay));
     replay_fscanf(replay, "attr.flags %d\n", &temp); qxl->attr.flags = temp;
+    if (replay->error) {
+        return;
+    }
     if (qxl->attr.flags & SPICE_LINE_FLAGS_STYLED) {
         size_t size;
 
@@ -752,6 +788,9 @@ static void red_replay_invers_free(SpiceReplay *replay, QXLInvers *qxl, uint32_t
 static void red_replay_clip_ptr(SpiceReplay *replay, QXLClip *qxl)
 {
     replay_fscanf(replay, "type %d\n", &qxl->type);
+    if (replay->error) {
+        return;
+    }
     switch (qxl->type) {
     case SPICE_CLIP_TYPE_RECTS:
         qxl->data = QXLPHYSICAL_FROM_PTR(red_replay_clip_rects(replay));
@@ -781,7 +820,7 @@ static uint8_t *red_replay_transform(SpiceReplay *replay)
 
 static void red_replay_composite_ptr(SpiceReplay *replay, QXLComposite *qxl, uint32_t flags)
 {
-    int enabled;
+    int enabled = 0;
 
     replay_fscanf(replay, "flags %d\n", &qxl->flags);
     qxl->src = QXLPHYSICAL_FROM_PTR(red_replay_image(replay, flags));
@@ -821,15 +860,24 @@ static QXLDrawable *red_replay_native_drawable(SpiceReplay *replay, uint32_t fla
     replay_fscanf(replay, "self_bitmap %d\n", &temp); qxl->self_bitmap = temp;
     red_replay_rect_ptr(replay, "self_bitmap_area", &qxl->self_bitmap_area);
     replay_fscanf(replay, "surface_id %d\n", &qxl->surface_id);
+    if (replay->error) {
+        return NULL;
+    }
     qxl->surface_id = replay_id_get(replay, qxl->surface_id);
 
     for (i = 0; i < 3; i++) {
         replay_fscanf(replay, "surfaces_dest %d\n", &qxl->surfaces_dest[i]);
+        if (replay->error) {
+            return NULL;
+        }
         qxl->surfaces_dest[i] = replay_id_get(replay, qxl->surfaces_dest[i]);
         red_replay_rect_ptr(replay, "surfaces_rects", &qxl->surfaces_rects[i]);
     }
 
     replay_fscanf(replay, "type %d\n", &temp); qxl->type = temp;
+    if (replay->error) {
+        return NULL;
+    }
     switch (qxl->type) {
     case QXL_DRAW_ALPHA_BLEND:
         red_replay_alpha_blend_ptr(replay, &qxl->u.alpha_blend, flags);
@@ -952,6 +1000,9 @@ static QXLCompatDrawable *red_replay_compat_drawable(SpiceReplay *replay, uint32
     red_replay_rect_ptr(replay, "bitmap_area", &qxl->bitmap_area);
 
     replay_fscanf(replay, "type %d\n", &temp); qxl->type = temp;
+    if (replay->error) {
+        return NULL;
+    }
     switch (qxl->type) {
     case QXL_DRAW_ALPHA_BLEND:
         red_replay_alpha_blend_ptr_compat(replay, &qxl->u.alpha_blend, flags);
@@ -1022,6 +1073,9 @@ static QXLUpdateCmd *red_replay_update_cmd(SpiceReplay *replay)
     red_replay_rect_ptr(replay, "area", &qxl->area);
     replay_fscanf(replay, "update_id %d\n", &qxl->update_id);
     replay_fscanf(replay, "surface_id %d\n", &qxl->surface_id);
+    if (replay->error) {
+        return NULL;
+    }
     qxl->surface_id = replay_id_get(replay, qxl->surface_id);
 
     return qxl;
@@ -1047,6 +1101,9 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
     replay_fscanf(replay, "surface_id %d\n", &qxl->surface_id);
     replay_fscanf(replay, "type %d\n", &temp); qxl->type = temp;
     replay_fscanf(replay, "flags %d\n", &qxl->flags);
+    if (replay->error) {
+        return NULL;
+    }
 
     switch (qxl->type) {
     case QXL_SURFACE_CMD_CREATE:
@@ -1054,6 +1111,9 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
         replay_fscanf(replay, "u.surface_create.width %d\n", &qxl->u.surface_create.width);
         replay_fscanf(replay, "u.surface_create.height %d\n", &qxl->u.surface_create.height);
         replay_fscanf(replay, "u.surface_create.stride %d\n", &qxl->u.surface_create.stride);
+        if (replay->error) {
+            return NULL;
+        }
         size = qxl->u.surface_create.height * abs(qxl->u.surface_create.stride);
         if ((qxl->flags & QXL_SURF_FLAG_KEEP_DATA) != 0) {
             read_binary(replay, "data", &read_size, (uint8_t**)&qxl->u.surface_create.data, 0);
@@ -1100,6 +1160,9 @@ static QXLCursor *red_replay_cursor(SpiceReplay *replay)
     cursor.header.hot_spot_y = temp;
 
     replay_fscanf(replay, "data_size %d\n", &temp);
+    if (replay->error) {
+        return NULL;
+    }
     cursor.data_size = temp;
     cursor.data_size = red_replay_data_chunks(replay, "cursor", (uint8_t**)&qxl, sizeof(QXLCursor));
     qxl->header = cursor.header;
@@ -1114,6 +1177,9 @@ static QXLCursorCmd *red_replay_cursor_cmd(SpiceReplay *replay)
 
     replay_fscanf(replay, "cursor_cmd\n");
     replay_fscanf(replay, "type %d\n", &temp);
+    if (replay->error) {
+        return NULL;
+    }
     qxl->type = temp;
     switch (qxl->type) {
     case QXL_CURSOR_SET:
@@ -1163,6 +1229,9 @@ static void replay_handle_create_primary(QXLWorker *worker, SpiceReplay *replay)
         &surface.stride, &surface.format);
     replay_fscanf(replay, "%d %d %d %d\n", &surface.position, &surface.mouse_mode,
         &surface.flags, &surface.type);
+    if (replay->error) {
+        return;
+    }
     read_binary(replay, "data", &size, &mem, 0);
     surface.group_id = 0;
     surface.mem = QXLPHYSICAL_FROM_PTR(mem);
