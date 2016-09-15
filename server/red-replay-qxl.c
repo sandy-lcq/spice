@@ -113,6 +113,13 @@ static inline void replay_free(SpiceReplay *replay, void *mem)
     free(mem);
 }
 
+static inline void *replay_realloc(SpiceReplay *replay, void *mem, size_t n_bytes)
+{
+    GList *elem = g_list_find(replay->allocated, mem);
+    elem->data = spice_realloc(mem, n_bytes);
+    return elem->data;
+}
+
 static uint32_t replay_id_get(SpiceReplay *replay, uint32_t id)
 {
     uint32_t newid = 0;
@@ -486,8 +493,8 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         if (replay->error) {
             return NULL;
         }
-        qxl = realloc(qxl, sizeof(QXLImageDescriptor) + sizeof(QXLQUICData) +
-                      qxl->quic.data_size);
+        qxl = replay_realloc(replay, qxl, sizeof(QXLImageDescriptor) + sizeof(QXLQUICData) +
+                             qxl->quic.data_size);
         size = red_replay_data_chunks(replay, "quic.data", (uint8_t**)&qxl->quic.data, 0);
         spice_assert(size == qxl->quic.data_size);
         break;
