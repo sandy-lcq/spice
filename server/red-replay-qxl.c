@@ -50,6 +50,8 @@ struct SpiceReplay {
     GArray *id_free; // free list
     int nsurfaces;
 
+    GList *allocated;
+
     pthread_mutex_t mutex;
     pthread_cond_t cond;
 };
@@ -86,6 +88,26 @@ static replay_t replay_fscanf(SpiceReplay *replay, const char *fmt, ...)
         replay->error = TRUE;
     }
     return replay->error ? REPLAY_ERROR : REPLAY_OK;
+}
+
+static inline void *replay_malloc(SpiceReplay *replay, size_t size)
+{
+    void *mem = spice_malloc(size);
+    replay->allocated = g_list_prepend(replay->allocated, mem);
+    return mem;
+}
+
+static inline void *replay_malloc0(SpiceReplay *replay, size_t size)
+{
+    void *mem = replay_malloc(replay, size);
+    memset(mem, 0, size);
+    return mem;
+}
+
+static inline void replay_free(SpiceReplay *replay, void *mem)
+{
+    replay->allocated = g_list_remove(replay->allocated, mem);
+    free(mem);
 }
 
 static uint32_t replay_id_get(SpiceReplay *replay, uint32_t id)
@@ -199,7 +221,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
         return REPLAY_ERROR;
 
     if (*buf == NULL) {
-        *buf = spice_malloc(*size + base_size);
+        *buf = replay_malloc(replay, *size + base_size);
     }
 #if 0
     {
@@ -213,7 +235,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
         int ret;
 
         replay_fscanf(replay, "%d:", &zlib_size);
-        zlib_buffer = spice_malloc(zlib_size);
+        zlib_buffer = replay_malloc(replay, zlib_size);
         replay_fread(replay, zlib_buffer, zlib_size);
         strm.zalloc = Z_NULL;
         strm.zfree = Z_NULL;
@@ -241,7 +263,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
             }
         }
         (void)inflateEnd(&strm);
-        free(zlib_buffer); // TODO - avoid repeat alloc/dealloc by keeping last
+        replay_free(replay, zlib_buffer); // TODO - avoid repeat alloc/dealloc by keeping last
     } else {
         replay_fread(replay, *buf + base_size, *size);
     }
@@ -377,7 +399,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         return NULL;
     }
 
-    qxl = spice_new0(QXLImage, 1);
+    qxl = (QXLImage*)replay_malloc0(replay, sizeof(QXLImage));
     replay_fscanf(replay, "descriptor.id %"PRIu64"\n", &qxl->descriptor.id);
     replay_fscanf(replay, "descriptor.type %d\n", &temp); qxl->descriptor.type = temp;
     replay_fscanf(replay, "descriptor.flags %d\n", &temp); qxl->descriptor.flags = temp;
@@ -398,7 +420,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
             int i, num_ents;
 
             replay_fscanf(replay, "qp.num_ents %d\n", &num_ents);
-            qp = spice_malloc(sizeof(QXLPalette) + num_ents * sizeof(qp->ents[0]));
+            qp = replay_malloc(replay, sizeof(QXLPalette) + num_ents * sizeof(qp->ents[0]));
             qp->num_ents = num_ents;
             qxl->bitmap.palette = QXLPHYSICAL_FROM_PTR(qp);
             replay_fscanf(replay, "unique %"PRIu64"\n", &qp->unique);
@@ -788,7 +810,7 @@ static void red_replay_composite_free(SpiceReplay *replay, QXLComposite *qxl, ui
 
 static QXLDrawable *red_replay_native_drawable(SpiceReplay *replay, uint32_t flags)
 {
-    QXLDrawable *qxl = spice_malloc0(sizeof(QXLDrawable)); // TODO - this is too large usually
+    QXLDrawable *qxl = replay_malloc0(replay, sizeof(QXLDrawable)); // TODO - this is too large usually
     int i;
     int temp;
 
@@ -919,7 +941,7 @@ static void red_replay_native_drawable_free(SpiceReplay *replay, QXLDrawable *qx
 static QXLCompatDrawable *red_replay_compat_drawable(SpiceReplay *replay, uint32_t flags)
 {
     int temp;
-    QXLCompatDrawable *qxl = spice_malloc0(sizeof(QXLCompatDrawable)); // TODO - too large usually
+    QXLCompatDrawable *qxl = replay_malloc0(replay, sizeof(QXLCompatDrawable)); // TODO - too large usually
 
     red_replay_rect_ptr(replay, "bbox", &qxl->bbox);
     red_replay_clip_ptr(replay, &qxl->clip);
@@ -994,7 +1016,7 @@ static QXLPHYSICAL red_replay_drawable(SpiceReplay *replay, uint32_t flags)
 
 static QXLUpdateCmd *red_replay_update_cmd(SpiceReplay *replay)
 {
-    QXLUpdateCmd *qxl = spice_malloc0(sizeof(QXLUpdateCmd));
+    QXLUpdateCmd *qxl = replay_malloc0(replay, sizeof(QXLUpdateCmd));
 
     replay_fscanf(replay, "update\n");
     red_replay_rect_ptr(replay, "area", &qxl->area);
@@ -1019,7 +1041,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
     size_t size;
     size_t read_size;
     int temp;
-    QXLSurfaceCmd *qxl = spice_malloc0(sizeof(QXLSurfaceCmd));
+    QXLSurfaceCmd *qxl = replay_malloc0(replay, sizeof(QXLSurfaceCmd));
 
     replay_fscanf(replay, "surface_cmd\n");
     replay_fscanf(replay, "surface_id %d\n", &qxl->surface_id);
@@ -1039,7 +1061,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
                 spice_printerr("mismatch %zu != %zu", size, read_size);
             }
         } else {
-            qxl->u.surface_create.data = QXLPHYSICAL_FROM_PTR(spice_malloc(size));
+            qxl->u.surface_create.data = QXLPHYSICAL_FROM_PTR(replay_malloc(replay, size));
         }
         qxl->surface_id = replay_id_new(replay, qxl->surface_id);
         break;
@@ -1088,7 +1110,7 @@ static QXLCursor *red_replay_cursor(SpiceReplay *replay)
 static QXLCursorCmd *red_replay_cursor_cmd(SpiceReplay *replay)
 {
     int temp;
-    QXLCursorCmd *qxl = spice_new0(QXLCursorCmd, 1);
+    QXLCursorCmd *qxl = replay_malloc0(replay, sizeof(QXLCursorCmd));
 
     replay_fscanf(replay, "cursor_cmd\n");
     replay_fscanf(replay, "type %d\n", &temp);
@@ -1185,7 +1207,7 @@ static void replay_handle_dev_input(QXLWorker *worker, SpiceReplay *replay,
 SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
                                                          QXLWorker *worker)
 {
-    QXLCommandExt* cmd;
+    QXLCommandExt* cmd = NULL;
     uint64_t timestamp;
     int type;
     int what = -1;
@@ -1195,13 +1217,13 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
         replay_fscanf(replay, "event %d %d %d %"PRIu64"\n", &counter,
                             &what, &type, &timestamp);
         if (replay->error) {
-            return NULL;
+            goto error;
         }
         if (what == 1) {
             replay_handle_dev_input(worker, replay, type);
         }
     }
-    cmd = g_new(QXLCommandExt, 1);
+    cmd = replay_malloc0(replay, sizeof(QXLCommandExt));
     cmd->cmd.type = type;
     cmd->group_id = 0;
     spice_debug("command %"PRIu64", %d\r", timestamp, cmd->cmd.type);
@@ -1224,6 +1246,10 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
         break;
     }
 
+    if (replay->error) {
+        goto error;
+    }
+
     QXLReleaseInfo *info;
     switch (cmd->cmd.type) {
     case QXL_CMD_DRAW:
@@ -1234,9 +1260,25 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
         info->id = (uintptr_t)cmd;
     }
 
+    /* all buffer allocated will be used by the caller but
+     * free the list of buffer allocated to avoid to free on next calls */
+    if (replay->allocated) {
+        g_list_free(replay->allocated);
+        replay->allocated = NULL;
+    }
+
     replay->counter++;
 
     return cmd;
+
+error:
+    /* if there were some allocation during the read free all
+     * buffers allocated to avoid leaks */
+    if (replay->allocated) {
+        g_list_free_full(replay->allocated, free);
+        replay->allocated = NULL;
+    }
+    return NULL;
 }
 
 SPICE_GNUC_VISIBLE void spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt *cmd)
@@ -1271,7 +1313,7 @@ SPICE_GNUC_VISIBLE void spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt
         break;
     }
 
-    g_free(cmd);
+    free(cmd);
 }
 
 /* caller is incharge of closing the replay when done and releasing the SpiceReplay
@@ -1305,6 +1347,7 @@ SpiceReplay *spice_replay_new(FILE *file, int nsurfaces)
     replay->id_map_inv = g_array_new(FALSE, FALSE, sizeof(uint32_t));
     replay->id_free = g_array_new(FALSE, FALSE, sizeof(uint32_t));
     replay->nsurfaces = nsurfaces;
+    replay->allocated = NULL;
 
     /* reserve id 0 */
     replay_id_new(replay, 0);
@@ -1316,6 +1359,7 @@ SPICE_GNUC_VISIBLE void spice_replay_free(SpiceReplay *replay)
 {
     spice_return_if_fail(replay != NULL);
 
+    g_list_free_full(replay->allocated, free);
     pthread_mutex_destroy(&replay->mutex);
     pthread_cond_destroy(&replay->cond);
     g_array_free(replay->id_map, TRUE);
