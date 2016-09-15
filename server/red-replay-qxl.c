@@ -282,8 +282,8 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
     return replay_fscanf(replay, "\n");
 }
 
-static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
-                                     uint8_t **mem, size_t base_size)
+static ssize_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
+                                      uint8_t **mem, size_t base_size)
 {
     size_t data_size;
     int count_chunks;
@@ -291,12 +291,15 @@ static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
     QXLDataChunk *cur, *next;
 
     replay_fscanf(replay, "data_chunks %d %zu\n", &count_chunks, &data_size);
+    if (replay->error) {
+        return -1;
+    }
     if (base_size == 0) {
         base_size = sizeof(QXLDataChunk);
     }
 
     if (read_binary(replay, prefix, &next_data_size, mem, base_size) == REPLAY_ERROR) {
-        return 0;
+        return -1;
     }
     cur = (QXLDataChunk*)(*mem + base_size - sizeof(QXLDataChunk));
     cur->data_size = next_data_size;
@@ -305,7 +308,7 @@ static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
     while (count_chunks-- > 0) {
         if (read_binary(replay, prefix, &next_data_size, (uint8_t**)&cur->next_chunk,
             sizeof(QXLDataChunk)) == REPLAY_ERROR) {
-            return 0;
+            return -1;
         }
         data_size += next_data_size;
         next = QXLPHYSICAL_TO_PTR(cur->next_chunk);
@@ -358,9 +361,12 @@ static void red_replay_rect_ptr(SpiceReplay *replay, const char *prefix, QXLRect
 static QXLPath *red_replay_path(SpiceReplay *replay)
 {
     QXLPath *qxl = NULL;
-    size_t data_size;
+    ssize_t data_size;
 
     data_size = red_replay_data_chunks(replay, "path", (uint8_t**)&qxl, sizeof(QXLPath));
+    if (data_size < 0) {
+        return NULL;
+    }
     qxl->data_size = data_size;
     return qxl;
 }
@@ -381,7 +387,9 @@ static QXLClipRects *red_replay_clip_rects(SpiceReplay *replay)
     if (replay->error) {
         return NULL;
     }
-    red_replay_data_chunks(replay, "clip_rects", (uint8_t**)&qxl, sizeof(QXLClipRects));
+    if (red_replay_data_chunks(replay, "clip_rects", (uint8_t**)&qxl, sizeof(QXLClipRects)) < 0) {
+        return NULL;
+    }
     qxl->num_rects = num_rects;
     return qxl;
 }
@@ -402,7 +410,8 @@ static uint8_t *red_replay_image_data_flat(SpiceReplay *replay, size_t *size)
 static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
 {
     QXLImage* qxl = NULL;
-    size_t bitmap_size, size;
+    size_t bitmap_size;
+    ssize_t size;
     uint8_t qxl_flags;
     int temp;
     int has_palette;
@@ -717,13 +726,16 @@ static QXLString *red_replay_string(SpiceReplay *replay)
     uint32_t data_size;
     uint16_t length;
     uint16_t flags;
-    size_t chunk_size;
+    ssize_t chunk_size;
     QXLString *qxl = NULL;
 
     replay_fscanf(replay, "data_size %d\n", &data_size);
     replay_fscanf(replay, "length %d\n", &temp); length = temp;
     replay_fscanf(replay, "flags %d\n", &temp); flags = temp;
     chunk_size = red_replay_data_chunks(replay, "string", (uint8_t**)&qxl, sizeof(QXLString));
+    if (chunk_size <  0) {
+        return NULL;
+    }
     qxl->data_size = data_size;
     qxl->length = length;
     qxl->flags = flags;
@@ -1146,6 +1158,7 @@ static QXLCursor *red_replay_cursor(SpiceReplay *replay)
 {
     int temp;
     QXLCursor cursor, *qxl = NULL;
+    ssize_t data_size;
 
     replay_fscanf(replay, "header.unique %"SCNu64"\n", &cursor.header.unique);
     replay_fscanf(replay, "header.type %d\n", &temp);
@@ -1163,10 +1176,12 @@ static QXLCursor *red_replay_cursor(SpiceReplay *replay)
     if (replay->error) {
         return NULL;
     }
-    cursor.data_size = temp;
-    cursor.data_size = red_replay_data_chunks(replay, "cursor", (uint8_t**)&qxl, sizeof(QXLCursor));
+    data_size = red_replay_data_chunks(replay, "cursor", (uint8_t**)&qxl, sizeof(QXLCursor));
+    if (data_size < 0) {
+        return NULL;
+    }
     qxl->header = cursor.header;
-    qxl->data_size = cursor.data_size;
+    qxl->data_size = data_size;
     return qxl;
 }
 
