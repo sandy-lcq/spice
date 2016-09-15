@@ -1007,7 +1007,7 @@ static QXLUpdateCmd *red_replay_update_cmd(SpiceReplay *replay)
 
 static QXLMessage *red_replay_message(SpiceReplay *replay)
 {
-    QXLMessage *qxl;
+    QXLMessage *qxl = NULL;
     size_t size;
 
     read_binary(replay, "message", &size, (uint8_t**)&qxl, sizeof(QXLMessage));
