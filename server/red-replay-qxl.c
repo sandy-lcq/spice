@@ -1066,10 +1066,10 @@ static QXLCompatDrawable *red_replay_compat_drawable(SpiceReplay *replay, uint32
 
 static QXLPHYSICAL red_replay_drawable(SpiceReplay *replay, uint32_t flags)
 {
+    replay_fscanf(replay, "drawable\n");
     if (replay->error) {
         return 0;
     }
-    replay_fscanf(replay, "drawable\n");
     if (flags & QXL_COMMAND_FLAG_COMPAT) {
         return QXLPHYSICAL_FROM_PTR(red_replay_compat_drawable(replay, flags));
     } else {
