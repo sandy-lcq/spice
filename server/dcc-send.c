@@ -147,11 +147,7 @@ static int is_bitmap_lossy(RedChannelClient *rcc, SpiceImage *image, SpiceRect *
         out_data->id = image->descriptor.id;
         if (dcc_pixmap_cache_hit(dcc, image->descriptor.id, &is_hit_lossy)) {
             out_data->type = BITMAP_DATA_TYPE_CACHE;
-            if (is_hit_lossy) {
-                return TRUE;
-            } else {
-                return FALSE;
-            }
+            return is_hit_lossy;
         } else {
             out_data->type = BITMAP_DATA_TYPE_BITMAP_TO_CACHE;
         }
@@ -166,13 +162,8 @@ static int is_bitmap_lossy(RedChannelClient *rcc, SpiceImage *image, SpiceRect *
     out_data->type = BITMAP_DATA_TYPE_SURFACE;
     out_data->id = image->u.surface.surface_id;
 
-    if (is_surface_area_lossy(dcc, out_data->id,
-                              area, &out_data->lossy_rect))
-    {
-        return TRUE;
-    } else {
-        return FALSE;
-    }
+    return is_surface_area_lossy(dcc, out_data->id,
+                                 area, &out_data->lossy_rect);
 }
 
 static int is_brush_lossy(RedChannelClient *rcc, SpiceBrush *brush,
