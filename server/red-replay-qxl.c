@@ -36,12 +36,12 @@
 
 typedef enum {
     REPLAY_OK = 0,
-    REPLAY_EOF,
+    REPLAY_ERROR,
 } replay_t;
 
 struct SpiceReplay {
     FILE *fd;
-    int eof;
+    gboolean error;
     int counter;
     bool created_primary;
 
@@ -56,11 +56,11 @@ struct SpiceReplay {
 
 static int replay_fread(SpiceReplay *replay, uint8_t *buf, size_t size)
 {
-    if (replay->eof) {
+    if (replay->error) {
         return 0;
     }
     if (feof(replay->fd)) {
-        replay->eof = 1;
+        replay->error = TRUE;
         return 0;
     }
     return fread(buf, size, 1, replay->fd);
@@ -72,20 +72,20 @@ static replay_t replay_fscanf(SpiceReplay *replay, const char *fmt, ...)
     va_list ap;
     int ret;
 
-    if (replay->eof) {
-        return REPLAY_EOF;
+    if (replay->error) {
+        return REPLAY_ERROR;
     }
     if (feof(replay->fd)) {
-        replay->eof = 1;
-        return REPLAY_EOF;
+        replay->error = TRUE;
+        return REPLAY_ERROR;
     }
     va_start(ap, fmt);
     ret = vfscanf(replay->fd, fmt, ap);
     va_end(ap);
     if (ret == EOF) {
-        replay->eof = 1;
+        replay->error = TRUE;
     }
-    return replay->eof ? REPLAY_EOF : REPLAY_OK;
+    return replay->error ? REPLAY_ERROR : REPLAY_OK;
 }
 
 static uint32_t replay_id_get(SpiceReplay *replay, uint32_t id)
@@ -195,8 +195,8 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
     z_stream strm;
 
     snprintf(template, sizeof(template), "binary %%d %s %%ld:", prefix);
-    if (replay_fscanf(replay, template, &with_zlib, size) == REPLAY_EOF)
-        return REPLAY_EOF;
+    if (replay_fscanf(replay, template, &with_zlib, size) == REPLAY_ERROR)
+        return REPLAY_ERROR;
 
     if (*buf == NULL) {
         *buf = spice_malloc(*size + base_size);
@@ -208,7 +208,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
         hexdump(*buf + base_size, *size);
     }
 #else
-    spice_return_val_if_fail(with_zlib != -1, REPLAY_EOF);
+    spice_return_val_if_fail(with_zlib != -1, REPLAY_ERROR);
     if (with_zlib) {
         int ret;
 
@@ -234,7 +234,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
                  * it seems it may kill the red_worker thread (so a chunk is
                  * left hanging and the rest of the message is never written).
                  * Let it pass */
-                return REPLAY_EOF;
+                return REPLAY_ERROR;
             }
             if (ret != Z_OK) {
                 spice_warn_if_reached();
@@ -263,7 +263,7 @@ static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
         base_size = sizeof(QXLDataChunk);
     }
 
-    if (read_binary(replay, prefix, &next_data_size, mem, base_size) == REPLAY_EOF) {
+    if (read_binary(replay, prefix, &next_data_size, mem, base_size) == REPLAY_ERROR) {
         return 0;
     }
     cur = (QXLDataChunk*)(*mem + base_size - sizeof(QXLDataChunk));
@@ -272,7 +272,7 @@ static size_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
     cur->next_chunk = cur->prev_chunk = 0;
     while (count_chunks-- > 0) {
         if (read_binary(replay, prefix, &next_data_size, (uint8_t**)&cur->next_chunk,
-            sizeof(QXLDataChunk)) == REPLAY_EOF) {
+            sizeof(QXLDataChunk)) == REPLAY_ERROR) {
             return 0;
         }
         data_size += next_data_size;
@@ -981,7 +981,7 @@ static QXLCompatDrawable *red_replay_compat_drawable(SpiceReplay *replay, uint32
 
 static QXLPHYSICAL red_replay_drawable(SpiceReplay *replay, uint32_t flags)
 {
-    if (replay->eof) {
+    if (replay->error) {
         return 0;
     }
     replay_fscanf(replay, "drawable\n");
@@ -1194,7 +1194,7 @@ SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
     while (what != 0) {
         replay_fscanf(replay, "event %d %d %d %"PRIu64"\n", &counter,
                             &what, &type, &timestamp);
-        if (replay->eof) {
+        if (replay->error) {
             return NULL;
         }
         if (what == 1) {
@@ -1296,7 +1296,7 @@ SpiceReplay *spice_replay_new(FILE *file, int nsurfaces)
 
     replay = spice_malloc0(sizeof(SpiceReplay));
 
-    replay->eof = 0;
+    replay->error = FALSE;
     replay->fd = file;
     replay->created_primary = FALSE;
     pthread_mutex_init(&replay->mutex, NULL);
