@@ -208,10 +208,17 @@ struct DisplayChannel {
     ImageEncoderSharedData encoder_shared_data;
 };
 
-static inline int get_stream_id(DisplayChannel *display, Stream *stream)
-{
-    return (int)(stream - display->streams_buf);
-}
+
+#define FOREACH_DCC(channel, _link, _next, _data)                   \
+    for (_link = (channel ? RED_CHANNEL(channel)->clients : NULL), \
+         _next = (_link ? _link->next : NULL), \
+         _data = (_link ? _link->data : NULL); \
+         _link; \
+         _link = _next, \
+         _next = (_link ? _link->next : NULL), \
+         _data = (_link ? _link->data : NULL))
+
+int display_channel_get_stream_id(DisplayChannel *display, Stream *stream);
 
 typedef struct RedSurfaceDestroyItem {
     RedPipeItem pipe_item;
@@ -281,20 +288,13 @@ void                       display_channel_gl_draw                   (DisplayCha
                                                                       SpiceMsgDisplayGlDraw *draw);
 void                       display_channel_gl_draw_done              (DisplayChannel *display);
 
-static inline int validate_surface(DisplayChannel *display, uint32_t surface_id)
-{
-    if SPICE_UNLIKELY(surface_id >= display->n_surfaces) {
-        spice_warning("invalid surface_id %u", surface_id);
-        return 0;
-    }
-    if (!display->surfaces[surface_id].context.canvas) {
-        spice_warning("canvas address is %p for %d (and is NULL)\n",
-                   &(display->surfaces[surface_id].context.canvas), surface_id);
-        spice_warning("failed on %d", surface_id);
-        return 0;
-    }
-    return 1;
-}
+void display_channel_update_monitors_config(DisplayChannel *display, QXLMonitorsConfig *config,
+                                            uint16_t count, uint16_t max_allowed);
+void set_monitors_config_to_primary(DisplayChannel *display);
+
+gboolean display_channel_validate_surface(DisplayChannel *display, uint32_t surface_id);
+gboolean display_channel_surface_has_canvas(DisplayChannel *display, uint32_t surface_id);
+void display_channel_reset_image_cache(DisplayChannel *self);
 
 static inline int is_equal_path(SpicePath *path1, SpicePath *path2)
 {

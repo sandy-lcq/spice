@@ -247,7 +247,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                                    &update, ext_cmd.cmd.data)) {
                 break;
             }
-            if (!validate_surface(worker->display_channel, update.surface_id)) {
+            if (!display_channel_validate_surface(worker->display_channel, update.surface_id)) {
                 spice_warning("Invalid surface in QXL_CMD_UPDATE");
             } else {
                 display_channel_draw(worker->display_channel, &update.area, update.surface_id);
@@ -587,18 +587,6 @@ static void handle_dev_destroy_surfaces(void *opaque, void *payload)
     cursor_channel_reset(worker->cursor_channel);
 }
 
-static void display_update_monitors_config(DisplayChannel *display,
-                                           QXLMonitorsConfig *config,
-                                           uint16_t count, uint16_t max_allowed)
-{
-
-    if (display->monitors_config)
-        monitors_config_unref(display->monitors_config);
-
-    display->monitors_config =
-        monitors_config_new(config->heads, count, max_allowed);
-}
-
 static void red_worker_push_monitors_config(RedWorker *worker)
 {
     DisplayChannelClient *dcc;
@@ -607,21 +595,6 @@ static void red_worker_push_monitors_config(RedWorker *worker)
     FOREACH_CLIENT(worker->display_channel, item, next, dcc) {
         dcc_push_monitors_config(dcc);
     }
-}
-
-static void set_monitors_config_to_primary(DisplayChannel *display)
-{
-    DrawContext *context = &display->surfaces[0].context;
-    QXLHead head = { 0, };
-
-    spice_return_if_fail(display->surfaces[0].context.canvas);
-
-    if (display->monitors_config)
-        monitors_config_unref(display->monitors_config);
-
-    head.width = context->width;
-    head.height = context->height;
-    display->monitors_config = monitors_config_new(&head, 1, 1);
 }
 
 static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
@@ -689,12 +662,12 @@ static void destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
 {
     DisplayChannel *display = worker->display_channel;
 
-    if (!validate_surface(display, surface_id))
+    if (!display_channel_validate_surface(display, surface_id))
         return;
     spice_warn_if_fail(surface_id == 0);
 
     spice_debug(NULL);
-    if (!display->surfaces[surface_id].context.canvas) {
+    if (!display_channel_surface_has_canvas(display, surface_id)) {
         spice_warning("double destroy of primary surface");
         return;
     }
@@ -704,7 +677,7 @@ static void destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
     display_channel_surface_unref(display, 0);
 
     spice_warn_if_fail(ring_is_empty(&display->streams));
-    spice_warn_if_fail(!display->surfaces[surface_id].context.canvas);
+    spice_warn_if_fail(!display_channel_surface_has_canvas(display, surface_id));
 
     cursor_channel_reset(worker->cursor_channel);
 }
@@ -828,9 +801,8 @@ static void handle_dev_reset_cursor(void *opaque, void *payload)
 static void handle_dev_reset_image_cache(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
-    DisplayChannel *display = worker->display_channel;
 
-    image_cache_reset(&display->image_cache);
+    display_channel_reset_image_cache(worker->display_channel);
 }
 
 static void handle_dev_destroy_surface_wait_async(void *opaque, void *payload)
@@ -950,9 +922,9 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
         /* TODO: raise guest bug (requires added QXL interface) */
         return;
     }
-    display_update_monitors_config(worker->display_channel, dev_monitors_config,
-                                   MIN(count, msg->max_monitors),
-                                   MIN(max_allowed, msg->max_monitors));
+    display_channel_update_monitors_config(worker->display_channel, dev_monitors_config,
+                                           MIN(count, msg->max_monitors),
+                                           MIN(max_allowed, msg->max_monitors));
     red_worker_push_monitors_config(worker);
 }
 

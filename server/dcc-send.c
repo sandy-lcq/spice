@@ -94,7 +94,7 @@ static int is_surface_area_lossy(DisplayChannelClient *dcc, uint32_t surface_id,
     QRegion lossy_region;
     DisplayChannel *display = DCC_TO_DC(dcc);
 
-    spice_return_val_if_fail(validate_surface(display, surface_id), FALSE);
+    spice_return_val_if_fail(display_channel_validate_surface(display, surface_id), FALSE);
 
     surface = &display->surfaces[surface_id];
     surface_lossy_region = &dcc->priv->surface_client_lossy_region[surface_id];
@@ -403,7 +403,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         RedSurface *surface;
 
         surface_id = simage->u.surface.surface_id;
-        if (!validate_surface(display, surface_id)) {
+        if (!display_channel_validate_surface(display, surface_id)) {
             spice_warning("Invalid surface in SPICE_IMAGE_TYPE_SURFACE");
             pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
             return FILL_BITS_TYPE_SURFACE;
@@ -1694,7 +1694,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
         return FALSE;
     }
 
-    StreamAgent *agent = &dcc->priv->stream_agents[get_stream_id(display, stream)];
+    StreamAgent *agent = &dcc->priv->stream_agents[display_channel_get_stream_id(display, stream)];
     uint64_t time_now = spice_get_monotonic_time_ns();
 
     if (!dcc->priv->use_video_encoder_rate_control) {
@@ -1740,7 +1740,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
 
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA, NULL);
 
-        stream_data.base.id = get_stream_id(display, stream);
+        stream_data.base.id = display_channel_get_stream_id(display, stream);
         stream_data.base.multi_media_time = frame_mm_time;
         stream_data.data_size = outbuf->size;
 
@@ -1750,7 +1750,7 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
 
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA_SIZED, NULL);
 
-        stream_data.base.id = get_stream_id(display, stream);
+        stream_data.base.id = display_channel_get_stream_id(display, stream);
         stream_data.base.multi_media_time = frame_mm_time;
         stream_data.data_size = outbuf->size;
         stream_data.width = copy->src_area.right - copy->src_area.left;
@@ -2159,7 +2159,7 @@ static void marshall_stream_start(RedChannelClient *rcc,
     SpiceClipRects clip_rects;
 
     stream_create.surface_id = 0;
-    stream_create.id = get_stream_id(DCC_TO_DC(dcc), stream);
+    stream_create.id = display_channel_get_stream_id(DCC_TO_DC(dcc), stream);
     stream_create.flags = stream->top_down ? SPICE_STREAM_FLAGS_TOP_DOWN : 0;
     stream_create.codec_type = agent->video_encoder->codec_type;
 
@@ -2195,7 +2195,7 @@ static void marshall_stream_clip(RedChannelClient *rcc,
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_CLIP, &item->base);
     SpiceMsgDisplayStreamClip stream_clip;
 
-    stream_clip.id = get_stream_id(DCC_TO_DC(dcc), agent->stream);
+    stream_clip.id = display_channel_get_stream_id(DCC_TO_DC(dcc), agent->stream);
     stream_clip.clip.type = item->clip_type;
     stream_clip.clip.rects = item->rects;
 
@@ -2209,7 +2209,7 @@ static void marshall_stream_end(RedChannelClient *rcc,
     SpiceMsgDisplayStreamDestroy destroy;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DESTROY, NULL);
-    destroy.id = get_stream_id(DCC_TO_DC(dcc), agent->stream);
+    destroy.id = display_channel_get_stream_id(DCC_TO_DC(dcc), agent->stream);
     stream_agent_stop(agent);
     spice_marshall_msg_display_stream_destroy(base_marshaller, &destroy);
 }

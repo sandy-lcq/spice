@@ -203,6 +203,13 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
     spice_warn_if_fail(ring_is_empty(&surface->depend_on_me));
 }
 
+/* TODO: perhaps rename to "ready" or "realized" ? */
+gboolean display_channel_surface_has_canvas(DisplayChannel *display,
+                                            uint32_t surface_id)
+{
+    return display->surfaces[surface_id].context.canvas != NULL;
+}
+
 static void streams_update_visible_region(DisplayChannel *display, Drawable *drawable)
 {
     Ring *ring;
@@ -232,7 +239,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
         }
 
         FOREACH_CLIENT(display, link, next, dcc) {
-            agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
+            agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
                 region_exclude(&agent->vis_region, &drawable->tree_item.base.rgn);
@@ -955,7 +962,7 @@ static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable
         /* surface_id must be validated before calling into
          * validate_drawable_bbox
          */
-        if (!validate_surface(display, drawable->surface_id)) {
+        if (!display_channel_validate_surface(display, drawable->surface_id)) {
             return FALSE;
         }
         context = &display->surfaces[surface_id].context;
@@ -998,7 +1005,7 @@ static Drawable *display_channel_get_drawable(DisplayChannel *display, uint8_t e
     }
     for (x = 0; x < 3; ++x) {
         if (red_drawable->surface_deps[x] != -1
-            && !validate_surface(display, red_drawable->surface_deps[x])) {
+            && !display_channel_validate_surface(display, red_drawable->surface_deps[x])) {
             return NULL;
         }
     }
@@ -1669,7 +1676,7 @@ void display_channel_update(DisplayChannel *display,
     SpiceRect rect;
     RedSurface *surface;
 
-    spice_return_if_fail(validate_surface(display, surface_id));
+    spice_return_if_fail(display_channel_validate_surface(display, surface_id));
 
     red_get_rect_ptr(&rect, area);
     display_channel_draw(display, &rect, surface_id);
@@ -1712,7 +1719,7 @@ static void display_channel_destroy_surface(DisplayChannel *display, uint32_t su
 
 void display_channel_destroy_surface_wait(DisplayChannel *display, uint32_t surface_id)
 {
-    if (!validate_surface(display, surface_id))
+    if (!display_channel_validate_surface(display, surface_id))
         return;
     if (!display->surfaces[surface_id].context.canvas)
         return;
@@ -1882,7 +1889,7 @@ static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t su
 {
     DisplayChannel *display = SPICE_CONTAINEROF(surfaces, DisplayChannel, image_surfaces);
 
-    spice_return_val_if_fail(validate_surface(display, surface_id), NULL);
+    spice_return_val_if_fail(display_channel_validate_surface(display, surface_id), NULL);
 
     return display->surfaces[surface_id].context.canvas;
 }
@@ -2037,4 +2044,56 @@ void display_channel_gl_draw(DisplayChannel *display, SpiceMsgDisplayGlDraw *dra
 void display_channel_gl_draw_done(DisplayChannel *display)
 {
     set_gl_draw_async_count(display, display->gl_draw_async_count - 1);
+}
+
+int display_channel_get_stream_id(DisplayChannel *display, Stream *stream)
+{
+    return (int)(stream - display->streams_buf);
+}
+
+gboolean display_channel_validate_surface(DisplayChannel *display, uint32_t surface_id)
+{
+    if SPICE_UNLIKELY(surface_id >= display->n_surfaces) {
+        spice_warning("invalid surface_id %u", surface_id);
+        return FALSE;
+    }
+    if (!display->surfaces[surface_id].context.canvas) {
+        spice_warning("canvas address is %p for %d (and is NULL)\n",
+                   &(display->surfaces[surface_id].context.canvas), surface_id);
+        spice_warning("failed on %d", surface_id);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+void display_channel_update_monitors_config(DisplayChannel *display,
+                                            QXLMonitorsConfig *config,
+                                            uint16_t count, uint16_t max_allowed)
+{
+
+    if (display->monitors_config)
+        monitors_config_unref(display->monitors_config);
+
+    display->monitors_config =
+        monitors_config_new(config->heads, count, max_allowed);
+}
+
+void set_monitors_config_to_primary(DisplayChannel *display)
+{
+    DrawContext *context = &display->surfaces[0].context;
+    QXLHead head = { 0, };
+
+    spice_return_if_fail(display->surfaces[0].context.canvas);
+
+    if (display->monitors_config)
+        monitors_config_unref(display->monitors_config);
+
+    head.width = context->width;
+    head.height = context->height;
+    display->monitors_config = monitors_config_new(&head, 1, 1);
+}
+
+void display_channel_reset_image_cache(DisplayChannel *self)
+{
+    image_cache_reset(&self->image_cache);
 }

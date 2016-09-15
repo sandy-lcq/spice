@@ -101,11 +101,11 @@ void stream_stop(DisplayChannel *display, Stream *stream)
     spice_return_if_fail(ring_item_is_linked(&stream->link));
     spice_return_if_fail(!stream->current);
 
-    spice_debug("stream %d", get_stream_id(display, stream));
+    spice_debug("stream %d", display_channel_get_stream_id(display, stream));
     FOREACH_CLIENT(display, link, next, dcc) {
         StreamAgent *stream_agent;
 
-        stream_agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
+        stream_agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
         region_clear(&stream_agent->vis_region);
         region_clear(&stream_agent->clip);
         if (stream_agent->video_encoder && dcc_use_video_encoder_rate_control(dcc)) {
@@ -302,7 +302,7 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *s
         StreamAgent *agent;
         QRegion clip_in_draw_dest;
 
-        agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
+        agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
         region_or(&agent->vis_region, &drawable->tree_item.base.rgn);
 
         region_init(&clip_in_draw_dest);
@@ -349,7 +349,7 @@ static void before_reattach_stream(DisplayChannel *display,
         return;
     }
 
-    index = get_stream_id(display, stream);
+    index = display_channel_get_stream_id(display, stream);
     DRAWABLE_FOREACH_DPI_SAFE(stream->current, ring_item, next, dpi) {
         dcc = dpi->dcc;
         agent = dcc_get_stream_agent(dcc, index);
@@ -759,7 +759,7 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
 
 void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
 {
-    StreamAgent *agent = dcc_get_stream_agent(dcc, get_stream_id(DCC_TO_DC(dcc), stream));
+    StreamAgent *agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(DCC_TO_DC(dcc), stream));
 
     spice_return_if_fail(region_is_empty(&agent->vis_region));
 
@@ -796,7 +796,7 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
         agent->report_id = rand();
         red_pipe_item_init(&report_pipe_item->pipe_item,
                            RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
-        report_pipe_item->stream_id = get_stream_id(DCC_TO_DC(dcc), stream);
+        report_pipe_item->stream_id = display_channel_get_stream_id(DCC_TO_DC(dcc), stream);
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &report_pipe_item->pipe_item);
     }
 #ifdef STREAM_STATS
@@ -839,7 +839,7 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
                                          Drawable *update_area_limit)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
-    int stream_id = get_stream_id(display, stream);
+    int stream_id = display_channel_get_stream_id(display, stream);
     StreamAgent *agent = dcc_get_stream_agent(dcc, stream_id);
 
     /* stopping the client from playing older frames at once*/
@@ -936,12 +936,12 @@ void stream_detach_behind(DisplayChannel *display, QRegion *region, Drawable *dr
         item = ring_next(ring, item);
 
         FOREACH_CLIENT(display, link, next, dcc) {
-            StreamAgent *agent = dcc_get_stream_agent(dcc, get_stream_id(display, stream));
+            StreamAgent *agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
 
             if (region_intersects(&agent->vis_region, region)) {
                 dcc_detach_stream_gracefully(dcc, stream, drawable);
                 detach = 1;
-                spice_debug("stream %d", get_stream_id(display, stream));
+                spice_debug("stream %d", display_channel_get_stream_id(display, stream));
             }
         }
         if (detach && stream->current) {
