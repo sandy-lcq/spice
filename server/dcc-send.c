@@ -102,28 +102,26 @@ static int is_surface_area_lossy(DisplayChannelClient *dcc, uint32_t surface_id,
     if (!area) {
         if (region_is_empty(surface_lossy_region)) {
             return FALSE;
-        } else {
-            out_lossy_area->top = 0;
-            out_lossy_area->left = 0;
-            out_lossy_area->bottom = surface->context.height;
-            out_lossy_area->right = surface->context.width;
-            return TRUE;
         }
+        out_lossy_area->top = 0;
+        out_lossy_area->left = 0;
+        out_lossy_area->bottom = surface->context.height;
+        out_lossy_area->right = surface->context.width;
+        return TRUE;
     }
 
     region_init(&lossy_region);
     region_add(&lossy_region, area);
     region_and(&lossy_region, surface_lossy_region);
-    if (!region_is_empty(&lossy_region)) {
-        out_lossy_area->left = lossy_region.extents.x1;
-        out_lossy_area->top = lossy_region.extents.y1;
-        out_lossy_area->right = lossy_region.extents.x2;
-        out_lossy_area->bottom = lossy_region.extents.y2;
-        region_destroy(&lossy_region);
-        return TRUE;
-    } else {
+    if (region_is_empty(&lossy_region)) {
         return FALSE;
     }
+    out_lossy_area->left = lossy_region.extents.x1;
+    out_lossy_area->top = lossy_region.extents.y1;
+    out_lossy_area->right = lossy_region.extents.x2;
+    out_lossy_area->bottom = lossy_region.extents.y2;
+    region_destroy(&lossy_region);
+    return TRUE;
 }
 
 /* returns if the bitmap was already sent lossy to the client. If the bitmap hasn't been sent yet
