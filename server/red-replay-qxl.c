@@ -57,16 +57,14 @@ struct SpiceReplay {
     pthread_cond_t cond;
 };
 
-static int replay_fread(SpiceReplay *replay, uint8_t *buf, size_t size)
+static ssize_t replay_fread(SpiceReplay *replay, uint8_t *buf, size_t size)
 {
-    if (replay->error) {
-        return 0;
-    }
-    if (feof(replay->fd)) {
+    if (replay->error || feof(replay->fd) ||
+        fread(buf, 1, size, replay->fd) != size) {
         replay->error = TRUE;
         return 0;
     }
-    return fread(buf, size, 1, replay->fd);
+    return size;
 }
 
 __attribute__((format(scanf, 2, 3)))
