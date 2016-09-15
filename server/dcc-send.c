@@ -129,7 +129,7 @@ static int is_surface_area_lossy(DisplayChannelClient *dcc, uint32_t surface_id,
    all the surface is considered. out_lossy_data will hold info about the bitmap, and its lossy
    area in case it is lossy and part of a surface. */
 static int is_bitmap_lossy(RedChannelClient *rcc, SpiceImage *image, SpiceRect *area,
-                           Drawable *drawable, BitmapData *out_data)
+                           BitmapData *out_data)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
 
@@ -165,11 +165,11 @@ static int is_bitmap_lossy(RedChannelClient *rcc, SpiceImage *image, SpiceRect *
 }
 
 static int is_brush_lossy(RedChannelClient *rcc, SpiceBrush *brush,
-                          Drawable *drawable, BitmapData *out_data)
+                          BitmapData *out_data)
 {
     if (brush->type == SPICE_BRUSH_TYPE_PATTERN) {
         return is_bitmap_lossy(rcc, brush->u.pattern.pat, NULL,
-                               drawable, out_data);
+                               out_data);
     } else {
         out_data->type = BITMAP_DATA_TYPE_INVALID;
         return FALSE;
@@ -832,7 +832,7 @@ static void red_lossy_marshall_qxl_draw_fill(RedChannelClient *rcc,
                            (rop & SPICE_ROPD_OP_AND) ||
                            (rop & SPICE_ROPD_OP_XOR));
 
-    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.fill.brush, item,
+    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.fill.brush,
                                     &brush_bitmap_data);
     if (!dest_allowed_lossy) {
         dest_is_lossy = is_surface_area_lossy(dcc, item->surface_id, &drawable->bbox,
@@ -922,13 +922,12 @@ static void red_lossy_marshall_qxl_draw_opaque(RedChannelClient *rcc,
                           (rop & SPICE_ROPD_OP_AND) ||
                           (rop & SPICE_ROPD_OP_XOR));
 
-    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.opaque.brush, item,
+    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.opaque.brush,
                                     &brush_bitmap_data);
 
     if (!src_allowed_lossy) {
         src_is_lossy = is_bitmap_lossy(rcc, drawable->u.opaque.src_bitmap,
                                        &drawable->u.opaque.src_area,
-                                       item,
                                        &src_bitmap_data);
     }
 
@@ -1007,7 +1006,7 @@ static void red_lossy_marshall_qxl_draw_copy(RedChannelClient *rcc,
     FillBitsType src_send_type;
 
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.copy.src_bitmap,
-                                   &drawable->u.copy.src_area, item, &src_bitmap_data);
+                                   &drawable->u.copy.src_area, &src_bitmap_data);
 
     src_send_type = red_marshall_qxl_draw_copy(rcc, base_marshaller, dpi, TRUE);
     if (src_send_type == FILL_BITS_TYPE_COMPRESS_LOSSY) {
@@ -1049,7 +1048,7 @@ static void red_lossy_marshall_qxl_draw_transparent(RedChannelClient *rcc,
     BitmapData src_bitmap_data;
 
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.transparent.src_bitmap,
-                                   &drawable->u.transparent.src_area, item, &src_bitmap_data);
+                                   &drawable->u.transparent.src_area, &src_bitmap_data);
 
     if (!src_is_lossy || (src_bitmap_data.type != BITMAP_DATA_TYPE_SURFACE)) {
         red_marshall_qxl_draw_transparent(rcc, base_marshaller, dpi);
@@ -1103,7 +1102,7 @@ static void red_lossy_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
     FillBitsType src_send_type;
 
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.alpha_blend.src_bitmap,
-                                   &drawable->u.alpha_blend.src_area, item, &src_bitmap_data);
+                                   &drawable->u.alpha_blend.src_area, &src_bitmap_data);
 
     src_send_type = red_marshall_qxl_draw_alpha_blend(rcc, base_marshaller, dpi, TRUE);
 
@@ -1199,7 +1198,7 @@ static void red_lossy_marshall_qxl_draw_blend(RedChannelClient *rcc,
     SpiceRect dest_lossy_area;
 
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.blend.src_bitmap,
-                                   &drawable->u.blend.src_area, item, &src_bitmap_data);
+                                   &drawable->u.blend.src_area, &src_bitmap_data);
     dest_is_lossy = is_surface_area_lossy(dcc, drawable->surface_id,
                                           &drawable->bbox, &dest_lossy_area);
 
@@ -1366,8 +1365,8 @@ static void red_lossy_marshall_qxl_draw_rop3(RedChannelClient *rcc,
     SpiceRect dest_lossy_area;
 
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.rop3.src_bitmap,
-                                   &drawable->u.rop3.src_area, item, &src_bitmap_data);
-    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.rop3.brush, item,
+                                   &drawable->u.rop3.src_area, &src_bitmap_data);
+    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.rop3.brush,
                                     &brush_bitmap_data);
     dest_is_lossy = is_surface_area_lossy(dcc, drawable->surface_id,
                                           &drawable->bbox, &dest_lossy_area);
@@ -1446,9 +1445,9 @@ static void red_lossy_marshall_qxl_draw_composite(RedChannelClient *rcc,
     SpiceRect dest_lossy_area;
 
     src_is_lossy = is_bitmap_lossy(rcc, drawable->u.composite.src_bitmap,
-                                   NULL, item, &src_bitmap_data);
+                                   NULL, &src_bitmap_data);
     mask_is_lossy = drawable->u.composite.mask_bitmap &&
-        is_bitmap_lossy(rcc, drawable->u.composite.mask_bitmap, NULL, item, &mask_bitmap_data);
+        is_bitmap_lossy(rcc, drawable->u.composite.mask_bitmap, NULL, &mask_bitmap_data);
 
     dest_is_lossy = is_surface_area_lossy(dcc, drawable->surface_id,
                                           &drawable->bbox, &dest_lossy_area);
@@ -1525,7 +1524,7 @@ static void red_lossy_marshall_qxl_draw_stroke(RedChannelClient *rcc,
     SpiceRect dest_lossy_area;
     int rop;
 
-    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.stroke.brush, item,
+    brush_is_lossy = is_brush_lossy(rcc, &drawable->u.stroke.brush,
                                     &brush_bitmap_data);
 
     // back_mode is not used at the client. Ignoring.
@@ -1609,9 +1608,9 @@ static void red_lossy_marshall_qxl_draw_text(RedChannelClient *rcc,
     SpiceRect dest_lossy_area;
     int rop = 0;
 
-    fg_is_lossy = is_brush_lossy(rcc, &drawable->u.text.fore_brush, item,
+    fg_is_lossy = is_brush_lossy(rcc, &drawable->u.text.fore_brush,
                                  &fg_bitmap_data);
-    bg_is_lossy = is_brush_lossy(rcc, &drawable->u.text.back_brush, item,
+    bg_is_lossy = is_brush_lossy(rcc, &drawable->u.text.back_brush,
                                  &bg_bitmap_data);
 
     // assuming that if the brush type is solid, the destination can
