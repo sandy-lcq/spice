@@ -662,15 +662,11 @@ static void destroy_primary_surface(RedWorker *worker, uint32_t surface_id)
 {
     DisplayChannel *display = worker->display_channel;
 
-    if (!display_channel_validate_surface(display, surface_id))
-        return;
-    spice_warn_if_fail(surface_id == 0);
-
-    spice_debug(NULL);
-    if (!display_channel_surface_has_canvas(display, surface_id)) {
+    if (!display_channel_validate_surface(display, surface_id)) {
         spice_warning("double destroy of primary surface");
         return;
     }
+    spice_warn_if_fail(surface_id == 0);
 
     flush_all_qxl_commands(worker);
     display_channel_destroy_surface_wait(display, 0);
