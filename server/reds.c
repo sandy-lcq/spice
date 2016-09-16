@@ -688,15 +688,15 @@ int reds_get_mouse_mode(RedsState *reds)
 
 static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
 {
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
     if (reds->mouse_mode == mode) {
         return;
     }
     reds->mouse_mode = mode;
 
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        QXLInstance *qxl = (QXLInstance *)l->data;
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
         red_qxl_set_mouse_mode(qxl, mode);
     }
 
@@ -1717,14 +1717,11 @@ static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mi
 
 static void reds_mig_target_client_disconnect_all(RedsState *reds)
 {
-    GList *l, *next;
+    GListIter it;
+    RedsMigTargetClient *mig_client;
 
-    l = reds->mig_target_clients;
-    while (l) {
-        next = l->next;
-        RedsMigTargetClient *mig_client = l->data;
+    GLIST_FOREACH(reds->mig_target_clients, it, RedsMigTargetClient, mig_client) {
         reds_client_disconnect(reds, mig_client->client);
-        l = next;
     }
 }
 
@@ -4315,13 +4312,14 @@ void reds_update_client_mouse_allowed(RedsState *reds)
     int allow_now = FALSE;
     int x_res = 0;
     int y_res = 0;
-    GList *l;
     int num_active_workers = g_list_length(reds->qxl_instances);
 
     if (num_active_workers > 0) {
+        GListIter it;
+        QXLInstance *qxl;
+
         allow_now = TRUE;
-        for (l = reds->qxl_instances; l != NULL && allow_now; l = l->next) {
-            QXLInstance *qxl = l->data;
+        FOREACH_QXL_INSTANCE(reds, it, qxl) {
             if (red_qxl_get_primary_active(qxl)) {
                 allow_now = red_qxl_get_allow_client_mouse(qxl, &x_res, &y_res);
                 break;
@@ -4342,15 +4340,14 @@ void reds_update_client_mouse_allowed(RedsState *reds)
 
 static gboolean reds_use_client_monitors_config(RedsState *reds)
 {
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
     if (reds->qxl_instances == NULL) {
         return FALSE;
     }
 
-    for (l = reds->qxl_instances; l != NULL ; l = l->next) {
-        QXLInstance *qxl = l->data;
-
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
         if (!red_qxl_use_client_monitors_config(qxl))
             return FALSE;
     }
@@ -4359,10 +4356,10 @@ static gboolean reds_use_client_monitors_config(RedsState *reds)
 
 static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config)
 {
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        QXLInstance *qxl = l->data;
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
         if (!red_qxl_client_monitors_config(qxl, monitors_config)) {
             /* this is a normal condition, some qemu devices might not implement it */
             spice_debug("QXLInterface::client_monitors_config failed\n");
@@ -4385,10 +4382,10 @@ static int calc_compression_level(RedsState *reds)
 void reds_on_ic_change(RedsState *reds)
 {
     int compression_level = calc_compression_level(reds);
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        QXLInstance *qxl = l->data;
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
         red_qxl_set_compression_level(qxl, compression_level);
         red_qxl_on_ic_change(qxl, spice_server_get_image_compression(reds));
     }
@@ -4397,10 +4394,10 @@ void reds_on_ic_change(RedsState *reds)
 void reds_on_sv_change(RedsState *reds)
 {
     int compression_level = calc_compression_level(reds);
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        QXLInstance *qxl = l->data;
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
         red_qxl_set_compression_level(qxl, compression_level);
         red_qxl_on_sv_change(qxl, reds_get_streaming_video(reds));
     }
@@ -4408,29 +4405,30 @@ void reds_on_sv_change(RedsState *reds)
 
 void reds_on_vc_change(RedsState *reds)
 {
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        red_qxl_on_vc_change(l->data, reds_get_video_codecs(reds));
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+        red_qxl_on_vc_change(qxl, reds_get_video_codecs(reds));
     }
 }
 
 void reds_on_vm_stop(RedsState *reds)
 {
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        QXLInstance *qxl = l->data;
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
         red_qxl_stop(qxl);
     }
 }
 
 void reds_on_vm_start(RedsState *reds)
 {
-    GList *l;
+    GListIter it;
+    QXLInstance *qxl;
 
-    for (l = reds->qxl_instances; l != NULL; l = l->next) {
-        QXLInstance *qxl = l->data;
+    FOREACH_QXL_INSTANCE(reds, it, qxl) {
         red_qxl_start(qxl);
     }
 }

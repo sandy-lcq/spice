@@ -156,4 +156,7 @@ struct RedsState {
     MainDispatcher *main_dispatcher;
 };
 
+#define FOREACH_QXL_INSTANCE(_reds, _iter, _qxl) \
+    GLIST_FOREACH(_reds->qxl_instances, _iter, QXLInstance, _qxl)
+
 #endif

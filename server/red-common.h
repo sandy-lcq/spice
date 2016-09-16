@@ -62,4 +62,22 @@ extern const SpiceCoreInterfaceInternal event_loop_core;
 
 typedef struct RedsState RedsState;
 
+typedef struct GListIter {
+    GList *link;
+    GList *next;
+} GListIter;
+
+#define GLIST_FOREACH_GENERIC(_list, _iter, _type, _data, _dir) \
+    for (_iter.link = _list; \
+        (_data = (_type *) (_iter.link ? _iter.link->data : NULL), \
+         _iter.next = (_iter.link ? _iter.link->_dir : NULL), \
+         _iter.link) != NULL; \
+         _iter.link = _iter.next)
+
+#define GLIST_FOREACH(_list, _iter, _type, _data) \
+    GLIST_FOREACH_GENERIC(_list, _iter, _type, _data, next)
+
+#define GLIST_FOREACH_REVERSED(_list, _iter, _type, _data) \
+    GLIST_FOREACH_GENERIC(_list, _iter, _type, _data, prev)
+
 #endif
