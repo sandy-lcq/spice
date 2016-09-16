@@ -767,7 +767,7 @@ static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
 static gboolean vdi_port_read_buf_process(RedCharDeviceVDIPort *dev,
                                           RedVDIReadBuf *buf, gboolean *error)
 {
-    int res;
+    AgentMsgFilterResult res;
 
     *error = FALSE;
 
@@ -778,6 +778,8 @@ static gboolean vdi_port_read_buf_process(RedCharDeviceVDIPort *dev,
         switch (res) {
         case AGENT_MSG_FILTER_OK:
             return TRUE;
+        case AGENT_MSG_FILTER_MONITORS_CONFIG:
+            /* fall through */
         case AGENT_MSG_FILTER_DISCARD:
             return FALSE;
         case AGENT_MSG_FILTER_PROTO_ERROR:
@@ -1199,7 +1201,7 @@ void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *mess
 {
     RedCharDeviceVDIPort *dev = reds->agent_dev;
     VDIChunkHeader *header;
-    int res;
+    AgentMsgFilterResult res;
 
     res = agent_msg_filter_process_data(&reds->agent_dev->priv->write_filter,
                                         message, size);

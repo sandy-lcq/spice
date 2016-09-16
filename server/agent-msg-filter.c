@@ -48,8 +48,8 @@ void agent_msg_filter_init(AgentMsgFilter *filter,
     filter->discard_all = discard_all;
 }
 
-int agent_msg_filter_process_data(AgentMsgFilter *filter,
-                                  const uint8_t *data, uint32_t len)
+AgentMsgFilterResult agent_msg_filter_process_data(AgentMsgFilter *filter,
+                                                   const uint8_t *data, uint32_t len)
 {
     struct VDAgentMessage msg_header;
 

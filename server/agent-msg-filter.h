@@ -25,17 +25,16 @@
 #include <glib.h>
 
 /* Possible return values for agent_msg_filter_process_data */
-enum {
+typedef enum {
     AGENT_MSG_FILTER_OK,
     AGENT_MSG_FILTER_DISCARD,
     AGENT_MSG_FILTER_PROTO_ERROR,
     AGENT_MSG_FILTER_MONITORS_CONFIG,
-    AGENT_MSG_FILTER_END
-};
+} AgentMsgFilterResult;
 
 typedef struct AgentMsgFilter {
     int msg_data_to_read;
-    int result;
+    AgentMsgFilterResult result;
     gboolean copy_paste_enabled;
     gboolean file_xfer_enabled;
     gboolean use_client_monitors_config;
@@ -49,7 +48,7 @@ void agent_msg_filter_init(AgentMsgFilter *filter,
 void agent_msg_filter_config(AgentMsgFilter *filter,
                              gboolean copy_paste, gboolean file_xfer,
                              gboolean use_client_monitors_config);
-int agent_msg_filter_process_data(AgentMsgFilter *filter,
-                                  const uint8_t *data, uint32_t len);
+AgentMsgFilterResult agent_msg_filter_process_data(AgentMsgFilter *filter,
+                                                   const uint8_t *data, uint32_t len);
 
 #endif
