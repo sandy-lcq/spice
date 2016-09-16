@@ -763,36 +763,23 @@ static void vdi_port_read_buf_release(uint8_t *data, void *opaque)
     red_pipe_item_unref((RedPipeItem *)opaque);
 }
 
-/* returns TRUE if the buffer can be forwarded */
-static gboolean vdi_port_read_buf_process(RedCharDeviceVDIPort *dev,
-                                          RedVDIReadBuf *buf, gboolean *error)
+/*
+    returns the #AgentMsgFilterResult value:
+        AGENT_MSG_FILTER_OK if the buffer can be forwarded,
+        AGENT_MSG_FILTER_PROTO_ERROR on error
+        other values can be discarded
+*/
+static AgentMsgFilterResult vdi_port_read_buf_process(RedCharDeviceVDIPort *dev,
+                                                      RedVDIReadBuf *buf)
 {
-    AgentMsgFilterResult res;
-
-    *error = FALSE;
-
     switch (dev->priv->vdi_chunk_header.port) {
-    case VDP_CLIENT_PORT: {
-        res = agent_msg_filter_process_data(&dev->priv->read_filter,
-                                            buf->data, buf->len);
-        switch (res) {
-        case AGENT_MSG_FILTER_OK:
-            return TRUE;
-        case AGENT_MSG_FILTER_MONITORS_CONFIG:
-            /* fall through */
-        case AGENT_MSG_FILTER_DISCARD:
-            return FALSE;
-        case AGENT_MSG_FILTER_PROTO_ERROR:
-            *error = TRUE;
-            return FALSE;
-        }
-    }
+    case VDP_CLIENT_PORT:
+        return agent_msg_filter_process_data(&dev->priv->read_filter, buf->data, buf->len);
     case VDP_SERVER_PORT:
-        return FALSE;
+        return AGENT_MSG_FILTER_DISCARD;
     default:
         spice_warning("invalid port");
-        *error = TRUE;
-        return FALSE;
+        return AGENT_MSG_FILTER_PROTO_ERROR;
     }
 }
 
@@ -883,7 +870,6 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *s
             dev->priv->read_state = VDI_PORT_READ_STATE_READ_DATA;
         }
         case VDI_PORT_READ_STATE_READ_DATA: {
-            gboolean error = FALSE;
             n = sif->read(reds->vdagent, dev->priv->receive_pos, dev->priv->receive_len);
             if (!n) {
                 return NULL;
@@ -902,12 +888,15 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *s
             } else {
                 dev->priv->read_state = VDI_PORT_READ_STATE_GET_BUFF;
             }
-            if (vdi_port_read_buf_process(reds->agent_dev, dispatch_buf, &error)) {
+            switch (vdi_port_read_buf_process(reds->agent_dev, dispatch_buf)) {
+            case AGENT_MSG_FILTER_OK:
                 return &dispatch_buf->base;
-            } else {
-                if (error) {
-                    reds_agent_remove(reds);
-                }
+            case AGENT_MSG_FILTER_PROTO_ERROR:
+                reds_agent_remove(reds);
+                /* fall through */
+            case AGENT_MSG_FILTER_MONITORS_CONFIG:
+                /* fall through */
+            case AGENT_MSG_FILTER_DISCARD:
                 red_pipe_item_unref(&dispatch_buf->base);
             }
         }
@@ -1277,22 +1266,25 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
     if (agent_dev->priv->read_filter.msg_data_to_read ||
         read_data_len > sizeof(VDAgentMessage)) { /* msg header has been read */
         RedVDIReadBuf *read_buf = agent_dev->priv->current_read_buf;
-        gboolean error = FALSE;
 
         spice_debug("push partial read %u (msg first chunk? %d)", read_data_len,
                     !agent_dev->priv->read_filter.msg_data_to_read);
 
         read_buf->len = read_data_len;
-        if (vdi_port_read_buf_process(reds->agent_dev, read_buf, &error)) {
+        switch (vdi_port_read_buf_process(reds->agent_dev, read_buf)) {
+        case AGENT_MSG_FILTER_OK:
             main_channel_client_push_agent_data(mcc,
                                                 read_buf->data,
                                                 read_buf->len,
                                                 vdi_port_read_buf_release,
                                                 read_buf);
-        } else {
-            if (error) {
-               reds_agent_remove(reds);
-            }
+            break;
+        case AGENT_MSG_FILTER_PROTO_ERROR:
+            reds_agent_remove(reds);
+            /* fall through */
+        case AGENT_MSG_FILTER_MONITORS_CONFIG:
+            /* fall through */
+        case AGENT_MSG_FILTER_DISCARD:
             red_pipe_item_unref(&read_buf->base);
         }
 
