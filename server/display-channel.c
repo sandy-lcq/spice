@@ -1959,42 +1959,43 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
     return display;
 }
 
-void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd *surface,
+void display_channel_process_surface_cmd(DisplayChannel *display,
+                                         const RedSurfaceCmd *surface_cmd,
                                          int loadvm)
 {
     uint32_t surface_id;
     RedSurface *red_surface;
     uint8_t *data;
 
-    surface_id = surface->surface_id;
+    surface_id = surface_cmd->surface_id;
     if SPICE_UNLIKELY(surface_id >= display->priv->n_surfaces) {
         return;
     }
 
     red_surface = &display->priv->surfaces[surface_id];
 
-    switch (surface->type) {
+    switch (surface_cmd->type) {
     case QXL_SURFACE_CMD_CREATE: {
-        uint32_t height = surface->u.surface_create.height;
-        int32_t stride = surface->u.surface_create.stride;
-        int reloaded_surface = loadvm || (surface->flags & QXL_SURF_FLAG_KEEP_DATA);
+        uint32_t height = surface_cmd->u.surface_create.height;
+        int32_t stride = surface_cmd->u.surface_create.stride;
+        int reloaded_surface = loadvm || (surface_cmd->flags & QXL_SURF_FLAG_KEEP_DATA);
 
         if (red_surface->refs) {
             spice_warning("avoiding creating a surface twice");
             break;
         }
-        data = surface->u.surface_create.data;
+        data = surface_cmd->u.surface_create.data;
         if (stride < 0) {
             /* No need to worry about overflow here, command should already be validated
              * when it is read, specifically red_get_surface_cmd */
             data -= (int32_t)(stride * (height - 1));
         }
-        display_channel_create_surface(display, surface_id, surface->u.surface_create.width,
-                                       height, stride, surface->u.surface_create.format, data,
+        display_channel_create_surface(display, surface_id, surface_cmd->u.surface_create.width,
+                                       height, stride, surface_cmd->u.surface_create.format, data,
                                        reloaded_surface,
                                        // reloaded surfaces will be sent on demand
                                        !reloaded_surface);
-        red_surface->create = surface->release_info_ext;
+        red_surface->create = surface_cmd->release_info_ext;
         break;
     }
     case QXL_SURFACE_CMD_DESTROY:
@@ -2002,7 +2003,7 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
             spice_warning("avoiding destroying a surface twice");
             break;
         }
-        red_surface->destroy = surface->release_info_ext;
+        red_surface->destroy = surface_cmd->release_info_ext;
         display_channel_destroy_surface(display, surface_id);
         break;
     default:
