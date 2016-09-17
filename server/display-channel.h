@@ -55,8 +55,6 @@ struct Drawable {
     RingItem list_link;
     DrawItem tree_item;
     GList *pipes;
-    RedPipeItem *pipe_item_rest;
-    uint32_t size_pipe_item_rest;
     RedDrawable *red_drawable;
 
     GlzImageRetention glz_retention;

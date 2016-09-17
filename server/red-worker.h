@@ -35,7 +35,6 @@ typedef struct CommonGraphicsChannel {
 
     QXLInstance *qxl;
     uint8_t recv_buf[CHANNEL_RECEIVE_BUF_SIZE];
-    uint32_t id_alloc; // bitfield. TODO - use this instead of shift scheme.
     int during_target_migrate; /* TRUE when the client that is associated with the channel
                                   is during migration. Turned off when the vm is started.
                                   The flag is used to avoid sending messages that are artifacts
