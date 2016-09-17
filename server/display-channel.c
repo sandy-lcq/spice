@@ -1964,7 +1964,7 @@ void display_channel_process_surface_cmd(DisplayChannel *display,
                                          int loadvm)
 {
     uint32_t surface_id;
-    RedSurface *red_surface;
+    RedSurface *surface;
     uint8_t *data;
 
     surface_id = surface_cmd->surface_id;
@@ -1972,7 +1972,7 @@ void display_channel_process_surface_cmd(DisplayChannel *display,
         return;
     }
 
-    red_surface = &display->priv->surfaces[surface_id];
+    surface = &display->priv->surfaces[surface_id];
 
     switch (surface_cmd->type) {
     case QXL_SURFACE_CMD_CREATE: {
@@ -1980,7 +1980,7 @@ void display_channel_process_surface_cmd(DisplayChannel *display,
         int32_t stride = surface_cmd->u.surface_create.stride;
         int reloaded_surface = loadvm || (surface_cmd->flags & QXL_SURF_FLAG_KEEP_DATA);
 
-        if (red_surface->refs) {
+        if (surface->refs) {
             spice_warning("avoiding creating a surface twice");
             break;
         }
@@ -1995,15 +1995,15 @@ void display_channel_process_surface_cmd(DisplayChannel *display,
                                        reloaded_surface,
                                        // reloaded surfaces will be sent on demand
                                        !reloaded_surface);
-        red_surface->create = surface_cmd->release_info_ext;
+        surface->create = surface_cmd->release_info_ext;
         break;
     }
     case QXL_SURFACE_CMD_DESTROY:
-        if (!red_surface->refs) {
+        if (!surface->refs) {
             spice_warning("avoiding destroying a surface twice");
             break;
         }
-        red_surface->destroy = surface_cmd->release_info_ext;
+        surface->destroy = surface_cmd->release_info_ext;
         display_channel_destroy_surface(display, surface_id);
         break;
     default:
