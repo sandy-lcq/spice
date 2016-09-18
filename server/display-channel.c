@@ -1976,22 +1976,23 @@ void display_channel_process_surface_cmd(DisplayChannel *display,
 
     switch (surface_cmd->type) {
     case QXL_SURFACE_CMD_CREATE: {
-        uint32_t height = surface_cmd->u.surface_create.height;
-        int32_t stride = surface_cmd->u.surface_create.stride;
+        const RedSurfaceCreate *create = &surface_cmd->u.surface_create;
+        uint32_t height = create->height;
+        int32_t stride = create->stride;
         int reloaded_surface = loadvm || (surface_cmd->flags & QXL_SURF_FLAG_KEEP_DATA);
 
         if (surface->refs) {
             spice_warning("avoiding creating a surface twice");
             break;
         }
-        data = surface_cmd->u.surface_create.data;
+        data = create->data;
         if (stride < 0) {
             /* No need to worry about overflow here, command should already be validated
              * when it is read, specifically red_get_surface_cmd */
             data -= (int32_t)(stride * (height - 1));
         }
-        display_channel_create_surface(display, surface_id, surface_cmd->u.surface_create.width,
-                                       height, stride, surface_cmd->u.surface_create.format, data,
+        display_channel_create_surface(display, surface_id, create->width,
+                                       height, stride, create->format, data,
                                        reloaded_surface,
                                        // reloaded surfaces will be sent on demand
                                        !reloaded_surface);
