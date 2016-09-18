@@ -283,13 +283,14 @@ static void send_free_list(RedChannelClient *rcc)
         dcc_pixmap_cache_hit(dcc, dcc->priv->send_data.pixmap_cache_items[i], &dummy);
     }
 
-    if (free_list->wait.header.wait_count) {
-        red_channel_client_init_send_data(rcc, SPICE_MSG_LIST, NULL);
-    } else { /* only one message, no need for a list */
+    if (!free_list->wait.header.wait_count) {
+        /* only one message, no need for a list */
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_INVAL_LIST, NULL);
         spice_marshall_msg_display_inval_list(urgent_marshaller, free_list->res);
         return;
     }
+
+    red_channel_client_init_send_data(rcc, SPICE_MSG_LIST, NULL);
 
     inval_m = spice_marshaller_get_submarshaller(urgent_marshaller);
     marshal_sub_msg_inval_list(inval_m, free_list);
