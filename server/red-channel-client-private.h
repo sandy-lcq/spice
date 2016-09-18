@@ -38,6 +38,7 @@ struct RedChannelClientPrivate
     } ack_data;
 
     struct {
+        /* this can be either main.marshaller or urgent.marshaller */
         SpiceMarshaller *marshaller;
         SpiceDataHeaderOpaque header;
         uint32_t size;
