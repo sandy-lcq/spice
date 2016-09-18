@@ -43,7 +43,6 @@ struct RedChannelClientPrivate
         uint32_t size;
         RedPipeItem *item;
         int blocked;
-        uint64_t serial;
         uint64_t last_sent_serial;
 
         struct {

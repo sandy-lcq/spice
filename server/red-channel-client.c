@@ -166,26 +166,9 @@ static void red_channel_client_reset_send_data(RedChannelClient *rcc)
     rcc->priv->send_data.header.set_msg_type(&rcc->priv->send_data.header, 0);
     rcc->priv->send_data.header.set_msg_size(&rcc->priv->send_data.header, 0);
 
-    /* Keeping the serial consecutive: resetting it if reset_send_data
-     * has been called before, but no message has been sent since then.
-     */
-    if (rcc->priv->send_data.last_sent_serial != rcc->priv->send_data.serial) {
-        spice_assert(rcc->priv->send_data.serial - rcc->priv->send_data.last_sent_serial == 1);
-        /*  When the urgent marshaller is active, the serial was incremented by
-         *  the call to reset_send_data that was made for the main marshaller.
-         *  The urgent msg receives this serial, and the main msg serial is
-         *  the following one. Thus, (rcc->priv->send_data.serial - rcc->priv->send_data.last_sent_serial)
-         *  should be 1 in this case*/
-        if (!red_channel_client_urgent_marshaller_is_active(rcc)) {
-            rcc->priv->send_data.serial = rcc->priv->send_data.last_sent_serial;
-        }
-    }
-    rcc->priv->send_data.serial++;
-
     if (!rcc->priv->is_mini_header) {
         spice_assert(rcc->priv->send_data.marshaller != rcc->priv->send_data.urgent.marshaller);
         rcc->priv->send_data.header.set_msg_sub_list(&rcc->priv->send_data.header, 0);
-        rcc->priv->send_data.header.set_msg_serial(&rcc->priv->send_data.header, rcc->priv->send_data.serial);
     }
 }
 
@@ -304,10 +287,6 @@ static void red_channel_client_restore_main_sender(RedChannelClient *rcc)
     spice_marshaller_reset(rcc->priv->send_data.urgent.marshaller);
     rcc->priv->send_data.marshaller = rcc->priv->send_data.main.marshaller;
     rcc->priv->send_data.header.data = rcc->priv->send_data.main.header_data;
-    if (!rcc->priv->is_mini_header) {
-        rcc->priv->send_data.header.set_msg_serial(&rcc->priv->send_data.header,
-                                                   rcc->priv->send_data.serial);
-    }
     rcc->priv->send_data.item = rcc->priv->send_data.main.item;
 }
 
@@ -588,7 +567,7 @@ static void full_header_set_msg_serial(SpiceDataHeaderOpaque *header, uint64_t s
 
 static void mini_header_set_msg_serial(SpiceDataHeaderOpaque *header, uint64_t serial)
 {
-    spice_error("attempt to set header serial on mini header");
+    /* ignore serial, not supported by mini header */
 }
 
 static void full_header_set_msg_sub_list(SpiceDataHeaderOpaque *header, uint32_t sub_list)
@@ -1248,8 +1227,9 @@ void red_channel_client_begin_send_message(RedChannelClient *rcc)
     rcc->priv->send_data.header.set_msg_size(&rcc->priv->send_data.header,
                                              rcc->priv->send_data.size -
                                              rcc->priv->send_data.header.header_size);
+    rcc->priv->send_data.header.set_msg_serial(&rcc->priv->send_data.header,
+                                               ++rcc->priv->send_data.last_sent_serial);
     rcc->priv->ack_data.messages_window++;
-    rcc->priv->send_data.last_sent_serial = rcc->priv->send_data.serial;
     rcc->priv->send_data.header.data = NULL; /* avoid writing to this until we have a new message */
     red_channel_client_send(rcc);
 }
@@ -1269,13 +1249,12 @@ SpiceMarshaller *red_channel_client_switch_to_urgent_sender(RedChannelClient *rc
 
 uint64_t red_channel_client_get_message_serial(RedChannelClient *rcc)
 {
-    return rcc->priv->send_data.serial;
+    return rcc->priv->send_data.last_sent_serial + 1;
 }
 
 void red_channel_client_set_message_serial(RedChannelClient *rcc, uint64_t serial)
 {
-    rcc->priv->send_data.last_sent_serial = serial;
-    rcc->priv->send_data.serial = serial;
+    rcc->priv->send_data.last_sent_serial = serial - 1;
 }
 
 static inline gboolean prepare_pipe_add(RedChannelClient *rcc, RedPipeItem *item)
