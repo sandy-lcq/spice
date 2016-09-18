@@ -1985,6 +1985,8 @@ void display_channel_process_surface_cmd(DisplayChannel *display, RedSurfaceCmd 
         }
         data = surface->u.surface_create.data;
         if (stride < 0) {
+            /* No need to worry about overflow here, command should already be validated
+             * when it is read, specifically red_get_surface_cmd */
             data -= (int32_t)(stride * (height - 1));
         }
         display_channel_create_surface(display, surface_id, surface->u.surface_create.width,
