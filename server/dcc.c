@@ -796,14 +796,9 @@ static void dcc_push_release(DisplayChannelClient *dcc, uint8_t type, uint64_t i
     }
 
     if (free_list->res->count == free_list->res_size) {
-        SpiceResourceList *new_list;
-        new_list = spice_malloc(sizeof(*new_list) +
-                                free_list->res_size * sizeof(SpiceResourceID) * 2);
-        new_list->count = free_list->res->count;
-        memcpy(new_list->resources, free_list->res->resources,
-               new_list->count * sizeof(SpiceResourceID));
-        free(free_list->res);
-        free_list->res = new_list;
+        free_list->res = spice_realloc(free_list->res,
+                                       sizeof(*free_list->res) +
+                                       free_list->res_size * sizeof(SpiceResourceID) * 2);
         free_list->res_size *= 2;
     }
     free_list->res->resources[free_list->res->count].type = type;
