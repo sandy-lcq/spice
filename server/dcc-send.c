@@ -263,9 +263,9 @@ static void send_free_list(RedChannelClient *rcc)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     FreeList *free_list = &dcc->priv->send_data.free_list;
-    int sub_list_len = 1;
+    const int sub_list_len = 2;
     SpiceMarshaller *urgent_marshaller;
-    SpiceMarshaller *wait_m = NULL;
+    SpiceMarshaller *wait_m;
     SpiceMarshaller *inval_m;
     uint32_t sub_arr_offset;
     uint32_t wait_offset = 0;
@@ -292,14 +292,13 @@ static void send_free_list(RedChannelClient *rcc)
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_LIST, NULL);
 
+    /* append invalidate list */
     inval_m = spice_marshaller_get_submarshaller(urgent_marshaller);
     marshal_sub_msg_inval_list(inval_m, free_list);
 
-    if (free_list->wait.header.wait_count) {
-        wait_m = spice_marshaller_get_submarshaller(urgent_marshaller);
-        marshal_sub_msg_inval_list_wait(wait_m, free_list);
-        sub_list_len++;
-    }
+    /* append wait list */
+    wait_m = spice_marshaller_get_submarshaller(urgent_marshaller);
+    marshal_sub_msg_inval_list_wait(wait_m, free_list);
 
     sub_arr_offset = sub_list_len * sizeof(uint32_t);
 
@@ -308,10 +307,8 @@ static void send_free_list(RedChannelClient *rcc)
                                                          // adding the sub list
                                                          // offsets array to the marshaller
     /* adding the array of offsets */
-    if (wait_m) {
-        wait_offset = spice_marshaller_get_offset(wait_m);
-        spice_marshaller_add_uint32(urgent_marshaller, wait_offset + sub_arr_offset);
-    }
+    wait_offset = spice_marshaller_get_offset(wait_m);
+    spice_marshaller_add_uint32(urgent_marshaller, wait_offset + sub_arr_offset);
     spice_marshaller_add_uint32(urgent_marshaller, inval_offset + sub_arr_offset);
 }
 
