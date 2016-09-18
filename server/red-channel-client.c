@@ -674,7 +674,6 @@ RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedCl
     }
 
     rcc->incoming.header.data = rcc->incoming.header_buf;
-    rcc->incoming.serial = 1;
 
     if (!channel->channel_cbs.config_socket(rcc)) {
         goto error;
@@ -740,7 +739,6 @@ RedChannelClient *red_channel_client_create_dummy(int size,
     }
 
     rcc->incoming.header.data = rcc->incoming.header_buf;
-    rcc->incoming.serial = 1;
     g_queue_init(&rcc->priv->pipe);
 
     rcc->priv->dummy = TRUE;

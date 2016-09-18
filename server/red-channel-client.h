@@ -195,7 +195,6 @@ typedef struct IncomingHandler {
     uint32_t header_pos;
     uint8_t *msg; // data of the msg following the header. allocated by alloc_msg_buf.
     uint32_t msg_pos;
-    uint64_t serial;
 } IncomingHandler;
 
 struct RedChannelClient {
