@@ -33,3 +33,5 @@ INSTALL
 .tarball-version
 docs/manual/manual.chunked/
 docs/manual/manual.html
+spice-server-enums.h
+spice-server-enums.c

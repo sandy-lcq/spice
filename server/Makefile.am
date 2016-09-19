@@ -68,6 +68,8 @@ libspice_serverinclude_HEADERS =		\
 	spice.h					\
 	$(NULL)
 
+spice_built_sources = spice-server-enums.h spice-server-enums.c
+
 libserver_la_SOURCES =				\
 	$(libspice_serverinclude_HEADERS)	\
 	agent-msg-filter.c			\
@@ -156,6 +158,7 @@ libserver_la_SOURCES =				\
 	dcc-private.h				\
 	image-encoders.c					\
 	image-encoders.h					\
+	$(spice_built_sources)		\
 	$(NULL)
 
 if HAVE_LZ4
@@ -186,6 +189,34 @@ endif
 
 libspice_server_la_LIBADD = libserver.la
 libspice_server_la_SOURCES =
+
+spice-server-enums.c: spice-server.h
+	$(AM_V_GEN)glib-mkenums --fhead "#include \"config.h\"\n\n" \
+			--fhead "#include <glib-object.h>\n" \
+			--fhead "#include \"spice-server-enums.h\"\n\n" \
+			--fprod "\n#include \"spice-server.h\"\n" \
+			--vhead "static const G@Type@Value _@enum_name@_values[] = {" \
+			--vprod "  { @VALUENAME@, \"@VALUENAME@\", \"@valuenick@\" }," \
+			--vtail "  { 0, NULL, NULL }\n};\n\n" \
+			--vtail "GType\n@enum_name@_get_type (void)\n{\n" \
+			--vtail "  static GType type = 0;\n" \
+			--vtail "  static volatile gsize type_volatile = 0;\n\n" \
+			--vtail "  if (g_once_init_enter(&type_volatile)) {\n" \
+			--vtail "    type = g_@type@_register_static (\"@EnumName@\", _@enum_name@_values);\n" \
+			--vtail "    g_once_init_leave(&type_volatile, type);\n" \
+			--vtail "  }\n\n" \
+			--vtail "  return type;\n}\n\n" \
+		$^ > $@
+
+spice-server-enums.h: spice-server.h
+	$(AM_V_GEN)glib-mkenums --fhead "#ifndef SPICE_SERVER_ENUMS_H\n" \
+			--fhead "#define SPICE_SERVER_ENUMS_H\n\n" \
+			--fhead "G_BEGIN_DECLS\n\n" \
+			--ftail "G_END_DECLS\n\n" \
+			--ftail "#endif /* SPICE_SERVER_ENUMS_H */\n" \
+			--eprod "#define SPICE_TYPE_@ENUMSHORT@ @enum_name@_get_type()\n" \
+			--eprod "GType @enum_name@_get_type (void);\n" \
+		$^ >  $@
 
 EXTRA_DIST =					\
 	spice-bitmap-utils.tmpl.c			\
