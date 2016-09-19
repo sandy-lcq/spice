@@ -350,12 +350,12 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 {
     DisplayChannelClient *dcc;
 
-    dcc = (DisplayChannelClient*)red_channel_client_create(
+    dcc = DISPLAY_CHANNEL_CLIENT(red_channel_client_create(
         sizeof(DisplayChannelClient),
         &COMMON_GRAPHICS_CHANNEL(display)->base,
         client, stream, TRUE,
         num_common_caps, common_caps,
-        num_caps, caps);
+        num_caps, caps));
 
     display->common.during_target_migrate = mig_target;
     dcc->priv->id = display->common.qxl->id;

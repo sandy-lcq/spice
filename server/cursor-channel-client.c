@@ -97,14 +97,14 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
     spice_return_val_if_fail(!num_caps || caps, NULL);
 
     CursorChannelClient *ccc =
-        (CursorChannelClient*)red_channel_client_create(sizeof(CursorChannelClient),
+        CURSOR_CHANNEL_CLIENT(red_channel_client_create(sizeof(CursorChannelClient),
                                                         RED_CHANNEL(cursor),
                                                         client, stream,
                                                         FALSE,
                                                         num_common_caps,
                                                         common_caps,
                                                         num_caps,
-                                                        caps);
+                                                        caps));
     spice_return_val_if_fail(ccc != NULL, NULL);
     COMMON_GRAPHICS_CHANNEL(cursor)->during_target_migrate = mig_target;
 

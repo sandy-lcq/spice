@@ -48,7 +48,7 @@ RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t c
     RedChannelClient *rcc;
 
     FOREACH_CLIENT(main_chan, link, next, rcc) {
-        MainChannelClient *mcc = (MainChannelClient*) rcc;
+        MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
         if (main_channel_client_get_connection_id(mcc) == connection_id) {
             return red_channel_client_get_client(rcc);
         }
@@ -102,7 +102,7 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
     uint32_t size, void *message)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    MainChannelClient *mcc = (MainChannelClient*)rcc;
+    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
     SpiceMigrateDataHeader *header = (SpiceMigrateDataHeader *)message;
 
     /* not supported with multi-clients */
@@ -157,7 +157,7 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     MainChannel *main_chan = SPICE_CONTAINEROF(channel, MainChannel, base);
-    MainChannelClient *mcc = (MainChannelClient*)rcc;
+    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
 
     switch (type) {
     case SPICE_MSGC_MAIN_AGENT_START: {
@@ -226,7 +226,7 @@ static uint8_t *main_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     MainChannel *main_chan = SPICE_CONTAINEROF(channel, MainChannel, base);
-    MainChannelClient *mcc = (MainChannelClient*)rcc;
+    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
 
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
         return reds_get_agent_data_buffer(channel->reds, mcc, size);
@@ -338,7 +338,7 @@ static int main_channel_connect_semi_seamless(MainChannel *main_channel)
     RedChannelClient *rcc;
 
     FOREACH_CLIENT(main_channel, link, next, rcc) {
-        MainChannelClient *mcc = (MainChannelClient*)rcc;
+        MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
         if (main_channel_client_connect_semi_seamless(mcc))
             main_channel->num_clients_mig_wait++;
     }
@@ -353,7 +353,7 @@ static int main_channel_connect_seamless(MainChannel *main_channel)
     spice_assert(g_list_length(main_channel->base.clients) == 1);
 
     FOREACH_CLIENT(main_channel, link, next, rcc) {
-        MainChannelClient *mcc = (MainChannelClient*)rcc;
+        MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
         main_channel_client_connect_seamless(mcc);
         main_channel->num_clients_mig_wait++;
     }
@@ -393,7 +393,7 @@ void main_channel_migrate_cancel_wait(MainChannel *main_chan)
     RedChannelClient *rcc;
 
     FOREACH_CLIENT(main_chan, link, next, rcc) {
-        MainChannelClient *mcc = (MainChannelClient*)rcc;
+        MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
         main_channel_client_migrate_cancel_wait(mcc);
     }
     main_chan->num_clients_mig_wait = 0;
@@ -413,7 +413,7 @@ int main_channel_migrate_src_complete(MainChannel *main_chan, int success)
     }
 
     FOREACH_CLIENT(main_chan, link, next, rcc) {
-        MainChannelClient *mcc = (MainChannelClient*)rcc;
+        MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
         if (main_channel_client_migrate_src_complete(mcc, success))
             semi_seamless_count++;
    }

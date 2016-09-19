@@ -384,7 +384,7 @@ void main_channel_client_handle_migrate_dst_do_seamless(MainChannelClient *mcc,
 void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping, uint32_t size)
 {
     uint64_t roundtrip;
-    RedChannelClient* rcc = (RedChannelClient*)mcc;
+    RedChannelClient* rcc = RED_CHANNEL_CLIENT(mcc);
 
     roundtrip = g_get_monotonic_time() - ping->timestamp;
 
@@ -559,10 +559,10 @@ MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient 
                                               int num_common_caps, uint32_t *common_caps,
                                               int num_caps, uint32_t *caps)
 {
-    MainChannelClient *mcc = (MainChannelClient*)
+    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(
                              red_channel_client_create(sizeof(MainChannelClient), &main_chan->base,
                                                        client, stream, FALSE, num_common_caps,
-                                                       common_caps, num_caps, caps);
+                                                       common_caps, num_caps, caps));
     spice_assert(mcc != NULL);
     mcc->priv->connection_id = connection_id;
     mcc->priv->bitrate_per_sec = ~0;
@@ -599,7 +599,7 @@ uint64_t main_channel_client_get_roundtrip_ms(MainChannelClient *mcc)
 void main_channel_client_migrate(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    reds_on_main_channel_migrate(channel->reds, SPICE_CONTAINEROF(rcc, MainChannelClient, base));
+    reds_on_main_channel_migrate(channel->reds, MAIN_CHANNEL_CLIENT(rcc));
     red_channel_client_default_migrate(rcc);
 }
 
@@ -671,7 +671,7 @@ static void main_channel_marshall_ping(RedChannelClient *rcc,
                                        SpiceMarshaller *m,
                                        RedPingPipeItem *item)
 {
-    MainChannelClient *mcc = (MainChannelClient*)rcc;
+    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
     SpiceMsgPing ping;
     int size_left = item->size;
 
@@ -870,7 +870,7 @@ static void main_channel_marshall_agent_connected(SpiceMarshaller *m,
 
 void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
 {
-    MainChannelClient *mcc = SPICE_CONTAINEROF(rcc, MainChannelClient, base);
+    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
     /* In semi-seamless migration (dest side), the connection is started from scratch, and

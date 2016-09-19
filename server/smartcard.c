@@ -66,6 +66,8 @@ typedef struct SmartCardChannelClient {
     SmartCardChannelClientPrivate priv[1];
 } SmartCardChannelClient;
 
+#define SMARTCARD_CHANNEL_CLIENT(rcc) ((SmartCardChannelClient*)rcc)
+
 G_DEFINE_TYPE(RedCharDeviceSmartcard, red_char_device_smartcard, RED_TYPE_CHAR_DEVICE)
 
 #define RED_CHAR_DEVICE_SMARTCARD_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), RED_TYPE_CHAR_DEVICE_SMARTCARD, RedCharDeviceSmartcardPrivate))
@@ -387,7 +389,7 @@ static uint8_t *smartcard_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                     uint16_t type,
                                                     uint32_t size)
 {
-    SmartCardChannelClient *scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
+    SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
 
     /* todo: only one reader is actually supported. When we fix the code to support
      * multiple readers, we will porbably associate different devices to
@@ -420,7 +422,7 @@ static void smartcard_channel_release_msg_rcv_buf(RedChannelClient *rcc,
                                                   uint32_t size,
                                                   uint8_t *msg)
 {
-    SmartCardChannelClient *scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
+    SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
 
     /* todo: only one reader is actually supported. When we fix the code to support
      * multiple readers, we will porbably associate different devices to
@@ -472,7 +474,7 @@ static void smartcard_channel_send_migrate_data(RedChannelClient *rcc,
     RedCharDeviceSmartcard *dev;
     SpiceMarshaller *m2;
 
-    scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
+    scc = SMARTCARD_CHANNEL_CLIENT(rcc);
     dev = scc->priv->smartcard;
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SMARTCARD_MAGIC);
@@ -517,7 +519,7 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
 
 static void smartcard_channel_on_disconnect(RedChannelClient *rcc)
 {
-    SmartCardChannelClient *scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
+    SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
 
     if (scc->priv->smartcard) {
         RedCharDeviceSmartcard *dev = scc->priv->smartcard;
@@ -665,7 +667,7 @@ static int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
     SpiceMigrateDataHeader *header;
     SpiceMigrateDataSmartcard *mig_data;
 
-    scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
+    scc = SMARTCARD_CHANNEL_CLIENT(rcc);
     header = (SpiceMigrateDataHeader *)message;
     mig_data = (SpiceMigrateDataSmartcard *)(header + 1);
     if (size < sizeof(SpiceMigrateDataHeader) + sizeof(SpiceMigrateDataSmartcard)) {
@@ -706,7 +708,7 @@ static int smartcard_channel_handle_message(RedChannelClient *rcc,
                                             uint8_t *msg)
 {
     VSCMsgHeader* vheader = (VSCMsgHeader*)msg;
-    SmartCardChannelClient *scc = SPICE_CONTAINEROF(rcc, SmartCardChannelClient, base);
+    SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
 
     if (type != SPICE_MSGC_SMARTCARD_DATA) {
         /* Handles seamless migration protocol. Also handles ack's,
@@ -760,13 +762,13 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
 
     SmartCardChannelClient *scc;
 
-    scc = (SmartCardChannelClient *)red_channel_client_create(sizeof(SmartCardChannelClient),
-                                                              channel,
-                                                              client,
-                                                              stream,
-                                                              FALSE,
-                                                              num_common_caps, common_caps,
-                                                              num_caps, caps);
+    scc = SMARTCARD_CHANNEL_CLIENT(red_channel_client_create(sizeof(SmartCardChannelClient),
+                                                             channel,
+                                                             client,
+                                                             stream,
+                                                             FALSE,
+                                                             num_common_caps, common_caps,
+                                                             num_caps, caps));
     if (!scc) {
         return;
     }

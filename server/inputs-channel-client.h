@@ -45,4 +45,6 @@ enum {
     RED_PIPE_ITEM_MIGRATE_DATA,
 };
 
+#define INPUTS_CHANNEL_CLIENT(rcc) ((InputsChannelClient*)rcc)
+
 #endif /* _INPUTS_CHANNEL_CLIENT_H_ */

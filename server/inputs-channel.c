@@ -273,7 +273,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
                                         void *message)
 {
     InputsChannel *inputs_channel = (InputsChannel *)red_channel_client_get_channel(rcc);
-    InputsChannelClient *icc = (InputsChannelClient *)rcc;
+    InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
     uint32_t i;
     RedsState *reds = red_channel_get_server(&inputs_channel->base);
 
@@ -547,7 +547,7 @@ static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
                                               uint32_t size,
                                               void *message)
 {
-    InputsChannelClient *icc = (InputsChannelClient*)rcc;
+    InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
     InputsChannel *inputs = (InputsChannel*)red_channel_client_get_channel(rcc);
     SpiceMigrateDataHeader *header;
     SpiceMigrateDataInputs *mig_data;

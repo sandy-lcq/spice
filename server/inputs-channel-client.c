@@ -46,13 +46,13 @@ RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                uint32_t *caps)
 {
     InputsChannelClient* icc =
-        (InputsChannelClient*)red_channel_client_create(sizeof(InputsChannelClient),
+        INPUTS_CHANNEL_CLIENT(red_channel_client_create(sizeof(InputsChannelClient),
                                                         channel, client,
                                                         stream,
                                                         monitor_latency,
                                                         num_common_caps,
                                                         common_caps, num_caps,
-                                                        caps);
+                                                        caps));
     if (icc) {
         icc->priv->motion_count = 0;
     }
@@ -63,7 +63,7 @@ void inputs_channel_client_send_migrate_data(RedChannelClient *rcc,
                                              SpiceMarshaller *m,
                                              RedPipeItem *item)
 {
-    InputsChannelClient *icc = SPICE_CONTAINEROF(rcc, InputsChannelClient, base);
+    InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
 

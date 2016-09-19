@@ -128,7 +128,7 @@ void red_channel_client_on_input(void *opaque, int n)
 
 int red_channel_client_get_out_msg_size(void *opaque)
 {
-    RedChannelClient *rcc = (RedChannelClient *)opaque;
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
 
     return rcc->priv->send_data.size;
 }
@@ -136,7 +136,7 @@ int red_channel_client_get_out_msg_size(void *opaque)
 void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
                                         int *vec_size, int pos)
 {
-    RedChannelClient *rcc = (RedChannelClient *)opaque;
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
 
     *vec_size = spice_marshaller_fill_iovec(rcc->priv->send_data.marshaller,
                                             vec, IOV_MAX, pos);
@@ -144,7 +144,7 @@ void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
 
 void red_channel_client_on_out_block(void *opaque)
 {
-    RedChannelClient *rcc = (RedChannelClient *)opaque;
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
 
     rcc->priv->send_data.blocked = TRUE;
     rcc->priv->channel->core->watch_update_mask(rcc->priv->stream->watch,
@@ -313,7 +313,7 @@ static void red_channel_client_restore_main_sender(RedChannelClient *rcc)
 
 void red_channel_client_on_out_msg_done(void *opaque)
 {
-    RedChannelClient *rcc = (RedChannelClient *)opaque;
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
     int fd;
 
     rcc->priv->send_data.size = 0;
@@ -529,7 +529,7 @@ void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uin
 
 static void red_channel_client_event(int fd, int event, void *data)
 {
-    RedChannelClient *rcc = (RedChannelClient *)data;
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(data);
 
     red_channel_client_ref(rcc);
     if (event & SPICE_WATCH_EVENT_READ) {

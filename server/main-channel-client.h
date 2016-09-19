@@ -105,4 +105,6 @@ typedef struct MainMultiMediaTimeItemInfo {
 RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
                                             void *data, int num);
 
+#define MAIN_CHANNEL_CLIENT(rcc) ((MainChannelClient*)rcc)
+
 #endif /* __MAIN_CHANNEL_CLIENT_H__ */
