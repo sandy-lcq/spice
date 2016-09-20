@@ -486,14 +486,13 @@ void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback
 
 int red_channel_all_blocked(RedChannel *channel)
 {
-    GList *link;
+    GList *link, *next;
     RedChannelClient *rcc;
 
     if (!channel || !channel->clients) {
         return FALSE;
     }
-    for (link = channel->clients; link != NULL; link = link->next) {
-        rcc = link->data;
+    FOREACH_CLIENT(channel, link, next, rcc) {
         if (!red_channel_client_is_blocked(rcc)) {
             return FALSE;
         }
@@ -784,13 +783,12 @@ void red_channel_pipes_new_add_tail(RedChannel *channel, new_pipe_item_t creator
 
 uint32_t red_channel_max_pipe_size(RedChannel *channel)
 {
-    GList *link;
+    GList *link, *next;
     RedChannelClient *rcc;
     uint32_t pipe_size = 0;
 
-    for (link = channel->clients; link != NULL; link = link->next) {
+    FOREACH_CLIENT(channel, link, next, rcc) {
         uint32_t new_size;
-        rcc = link->data;
         new_size = red_channel_client_get_pipe_size(rcc);
         pipe_size = MAX(pipe_size, new_size);
     }
