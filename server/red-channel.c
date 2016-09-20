@@ -31,6 +31,9 @@
 #include "main-dispatcher.h"
 #include "utils.h"
 
+#define FOREACH_CHANNEL_CLIENT(_client, _iter, _data) \
+    GLIST_FOREACH((_client ? (_client)->channels : NULL), _iter, RedChannelClient, _data)
+
 /*
  * Lifetime of RedChannel, RedChannelClient and RedClient:
  * RedChannel is created and destroyed by the calls to
@@ -577,14 +580,16 @@ RedClient *red_client_unref(RedClient *client)
 
 void red_client_set_migration_seamless(RedClient *client) // dest
 {
-    GList *link;
+    GListIter iter;
+    RedChannelClient *rcc;
+
     spice_assert(client->during_target_migrate);
     pthread_mutex_lock(&client->lock);
     client->seamless_migrate = TRUE;
     /* update channel clients that got connected before the migration
      * type was set. red_client_add_channel will handle newer channel clients */
-    for (link = client->channels; link != NULL; link = link->next) {
-        if (red_channel_client_set_migration_seamless(link->data))
+    FOREACH_CHANNEL_CLIENT(client, iter, rcc) {
+        if (red_channel_client_set_migration_seamless(rcc))
             client->num_migrated_channels++;
     }
     pthread_mutex_unlock(&client->lock);
@@ -592,7 +597,7 @@ void red_client_set_migration_seamless(RedClient *client) // dest
 
 void red_client_migrate(RedClient *client)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
     RedChannel *channel;
 
@@ -603,21 +608,17 @@ void red_client_migrate(RedClient *client)
                       " this might be a BUG",
                       client->thread_id, pthread_self());
     }
-    link = client->channels;
-    while (link) {
-        next = link->next;
-        rcc = link->data;
+    FOREACH_CHANNEL_CLIENT(client, iter, rcc) {
         channel = red_channel_client_get_channel(rcc);
         if (red_channel_client_is_connected(rcc)) {
             channel->client_cbs.migrate(rcc);
         }
-        link = next;
     }
 }
 
 void red_client_destroy(RedClient *client)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
 
     spice_printerr("destroy client %p with #channels=%d", client, g_list_length(client->channels));
@@ -628,13 +629,10 @@ void red_client_destroy(RedClient *client)
                       client->thread_id,
                       pthread_self());
     }
-    link = client->channels;
-    while (link) {
+    FOREACH_CHANNEL_CLIENT(client, iter, rcc) {
         RedChannel *channel;
-        next = link->next;
         // some channels may be in other threads, so disconnection
         // is not synchronous.
-        rcc = link->data;
         channel = red_channel_client_get_channel(rcc);
         red_channel_client_set_destroying(rcc);
         // some channels may be in other threads. However we currently
@@ -646,7 +644,6 @@ void red_client_destroy(RedClient *client)
         spice_assert(red_channel_client_pipe_is_empty(rcc));
         spice_assert(red_channel_client_no_item_being_sent(rcc));
         red_channel_client_destroy(rcc);
-        link = next;
     }
     red_client_unref(client);
 }
@@ -654,13 +651,12 @@ void red_client_destroy(RedClient *client)
 /* client->lock should be locked */
 RedChannelClient *red_client_get_channel(RedClient *client, int type, int id)
 {
-    GList *link;
+    GListIter iter;
     RedChannelClient *rcc;
     RedChannelClient *ret = NULL;
 
-    for (link = client->channels; link != NULL; link = link->next) {
+    FOREACH_CHANNEL_CLIENT(client, iter, rcc) {
         RedChannel *channel;
-        rcc = link->data;
         channel = red_channel_client_get_channel(rcc);
         if (channel->type == type && channel->id == id) {
             ret = rcc;
@@ -691,7 +687,8 @@ void red_client_set_main(RedClient *client, MainChannelClient *mcc) {
 
 void red_client_semi_seamless_migrate_complete(RedClient *client)
 {
-    GList *link, *next;
+    GListIter iter;
+    RedChannelClient *rcc;
 
     pthread_mutex_lock(&client->lock);
     if (!client->during_target_migrate || client->seamless_migrate) {
@@ -700,11 +697,8 @@ void red_client_semi_seamless_migrate_complete(RedClient *client)
         return;
     }
     client->during_target_migrate = FALSE;
-    link = client->channels;
-    while (link) {
-        next = link->next;
-        red_channel_client_semi_seamless_migration_complete(link->data);
-        link = next;
+    FOREACH_CHANNEL_CLIENT(client, iter, rcc) {
+        red_channel_client_semi_seamless_migration_complete(rcc);
     }
     pthread_mutex_unlock(&client->lock);
     reds_on_client_semi_seamless_migrate_complete(client->reds, client);
