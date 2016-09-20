@@ -590,9 +590,9 @@ static void handle_dev_destroy_surfaces(void *opaque, void *payload)
 static void red_worker_push_monitors_config(RedWorker *worker)
 {
     DisplayChannelClient *dcc;
-    GList *item, *next;
+    GListIter iter;
 
-    FOREACH_DCC(worker->display_channel, item, next, dcc) {
+    FOREACH_DCC(worker->display_channel, iter, dcc) {
         dcc_push_monitors_config(dcc);
     }
 }

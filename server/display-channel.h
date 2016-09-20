@@ -214,14 +214,9 @@ struct DisplayChannel {
     DisplayChannelPrivate priv[1];
 };
 
-#define FOREACH_DCC(channel, _link, _next, _data)                   \
-    for (_link = (channel ? RED_CHANNEL(channel)->clients : NULL), \
-         _next = (_link ? _link->next : NULL), \
-         _data = (_link ? _link->data : NULL); \
-         _link; \
-         _link = _next, \
-         _next = (_link ? _link->next : NULL), \
-         _data = (_link ? _link->data : NULL))
+#define FOREACH_DCC(_channel, _iter, _data) \
+    GLIST_FOREACH((_channel ? RED_CHANNEL(_channel)->clients : NULL), \
+                  _iter, DisplayChannelClient, _data)
 
 int display_channel_get_stream_id(DisplayChannel *display, Stream *stream);
 
