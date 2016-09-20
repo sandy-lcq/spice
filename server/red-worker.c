@@ -592,7 +592,7 @@ static void red_worker_push_monitors_config(RedWorker *worker)
     DisplayChannelClient *dcc;
     GList *item, *next;
 
-    FOREACH_CLIENT(worker->display_channel, item, next, dcc) {
+    FOREACH_DCC(worker->display_channel, item, next, dcc) {
         dcc_push_monitors_config(dcc);
     }
 }

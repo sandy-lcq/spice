@@ -196,7 +196,7 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 
     region_destroy(&surface->draw_dirty_region);
     surface->context.canvas = NULL;
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_destroy_surface(dcc, surface_id);
     }
 
@@ -238,7 +238,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
             continue;
         }
 
-        FOREACH_CLIENT(display, link, next, dcc) {
+        FOREACH_DCC(display, link, next, dcc) {
             agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
@@ -256,7 +256,7 @@ static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
     GList *link, *next;
 
     spice_warn_if_fail(drawable->pipes == NULL);
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_prepend_drawable(dcc, drawable);
     }
 }
@@ -283,7 +283,7 @@ static void pipes_add_drawable_after(DisplayChannel *display,
     if (num_other_linked != g_list_length(display->common.base.clients)) {
         GList *link, *next;
         spice_debug("TODO: not O(n^2)");
-        FOREACH_CLIENT(display, link, next, dcc) {
+        FOREACH_DCC(display, link, next, dcc) {
             int sent = 0;
             GList *l;
             for (l = pos_after->pipes; l != NULL; l = l->next) {
@@ -443,7 +443,7 @@ static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *
              * (or will receive) other_drawable */
             dpi_item = g_list_first(other_drawable->pipes);
             /* dpi contains a sublist of dcc's, ordered the same */
-            FOREACH_CLIENT(display, link, next, dcc) {
+            FOREACH_DCC(display, link, next, dcc) {
                 if (dpi_item && dcc == ((RedDrawablePipeItem *) dpi_item->data)->dcc) {
                     dpi_item = dpi_item->next;
                 } else {
@@ -1168,7 +1168,7 @@ void display_channel_free_glz_drawables_to_free(DisplayChannel *display)
 
     spice_return_if_fail(display);
 
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         image_encoders_free_glz_drawables_to_free(dcc_get_encoders(dcc));
     }
 }
@@ -1180,7 +1180,7 @@ void display_channel_free_glz_drawables(DisplayChannel *display)
 
     spice_return_if_fail(display);
 
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         image_encoders_free_glz_drawables(dcc_get_encoders(dcc));
     }
 }
@@ -1223,7 +1223,7 @@ void display_channel_free_some(DisplayChannel *display)
 
     spice_debug("#draw=%d, #glz_draw=%d", display->priv->drawable_count,
                 display->priv->encoder_shared_data.glz_drawable_count);
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         ImageEncoders *encoders = dcc_get_encoders(dcc);
 
         // encoding using the dictionary is prevented since the following operations might
@@ -1237,7 +1237,7 @@ void display_channel_free_some(DisplayChannel *display)
         free_one_drawable(display, TRUE);
     }
 
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         ImageEncoders *encoders = dcc_get_encoders(dcc);
 
         image_encoders_glz_encode_unlock(encoders);
@@ -1706,7 +1706,7 @@ static void clear_surface_drawables_from_pipes(DisplayChannel *display, int surf
     GList *link, *next;
     DisplayChannelClient *dcc;
 
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         if (!dcc_clear_surface_drawables_from_pipe(dcc, surface_id, wait_if_used)) {
             red_channel_client_disconnect(RED_CHANNEL_CLIENT(dcc));
         }
@@ -1772,7 +1772,7 @@ static void send_create_surface(DisplayChannel *display, int surface_id, int ima
     DisplayChannelClient *dcc;
     GList *link, *next;
 
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_create_surface(dcc, surface_id);
         if (image_ready)
             dcc_push_surface_image(dcc, surface_id);

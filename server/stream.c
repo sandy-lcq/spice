@@ -102,7 +102,7 @@ void stream_stop(DisplayChannel *display, Stream *stream)
     spice_return_if_fail(!stream->current);
 
     spice_debug("stream %d", display_channel_get_stream_id(display, stream));
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         StreamAgent *stream_agent;
 
         stream_agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
@@ -298,7 +298,7 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *s
         stream->num_input_frames++;
     }
 
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         StreamAgent *agent;
         QRegion clip_in_draw_dest;
 
@@ -374,7 +374,7 @@ static void before_reattach_stream(DisplayChannel *display,
     }
 
 
-    FOREACH_CLIENT(display, link, link_next, dcc) {
+    FOREACH_DCC(display, link, link_next, dcc) {
         double drop_factor;
 
         agent = dcc_get_stream_agent(dcc, index);
@@ -456,7 +456,7 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
     stream->input_fps_start_time = drawable->creation_time;
     display->priv->streams_size_total += stream->width * stream->height;
     display->priv->stream_count++;
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_create_stream(dcc, stream);
     }
     spice_debug("stream %d %dx%d (%d, %d) (%d, %d) %u fps",
@@ -906,7 +906,7 @@ static void detach_stream_gracefully(DisplayChannel *display, Stream *stream,
     GList *link, *next;
     DisplayChannelClient *dcc;
 
-    FOREACH_CLIENT(display, link, next, dcc) {
+    FOREACH_DCC(display, link, next, dcc) {
         dcc_detach_stream_gracefully(dcc, stream, update_area_limit);
     }
     if (stream->current) {
@@ -937,7 +937,7 @@ void stream_detach_behind(DisplayChannel *display, QRegion *region, Drawable *dr
         int detach = 0;
         item = ring_next(ring, item);
 
-        FOREACH_CLIENT(display, link, next, dcc) {
+        FOREACH_DCC(display, link, next, dcc) {
             StreamAgent *agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
 
             if (region_intersects(&agent->vis_region, region)) {
