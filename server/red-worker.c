@@ -481,7 +481,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
 {
     int i;
     RedChannelClient *rcc;
-    GList *link, *next;
+    GListIter iter;
     uint8_t caps[SPICE_CAPABILITIES_SIZE] = { 0 };
     int caps_available[] = {
         SPICE_DISPLAY_CAP_SIZED_STREAM,
@@ -514,7 +514,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
         for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
             SET_CAP(caps, caps_available[i]);
         }
-        FOREACH_CLIENT(worker->display_channel, link, next, rcc) {
+        FOREACH_CLIENT(worker->display_channel, iter, rcc) {
             for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
                 if (!red_channel_client_test_remote_cap(rcc, caps_available[i]))
                     CLEAR_CAP(caps, caps_available[i]);

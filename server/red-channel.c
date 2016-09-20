@@ -87,10 +87,10 @@ void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc)
 
 int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         if (!red_channel_client_test_remote_common_cap(rcc, cap)) {
             return FALSE;
         }
@@ -100,10 +100,10 @@ int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
 
 int red_channel_test_remote_cap(RedChannel *channel, uint32_t cap)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         if (!red_channel_client_test_remote_cap(rcc, cap)) {
             return FALSE;
         }
@@ -486,13 +486,13 @@ void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback
 
 int red_channel_all_blocked(RedChannel *channel)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
 
     if (!channel || !channel->clients) {
         return FALSE;
     }
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         if (!red_channel_client_is_blocked(rcc)) {
             return FALSE;
         }
@@ -502,10 +502,10 @@ int red_channel_all_blocked(RedChannel *channel)
 
 int red_channel_any_blocked(RedChannel *channel)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         if (red_channel_client_is_blocked(rcc)) {
             return TRUE;
         }
@@ -529,10 +529,10 @@ int red_channel_get_first_socket(RedChannel *channel)
 
 int red_channel_no_item_being_sent(RedChannel *channel)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         if (!red_channel_client_no_item_being_sent(rcc)) {
             return FALSE;
         }
@@ -740,7 +740,7 @@ static int red_channel_pipes_create_batch(RedChannel *channel,
                                 new_pipe_item_t creator, void *data,
                                 rcc_item_t pipe_add)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
     RedPipeItem *item;
     int num = 0, n = 0;
@@ -748,7 +748,7 @@ static int red_channel_pipes_create_batch(RedChannel *channel,
     spice_assert(creator != NULL);
     spice_assert(pipe_add != NULL);
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         item = (*creator)(rcc, data, num++);
         if (item) {
             (*pipe_add)(rcc, item);
@@ -783,11 +783,11 @@ void red_channel_pipes_new_add_tail(RedChannel *channel, new_pipe_item_t creator
 
 uint32_t red_channel_max_pipe_size(RedChannel *channel)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
     uint32_t pipe_size = 0;
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         uint32_t new_size;
         new_size = red_channel_client_get_pipe_size(rcc);
         pipe_size = MAX(pipe_size, new_size);
@@ -797,11 +797,11 @@ uint32_t red_channel_max_pipe_size(RedChannel *channel)
 
 uint32_t red_channel_min_pipe_size(RedChannel *channel)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
     uint32_t pipe_size = ~0;
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         uint32_t new_size;
         new_size = red_channel_client_get_pipe_size(rcc);
         pipe_size = MIN(pipe_size, new_size);
@@ -811,11 +811,11 @@ uint32_t red_channel_min_pipe_size(RedChannel *channel)
 
 uint32_t red_channel_sum_pipes_size(RedChannel *channel)
 {
-    GList *link, *next;
+    GListIter iter;
     RedChannelClient *rcc;
     uint32_t sum = 0;
 
-    FOREACH_CLIENT(channel, link, next, rcc) {
+    FOREACH_CLIENT(channel, iter, rcc) {
         sum += red_channel_client_get_pipe_size(rcc);
     }
     return sum;

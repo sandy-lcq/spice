@@ -250,15 +250,9 @@ struct RedChannel {
 #endif
 };
 
-#define FOREACH_CLIENT(channel, _link, _next, _data)                   \
-    for (_link = (channel ? RED_CHANNEL(channel)->clients : NULL), \
-         _next = (_link ? _link->next : NULL), \
-         _data = (_link ? _link->data : NULL); \
-         _link; \
-         _link = _next, \
-         _next = (_link ? _link->next : NULL), \
-         _data = (_link ? _link->data : NULL))
-
+#define FOREACH_CLIENT(_channel, _iter, _data) \
+    GLIST_FOREACH((_channel ? RED_CHANNEL(_channel)->clients : NULL), \
+                  _iter, RedChannelClient, _data)
 
 #define RED_CHANNEL(Channel) ((RedChannel *)(Channel))
 
