@@ -172,6 +172,8 @@ if HAVE_SMARTCARD
 libserver_la_SOURCES +=	\
 	smartcard.c		\
 	smartcard.h		\
+	smartcard-channel-client.c	\
+	smartcard-channel-client.h	\
 	$(NULL)
 endif
 

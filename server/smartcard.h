@@ -21,6 +21,7 @@
 #include <glib-object.h>
 
 #include "char-device.h"
+#include "red-channel-client.h"
 
 #define RED_TYPE_CHAR_DEVICE_SMARTCARD red_char_device_smartcard_get_type()
 
@@ -33,6 +34,7 @@
 typedef struct RedCharDeviceSmartcard RedCharDeviceSmartcard;
 typedef struct RedCharDeviceSmartcardClass RedCharDeviceSmartcardClass;
 typedef struct RedCharDeviceSmartcardPrivate RedCharDeviceSmartcardPrivate;
+typedef struct SmartCardChannelClient SmartCardChannelClient;
 
 struct RedCharDeviceSmartcard
 {
@@ -53,5 +55,24 @@ GType red_char_device_smartcard_get_type(void) G_GNUC_CONST;
  */
 RedCharDevice *smartcard_device_connect(RedsState *reds, SpiceCharDeviceInstance *char_device);
 void smartcard_device_disconnect(SpiceCharDeviceInstance *char_device);
+void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_buf);
+SpiceCharDeviceInstance* smartcard_readers_get(uint32_t reader_id);
+SpiceCharDeviceInstance *smartcard_readers_get_unattached(void);
+uint32_t smartcard_get_n_readers(void);
+void smartcard_char_device_notify_reader_add(RedCharDeviceSmartcard *smartcard);
+void smartcard_char_device_attach_client(SpiceCharDeviceInstance *smartcard,
+                                         SmartCardChannelClient *scc);
+gboolean smartcard_char_device_notify_reader_remove(RedCharDeviceSmartcard *smartcard);
+void smartcard_char_device_detach_client(RedCharDeviceSmartcard *smartcard,
+                                         SmartCardChannelClient *scc);
+SmartCardChannelClient* smartcard_char_device_get_client(RedCharDeviceSmartcard *smartcard);
+int smartcard_char_device_handle_migrate_data(RedCharDeviceSmartcard *smartcard,
+                                              SpiceMigrateDataSmartcard *mig_data);
+
+enum {
+    RED_PIPE_ITEM_TYPE_ERROR = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
+    RED_PIPE_ITEM_TYPE_SMARTCARD_DATA,
+    RED_PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA,
+};
 
 #endif // __SMART_CARD_H__
