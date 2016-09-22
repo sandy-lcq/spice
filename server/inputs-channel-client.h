@@ -18,9 +18,43 @@
 #ifndef _INPUTS_CHANNEL_CLIENT_H_
 #define _INPUTS_CHANNEL_CLIENT_H_
 
-#include "red-channel.h"
+#include <glib-object.h>
+
+#include "red-channel-client.h"
+#include "inputs-channel.h"
+
+G_BEGIN_DECLS
+
+#define TYPE_INPUTS_CHANNEL_CLIENT inputs_channel_client_get_type()
+
+#define INPUTS_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_INPUTS_CHANNEL_CLIENT, InputsChannelClient))
+#define INPUTS_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_INPUTS_CHANNEL_CLIENT, InputsChannelClientClass))
+#define IS_INPUTS_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_INPUTS_CHANNEL_CLIENT))
+#define IS_INPUTS_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_INPUTS_CHANNEL_CLIENT))
+#define INPUTS_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_INPUTS_CHANNEL_CLIENT, InputsChannelClientClass))
 
 typedef struct InputsChannelClient InputsChannelClient;
+typedef struct InputsChannelClientClass InputsChannelClientClass;
+typedef struct InputsChannelClientPrivate InputsChannelClientPrivate;
+
+struct InputsChannelClient
+{
+    RedChannelClient parent;
+
+    InputsChannelClientPrivate *priv;
+};
+
+struct InputsChannelClientClass
+{
+    RedChannelClientClass parent_class;
+};
+
+GType inputs_channel_client_get_type(void) G_GNUC_CONST;
 
 RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                RedClient *client,
@@ -31,12 +65,15 @@ RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                int num_caps,
                                                uint32_t *caps);
 
+uint16_t inputs_channel_client_get_motion_count(InputsChannelClient* self);
+/* only for migration */
+void inputs_channel_client_set_motion_count(InputsChannelClient* self, uint16_t count);
+void inputs_channel_client_on_mouse_motion(InputsChannelClient* self);
 void inputs_channel_client_send_migrate_data(RedChannelClient *rcc,
-                                             SpiceMarshaller *m,
-                                             RedPipeItem *item);
-void inputs_channel_client_handle_migrate_data(InputsChannelClient *icc,
-                                               uint16_t motion_count);
-void inputs_channel_client_on_mouse_motion(InputsChannelClient *icc);
+                                             SpiceMarshaller *m, RedPipeItem *item);
+void inputs_channel_client_handle_migrate_data(InputsChannelClient *icc, uint16_t motion_count);
+
+G_END_DECLS
 
 enum {
     RED_PIPE_ITEM_INPUTS_INIT = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
@@ -44,7 +81,5 @@ enum {
     RED_PIPE_ITEM_KEY_MODIFIERS,
     RED_PIPE_ITEM_MIGRATE_DATA,
 };
-
-#define INPUTS_CHANNEL_CLIENT(rcc) ((InputsChannelClient*)rcc)
 
 #endif /* _INPUTS_CHANNEL_CLIENT_H_ */

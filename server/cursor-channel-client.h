@@ -18,15 +18,46 @@
 #ifndef CURSOR_CHANNEL_CLIENT_H_
 # define CURSOR_CHANNEL_CLIENT_H_
 
+#include <glib-object.h>
+
 #include "cache-item.h"
 #include "red-common.h"
-#include "red-channel.h"
+#include "red-channel-client.h"
 #include "reds-stream.h"
 
-typedef struct CursorChannel CursorChannel;
-typedef struct CursorChannelClient CursorChannelClient;
+G_BEGIN_DECLS
 
-#define CURSOR_CHANNEL_CLIENT(Client) ((CursorChannelClient*)(Client))
+#define TYPE_CURSOR_CHANNEL_CLIENT cursor_channel_client_get_type()
+
+#define CURSOR_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_CURSOR_CHANNEL_CLIENT, CursorChannelClient))
+#define CURSOR_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_CURSOR_CHANNEL_CLIENT, CursorChannelClientClass))
+#define IS_CURSOR_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_CURSOR_CHANNEL_CLIENT))
+#define IS_CURSOR_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_CURSOR_CHANNEL_CLIENT))
+#define CURSOR_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_CURSOR_CHANNEL_CLIENT, CursorChannelClientClass))
+
+typedef struct CursorChannelClient CursorChannelClient;
+typedef struct CursorChannelClientClass CursorChannelClientClass;
+typedef struct CursorChannelClientPrivate CursorChannelClientPrivate;
+typedef struct CursorChannel CursorChannel;
+
+struct CursorChannelClient
+{
+    RedChannelClient parent;
+
+    CursorChannelClientPrivate *priv;
+};
+
+struct CursorChannelClientClass
+{
+    RedChannelClientClass parent_class;
+};
+
+GType cursor_channel_client_get_type(void) G_GNUC_CONST;
 
 CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
                                                RedClient *client,
@@ -40,5 +71,7 @@ void cursor_channel_client_reset_cursor_cache(RedChannelClient *rcc);
 void cursor_channel_client_on_disconnect(RedChannelClient *rcc);
 RedCacheItem* cursor_channel_client_cache_find(CursorChannelClient *ccc, uint64_t id);
 int cursor_channel_client_cache_add(CursorChannelClient *ccc, uint64_t id, size_t size);
+
+G_END_DECLS
 
 #endif /* CURSOR_CHANNEL_CLIENT_H_ */

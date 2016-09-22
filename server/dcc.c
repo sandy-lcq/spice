@@ -22,8 +22,150 @@
 #include "dcc-private.h"
 #include "display-channel.h"
 #include "red-channel-client-private.h"
+#include "spice-server-enums.h"
+
+G_DEFINE_TYPE(DisplayChannelClient, display_channel_client, RED_TYPE_CHANNEL_CLIENT)
 
 #define DISPLAY_CLIENT_SHORT_TIMEOUT 15000000000ULL //nano
+#define DISPLAY_FREE_LIST_DEFAULT_SIZE 128
+
+enum
+{
+    PROP0,
+    PROP_IMAGE_COMPRESSION,
+    PROP_JPEG_STATE,
+    PROP_ZLIB_GLZ_STATE
+};
+
+static void
+display_channel_client_get_property(GObject *object,
+                                    guint property_id,
+                                    GValue *value,
+                                    GParamSpec *pspec)
+{
+    DisplayChannelClient *self = DISPLAY_CHANNEL_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_IMAGE_COMPRESSION:
+             g_value_set_enum(value, self->priv->image_compression);
+            break;
+        case PROP_JPEG_STATE:
+             g_value_set_enum(value, self->priv->jpeg_state);
+            break;
+        case PROP_ZLIB_GLZ_STATE:
+             g_value_set_enum(value, self->priv->zlib_glz_state);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+display_channel_client_set_property(GObject *object,
+                                    guint property_id,
+                                    const GValue *value,
+                                    GParamSpec *pspec)
+{
+    DisplayChannelClient *self = DISPLAY_CHANNEL_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_IMAGE_COMPRESSION:
+            self->priv->image_compression = g_value_get_enum(value);
+            break;
+        case PROP_JPEG_STATE:
+            self->priv->jpeg_state = g_value_get_enum(value);
+            break;
+        case PROP_ZLIB_GLZ_STATE:
+            self->priv->zlib_glz_state = g_value_get_enum(value);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void dcc_init_stream_agents(DisplayChannelClient *dcc);
+
+static void
+display_channel_client_constructed(GObject *object)
+{
+    DisplayChannelClient *self = DISPLAY_CHANNEL_CLIENT(object);
+
+    G_OBJECT_CLASS(display_channel_client_parent_class)->constructed(object);
+
+    dcc_init_stream_agents(self);
+
+    image_encoders_init(&self->priv->encoders, &DCC_TO_DC(self)->priv->encoder_shared_data);
+}
+
+static void
+display_channel_client_finalize(GObject *object)
+{
+    DisplayChannelClient *self = DISPLAY_CHANNEL_CLIENT(object);
+    g_free(self->priv);
+
+    G_OBJECT_CLASS(display_channel_client_parent_class)->finalize(object);
+}
+
+static void
+display_channel_client_class_init(DisplayChannelClientClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+    object_class->get_property = display_channel_client_get_property;
+    object_class->set_property = display_channel_client_set_property;
+    object_class->constructed = display_channel_client_constructed;
+    object_class->finalize = display_channel_client_finalize;
+
+    g_object_class_install_property(object_class,
+                                    PROP_IMAGE_COMPRESSION,
+                                    g_param_spec_enum("image-compression",
+                                                      "image compression",
+                                                      "Image compression type",
+                                                      SPICE_TYPE_SPICE_IMAGE_COMPRESSION_T,
+                                                      SPICE_IMAGE_COMPRESSION_INVALID,
+                                                      G_PARAM_CONSTRUCT | G_PARAM_READWRITE |
+                                                      G_PARAM_STATIC_STRINGS));
+
+    g_object_class_install_property(object_class,
+                                    PROP_JPEG_STATE,
+                                    g_param_spec_enum("jpeg-state",
+                                                      "jpeg state",
+                                                      "JPEG compression state",
+                                                      SPICE_TYPE_SPICE_WAN_COMPRESSION_T,
+                                                      SPICE_WAN_COMPRESSION_INVALID,
+                                                      G_PARAM_CONSTRUCT | G_PARAM_READWRITE |
+                                                      G_PARAM_STATIC_STRINGS));
+
+    g_object_class_install_property(object_class,
+                                    PROP_ZLIB_GLZ_STATE,
+                                    g_param_spec_enum("zlib-glz-state",
+                                                      "zlib glz state",
+                                                      "zlib glz state",
+                                                      SPICE_TYPE_SPICE_WAN_COMPRESSION_T,
+                                                      SPICE_WAN_COMPRESSION_INVALID,
+                                                      G_PARAM_CONSTRUCT | G_PARAM_READWRITE |
+                                                      G_PARAM_STATIC_STRINGS));
+}
+
+static void display_channel_client_init(DisplayChannelClient *self)
+{
+    /* we need to allocate the private data manually here since
+     * g_type_class_add_private() doesn't support private structs larger than
+     * 64k */
+    self->priv = g_new0(DisplayChannelClientPrivate, 1);
+
+    ring_init(&self->priv->palette_cache_lru);
+    self->priv->palette_cache_available = CLIENT_PALETTE_CACHE_SIZE;
+    // todo: tune quality according to bandwidth
+    self->priv->encoders.jpeg_quality = 85;
+
+    self->priv->send_data.free_list.res =
+        spice_malloc(sizeof(SpiceResourceList) +
+                     DISPLAY_FREE_LIST_DEFAULT_SIZE * sizeof(SpiceResourceID));
+    self->priv->send_data.free_list.res_size = DISPLAY_FREE_LIST_DEFAULT_SIZE;
+}
 
 static RedSurfaceCreateItem *red_surface_create_item_new(RedChannel* channel,
                                                          uint32_t surface_id,
@@ -336,8 +478,6 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
         red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT);
 }
 
-#define DISPLAY_FREE_LIST_DEFAULT_SIZE 128
-
 DisplayChannelClient *dcc_new(DisplayChannel *display,
                               RedClient *client, RedsStream *stream,
                               int mig_target,
@@ -349,35 +489,38 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
 
 {
     DisplayChannelClient *dcc;
+    GArray *common_caps_array = NULL, *caps_array = NULL;
 
-    dcc = DISPLAY_CHANNEL_CLIENT(red_channel_client_create(
-        sizeof(DisplayChannelClient),
-        &COMMON_GRAPHICS_CHANNEL(display)->base,
-        client, stream, TRUE,
-        num_common_caps, common_caps,
-        num_caps, caps));
+    if (common_caps) {
+        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
+                                              num_common_caps);
+        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
+    }
+    if (caps) {
+        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
+        g_array_append_vals(caps_array, caps, num_caps);
+    }
 
+    dcc = g_initable_new(TYPE_DISPLAY_CHANNEL_CLIENT,
+                         NULL, NULL,
+                         "channel", display,
+                         "client", client,
+                         "stream", stream,
+                         "monitor-latency", TRUE,
+                         "common-caps", common_caps_array,
+                         "caps", caps_array,
+                         "image-compression", image_compression,
+                         "jpeg-state", jpeg_state,
+                         "zlib-glz-state", zlib_glz_state,
+                         NULL);
+    spice_info("New display (client %p) dcc %p stream %p", client, dcc, stream);
     display->common.during_target_migrate = mig_target;
     dcc->priv->id = display->common.qxl->id;
-    spice_return_val_if_fail(dcc, NULL);
-    spice_info("New display (client %p) dcc %p stream %p", client, dcc, stream);
 
-    ring_init(&dcc->priv->palette_cache_lru);
-    dcc->priv->palette_cache_available = CLIENT_PALETTE_CACHE_SIZE;
-    dcc->priv->image_compression = image_compression;
-    dcc->priv->jpeg_state = jpeg_state;
-    dcc->priv->zlib_glz_state = zlib_glz_state;
-    // TODO: tune quality according to bandwidth
-    dcc->priv->encoders.jpeg_quality = 85;
-
-    dcc->priv->send_data.free_list.res =
-        spice_malloc(sizeof(SpiceResourceList) +
-                     DISPLAY_FREE_LIST_DEFAULT_SIZE * sizeof(SpiceResourceID));
-    dcc->priv->send_data.free_list.res_size = DISPLAY_FREE_LIST_DEFAULT_SIZE;
-
-    dcc_init_stream_agents(dcc);
-
-    image_encoders_init(&dcc->priv->encoders, &display->priv->encoder_shared_data);
+    if (common_caps_array)
+        g_array_unref(common_caps_array);
+    if (caps_array)
+        g_array_unref(caps_array);
 
     return dcc;
 }

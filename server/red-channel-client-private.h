@@ -19,14 +19,14 @@
 #define _H_RED_CHANNEL_CLIENT_PRIVATE
 
 #include "red-channel.h"
+#include "red-channel-client.h"
 
 struct RedChannelClientPrivate
 {
     RedChannel *channel;
     RedClient  *client;
     RedsStream *stream;
-    int dummy;
-    int dummy_connected;
+    gboolean monitor_latency;
 
     uint32_t refs;
 

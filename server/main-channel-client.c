@@ -42,7 +42,11 @@ enum NetTestStage {
 #define CLIENT_CONNECTIVITY_TIMEOUT (MSEC_PER_SEC * 30)
 #define PING_INTERVAL (MSEC_PER_SEC * 10)
 
-typedef struct MainChannelClientPrivate MainChannelClientPrivate;
+G_DEFINE_TYPE(MainChannelClient, main_channel_client, RED_TYPE_CHANNEL_CLIENT)
+
+#define MAIN_CHANNEL_CLIENT_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_MAIN_CHANNEL_CLIENT, MainChannelClientPrivate))
+
 struct MainChannelClientPrivate {
     uint32_t connection_id;
     uint32_t ping_id;
@@ -60,12 +64,6 @@ struct MainChannelClientPrivate {
     int mig_wait_prev_try_seamless;
     int init_sent;
     int seamless_mig_dst;
-};
-
-struct MainChannelClient {
-    RedChannelClient base;
-
-    MainChannelClientPrivate priv[1];
 };
 
 typedef struct RedPingPipeItem {
@@ -125,6 +123,93 @@ typedef struct RedMultiMediaTimePipeItem {
 #define ZERO_BUF_SIZE 4096
 
 static const uint8_t zero_page[ZERO_BUF_SIZE] = {0};
+
+enum {
+    PROP0,
+    PROP_CONNECTION_ID
+};
+
+static void main_channel_client_get_property(GObject *object,
+                                             guint property_id,
+                                             GValue *value,
+                                             GParamSpec *pspec)
+{
+    MainChannelClient *self = MAIN_CHANNEL_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_CONNECTION_ID:
+            g_value_set_uint(value, self->priv->connection_id);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void main_channel_client_set_property(GObject *object,
+                                             guint property_id,
+                                             const GValue *value,
+                                             GParamSpec *pspec)
+{
+    MainChannelClient *self = MAIN_CHANNEL_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_CONNECTION_ID:
+            self->priv->connection_id = g_value_get_uint(value);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void ping_timer_cb(void *opaque);
+static void main_channel_client_constructed(GObject *object)
+{
+    G_OBJECT_CLASS(main_channel_client_parent_class)->constructed(object);
+#ifdef RED_STATISTICS
+    MainChannelClient *self = MAIN_CHANNEL_CLIENT(object);
+    RedsState *reds =
+        red_channel_get_server(red_channel_client_get_channel(RED_CHANNEL_CLIENT(object)));
+
+    self->priv->ping_timer =
+        reds_get_core_interface(reds)->timer_add(reds_get_core_interface(reds),
+                                                 ping_timer_cb, self);
+    if (!self->priv->ping_timer) {
+        spice_error("ping timer create failed");
+    }
+    self->priv->ping_interval = PING_INTERVAL;
+#endif
+}
+
+static void main_channel_client_class_init(MainChannelClientClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+    g_type_class_add_private(klass, sizeof(MainChannelClientPrivate));
+
+    object_class->get_property = main_channel_client_get_property;
+    object_class->set_property = main_channel_client_set_property;
+    object_class->constructed = main_channel_client_constructed;
+
+    g_object_class_install_property(object_class,
+                                    PROP_CONNECTION_ID,
+                                    g_param_spec_uint("connection-id",
+                                                      "Connection ID",
+                                                      "Connection ID",
+                                                      0,
+                                                      G_MAXUINT,
+                                                      0,
+                                                      G_PARAM_CONSTRUCT_ONLY |
+                                                      G_PARAM_READWRITE |
+                                                      G_PARAM_STATIC_STRINGS));
+}
+
+static void main_channel_client_init(MainChannelClient *self)
+{
+    self->priv = MAIN_CHANNEL_CLIENT_PRIVATE(self);
+    self->priv->bitrate_per_sec = ~0;
+}
 
 static int main_channel_client_push_ping(MainChannelClient *mcc, int size);
 
@@ -556,19 +641,35 @@ MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient 
                                               int num_common_caps, uint32_t *common_caps,
                                               int num_caps, uint32_t *caps)
 {
-    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(
-                             red_channel_client_create(sizeof(MainChannelClient), &main_chan->base,
-                                                       client, stream, FALSE, num_common_caps,
-                                                       common_caps, num_caps, caps));
-    spice_assert(mcc != NULL);
-    mcc->priv->connection_id = connection_id;
-    mcc->priv->bitrate_per_sec = ~0;
-#ifdef RED_STATISTICS
-    if (!(mcc->priv->ping_timer = reds_core_timer_add(red_channel_get_server(&main_chan->base), ping_timer_cb, mcc))) {
-        spice_error("ping timer create failed");
+    MainChannelClient *mcc;
+    GArray *common_caps_array = NULL, *caps_array = NULL;
+
+    if (common_caps) {
+        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
+                                              num_common_caps);
+        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
     }
-    mcc->priv->ping_interval = PING_INTERVAL;
-#endif
+    if (caps) {
+        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
+        g_array_append_vals(caps_array, caps, num_caps);
+    }
+
+    mcc = g_initable_new(TYPE_MAIN_CHANNEL_CLIENT,
+                         NULL, NULL,
+                         "channel", RED_CHANNEL(main_chan),
+                         "client", client,
+                         "stream", stream,
+                         "monitor-latency", FALSE,
+                         "caps", caps_array,
+                         "common-caps", common_caps_array,
+                         "connection-id", connection_id,
+                         NULL);
+
+    if (caps_array)
+        g_array_unref(caps_array);
+    if (common_caps_array)
+        g_array_unref(common_caps_array);
+
     return mcc;
 }
 

@@ -500,13 +500,12 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
 
     SmartCardChannelClient *scc;
 
-    scc = SMARTCARD_CHANNEL_CLIENT(red_channel_client_create(sizeof(SmartCardChannelClient),
-                                                             channel,
-                                                             client,
-                                                             stream,
-                                                             FALSE,
-                                                             num_common_caps, common_caps,
-                                                             num_caps, caps));
+    scc = smartcard_channel_client_create(channel,
+                                          client,
+                                          stream,
+                                          FALSE,
+                                          num_common_caps, common_caps,
+                                          num_caps, caps);
 
     if (!scc) {
         return;
@@ -564,9 +563,6 @@ red_char_device_smartcard_finalize(GObject *object)
     RedCharDeviceSmartcard *self = RED_CHAR_DEVICE_SMARTCARD(object);
 
     free(self->priv->buf);
-    if (self->priv->scc) {
-        smartcard_channel_client_set_char_device(self->priv->scc, NULL);
-    }
 
     G_OBJECT_CLASS(red_char_device_smartcard_parent_class)->finalize(object);
 }

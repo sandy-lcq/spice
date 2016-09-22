@@ -20,11 +20,122 @@
 
 #include "smartcard-channel-client.h"
 
+G_DEFINE_TYPE(SmartCardChannelClient, smart_card_channel_client, RED_TYPE_CHANNEL_CLIENT)
+
+#define SMARTCARD_CHANNEL_CLIENT_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_SMARTCARD_CHANNEL_CLIENT, \
+                                 SmartCardChannelClientPrivate))
+
+struct SmartCardChannelClientPrivate
+{
+    RedCharDeviceSmartcard *smartcard;
+
+    /* read_from_client/write_to_device buffer.
+     * The beginning of the buffer should always be VSCMsgHeader*/
+    RedCharDeviceWriteBuffer *write_buf;
+    int msg_in_write_buf; /* was the client msg received into a RedCharDeviceWriteBuffer
+                           * or was it explicitly malloced */
+};
+
 typedef struct RedErrorItem {
     RedPipeItem base;
     VSCMsgHeader vheader;
     VSCMsgError  error;
 } RedErrorItem;
+
+static void smart_card_channel_client_get_property(GObject *object,
+                                                   guint property_id,
+                                                   GValue *value,
+                                                   GParamSpec *pspec)
+{
+    switch (property_id)
+    {
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void smart_card_channel_client_set_property(GObject *object,
+                                                   guint property_id,
+                                                   const GValue *value,
+                                                   GParamSpec *pspec)
+{
+    switch (property_id)
+    {
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void smart_card_channel_client_dispose(GObject *object)
+{
+    G_OBJECT_CLASS(smart_card_channel_client_parent_class)->dispose(object);
+}
+
+static void smart_card_channel_client_finalize(GObject *object)
+{
+    SmartCardChannelClient *self = SMARTCARD_CHANNEL_CLIENT(object);
+
+    if (self->priv->smartcard)
+        g_object_remove_weak_pointer(G_OBJECT(self->priv->smartcard),
+                                     (gpointer*)&self->priv->smartcard);
+    G_OBJECT_CLASS(smart_card_channel_client_parent_class)->finalize(object);
+}
+
+static void smart_card_channel_client_class_init(SmartCardChannelClientClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+    g_type_class_add_private(klass, sizeof(SmartCardChannelClientPrivate));
+
+    object_class->get_property = smart_card_channel_client_get_property;
+    object_class->set_property = smart_card_channel_client_set_property;
+    object_class->dispose = smart_card_channel_client_dispose;
+    object_class->finalize = smart_card_channel_client_finalize;
+}
+
+static void
+smart_card_channel_client_init(SmartCardChannelClient *self)
+{
+    self->priv = SMARTCARD_CHANNEL_CLIENT_PRIVATE(self);
+}
+
+SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
+                                                        RedClient *client, RedsStream *stream,
+                                                        int monitor_latency,
+                                                        int num_common_caps, uint32_t *common_caps,
+                                                        int num_caps, uint32_t *caps)
+{
+    SmartCardChannelClient *rcc;
+    GArray *common_caps_array = NULL, *caps_array = NULL;
+
+    if (common_caps) {
+        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
+                                              num_common_caps);
+        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
+    }
+    if (caps) {
+        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
+        g_array_append_vals(caps_array, caps, num_caps);
+    }
+
+    rcc = g_initable_new(RED_TYPE_CHANNEL_CLIENT,
+                         NULL, NULL,
+                         "channel", channel,
+                         "client", client,
+                         "stream", stream,
+                         "monitor-latency", monitor_latency,
+                         "caps", caps_array,
+                         "common-caps", common_caps_array,
+                         NULL);
+
+    if (caps_array)
+        g_array_unref(caps_array);
+    if (common_caps_array)
+        g_array_unref(common_caps_array);
+
+    return rcc;
+}
 
 uint8_t *smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                     uint16_t type,
@@ -290,7 +401,14 @@ void smartcard_channel_client_set_char_device(SmartCardChannelClient *scc,
         return;
     }
 
+    if (scc->priv->smartcard) {
+        g_object_remove_weak_pointer(G_OBJECT(scc->priv->smartcard),
+                                     (gpointer*)&scc->priv->smartcard);
+    }
+
     scc->priv->smartcard = device;
+    g_object_add_weak_pointer(G_OBJECT(scc->priv->smartcard),
+                              (gpointer*)&scc->priv->smartcard);
 }
 
 RedCharDeviceSmartcard* smartcard_channel_client_get_char_device(SmartCardChannelClient *scc)

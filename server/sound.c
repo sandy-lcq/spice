@@ -31,6 +31,7 @@
 
 #include "spice.h"
 #include "red-common.h"
+#include "dummy-channel-client.h"
 #include "main-channel.h"
 #include "reds.h"
 #include "red-qxl.h"
@@ -976,11 +977,9 @@ static SndChannel *__new_channel(SndWorker *worker, int size, uint32_t channel_i
     channel->on_message_done = on_message_done;
     channel->cleanup = cleanup;
 
-    channel->channel_client = red_channel_client_create_dummy(sizeof(RedChannelClient),
-                                                              worker->base_channel,
-                                                              client,
-                                                              num_common_caps, common_caps,
-                                                              num_caps, caps);
+    channel->channel_client =
+        dummy_channel_client_create(worker->base_channel, client,
+                                    num_common_caps, common_caps, num_caps, caps);
     if (!channel->channel_client) {
         goto error2;
     }

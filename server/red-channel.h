@@ -27,25 +27,12 @@
 #include <common/ring.h>
 #include <common/marshaller.h>
 
+#include "demarshallers.h"
 #include "spice.h"
 #include "red-common.h"
-#include "demarshallers.h"
 #include "reds-stream.h"
 #include "stat.h"
 #include "red-pipe-item.h"
-
-#define MAX_SEND_BUFS 1000
-#define CLIENT_ACK_WINDOW 20
-
-#ifndef IOV_MAX
-#define IOV_MAX 1024
-#endif
-
-#define MAX_HEADER_SIZE sizeof(SpiceDataHeader)
-
-/* Basic interface for channels, without using the RedChannel interface.
-   The intention is to move towards one channel interface gradually.
-   At the final stage, this interface shouldn't be exposed. Only RedChannel will use it. */
 
 typedef struct SpiceDataHeaderOpaque SpiceDataHeaderOpaque;
 
@@ -104,28 +91,12 @@ typedef struct OutgoingHandlerInterface {
     on_outgoing_msg_done_proc on_msg_done;
     on_output_proc on_output;
 } OutgoingHandlerInterface;
-
 /* Red Channel interface */
 
 typedef struct RedChannel RedChannel;
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;
 typedef struct MainChannelClient MainChannelClient;
-
-/* Messages handled by red_channel
- * SET_ACK - sent to client on channel connection
- * Note that the numbers don't have to correspond to spice message types,
- * but we keep the 100 first allocated for base channel approach.
- * */
-enum {
-    RED_PIPE_ITEM_TYPE_SET_ACK=1,
-    RED_PIPE_ITEM_TYPE_MIGRATE,
-    RED_PIPE_ITEM_TYPE_EMPTY_MSG,
-    RED_PIPE_ITEM_TYPE_PING,
-    RED_PIPE_ITEM_TYPE_MARKER,
-
-    RED_PIPE_ITEM_TYPE_CHANNEL_BASE=101,
-};
 
 typedef uint8_t *(*channel_alloc_msg_recv_buf_proc)(RedChannelClient *channel,
                                                     uint16_t type, uint32_t size);

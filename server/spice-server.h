@@ -72,6 +72,22 @@ int spice_server_add_interface(SpiceServer *s,
  */
 int spice_server_remove_interface(SpiceBaseInstance *sin);
 
+/* XXX This definition is here only to make glib generation
+ * of enumerators possible
+ */
+#if 0
+typedef enum {
+    SPICE_IMAGE_COMPRESSION_INVALID  = 0,
+    SPICE_IMAGE_COMPRESSION_OFF      = 1,
+    SPICE_IMAGE_COMPRESSION_AUTO_GLZ = 2,
+    SPICE_IMAGE_COMPRESSION_AUTO_LZ  = 3,
+    SPICE_IMAGE_COMPRESSION_QUIC     = 4,
+    SPICE_IMAGE_COMPRESSION_GLZ      = 5,
+    SPICE_IMAGE_COMPRESSION_LZ       = 6,
+    SPICE_IMAGE_COMPRESSION_LZ4      = 7,
+} spice_image_compression_t;
+#endif
+
 // Needed for backward API compatibility
 typedef SpiceImageCompression spice_image_compression_t;
 #define SPICE_IMAGE_COMPRESS_INVALID SPICE_IMAGE_COMPRESSION_INVALID

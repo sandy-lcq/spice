@@ -37,6 +37,32 @@
 #include "red-channel-client-private.h"
 #include "red-channel.h"
 
+static const SpiceDataHeaderOpaque full_header_wrapper;
+static const SpiceDataHeaderOpaque mini_header_wrapper;
+static void red_channel_client_destroy_remote_caps(RedChannelClient* rcc);
+static void red_channel_client_initable_interface_init(GInitableIface *iface);
+
+G_DEFINE_TYPE_WITH_CODE(RedChannelClient, red_channel_client, G_TYPE_OBJECT,
+                        G_IMPLEMENT_INTERFACE(G_TYPE_INITABLE,
+                                              red_channel_client_initable_interface_init))
+
+#define CHANNEL_CLIENT_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE((o), RED_TYPE_CHANNEL_CLIENT, RedChannelClientPrivate))
+
+static gboolean red_channel_client_initable_init(GInitable *initable,
+                                                 GCancellable *cancellable,
+                                                 GError **error);
+
+enum {
+    PROP0,
+    PROP_STREAM,
+    PROP_CHANNEL,
+    PROP_CLIENT,
+    PROP_MONITOR_LATENCY,
+    PROP_COMMON_CAPS,
+    PROP_CAPS
+};
+
 #define PING_TEST_TIMEOUT_MS (MSEC_PER_SEC * 15)
 #define PING_TEST_IDLE_NET_TIMEOUT_MS (MSEC_PER_SEC / 10)
 
@@ -100,6 +126,226 @@ static void red_channel_client_restart_ping_timer(RedChannelClient *rcc)
     }
 
     red_channel_client_start_ping_timer(rcc, timeout);
+}
+
+static void
+red_channel_client_get_property(GObject *object,
+                                guint property_id,
+                                GValue *value,
+                                GParamSpec *pspec)
+{
+    RedChannelClient *self = RED_CHANNEL_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_STREAM:
+            g_value_set_pointer(value, self->priv->stream);
+            break;
+        case PROP_CHANNEL:
+            g_value_set_pointer(value, self->priv->channel);
+            break;
+        case PROP_CLIENT:
+            g_value_set_pointer(value, self->priv->client);
+            break;
+        case PROP_MONITOR_LATENCY:
+            g_value_set_boolean(value, self->priv->monitor_latency);
+            break;
+        case PROP_COMMON_CAPS:
+            {
+                GArray *arr = g_array_sized_new(FALSE, FALSE,
+                                                sizeof(*self->priv->remote_caps.common_caps),
+                                                self->priv->remote_caps.num_common_caps);
+                g_value_take_boxed(value, arr);
+            }
+            break;
+        case PROP_CAPS:
+            {
+                GArray *arr = g_array_sized_new(FALSE, FALSE,
+                                                sizeof(*self->priv->remote_caps.caps),
+                                                self->priv->remote_caps.num_caps);
+                g_value_take_boxed(value, arr);
+            }
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+red_channel_client_set_property(GObject *object,
+                                guint property_id,
+                                const GValue *value,
+                                GParamSpec *pspec)
+{
+    RedChannelClient *self = RED_CHANNEL_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_STREAM:
+            self->priv->stream = g_value_get_pointer(value);
+            break;
+        case PROP_CHANNEL:
+            if (self->priv->channel)
+                red_channel_unref(self->priv->channel);
+            self->priv->channel = g_value_get_pointer(value);
+            if (self->priv->channel)
+                red_channel_ref(self->priv->channel);
+            break;
+        case PROP_CLIENT:
+            self->priv->client = g_value_get_pointer(value);
+            break;
+        case PROP_MONITOR_LATENCY:
+            self->priv->monitor_latency = g_value_get_boolean(value);
+            break;
+        case PROP_COMMON_CAPS:
+            {
+                GArray *caps = g_value_get_boxed(value);
+                if (caps) {
+                    self->priv->remote_caps.num_common_caps = caps->len;
+                    free(self->priv->remote_caps.common_caps);
+                    self->priv->remote_caps.common_caps =
+                        spice_memdup(caps->data, caps->len * sizeof(uint32_t));
+                }
+            }
+            break;
+        case PROP_CAPS:
+            {
+                GArray *caps = g_value_get_boxed(value);
+                if (caps) {
+                    self->priv->remote_caps.num_caps = caps->len;
+                    free(self->priv->remote_caps.caps);
+                    self->priv->remote_caps.caps =
+                        spice_memdup(caps->data, caps->len * sizeof(uint32_t));
+                }
+            }
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+red_channel_client_finalize(GObject *object)
+{
+    RedChannelClient *self = RED_CHANNEL_CLIENT(object);
+
+    reds_stream_free(self->priv->stream);
+    self->priv->stream = NULL;
+
+    if (self->priv->send_data.main.marshaller) {
+        spice_marshaller_destroy(self->priv->send_data.main.marshaller);
+    }
+
+    if (self->priv->send_data.urgent.marshaller) {
+        spice_marshaller_destroy(self->priv->send_data.urgent.marshaller);
+    }
+
+    red_channel_client_destroy_remote_caps(self);
+    if (self->priv->channel) {
+        red_channel_unref(self->priv->channel);
+    }
+
+    G_OBJECT_CLASS(red_channel_client_parent_class)->finalize(object);
+}
+
+static void red_channel_client_initable_interface_init(GInitableIface *iface)
+{
+    iface->init = red_channel_client_initable_init;
+}
+
+static gboolean red_channel_client_default_is_connected(RedChannelClient *rcc);
+static void red_channel_client_default_disconnect(RedChannelClient *rcc);
+
+
+static void red_channel_client_constructed(GObject *object)
+{
+    RedChannelClient *self =  RED_CHANNEL_CLIENT(object);
+
+    if (red_channel_client_test_remote_common_cap(self, SPICE_COMMON_CAP_MINI_HEADER)) {
+        self->incoming.header = mini_header_wrapper;
+        self->priv->send_data.header = mini_header_wrapper;
+        self->priv->is_mini_header = TRUE;
+    } else {
+        self->incoming.header = full_header_wrapper;
+        self->priv->send_data.header = full_header_wrapper;
+        self->priv->is_mini_header = FALSE;
+    }
+}
+
+static void red_channel_client_class_init(RedChannelClientClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    GParamSpec *spec;
+
+    g_debug("%s", G_STRFUNC);
+    g_type_class_add_private(klass, sizeof(RedChannelClientPrivate));
+
+    object_class->get_property = red_channel_client_get_property;
+    object_class->set_property = red_channel_client_set_property;
+    object_class->finalize = red_channel_client_finalize;
+    object_class->constructed = red_channel_client_constructed;
+
+    klass->is_connected = red_channel_client_default_is_connected;
+    klass->disconnect = red_channel_client_default_disconnect;
+
+    spec = g_param_spec_pointer("stream", "stream",
+                                "Associated RedStream",
+                                G_PARAM_STATIC_STRINGS
+                                | G_PARAM_READWRITE
+                                | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, PROP_STREAM, spec);
+
+    spec = g_param_spec_pointer("channel", "channel",
+                                "Associated RedChannel",
+                                G_PARAM_STATIC_STRINGS
+                                | G_PARAM_READWRITE
+                                | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, PROP_CHANNEL, spec);
+
+    spec = g_param_spec_pointer("client", "client",
+                                "Associated RedClient",
+                                G_PARAM_STATIC_STRINGS
+                                | G_PARAM_READWRITE
+                                | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, PROP_CLIENT, spec);
+
+    spec = g_param_spec_boolean("monitor-latency", "monitor-latency",
+                                "Whether to monitor latency for this client",
+                                FALSE,
+                                G_PARAM_STATIC_STRINGS
+                                | G_PARAM_READWRITE
+                                | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, PROP_MONITOR_LATENCY, spec);
+
+    spec = g_param_spec_boxed("common-caps", "common-caps",
+                              "Common Capabilities",
+                              G_TYPE_ARRAY,
+                              G_PARAM_STATIC_STRINGS
+                              | G_PARAM_READWRITE
+                              | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, PROP_COMMON_CAPS, spec);
+
+    spec = g_param_spec_boxed("caps", "caps",
+                              "Capabilities",
+                              G_TYPE_ARRAY,
+                              G_PARAM_STATIC_STRINGS
+                              | G_PARAM_READWRITE
+                              | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, PROP_CAPS, spec);
+}
+
+static void
+red_channel_client_init(RedChannelClient *self)
+{
+    self->priv = CHANNEL_CLIENT_PRIVATE(self);
+    // blocks send message (maybe use send_data.blocked + block flags)
+    self->priv->ack_data.messages_window = ~0;
+    self->priv->ack_data.client_generation = ~0;
+    self->priv->ack_data.client_window = CLIENT_ACK_WINDOW;
+    self->priv->send_data.main.marshaller = spice_marshaller_new();
+    self->priv->send_data.urgent.marshaller = spice_marshaller_new();
+
+    self->priv->send_data.marshaller = self->priv->send_data.main.marshaller;
 }
 
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
@@ -336,19 +582,6 @@ static gboolean red_channel_client_pipe_remove(RedChannelClient *rcc, RedPipeIte
     return g_queue_remove(&rcc->priv->pipe, item);
 }
 
-static void red_channel_client_set_remote_caps(RedChannelClient* rcc,
-                                               int num_common_caps, uint32_t *common_caps,
-                                               int num_caps, uint32_t *caps)
-{
-    rcc->priv->remote_caps.num_common_caps = num_common_caps;
-    rcc->priv->remote_caps.common_caps = spice_memdup(common_caps,
-                                                      num_common_caps *
-                                                      sizeof(uint32_t));
-
-    rcc->priv->remote_caps.num_caps = num_caps;
-    rcc->priv->remote_caps.caps = spice_memdup(caps, num_caps * sizeof(uint32_t));
-}
-
 static void red_channel_client_destroy_remote_caps(RedChannelClient* rcc)
 {
     rcc->priv->remote_caps.num_common_caps = 0;
@@ -510,14 +743,14 @@ static void red_channel_client_event(int fd, int event, void *data)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(data);
 
-    red_channel_client_ref(rcc);
+    g_object_ref(rcc);
     if (event & SPICE_WATCH_EVENT_READ) {
         red_channel_client_receive(rcc);
     }
     if (event & SPICE_WATCH_EVENT_WRITE) {
         red_channel_client_push(rcc);
     }
-    red_channel_client_unref(rcc);
+    g_object_unref(rcc);
 }
 
 static uint32_t full_header_get_msg_size(SpiceDataHeaderOpaque *header)
@@ -606,129 +839,108 @@ static int red_channel_client_pre_create_validate(RedChannel *channel, RedClient
     return TRUE;
 }
 
-RedChannelClient *red_channel_client_create(int size, RedChannel *channel, RedClient  *client,
+static gboolean red_channel_client_initable_init(GInitable *initable,
+                                                 GCancellable *cancellable,
+                                                 GError **error)
+{
+    GError *local_error = NULL;
+    RedChannelClient *self = RED_CHANNEL_CLIENT(initable);
+    pthread_mutex_lock(&self->priv->client->lock);
+    if (!red_channel_client_pre_create_validate(self->priv->channel, self->priv->client)) {
+        g_set_error(&local_error,
+                    SPICE_SERVER_ERROR,
+                    SPICE_SERVER_ERROR_FAILED,
+                    "Client %p: duplicate channel type %d id %d",
+                    self->priv->client, self->priv->channel->type,
+                    self->priv->channel->id);
+        goto cleanup;
+    }
+
+    if (self->priv->monitor_latency
+        && reds_stream_get_family(self->priv->stream) != AF_UNIX) {
+        self->priv->latency_monitor.timer =
+            self->priv->channel->core->timer_add(self->priv->channel->core,
+                                                 red_channel_client_ping_timer,
+                                                 self);
+
+        if (!self->priv->client->during_target_migrate) {
+            red_channel_client_start_ping_timer(self,
+                                                PING_TEST_IDLE_NET_TIMEOUT_MS);
+        }
+        self->priv->latency_monitor.roundtrip = -1;
+    }
+
+    self->incoming.opaque = self;
+    self->incoming.cb = &self->priv->channel->incoming_cb;
+    self->incoming.header.data = self->incoming.header_buf;
+
+    self->outgoing.opaque = self;
+    self->outgoing.cb = &self->priv->channel->outgoing_cb;
+    self->outgoing.pos = 0;
+    self->outgoing.size = 0;
+
+    g_queue_init(&self->priv->pipe);
+    if (self->priv->stream)
+        self->priv->stream->watch =
+            self->priv->channel->core->watch_add(self->priv->channel->core,
+                                                 self->priv->stream->socket,
+                                                 SPICE_WATCH_EVENT_READ,
+                                                 red_channel_client_event,
+                                                 self);
+    self->priv->id = g_list_length(self->priv->channel->clients);
+    red_channel_add_client(self->priv->channel, self);
+    red_client_add_channel(self->priv->client, self);
+
+    if (!self->priv->channel->channel_cbs.config_socket(self)) {
+        g_set_error_literal(&local_error,
+                            SPICE_SERVER_ERROR,
+                            SPICE_SERVER_ERROR_FAILED,
+                            "Unable to configure socket");
+    }
+
+cleanup:
+    pthread_mutex_unlock(&self->priv->client->lock);
+    if (local_error) {
+        g_warning("Failed to create channel client: %s", local_error->message);
+        g_propagate_error(error, local_error);
+    }
+    return local_error == NULL;
+}
+
+RedChannelClient *red_channel_client_create(RedChannel *channel, RedClient *client,
                                             RedsStream *stream,
                                             int monitor_latency,
                                             int num_common_caps, uint32_t *common_caps,
                                             int num_caps, uint32_t *caps)
 {
-    RedChannelClient *rcc = NULL;
+    RedChannelClient *rcc;
+    GArray *common_caps_array = NULL, *caps_array = NULL;
 
-    pthread_mutex_lock(&client->lock);
-    if (!red_channel_client_pre_create_validate(channel, client)) {
-        goto error;
+    if (common_caps) {
+        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
+                                              num_common_caps);
+        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
     }
-    spice_assert(stream && channel && size >= sizeof(RedChannelClient));
-    rcc = spice_malloc0(size);
-    rcc->priv->stream = stream;
-    rcc->priv->channel = channel;
-    rcc->priv->client = client;
-    rcc->priv->refs = 1;
-    rcc->priv->ack_data.messages_window = ~0;  // blocks send message (maybe use send_data.blocked +
-                                               // block flags)
-    rcc->priv->ack_data.client_generation = ~0;
-    rcc->priv->ack_data.client_window = CLIENT_ACK_WINDOW;
-    rcc->priv->send_data.main.marshaller = spice_marshaller_new();
-    rcc->priv->send_data.urgent.marshaller = spice_marshaller_new();
-
-    rcc->priv->send_data.marshaller = rcc->priv->send_data.main.marshaller;
-
-    rcc->incoming.opaque = rcc;
-    rcc->incoming.cb = &channel->incoming_cb;
-
-    rcc->outgoing.opaque = rcc;
-    rcc->outgoing.cb = &channel->outgoing_cb;
-    rcc->outgoing.pos = 0;
-    rcc->outgoing.size = 0;
-
-    red_channel_client_set_remote_caps(rcc, num_common_caps, common_caps, num_caps, caps);
-    if (red_channel_client_test_remote_common_cap(rcc, SPICE_COMMON_CAP_MINI_HEADER)) {
-        rcc->incoming.header = mini_header_wrapper;
-        rcc->priv->send_data.header = mini_header_wrapper;
-        rcc->priv->is_mini_header = TRUE;
-    } else {
-        rcc->incoming.header = full_header_wrapper;
-        rcc->priv->send_data.header = full_header_wrapper;
-        rcc->priv->is_mini_header = FALSE;
+    if (caps) {
+        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
+        g_array_append_vals(caps_array, caps, num_caps);
     }
+    rcc = g_initable_new(RED_TYPE_CHANNEL_CLIENT,
+                         NULL, NULL,
+                         "channel", channel,
+                         "client", client,
+                         "stream", stream,
+                         "monitor-latency", monitor_latency,
+                         "caps", caps_array,
+                         "common-caps", common_caps_array,
+                         NULL);
 
-    rcc->incoming.header.data = rcc->incoming.header_buf;
-
-    if (!channel->channel_cbs.config_socket(rcc)) {
-        goto error;
-    }
-
-    g_queue_init(&rcc->priv->pipe);
-
-    stream->watch = channel->core->watch_add(channel->core,
-                                           stream->socket,
-                                           SPICE_WATCH_EVENT_READ,
-                                           red_channel_client_event, rcc);
-    rcc->priv->id = g_list_length(channel->clients);
-    red_channel_add_client(channel, rcc);
-    red_client_add_channel(client, rcc);
-    red_channel_ref(channel);
-    pthread_mutex_unlock(&client->lock);
-
-    if (monitor_latency && reds_stream_get_family(stream) != AF_UNIX) {
-        rcc->priv->latency_monitor.timer = channel->core->timer_add(
-            channel->core, red_channel_client_ping_timer, rcc);
-        if (!client->during_target_migrate) {
-            red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
-        }
-        rcc->priv->latency_monitor.roundtrip = -1;
-    }
+    if (caps_array)
+        g_array_unref(caps_array);
+    if (common_caps_array)
+        g_array_unref(common_caps_array);
 
     return rcc;
-error:
-    free(rcc);
-    reds_stream_free(stream);
-    pthread_mutex_unlock(&client->lock);
-    return NULL;
-}
-
-RedChannelClient *red_channel_client_create_dummy(int size,
-                                                  RedChannel *channel,
-                                                  RedClient  *client,
-                                                  int num_common_caps, uint32_t *common_caps,
-                                                  int num_caps, uint32_t *caps)
-{
-    RedChannelClient *rcc = NULL;
-
-    spice_assert(size >= sizeof(RedChannelClient));
-
-    pthread_mutex_lock(&client->lock);
-    if (!red_channel_client_pre_create_validate(channel, client)) {
-        goto error;
-    }
-    rcc = spice_malloc0(size);
-    rcc->priv->refs = 1;
-    rcc->priv->client = client;
-    rcc->priv->channel = channel;
-    red_channel_ref(channel);
-    red_channel_client_set_remote_caps(rcc, num_common_caps, common_caps, num_caps, caps);
-    if (red_channel_client_test_remote_common_cap(rcc, SPICE_COMMON_CAP_MINI_HEADER)) {
-        rcc->incoming.header = mini_header_wrapper;
-        rcc->priv->send_data.header = mini_header_wrapper;
-        rcc->priv->is_mini_header = TRUE;
-    } else {
-        rcc->incoming.header = full_header_wrapper;
-        rcc->priv->send_data.header = full_header_wrapper;
-        rcc->priv->is_mini_header = FALSE;
-    }
-
-    rcc->incoming.header.data = rcc->incoming.header_buf;
-    g_queue_init(&rcc->priv->pipe);
-
-    rcc->priv->dummy = TRUE;
-    rcc->priv->dummy_connected = TRUE;
-    red_channel_add_client(channel, rcc);
-    red_client_add_channel(client, rcc);
-    pthread_mutex_unlock(&client->lock);
-    return rcc;
-error:
-    pthread_mutex_unlock(&client->lock);
-    return NULL;
 }
 
 static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
@@ -772,43 +984,12 @@ void red_channel_client_default_migrate(RedChannelClient *rcc)
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MIGRATE);
 }
 
-void red_channel_client_ref(RedChannelClient *rcc)
-{
-    rcc->priv->refs++;
-}
-
-void red_channel_client_unref(RedChannelClient *rcc)
-{
-    if (--rcc->priv->refs != 0) {
-        return;
-    }
-
-    spice_debug("destroy rcc=%p", rcc);
-
-    reds_stream_free(rcc->priv->stream);
-    rcc->priv->stream = NULL;
-
-    if (rcc->priv->send_data.main.marshaller) {
-        spice_marshaller_destroy(rcc->priv->send_data.main.marshaller);
-    }
-
-    if (rcc->priv->send_data.urgent.marshaller) {
-        spice_marshaller_destroy(rcc->priv->send_data.urgent.marshaller);
-    }
-
-    red_channel_client_destroy_remote_caps(rcc);
-    if (rcc->priv->channel) {
-        red_channel_unref(rcc->priv->channel);
-    }
-    free(rcc);
-}
-
 void red_channel_client_destroy(RedChannelClient *rcc)
 {
     rcc->priv->destroying = TRUE;
     red_channel_client_disconnect(rcc);
     red_client_remove_channel(rcc);
-    red_channel_client_unref(rcc);
+    g_object_unref(rcc);
 }
 
 void red_channel_client_shutdown(RedChannelClient *rcc)
@@ -1000,16 +1181,16 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
 
 void red_channel_client_receive(RedChannelClient *rcc)
 {
-    red_channel_client_ref(rcc);
+    g_object_ref(rcc);
     red_peer_handle_incoming(rcc->priv->stream, &rcc->incoming);
-    red_channel_client_unref(rcc);
+    g_object_unref(rcc);
 }
 
 void red_channel_client_send(RedChannelClient *rcc)
 {
-    red_channel_client_ref(rcc);
+    g_object_ref(rcc);
     red_peer_handle_outgoing(rcc->priv->stream, &rcc->outgoing);
-    red_channel_client_unref(rcc);
+    g_object_unref(rcc);
 }
 
 static inline RedPipeItem *red_channel_client_pipe_item_get(RedChannelClient *rcc)
@@ -1030,7 +1211,7 @@ void red_channel_client_push(RedChannelClient *rcc)
     } else {
         return;
     }
-    red_channel_client_ref(rcc);
+    g_object_ref(rcc);
     if (rcc->priv->send_data.blocked) {
         red_channel_client_send(rcc);
     }
@@ -1049,7 +1230,7 @@ void red_channel_client_push(RedChannelClient *rcc)
                                                     SPICE_WATCH_EVENT_READ);
     }
     rcc->priv->during_send = FALSE;
-    red_channel_client_unref(rcc);
+    g_object_unref(rcc);
 }
 
 int red_channel_client_get_roundtrip_ms(RedChannelClient *rcc)
@@ -1377,14 +1558,18 @@ gboolean red_channel_client_is_mini_header(RedChannelClient *rcc)
     return rcc->priv->is_mini_header;
 }
 
-int red_channel_client_is_connected(RedChannelClient *rcc)
+static gboolean red_channel_client_default_is_connected(RedChannelClient *rcc)
 {
-    if (!rcc->priv->dummy) {
-        return rcc->priv->channel
-            && (g_list_find(rcc->priv->channel->clients, rcc) != NULL);
-    } else {
-        return rcc->priv->dummy_connected;
-    }
+    return rcc->priv->channel
+        && (g_list_find(rcc->priv->channel->clients, rcc) != NULL);
+}
+
+gboolean red_channel_client_is_connected(RedChannelClient *rcc)
+{
+    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
+
+    g_return_val_if_fail(klass->is_connected != NULL, FALSE);
+    return klass->is_connected(rcc);
 }
 
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc)
@@ -1424,27 +1609,10 @@ void red_channel_client_push_set_ack(RedChannelClient *rcc)
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SET_ACK);
 }
 
-static void red_channel_client_disconnect_dummy(RedChannelClient *rcc)
-{
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    GList *link;
-    spice_assert(rcc->priv->dummy);
-    if (channel && (link = g_list_find(channel->clients, rcc))) {
-        spice_printerr("rcc=%p (channel=%p type=%d id=%d)", rcc, channel,
-                       channel->type, channel->id);
-        red_channel_remove_client(channel, link->data);
-    }
-    rcc->priv->dummy_connected = FALSE;
-}
-
-void red_channel_client_disconnect(RedChannelClient *rcc)
+static void red_channel_client_default_disconnect(RedChannelClient *rcc)
 {
     RedChannel *channel = rcc->priv->channel;
 
-    if (rcc->priv->dummy) {
-        red_channel_client_disconnect_dummy(rcc);
-        return;
-    }
     if (!red_channel_client_is_connected(rcc)) {
         return;
     }
@@ -1465,6 +1633,14 @@ void red_channel_client_disconnect(RedChannelClient *rcc)
     }
     red_channel_remove_client(channel, rcc);
     channel->channel_cbs.on_disconnect(rcc);
+}
+
+void red_channel_client_disconnect(RedChannelClient *rcc)
+{
+    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
+
+    g_return_if_fail(klass->is_connected != NULL);
+    klass->disconnect(rcc);
 }
 
 int red_channel_client_is_blocked(RedChannelClient *rcc)
@@ -1643,4 +1819,9 @@ void red_channel_client_set_destroying(RedChannelClient *rcc)
 gboolean red_channel_client_is_destroying(RedChannelClient *rcc)
 {
     return rcc->priv->destroying;
+}
+
+GQuark spice_server_error_quark(void)
+{
+    return g_quark_from_static_string("spice-server-error-quark");
 }

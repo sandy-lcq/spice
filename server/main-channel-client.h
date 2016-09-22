@@ -17,11 +17,46 @@
 #ifndef __MAIN_CHANNEL_CLIENT_H__
 #define __MAIN_CHANNEL_CLIENT_H__
 
-#include "red-channel.h"
+#include <glib-object.h>
+#include <common/messages.h>
+
+#include "red-channel-client.h"
+
+G_BEGIN_DECLS
 
 /* FIXME: remove extra MainChannel typedef when possible */
 typedef struct MainChannel MainChannel;
+
+#define TYPE_MAIN_CHANNEL_CLIENT main_channel_client_get_type()
+
+#define MAIN_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_MAIN_CHANNEL_CLIENT, MainChannelClient))
+#define MAIN_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_MAIN_CHANNEL_CLIENT, MainChannelClientClass))
+#define IS_MAIN_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_MAIN_CHANNEL_CLIENT))
+#define IS_MAIN_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_MAIN_CHANNEL_CLIENT))
+#define MAIN_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_MAIN_CHANNEL_CLIENT, MainChannelClientClass))
+
 typedef struct MainChannelClient MainChannelClient;
+typedef struct MainChannelClientClass MainChannelClientClass;
+typedef struct MainChannelClientPrivate MainChannelClientPrivate;
+
+struct MainChannelClient
+{
+    RedChannelClient parent;
+
+    MainChannelClientPrivate *priv;
+};
+
+struct MainChannelClientClass
+{
+    RedChannelClientClass parent_class;
+};
+
+GType main_channel_client_get_type(void) G_GNUC_CONST;
 
 MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient *client,
                                               RedsStream *stream, uint32_t connection_id,
@@ -105,6 +140,6 @@ typedef struct MainMultiMediaTimeItemInfo {
 RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
                                             void *data, int num);
 
-#define MAIN_CHANNEL_CLIENT(rcc) ((MainChannelClient*)rcc)
+G_END_DECLS
 
 #endif /* __MAIN_CHANNEL_CLIENT_H__ */

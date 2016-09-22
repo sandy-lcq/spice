@@ -19,22 +19,30 @@
 #endif
 
 #include "inputs-channel-client.h"
-#include "inputs-channel.h"
 #include "migration-protocol.h"
 #include "red-channel-client.h"
 
-typedef struct InputsChannelClientPrivate InputsChannelClientPrivate;
+G_DEFINE_TYPE(InputsChannelClient, inputs_channel_client, RED_TYPE_CHANNEL_CLIENT)
+
+#define INPUTS_CHANNEL_CLIENT_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_INPUTS_CHANNEL_CLIENT, InputsChannelClientPrivate))
+
 struct InputsChannelClientPrivate
 {
     uint16_t motion_count;
 };
 
-struct InputsChannelClient
+static void
+inputs_channel_client_class_init(InputsChannelClientClass *klass)
 {
-    RedChannelClient base;
+    g_type_class_add_private(klass, sizeof(InputsChannelClientPrivate));
+}
 
-    InputsChannelClientPrivate priv[1];
-};
+static void
+inputs_channel_client_init(InputsChannelClient *self)
+{
+    self->priv = INPUTS_CHANNEL_CLIENT_PRIVATE(self);
+}
 
 RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                RedClient *client,
@@ -45,18 +53,34 @@ RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                int num_caps,
                                                uint32_t *caps)
 {
-    InputsChannelClient* icc =
-        INPUTS_CHANNEL_CLIENT(red_channel_client_create(sizeof(InputsChannelClient),
-                                                        channel, client,
-                                                        stream,
-                                                        monitor_latency,
-                                                        num_common_caps,
-                                                        common_caps, num_caps,
-                                                        caps));
-    if (icc) {
-        icc->priv->motion_count = 0;
+    RedChannelClient *rcc;
+    GArray *common_caps_array = NULL, *caps_array = NULL;
+
+    if (common_caps) {
+        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
+                                              num_common_caps);
+        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
     }
-    return RED_CHANNEL_CLIENT(icc);
+    if (caps) {
+        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
+        g_array_append_vals(caps_array, caps, num_caps);
+    }
+    rcc = g_initable_new(TYPE_INPUTS_CHANNEL_CLIENT,
+                         NULL, NULL,
+                         "channel", channel,
+                         "client", client,
+                         "stream", stream,
+                         "monitor-latency", monitor_latency,
+                         "caps", caps_array,
+                         "common-caps", common_caps_array,
+                         NULL);
+
+    if (caps_array)
+        g_array_unref(caps_array);
+    if (common_caps_array)
+        g_array_unref(common_caps_array);
+
+    return rcc;
 }
 
 void inputs_channel_client_send_migrate_data(RedChannelClient *rcc,

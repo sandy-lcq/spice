@@ -61,12 +61,4 @@ struct DisplayChannelClientPrivate
     bool gl_draw_ongoing;
 };
 
-struct DisplayChannelClient
-{
-    RedChannelClient base;
-    int is_low_bandwidth;
-
-    DisplayChannelClientPrivate priv[1];
-};
-
 #endif /* DCC_PRIVATE_H_ */

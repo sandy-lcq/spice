@@ -40,7 +40,11 @@ enum {
     RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE,
 };
 
-typedef struct CursorChannelClientPrivate CursorChannelClientPrivate;
+G_DEFINE_TYPE(CursorChannelClient, cursor_channel_client, RED_TYPE_CHANNEL_CLIENT)
+
+#define CURSOR_CHANNEL_CLIENT_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_CURSOR_CHANNEL_CLIENT, CursorChannelClientPrivate))
+
 struct CursorChannelClientPrivate
 {
     RedCacheItem *cursor_cache[CURSOR_CACHE_HASH_SIZE];
@@ -49,12 +53,19 @@ struct CursorChannelClientPrivate
     uint32_t cursor_cache_items;
 };
 
-struct CursorChannelClient
+static void
+cursor_channel_client_class_init(CursorChannelClientClass *klass)
 {
-    RedChannelClient base;
+    g_type_class_add_private(klass, sizeof(CursorChannelClientPrivate));
+}
 
-    CursorChannelClientPrivate priv[1];
-};
+static void
+cursor_channel_client_init(CursorChannelClient *self)
+{
+    self->priv = CURSOR_CHANNEL_CLIENT_PRIVATE(self);
+    ring_init(&self->priv->cursor_cache_lru);
+    self->priv->cursor_cache_available = CLIENT_CURSOR_CACHE_SIZE;
+}
 
 #define CLIENT_CURSOR_CACHE
 #include "cache-item.tmpl.c"
@@ -90,28 +101,36 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
                                                uint32_t *common_caps, int num_common_caps,
                                                uint32_t *caps, int num_caps)
 {
-    spice_return_val_if_fail(cursor, NULL);
-    spice_return_val_if_fail(client, NULL);
-    spice_return_val_if_fail(stream, NULL);
-    spice_return_val_if_fail(!num_common_caps || common_caps, NULL);
-    spice_return_val_if_fail(!num_caps || caps, NULL);
+    CursorChannelClient *rcc;
+    GArray *common_caps_array = NULL, *caps_array = NULL;
 
-    CursorChannelClient *ccc =
-        CURSOR_CHANNEL_CLIENT(red_channel_client_create(sizeof(CursorChannelClient),
-                                                        RED_CHANNEL(cursor),
-                                                        client, stream,
-                                                        FALSE,
-                                                        num_common_caps,
-                                                        common_caps,
-                                                        num_caps,
-                                                        caps));
-    spice_return_val_if_fail(ccc != NULL, NULL);
+    if (common_caps) {
+        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
+                                              num_common_caps);
+        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
+    }
+    if (caps) {
+        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
+        g_array_append_vals(caps_array, caps, num_caps);
+    }
+
+    rcc = g_initable_new(TYPE_CURSOR_CHANNEL_CLIENT,
+                         NULL, NULL,
+                         "channel", cursor,
+                         "client", client,
+                         "stream", stream,
+                         "monitor-latency", FALSE,
+                         "common-caps", common_caps_array,
+                         "caps", caps_array,
+                         NULL);
     COMMON_GRAPHICS_CHANNEL(cursor)->during_target_migrate = mig_target;
 
-    ring_init(&ccc->priv->cursor_cache_lru);
-    ccc->priv->cursor_cache_available = CLIENT_CURSOR_CACHE_SIZE;
+    if (caps_array)
+        g_array_unref(caps_array);
+    if (common_caps_array)
+        g_array_unref(common_caps_array);
 
-    return ccc;
+    return rcc;
 }
 
 RedCacheItem* cursor_channel_client_cache_find(CursorChannelClient *ccc, uint64_t id)

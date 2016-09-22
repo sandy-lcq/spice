@@ -18,20 +18,46 @@
 #ifndef _H_RED_CHANNEL_CLIENT
 #define _H_RED_CHANNEL_CLIENT
 
+#include <glib-object.h>
+#include <gio/gio.h>
+#include <spice/protocol.h>
 #include <common/marshaller.h>
 
 #include "red-pipe-item.h"
 #include "reds-stream.h"
 #include "red-channel.h"
-/* FIXME: remove */
-#include "red-channel-client-private.h"
+
+G_BEGIN_DECLS
+
+#define MAX_HEADER_SIZE sizeof(SpiceDataHeader)
+#define CLIENT_ACK_WINDOW 20
+
+#ifndef IOV_MAX
+#define IOV_MAX 1024
+#endif
+
+#define RED_TYPE_CHANNEL_CLIENT red_channel_client_get_type()
+
+#define RED_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHANNEL_CLIENT, RedChannelClient))
+#define RED_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_CHANNEL_CLIENT, RedChannelClientClass))
+#define RED_IS_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_CHANNEL_CLIENT))
+#define RED_IS_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_CHANNEL_CLIENT))
+#define RED_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHANNEL_CLIENT, RedChannelClientClass))
 
 typedef struct RedChannel RedChannel;
 typedef struct RedClient RedClient;
 typedef struct IncomingHandler IncomingHandler;
 
 typedef struct RedChannelClient RedChannelClient;
+typedef struct RedChannelClientClass RedChannelClientClass;
 typedef struct RedChannelClientPrivate RedChannelClientPrivate;
+
+GType red_channel_client_get_type(void) G_GNUC_CONST;
 
 /*
  * When an error occurs over a channel, we treat it as a warning
@@ -45,22 +71,13 @@ typedef struct RedChannelClientPrivate RedChannelClientPrivate;
         red_channel_client_shutdown(rcc);                                                \
     } while (0)
 
-RedChannelClient *red_channel_client_create(int size, RedChannel *channel,
+RedChannelClient *red_channel_client_create(RedChannel *channel,
                                             RedClient *client, RedsStream *stream,
                                             int monitor_latency,
                                             int num_common_caps, uint32_t *common_caps,
                                             int num_caps, uint32_t *caps);
 
-RedChannelClient *red_channel_client_create_dummy(int size,
-                                                  RedChannel *channel,
-                                                  RedClient  *client,
-                                                  int num_common_caps, uint32_t *common_caps,
-                                                  int num_caps, uint32_t *caps);
-
-void red_channel_client_ref(RedChannelClient *rcc);
-void red_channel_client_unref(RedChannelClient *rcc);
-
-int red_channel_client_is_connected(RedChannelClient *rcc);
+gboolean red_channel_client_is_connected(RedChannelClient *rcc);
 void red_channel_client_default_migrate(RedChannelClient *rcc);
 int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc);
 void red_channel_client_destroy(RedChannelClient *rcc);
@@ -175,8 +192,6 @@ gboolean red_channel_client_set_migration_seamless(RedChannelClient *rcc);
 void red_channel_client_set_destroying(RedChannelClient *rcc);
 gboolean red_channel_client_is_destroying(RedChannelClient *rcc);
 
-#define RED_CHANNEL_CLIENT(Client) ((RedChannelClient *)(Client))
-
 typedef struct OutgoingHandler {
     OutgoingHandlerInterface *cb;
     void *opaque;
@@ -197,12 +212,48 @@ typedef struct IncomingHandler {
     uint32_t msg_pos;
 } IncomingHandler;
 
-struct RedChannelClient {
+struct RedChannelClient
+{
+    GObject parent;
+
     /* protected */
     OutgoingHandler outgoing;
     IncomingHandler incoming;
 
-    RedChannelClientPrivate priv[1];
+    RedChannelClientPrivate *priv;
 };
+
+struct RedChannelClientClass
+{
+    GObjectClass parent_class;
+
+    gboolean (*is_connected)(RedChannelClient *rcc);
+    void (*disconnect)(RedChannelClient *rcc);
+};
+
+#define SPICE_SERVER_ERROR spice_server_error_quark()
+GQuark spice_server_error_quark(void);
+
+typedef enum
+{
+    SPICE_SERVER_ERROR_FAILED
+} SpiceServerError;
+
+/* Messages handled by red_channel
+ * SET_ACK - sent to client on channel connection
+ * Note that the numbers don't have to correspond to spice message types,
+ * but we keep the 100 first allocated for base channel approach.
+ * */
+enum {
+    RED_PIPE_ITEM_TYPE_SET_ACK=1,
+    RED_PIPE_ITEM_TYPE_MIGRATE,
+    RED_PIPE_ITEM_TYPE_EMPTY_MSG,
+    RED_PIPE_ITEM_TYPE_PING,
+    RED_PIPE_ITEM_TYPE_MARKER,
+
+    RED_PIPE_ITEM_TYPE_CHANNEL_BASE=101,
+};
+
+G_END_DECLS
 
 #endif /* _H_RED_CHANNEL_CLIENT */

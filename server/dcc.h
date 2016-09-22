@@ -18,11 +18,48 @@
 #ifndef DCC_H_
 # define DCC_H_
 
+#include <glib-object.h>
+
 #include "image-encoders.h"
 #include "image-cache.h"
 #include "pixmap-cache.h"
 #include "red-worker.h"
 #include "display-limits.h"
+
+G_BEGIN_DECLS
+
+#define TYPE_DISPLAY_CHANNEL_CLIENT display_channel_client_get_type()
+
+#define DISPLAY_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_DISPLAY_CHANNEL_CLIENT, DisplayChannelClient))
+#define DISPLAY_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_DISPLAY_CHANNEL_CLIENT, DisplayChannelClientClass))
+#define IS_DISPLAY_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_DISPLAY_CHANNEL_CLIENT))
+#define IS_DISPLAY_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_DISPLAY_CHANNEL_CLIENT))
+#define DISPLAY_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_DISPLAY_CHANNEL_CLIENT, DisplayChannelClientClass))
+
+typedef struct DisplayChannelClient DisplayChannelClient;
+typedef struct DisplayChannelClientClass DisplayChannelClientClass;
+typedef struct DisplayChannelClientPrivate DisplayChannelClientPrivate;
+
+struct DisplayChannelClient
+{
+    RedChannelClient parent;
+
+    int is_low_bandwidth;
+
+    DisplayChannelClientPrivate *priv;
+};
+
+struct DisplayChannelClientClass
+{
+    RedChannelClientClass parent_class;
+};
+
+GType display_channel_client_get_type(void) G_GNUC_CONST;
 
 #define PALETTE_CACHE_HASH_SHIFT 8
 #define PALETTE_CACHE_HASH_SIZE (1 << PALETTE_CACHE_HASH_SHIFT)
@@ -57,10 +94,7 @@ typedef struct FreeList {
     WaitForChannels wait;
 } FreeList;
 
-typedef struct DisplayChannelClient DisplayChannelClient;
-
 #define DCC_TO_DC(dcc) ((DisplayChannel*)red_channel_client_get_channel((RedChannelClient*)dcc))
-#define DISPLAY_CHANNEL_CLIENT(rcc) ((DisplayChannelClient*)rcc)
 
 typedef struct RedSurfaceCreateItem {
     RedPipeItem pipe_item;
@@ -171,5 +205,7 @@ uint64_t dcc_get_max_stream_bit_rate(DisplayChannelClient *dcc);
 void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate);
 int dcc_config_socket(RedChannelClient *rcc);
 gboolean dcc_is_low_bandwidth(DisplayChannelClient *dcc);
+
+G_END_DECLS
 
 #endif /* DCC_H_ */

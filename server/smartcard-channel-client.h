@@ -18,27 +18,42 @@
 #ifndef SMARTCARD_CHANNEL_CLIENT_H__
 #define SMARTCARD_CHANNEL_CLIENT_H__
 
+#include <glib-object.h>
+
 #include "smartcard.h"
-#include "red-channel-client.h"
 
+G_BEGIN_DECLS
+
+#define TYPE_SMARTCARD_CHANNEL_CLIENT smart_card_channel_client_get_type()
+
+#define SMARTCARD_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_SMARTCARD_CHANNEL_CLIENT, SmartCardChannelClient))
+#define SMARTCARD_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_SMARTCARD_CHANNEL_CLIENT, SmartCardChannelClientClass))
+#define IS_SMARTCARD_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_SMARTCARD_CHANNEL_CLIENT))
+#define IS_SMARTCARD_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_SMARTCARD_CHANNEL_CLIENT))
+#define SMARTCARD_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_SMARTCARD_CHANNEL_CLIENT, SmartCardChannelClientClass))
+
+typedef struct SmartCardChannelClient SmartCardChannelClient;
+typedef struct SmartCardChannelClientClass SmartCardChannelClientClass;
 typedef struct SmartCardChannelClientPrivate SmartCardChannelClientPrivate;
-struct SmartCardChannelClientPrivate {
-    RedCharDeviceSmartcard *smartcard;
 
-    /* read_from_client/write_to_device buffer.
-     * The beginning of the buffer should always be VSCMsgHeader*/
-    RedCharDeviceWriteBuffer *write_buf;
-    int msg_in_write_buf; /* was the client msg received into a RedCharDeviceWriteBuffer
-                           * or was it explicitly malloced */
+struct SmartCardChannelClient
+{
+    RedChannelClient parent;
+
+    SmartCardChannelClientPrivate *priv;
 };
 
-typedef struct SmartCardChannelClient {
-    RedChannelClient base;
+struct SmartCardChannelClientClass
+{
+    RedChannelClientClass parent_class;
+};
 
-    SmartCardChannelClientPrivate priv[1];
-} SmartCardChannelClient;
-
-#define SMARTCARD_CHANNEL_CLIENT(rcc) ((SmartCardChannelClient*)rcc)
+GType smart_card_channel_client_get_type(void) G_GNUC_CONST;
 
 SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
                                                         RedClient *client, RedsStream *stream,
@@ -92,5 +107,7 @@ void smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
 uint8_t *smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                     uint16_t type,
                                                     uint32_t size);
+
+G_END_DECLS
 
 #endif /* SMARTCARD_CHANNEL_CLIENT_H__ */
