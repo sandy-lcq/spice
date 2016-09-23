@@ -132,7 +132,7 @@ int spice_bitmap_from_surface_type(uint32_t surface_format)
     default:
         spice_critical("Unsupported surface format");
     }
-    return 0;
+    return SPICE_BITMAP_FMT_INVALID;
 }
 
 #ifdef DUMP_BITMAP
