@@ -2399,9 +2399,6 @@ void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
     case RED_PIPE_ITEM_TYPE_UPGRADE:
         marshall_upgrade(rcc, m, SPICE_UPCAST(RedUpgradeItem, pipe_item));
         break;
-    case RED_PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, SPICE_UPCAST(RedVerbItem, pipe_item));
-        break;
     case RED_PIPE_ITEM_TYPE_MIGRATE_DATA:
         display_channel_marshall_migrate_data(rcc, m);
         break;

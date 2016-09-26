@@ -65,42 +65,10 @@ gboolean common_graphics_channel_get_during_target_migrate(CommonGraphicsChannel
 QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self);
 
 enum {
-    RED_PIPE_ITEM_TYPE_VERB = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
-    RED_PIPE_ITEM_TYPE_INVAL_ONE,
+    RED_PIPE_ITEM_TYPE_INVAL_ONE = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
 
     RED_PIPE_ITEM_TYPE_COMMON_LAST
 };
-
-typedef struct RedVerbItem {
-    RedPipeItem base;
-    uint16_t verb;
-} RedVerbItem;
-
-static inline void red_marshall_verb(RedChannelClient *rcc, RedVerbItem *item)
-{
-    red_channel_client_init_send_data(rcc, item->verb, NULL);
-}
-
-static inline void red_pipe_add_verb(RedChannelClient* rcc, uint16_t verb)
-{
-    RedVerbItem *item = spice_new(RedVerbItem, 1);
-
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_VERB);
-    item->verb = verb;
-    red_channel_client_pipe_add(rcc, &item->base);
-}
-
-static inline void red_pipe_add_verb_proxy(RedChannelClient *rcc, gpointer data)
-{
-    uint16_t verb = GPOINTER_TO_UINT(data);
-    red_pipe_add_verb(rcc, verb);
-}
-
-
-static inline void red_pipes_add_verb(RedChannel *channel, uint16_t verb)
-{
-    red_channel_apply_clients_data(channel, red_pipe_add_verb_proxy, GUINT_TO_POINTER(verb));
-}
 
 G_END_DECLS
 

@@ -286,9 +286,6 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
         red_marshall_inval(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCacheItem, u.pipe_data));
         break;
-    case RED_PIPE_ITEM_TYPE_VERB:
-        red_marshall_verb(rcc, SPICE_UPCAST(RedVerbItem, pipe_item));
-        break;
     case RED_PIPE_ITEM_TYPE_CURSOR_INIT:
         cursor_channel_client_reset_cursor_cache(rcc);
         red_marshall_cursor_init(ccc, m, pipe_item);
@@ -378,7 +375,7 @@ void cursor_channel_reset(CursorChannel *cursor)
     if (red_channel_is_connected(channel)) {
         red_channel_pipes_add_type(channel, RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
         if (!common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor))) {
-            red_pipes_add_verb(channel, SPICE_MSG_CURSOR_RESET);
+            red_channel_pipes_add_empty_msg(channel, SPICE_MSG_CURSOR_RESET);
         }
         if (!red_channel_wait_all_sent(channel,
                                        COMMON_CLIENT_TIMEOUT)) {

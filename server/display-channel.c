@@ -1832,7 +1832,7 @@ void display_channel_destroy_surfaces(DisplayChannel *display)
 
     if (red_channel_is_connected(RED_CHANNEL(display))) {
         red_channel_pipes_add_type(RED_CHANNEL(display), RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);
-        red_pipes_add_verb(RED_CHANNEL(display), SPICE_MSG_DISPLAY_STREAM_DESTROY_ALL);
+        red_channel_pipes_add_empty_msg(RED_CHANNEL(display), SPICE_MSG_DISPLAY_STREAM_DESTROY_ALL);
     }
 
     display_channel_free_glz_drawables(display);

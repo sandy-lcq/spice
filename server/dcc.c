@@ -588,7 +588,7 @@ void dcc_start(DisplayChannelClient *dcc)
         dcc_create_surface(dcc, 0);
         dcc_push_surface_image(dcc, 0);
         dcc_push_monitors_config(dcc);
-        red_pipe_add_verb(rcc, SPICE_MSG_DISPLAY_MARK);
+        red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_DISPLAY_MARK);
         dcc_create_all_streams(dcc);
     }
 

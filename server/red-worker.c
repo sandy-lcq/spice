@@ -537,8 +537,8 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
         if (!worker->driver_cap_monitors_config) {
             red_worker_push_monitors_config(worker);
         }
-        red_pipes_add_verb(RED_CHANNEL(worker->display_channel),
-                           SPICE_MSG_DISPLAY_MARK);
+        red_channel_pipes_add_empty_msg(RED_CHANNEL(worker->display_channel),
+                                        SPICE_MSG_DISPLAY_MARK);
         red_channel_push(RED_CHANNEL(worker->display_channel));
     }
 
