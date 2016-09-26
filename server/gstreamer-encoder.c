@@ -26,6 +26,7 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
+#include <gst/video/video.h>
 
 #include "red-common.h"
 #include "video-encoder.h"
@@ -42,6 +43,7 @@
 typedef struct {
     SpiceBitmapFmt spice_format;
     char format[8];
+    GstVideoFormat gst_format;
     uint32_t bpp;
     uint32_t depth;
     uint32_t endianness;
@@ -756,12 +758,12 @@ static const SpiceFormatForGStreamer format_map[] =  {
     /* First item is invalid.
      * It's located first so the loop catch invalid values.
      */
-    {SPICE_BITMAP_FMT_INVALID, "", 0, 0, 0, 0, 0, 0},
-    {SPICE_BITMAP_FMT_RGBA, "BGRA", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
-    {SPICE_BITMAP_FMT_16BIT, "RGB15", 16, 15, 4321, 0x001f, 0x03E0, 0x7C00},
+    {SPICE_BITMAP_FMT_INVALID, "", GST_VIDEO_FORMAT_UNKNOWN, 0, 0, 0, 0, 0, 0},
+    {SPICE_BITMAP_FMT_RGBA, "BGRA", GST_VIDEO_FORMAT_BGRA, 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
+    {SPICE_BITMAP_FMT_16BIT, "RGB15", GST_VIDEO_FORMAT_RGB15, 16, 15, 4321, 0x001f, 0x03E0, 0x7C00},
     /* TODO: Test the other formats under GStreamer 0.10*/
-    {SPICE_BITMAP_FMT_32BIT, "BGRx", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
-    {SPICE_BITMAP_FMT_24BIT, "BGR", 24, 24, 4321, 0xff0000, 0xff00, 0xff},
+    {SPICE_BITMAP_FMT_32BIT, "BGRx", GST_VIDEO_FORMAT_BGRx, 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
+    {SPICE_BITMAP_FMT_24BIT, "BGR", GST_VIDEO_FORMAT_BGR, 24, 24, 4321, 0xff0000, 0xff00, 0xff},
 };
 #define GSTREAMER_FORMAT_INVALID (&format_map[0])
 
