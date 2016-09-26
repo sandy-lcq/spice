@@ -140,7 +140,6 @@ struct RedsState {
     char *stat_shm_name;
     SpiceStat *stat;
     pthread_mutex_t stat_lock;
-    RedsStatValue roundtrip_stat;
 #endif
     int allow_multiple_clients;
 

@@ -393,9 +393,6 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
          * channel client monitors the connectivity using ping-pong messages
          */
         red_channel_client_handle_message(rcc, size, SPICE_MSGC_PONG, ping);
-#ifdef RED_STATISTICS
-        stat_update_value(red_channel_client_get_channel(rcc)->reds, roundtrip);
-#endif
         return;
     }
 

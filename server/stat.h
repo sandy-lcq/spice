@@ -31,7 +31,6 @@ StatNodeRef stat_add_node(SpiceServer *reds, StatNodeRef parent, const char *nam
 void stat_remove_node(SpiceServer *reds, StatNodeRef node);
 uint64_t *stat_add_counter(SpiceServer *reds, StatNodeRef parent, const char *name, int visible);
 void stat_remove_counter(SpiceServer *reds, uint64_t *counter);
-void stat_update_value(SpiceServer *reds, uint32_t value);
 
 #define stat_inc_counter(reds, counter, value) {  \
     if (counter) {                          \
