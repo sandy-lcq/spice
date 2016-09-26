@@ -30,7 +30,7 @@
 #define VALUE_TABS 7
 #define INVALID_STAT_REF (~(uint32_t)0)
 
-static SpiceStat *reds_stat = NULL;
+static SpiceStat *reds_stat = (SpiceStat *)MAP_FAILED;
 static uint64_t *values = NULL;
 
 void print_stat_tree(int32_t node_index, int depth)
@@ -87,15 +87,15 @@ int main(int argc, char **argv)
     reds_stat = (SpiceStat *)mmap(NULL, shm_size, PROT_READ, MAP_SHARED, fd, 0);
     if (reds_stat == (SpiceStat *)MAP_FAILED) {
         perror("mmap");
-        goto error1;
+        goto error;
     }
     if (reds_stat->magic != SPICE_STAT_MAGIC) {
         printf("bad magic %u\n", reds_stat->magic);
-        goto error2;
+        goto error;
     }
     if (reds_stat->version != SPICE_STAT_VERSION) {
         printf("bad version %u\n", reds_stat->version);
-        goto error2;
+        goto error;
     }
     while (1) {
         system("clear");
@@ -107,12 +107,12 @@ int main(int argc, char **argv)
             reds_stat = mremap(reds_stat, shm_old_size, shm_size, MREMAP_MAYMOVE);
             if (reds_stat == (SpiceStat *)MAP_FAILED) {
                 perror("mremap");
-                goto error3;
+                goto error;
             }
             values = (uint64_t *)realloc(values, num_of_nodes * sizeof(uint64_t));
             if (values == NULL) {
                 perror("realloc");
-                goto error3;
+                goto error;
             }
             memset(values, 0, num_of_nodes * sizeof(uint64_t));
         }
@@ -121,11 +121,11 @@ int main(int argc, char **argv)
     }
     ret = 0;
 
-error3:
+error:
     free(values);
-error2:
-    munmap(reds_stat, shm_size);
-error1:
+    if (reds_stat != (SpiceStat *)MAP_FAILED) {
+        munmap(reds_stat, shm_size);
+    }
     shm_unlink(shm_name);
     free(shm_name);
     return ret;
