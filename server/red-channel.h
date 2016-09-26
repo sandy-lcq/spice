@@ -189,7 +189,10 @@ typedef struct RedChannelCapabilities {
     uint32_t *caps;
 } RedChannelCapabilities;
 
-int test_capability(const uint32_t *caps, int num_caps, uint32_t cap);
+static inline gboolean test_capability(const uint32_t *caps, int num_caps, uint32_t cap)
+{
+    return VD_AGENT_HAS_CAPABILITY(caps, num_caps, cap);
+}
 
 typedef struct RedChannelClientLatencyMonitor {
     int state;
