@@ -272,6 +272,7 @@ server/spice-version.h
 server/tests/Makefile
 docs/Makefile
 docs/manual/Makefile
+tools/Makefile
 ])
 
 dnl ==========================================================================
