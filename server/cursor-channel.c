@@ -55,10 +55,6 @@ struct CursorChannelPrivate {
     uint16_t cursor_trail_length;
     uint16_t cursor_trail_frequency;
     uint32_t mouse_mode;
-
-#ifdef RED_STATISTICS
-    StatNodeRef stat;
-#endif
 };
 
 struct CursorChannel {
