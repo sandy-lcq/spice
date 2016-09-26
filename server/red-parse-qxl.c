@@ -1293,6 +1293,9 @@ int red_get_message(RedMemSlotInfo *slots, int group_id,
 {
     QXLMessage *qxl;
     int error;
+    int memslot_id;
+    unsigned long len;
+    uint8_t *end;
 
     /*
      * security alert:
@@ -1307,6 +1310,14 @@ int red_get_message(RedMemSlotInfo *slots, int group_id,
     red->release_info_ext.info      = &qxl->release_info;
     red->release_info_ext.group_id  = group_id;
     red->data                       = qxl->data;
+    memslot_id = memslot_get_id(slots, addr+sizeof(*qxl));
+    len = memslot_max_size_virt(slots, ((intptr_t) qxl)+sizeof(*qxl), memslot_id, group_id);
+    len = MIN(len, 100000);
+    end = (uint8_t *)memchr(qxl->data, 0, len);
+    if (end == NULL) {
+        return 1;
+    }
+    red->len = end - qxl->data;
     return 0;
 }
 

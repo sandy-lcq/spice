@@ -76,6 +76,7 @@ typedef struct RedUpdateCmd {
 
 typedef struct RedMessage {
     QXLReleaseInfoExt release_info_ext;
+    int len;
     uint8_t *data;
 } RedMessage;
 

@@ -234,8 +234,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
                 break;
             }
 #ifdef DEBUG
-            /* alert: accessing message.data is insecure */
-            spice_warning("MESSAGE: %s", message.data);
+            spice_warning("MESSAGE: %.*s", message.len, message.data);
 #endif
             red_qxl_release_resource(worker->qxl, message.release_info_ext);
             red_put_message(&message);

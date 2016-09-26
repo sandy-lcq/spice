@@ -55,6 +55,9 @@ static inline int memslot_get_generation(RedMemSlotInfo *info, uint64_t addr)
 
 int memslot_validate_virt(RedMemSlotInfo *info, unsigned long virt, int slot_id,
                           uint32_t add_size, uint32_t group_id);
+unsigned long memslot_max_size_virt(RedMemSlotInfo *info,
+                                    unsigned long virt, int slot_id,
+                                    uint32_t group_id);
 unsigned long memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size,
                        int group_id, int *error);
 
