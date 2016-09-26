@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <spice/stats.h>
 
 #define TAB_LEN 4
@@ -33,15 +34,14 @@
 static SpiceStat *reds_stat = (SpiceStat *)MAP_FAILED;
 static uint64_t *values = NULL;
 
-void print_stat_tree(int32_t node_index, int depth)
+static void print_stat_tree(int32_t node_index, int depth)
 {
     SpiceStatNode *node = &reds_stat->nodes[node_index];
-    int i;
 
     if ((node->flags & SPICE_STAT_NODE_MASK_SHOW) == SPICE_STAT_NODE_MASK_SHOW) {
         printf("%*s%s", depth * TAB_LEN, "", node->name);
         if (node->flags & SPICE_STAT_NODE_FLAG_VALUE) {
-            printf(":%*s%llu (%llu)\n", (VALUE_TABS - depth) * TAB_LEN - strlen(node->name) - 1, "",
+            printf(":%*s%"PRIu64" (%"PRIu64")\n", (int) ((VALUE_TABS - depth) * TAB_LEN - strlen(node->name) - 1), "",
                    node->value, node->value - values[node_index]);
             values[node_index] = node->value;
         } else {
@@ -60,7 +60,6 @@ int main(int argc, char **argv)
 {
     char *shm_name;
     pid_t kvm_pid;
-    uint64_t *val;
     uint32_t num_of_nodes = 0;
     size_t shm_size;
     size_t shm_old_size;
@@ -98,7 +97,9 @@ int main(int argc, char **argv)
         goto error;
     }
     while (1) {
-        system("clear");
+        if (system("clear") != 0) {
+            printf("\n\n\n");
+        }
         printf("spice statistics\n\n");
         if (num_of_nodes != reds_stat->num_of_nodes) {
             num_of_nodes = reds_stat->num_of_nodes;
