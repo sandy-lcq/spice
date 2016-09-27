@@ -154,6 +154,6 @@ void                  stream_agent_unref                            (DisplayChan
                                                                      StreamAgent *agent);
 void                  stream_agent_stop                             (StreamAgent *agent);
 
-void detach_stream(DisplayChannel *display, Stream *stream);
+void stream_detach_drawable(Stream *stream);
 
 #endif /* STREAM_H */

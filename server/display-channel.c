@@ -1354,7 +1354,7 @@ void drawable_unref(Drawable *drawable)
     spice_warn_if_fail(drawable->pipes == NULL);
 
     if (drawable->stream) {
-        detach_stream(display, drawable->stream);
+        stream_detach_drawable(drawable->stream);
     }
     region_destroy(&drawable->tree_item.base.rgn);
 
