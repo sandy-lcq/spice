@@ -202,8 +202,10 @@ int image_encoders_compress_lz(ImageEncoders *enc, SpiceImage *dest,
                                SpiceBitmap *src, compress_send_data_t* o_comp_data);
 int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
                                  SpiceBitmap *src, compress_send_data_t* o_comp_data);
+#ifdef USE_LZ4
 int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
                                 SpiceBitmap *src, compress_send_data_t* o_comp_data);
+#endif
 int image_encoders_compress_glz(ImageEncoders *enc, SpiceImage *dest,
                                 SpiceBitmap *src,
                                 RedDrawable *red_drawable,
