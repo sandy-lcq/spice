@@ -408,11 +408,11 @@ static void guest_set_client_capabilities(RedWorker *worker)
         red_qxl_set_client_capabilities(worker->qxl, FALSE, caps);
     } else {
         // Take least common denominator
-        for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
+        for (i = 0 ; i < SPICE_N_ELEMENTS(caps_available); ++i) {
             SET_CAP(caps, caps_available[i]);
         }
         FOREACH_CLIENT(worker->display_channel, iter, rcc) {
-            for (i = 0 ; i < sizeof(caps_available) / sizeof(caps_available[0]); ++i) {
+            for (i = 0 ; i < SPICE_N_ELEMENTS(caps_available); ++i) {
                 if (!red_channel_client_test_remote_cap(rcc, caps_available[i]))
                     CLEAR_CAP(caps, caps_available[i]);
             }
