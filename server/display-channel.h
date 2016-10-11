@@ -43,6 +43,7 @@
 #include "stream.h"
 #include "dcc.h"
 #include "image-encoders.h"
+#include "common-graphics-channel.h"
 
 typedef struct DependItem {
     Drawable *drawable;
@@ -230,8 +231,9 @@ typedef struct RedUpgradeItem {
 } RedUpgradeItem;
 
 
-DisplayChannel*            display_channel_new                       (SpiceServer *reds,
-                                                                      RedWorker *worker,
+DisplayChannel*            display_channel_new                       (RedsState *reds,
+                                                                      QXLInstance *qxl,
+                                                                      const SpiceCoreInterfaceInternal *core,
                                                                       int migrate,
                                                                       int stream_video,
                                                                       GArray *video_codecs,

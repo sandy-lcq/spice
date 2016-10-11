@@ -18,7 +18,8 @@
 #ifndef CURSOR_CHANNEL_H_
 # define CURSOR_CHANNEL_H_
 
-#include "red-worker.h"
+#include "common-graphics-channel.h"
+#include "red-parse-qxl.h"
 
 /**
  * This type it's a RedChannel class which implement cursor (mouse)
@@ -39,7 +40,8 @@ typedef struct CursorChannel CursorChannel;
  * provided as helper functions and should only be called from the
  * CursorChannel thread.
  */
-CursorChannel*       cursor_channel_new         (RedWorker *worker);
+CursorChannel*       cursor_channel_new         (RedsState *server, QXLInstance *qxl,
+                                                 const SpiceCoreInterfaceInternal *core);
 
 /**
  * Cause the channel to disconnect all clients

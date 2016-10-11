@@ -1903,7 +1903,9 @@ static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t su
     return display->priv->surfaces[surface_id].context.canvas;
 }
 
-DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker, 
+DisplayChannel* display_channel_new(RedsState *reds,
+                                    QXLInstance *qxl,
+                                    const SpiceCoreInterfaceInternal *core,
                                     int migrate, int stream_video,
                                     GArray *video_codecs,
                                     uint32_t n_surfaces)
@@ -1922,9 +1924,8 @@ DisplayChannel* display_channel_new(SpiceServer *reds, RedWorker *worker,
     };
 
     spice_info("create display channel");
-    display = (DisplayChannel *)red_worker_new_channel(
-        worker, sizeof(*display), "display_channel",
-        SPICE_CHANNEL_DISPLAY,
+    display = (DisplayChannel *)common_graphics_channel_new(
+        reds, qxl, core, sizeof(*display), SPICE_CHANNEL_DISPLAY,
         SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER,
         &cbs, dcc_handle_message);
     spice_return_val_if_fail(display, NULL);

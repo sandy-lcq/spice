@@ -77,6 +77,8 @@ libserver_la_SOURCES =				\
 	cache-item.h				\
 	char-device.c				\
 	char-device.h				\
+	common-graphics-channel.c		\
+	common-graphics-channel.h		\
 	demarshallers.h				\
 	event-loop.c				\
 	glz-encoder.c				\

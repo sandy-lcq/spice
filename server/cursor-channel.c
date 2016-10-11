@@ -22,9 +22,11 @@
 #include <glib.h>
 #include <common/generated_server_marshallers.h>
 
+#include "common-graphics-channel.h"
 #include "cursor-channel.h"
 #include "cursor-channel-client.h"
 #include "reds.h"
+#include "red-qxl.h"
 
 enum {
     RED_PIPE_ITEM_TYPE_CURSOR = RED_PIPE_ITEM_TYPE_COMMON_LAST,
@@ -306,7 +308,8 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
     red_channel_client_begin_send_message(rcc);
 }
 
-CursorChannel* cursor_channel_new(RedWorker *worker)
+CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
+                                  const SpiceCoreInterfaceInternal *core)
 {
     CursorChannel *cursor_channel;
     CommonGraphicsChannel *channel = NULL;
@@ -316,9 +319,10 @@ CursorChannel* cursor_channel_new(RedWorker *worker)
     };
 
     spice_info("create cursor channel");
-    channel = red_worker_new_channel(worker, sizeof(CursorChannel), "cursor_channel",
-                                     SPICE_CHANNEL_CURSOR, 0,
-                                     &cbs, red_channel_client_handle_message);
+    channel = common_graphics_channel_new(server, qxl, core,
+                                          sizeof(CursorChannel),
+                                          SPICE_CHANNEL_CURSOR, 0,
+                                          &cbs, red_channel_client_handle_message);
 
     cursor_channel = (CursorChannel *)channel;
     cursor_channel->priv->cursor_visible = TRUE;

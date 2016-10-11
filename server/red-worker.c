@@ -91,37 +91,10 @@ struct RedWorker {
     RedRecord *record;
 };
 
-static RedsState* red_worker_get_server(RedWorker *worker);
-
 static int display_is_connected(RedWorker *worker)
 {
     return (worker->display_channel && red_channel_is_connected(
         &worker->display_channel->common.base));
-}
-
-static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
-{
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    CommonGraphicsChannel *common = SPICE_CONTAINEROF(channel, CommonGraphicsChannel, base);
-
-    /* SPICE_MSGC_MIGRATE_DATA is the only client message whose size is dynamic */
-    if (type == SPICE_MSGC_MIGRATE_DATA) {
-        return spice_malloc(size);
-    }
-
-    if (size > CHANNEL_RECEIVE_BUF_SIZE) {
-        spice_critical("unexpected message size %u (max is %d)", size, CHANNEL_RECEIVE_BUF_SIZE);
-        return NULL;
-    }
-    return common->recv_buf;
-}
-
-static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size,
-                                    uint8_t* msg)
-{
-    if (type == SPICE_MSGC_MIGRATE_DATA) {
-        free(msg);
-    }
 }
 
 void red_drawable_unref(RedDrawable *red_drawable)
@@ -399,82 +372,6 @@ static void flush_all_qxl_commands(RedWorker *worker)
 {
     flush_display_commands(worker);
     flush_cursor_commands(worker);
-}
-
-int common_channel_config_socket(RedChannelClient *rcc)
-{
-    RedClient *client = red_channel_client_get_client(rcc);
-    MainChannelClient *mcc = red_client_get_main(client);
-    RedsStream *stream = red_channel_client_get_stream(rcc);
-    int flags;
-    int delay_val;
-    gboolean is_low_bandwidth;
-
-    if ((flags = fcntl(stream->socket, F_GETFL)) == -1) {
-        spice_warning("accept failed, %s", strerror(errno));
-        return FALSE;
-    }
-
-    if (fcntl(stream->socket, F_SETFL, flags | O_NONBLOCK) == -1) {
-        spice_warning("accept failed, %s", strerror(errno));
-        return FALSE;
-    }
-
-    // TODO - this should be dynamic, not one time at channel creation
-    is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
-    delay_val = is_low_bandwidth ? 0 : 1;
-    /* FIXME: Using Nagle's Algorithm can lead to apparent delays, depending
-     * on the delayed ack timeout on the other side.
-     * Instead of using Nagle's, we need to implement message buffering on
-     * the application level.
-     * see: http://www.stuartcheshire.org/papers/NagleDelayedAck/
-     */
-    if (setsockopt(stream->socket, IPPROTO_TCP, TCP_NODELAY, &delay_val,
-                   sizeof(delay_val)) == -1) {
-        if (errno != ENOTSUP) {
-            spice_warning("setsockopt failed, %s", strerror(errno));
-        }
-    }
-    // TODO: move wide/narrow ack setting to red_channel.
-    red_channel_client_ack_set_client_window(rcc,
-        is_low_bandwidth ?
-        WIDE_CLIENT_ACK_WINDOW : NARROW_CLIENT_ACK_WINDOW);
-    return TRUE;
-}
-
-CommonGraphicsChannel *red_worker_new_channel(RedWorker *worker, int size,
-                                              const char *name,
-                                              uint32_t channel_type, int migration_flags,
-                                              ChannelCbs *channel_cbs,
-                                              channel_handle_parsed_proc handle_parsed)
-{
-    RedChannel *channel = NULL;
-    CommonGraphicsChannel *common;
-
-    spice_return_val_if_fail(worker, NULL);
-    spice_return_val_if_fail(channel_cbs, NULL);
-    spice_return_val_if_fail(!channel_cbs->alloc_recv_buf, NULL);
-    spice_return_val_if_fail(!channel_cbs->release_recv_buf, NULL);
-
-    if (!channel_cbs->config_socket)
-        channel_cbs->config_socket = common_channel_config_socket;
-    channel_cbs->alloc_recv_buf = common_alloc_recv_buf;
-    channel_cbs->release_recv_buf = common_release_recv_buf;
-
-    channel = red_channel_create_parser(size, red_worker_get_server(worker),
-                                        &worker->core, channel_type,
-                                        worker->qxl->id, TRUE /* handle_acks */,
-                                        spice_get_client_channel_parser(channel_type, NULL),
-                                        handle_parsed,
-                                        channel_cbs,
-                                        migration_flags);
-    spice_return_val_if_fail(channel, NULL);
-    red_channel_set_stat_node(channel, stat_add_node(red_worker_get_server(worker),
-                                                     worker->stat, name, TRUE));
-
-    common = (CommonGraphicsChannel *)channel;
-    common->qxl = worker->qxl;
-    return common;
 }
 
 static void guest_set_client_capabilities(RedWorker *worker)
@@ -1465,18 +1362,21 @@ RedWorker* red_worker_new(QXLInstance *qxl,
 
     worker->event_timeout = INF_EVENT_WAIT;
 
-    worker->cursor_channel = cursor_channel_new(worker);
+    worker->cursor_channel = cursor_channel_new(reds, qxl,
+                                                &worker->core);
     channel = RED_CHANNEL(worker->cursor_channel);
+    red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, "cursor_channel", TRUE));
     red_channel_register_client_cbs(channel, client_cursor_cbs, dispatcher);
     reds_register_channel(reds, channel);
 
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
-    worker->display_channel = display_channel_new(reds, worker, FALSE,
+    worker->display_channel = display_channel_new(reds, qxl, &worker->core, FALSE,
                                                   reds_get_streaming_video(reds),
                                                   reds_get_video_codecs(reds),
                                                   init_info.n_surfaces);
 
     channel = RED_CHANNEL(worker->display_channel);
+    red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, "display_channel", TRUE));
     red_channel_register_client_cbs(channel, client_display_cbs, dispatcher);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
@@ -1525,9 +1425,4 @@ bool red_worker_run(RedWorker *worker)
     pthread_sigmask(SIG_SETMASK, &curr_sig_mask, NULL);
 
     return r == 0;
-}
-
-static RedsState* red_worker_get_server(RedWorker *worker)
-{
-    return red_qxl_get_server(worker->qxl->st);
 }

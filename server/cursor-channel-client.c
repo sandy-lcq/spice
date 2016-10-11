@@ -21,6 +21,7 @@
 
 #include <common/generated_server_marshallers.h>
 
+#include "common-graphics-channel.h"
 #include "red-channel-client.h"
 #include "cache-item.h"
 #include "cursor-channel.h"
