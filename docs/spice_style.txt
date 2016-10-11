@@ -198,7 +198,14 @@ void function(type1 arg1, type2 arg2,
               type3 arg3)
 ----
 +
-* New line is acceptable only in arguments list
+* New line is acceptable in arguments list and before function name, like
++
+[source,c]
+----
+void
+function(type1 arg1, type2 arg2,
+         type3 arg3)
+----
 
 Branching indentation
 ---------------------
