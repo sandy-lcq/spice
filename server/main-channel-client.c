@@ -704,7 +704,6 @@ void main_channel_client_migrate(RedChannelClient *rcc)
 gboolean main_channel_client_connect_semi_seamless(MainChannelClient *mcc)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(mcc);
-    MainChannel* main_channel = (MainChannel*)red_channel_client_get_channel(rcc);
     if (red_channel_client_test_remote_cap(rcc,
                                            SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE)) {
         RedClient *client = red_channel_client_get_client(rcc);
@@ -718,7 +717,6 @@ gboolean main_channel_client_connect_semi_seamless(MainChannelClient *mcc)
             mcc->priv->mig_wait_connect = TRUE;
         }
         mcc->priv->mig_connect_ok = FALSE;
-        main_channel->num_clients_mig_wait++;
         return TRUE;
     }
     return FALSE;
