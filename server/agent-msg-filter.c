@@ -25,8 +25,6 @@
 #include <spice/vd_agent.h>
 #include "red-common.h"
 #include "agent-msg-filter.h"
-#include "reds.h"
-#include "red-qxl.h"
 
 void agent_msg_filter_config(AgentMsgFilter *filter,
                              gboolean copy_paste, gboolean file_xfer,
