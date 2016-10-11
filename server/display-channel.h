@@ -45,6 +45,8 @@
 #include "image-encoders.h"
 #include "common-graphics-channel.h"
 
+#define DISPLAY_CHANNEL(channel) ((DisplayChannel*)(channel))
+
 typedef struct DependItem {
     Drawable *drawable;
     RingItem ring_item;

@@ -25,6 +25,8 @@
 #include "red-channel.h"
 #include "main-channel-client.h"
 
+#define MAIN_CHANNEL(channel) ((MainChannel*)(channel))
+
 // TODO: Defines used to calculate receive buffer size, and also by reds.c
 // other options: is to make a reds_main_consts.h, to duplicate defines.
 #define REDS_AGENT_WINDOW_SIZE 10

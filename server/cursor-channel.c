@@ -28,6 +28,8 @@
 #include "reds.h"
 #include "red-qxl.h"
 
+#define CURSOR_CHANNEL(channel) ((CursorChannel*)(channel))
+
 enum {
     RED_PIPE_ITEM_TYPE_CURSOR = RED_PIPE_ITEM_TYPE_COMMON_LAST,
     RED_PIPE_ITEM_TYPE_CURSOR_INIT,
@@ -170,7 +172,7 @@ static void cursor_fill(CursorChannelClient *ccc, SpiceCursor *red_cursor,
 
 void cursor_channel_disconnect(CursorChannel *cursor_channel)
 {
-    RedChannel *channel = (RedChannel *)cursor_channel;
+    RedChannel *channel = RED_CHANNEL(cursor_channel);
 
     if (!channel || !red_channel_is_connected(channel)) {
         return;
@@ -198,7 +200,7 @@ static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *
     AddBufInfo info;
 
     spice_assert(rcc);
-    cursor_channel = (CursorChannel*)red_channel_client_get_channel(rcc);
+    cursor_channel = CURSOR_CHANNEL(red_channel_client_get_channel(rcc));
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_INIT, NULL);
     msg.visible = cursor_channel->priv->cursor_visible;
@@ -324,7 +326,7 @@ CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
                                           SPICE_CHANNEL_CURSOR, 0,
                                           &cbs, red_channel_client_handle_message);
 
-    cursor_channel = (CursorChannel *)channel;
+    cursor_channel = CURSOR_CHANNEL(channel);
     cursor_channel->priv->cursor_visible = TRUE;
     cursor_channel->priv->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 

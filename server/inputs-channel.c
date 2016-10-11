@@ -151,7 +151,7 @@ static uint8_t *inputs_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                  uint16_t type,
                                                  uint32_t size)
 {
-    InputsChannel *inputs_channel = (InputsChannel*)red_channel_client_get_channel(rcc);
+    InputsChannel *inputs_channel = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
 
     if (size > RECEIVE_BUF_SIZE) {
         spice_printerr("error: too large incoming message");
@@ -259,7 +259,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
             red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_MOUSE_MOTION_ACK, base);
             break;
         case RED_PIPE_ITEM_MIGRATE_DATA:
-            ((InputsChannel*)red_channel_client_get_channel(rcc))->src_during_migrate = FALSE;
+            INPUTS_CHANNEL(red_channel_client_get_channel(rcc))->src_during_migrate = FALSE;
             inputs_channel_client_send_migrate_data(rcc, m, base);
             break;
         default:
@@ -272,7 +272,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
 static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint16_t type,
                                         void *message)
 {
-    InputsChannel *inputs_channel = (InputsChannel *)red_channel_client_get_channel(rcc);
+    InputsChannel *inputs_channel = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
     InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
     uint32_t i;
     RedsState *reds = red_channel_get_server(&inputs_channel->base);
@@ -458,13 +458,13 @@ static void inputs_channel_on_disconnect(RedChannelClient *rcc)
     if (!rcc) {
         return;
     }
-    inputs_release_keys((InputsChannel*)red_channel_client_get_channel(rcc));
+    inputs_release_keys(INPUTS_CHANNEL(red_channel_client_get_channel(rcc)));
 }
 
 static void inputs_pipe_add_init(RedChannelClient *rcc)
 {
     RedInputsInitPipeItem *item = spice_malloc(sizeof(RedInputsInitPipeItem));
-    InputsChannel *inputs = (InputsChannel*)red_channel_client_get_channel(rcc);
+    InputsChannel *inputs = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_INPUTS_INIT);
     item->modifiers = kbd_get_leds(inputs_channel_get_keyboard(inputs));
@@ -511,7 +511,7 @@ static void inputs_connect(RedChannel *channel, RedClient *client,
 
 static void inputs_migrate(RedChannelClient *rcc)
 {
-    InputsChannel *inputs = (InputsChannel*)red_channel_client_get_channel(rcc);
+    InputsChannel *inputs = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
     inputs->src_during_migrate = TRUE;
     red_channel_client_default_migrate(rcc);
 }
@@ -548,7 +548,7 @@ static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
                                               void *message)
 {
     InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
-    InputsChannel *inputs = (InputsChannel*)red_channel_client_get_channel(rcc);
+    InputsChannel *inputs = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
     SpiceMigrateDataHeader *header;
     SpiceMigrateDataInputs *mig_data;
 
@@ -580,7 +580,7 @@ InputsChannel* inputs_channel_new(RedsState *reds)
     channel_cbs.handle_migrate_data = inputs_channel_handle_migrate_data;
     channel_cbs.handle_migrate_flush_mark = inputs_channel_handle_migrate_flush_mark;
 
-    inputs = (InputsChannel *)red_channel_create_parser(
+    inputs = INPUTS_CHANNEL(red_channel_create_parser(
                                     sizeof(InputsChannel),
                                     reds,
                                     reds_get_core_interface(reds),
@@ -589,7 +589,7 @@ InputsChannel* inputs_channel_new(RedsState *reds)
                                     spice_get_client_channel_parser(SPICE_CHANNEL_INPUTS, NULL),
                                     inputs_channel_handle_parsed,
                                     &channel_cbs,
-                                    SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER);
+                                    SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER));
 
     if (!inputs) {
         spice_error("failed to allocate Inputs Channel");

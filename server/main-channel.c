@@ -329,7 +329,7 @@ MainChannel* main_channel_new(RedsState *reds)
     client_cbs.migrate = main_channel_client_migrate;
     red_channel_register_client_cbs(channel, &client_cbs, NULL);
 
-    return (MainChannel *)channel;
+    return MAIN_CHANNEL(channel);
 }
 
 static int main_channel_connect_semi_seamless(MainChannel *main_channel)

@@ -122,7 +122,7 @@ CommonGraphicsChannel* common_graphics_channel_new(RedsState *server,
                                         migration_flags);
     spice_return_val_if_fail(channel, NULL);
 
-    common = (CommonGraphicsChannel *)channel;
+    common = COMMON_GRAPHICS_CHANNEL(channel);
     common->qxl = qxl;
     return common;
 }

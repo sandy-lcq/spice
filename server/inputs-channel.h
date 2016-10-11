@@ -26,6 +26,8 @@
 
 #include "red-channel.h"
 
+#define INPUTS_CHANNEL(channel) ((InputsChannel*)(channel))
+
 typedef struct InputsChannel InputsChannel;
 
 InputsChannel* inputs_channel_new(RedsState *reds);
