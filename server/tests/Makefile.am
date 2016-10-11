@@ -40,6 +40,7 @@ TESTS =						\
 	spice-options-test			\
 	stat_test				\
 	stream-test				\
+	test-agent-msg-filter			\
 	test-loop				\
 	test-qxl-parsing			\
 	$(NULL)
