@@ -172,7 +172,7 @@ static void stop_streams(DisplayChannel *display)
 void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 {
     RedSurface *surface = &display->priv->surfaces[surface_id];
-    QXLInstance *qxl = display->common.qxl;
+    QXLInstance *qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display));
     DisplayChannelClient *dcc;
     GListIter iter;
 
@@ -1831,7 +1831,7 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
 
     if (display->priv->renderer == RED_RENDERER_INVALID) {
         int i;
-        QXLInstance *qxl = display->common.qxl;
+        QXLInstance *qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display));
         RedsState *reds = red_qxl_get_server(qxl->st);
         GArray *renderers = reds_get_renderers(reds);
         for (i = 0; i < renderers->len; i++) {
@@ -2037,7 +2037,7 @@ void display_channel_gl_scanout(DisplayChannel *display)
 
 static void set_gl_draw_async_count(DisplayChannel *display, int num)
 {
-    QXLInstance *qxl = display->common.qxl;
+    QXLInstance *qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display));
 
     display->priv->gl_draw_async_count = num;
 

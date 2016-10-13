@@ -25,20 +25,18 @@ int common_channel_config_socket(RedChannelClient *rcc);
 
 #define COMMON_CLIENT_TIMEOUT (NSEC_PER_SEC * 30)
 
-#define CHANNEL_RECEIVE_BUF_SIZE 1024
+typedef struct CommonGraphicsChannelPrivate CommonGraphicsChannelPrivate;
 typedef struct CommonGraphicsChannel {
     RedChannel base; // Must be the first thing
 
-    QXLInstance *qxl;
-    uint8_t recv_buf[CHANNEL_RECEIVE_BUF_SIZE];
-    int during_target_migrate; /* TRUE when the client that is associated with the channel
-                                  is during migration. Turned off when the vm is started.
-                                  The flag is used to avoid sending messages that are artifacts
-                                  of the transition from stopped vm to loaded vm (e.g., recreation
-                                  of the primary surface) */
+    CommonGraphicsChannelPrivate *priv;
 } CommonGraphicsChannel;
 
 #define COMMON_GRAPHICS_CHANNEL(Channel) ((CommonGraphicsChannel*)(Channel))
+
+void common_graphics_channel_set_during_target_migrate(CommonGraphicsChannel *self, gboolean value);
+gboolean common_graphics_channel_get_during_target_migrate(CommonGraphicsChannel *self);
+QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self);
 
 enum {
     RED_PIPE_ITEM_TYPE_VERB = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,

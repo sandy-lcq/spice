@@ -27,6 +27,19 @@
 #include "dcc.h"
 #include "main-channel-client.h"
 
+#define CHANNEL_RECEIVE_BUF_SIZE 1024
+
+struct CommonGraphicsChannelPrivate
+{
+    QXLInstance *qxl;
+    uint8_t recv_buf[CHANNEL_RECEIVE_BUF_SIZE];
+    int during_target_migrate; /* TRUE when the client that is associated with the channel
+                                  is during migration. Turned off when the vm is started.
+                                  The flag is used to avoid sending messages that are artifacts
+                                  of the transition from stopped vm to loaded vm (e.g., recreation
+                                  of the primary surface) */
+};
+
 static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
@@ -41,7 +54,7 @@ static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint
         spice_critical("unexpected message size %u (max is %d)", size, CHANNEL_RECEIVE_BUF_SIZE);
         return NULL;
     }
-    return common->recv_buf;
+    return common->priv->recv_buf;
 }
 
 static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size,
@@ -123,7 +136,24 @@ CommonGraphicsChannel* common_graphics_channel_new(RedsState *server,
     spice_return_val_if_fail(channel, NULL);
 
     common = COMMON_GRAPHICS_CHANNEL(channel);
-    common->qxl = qxl;
+    /* FIXME remove leak */
+    common->priv = g_new0(CommonGraphicsChannelPrivate, 1);
+    common->priv->qxl = qxl;
     return common;
+}
+
+void common_graphics_channel_set_during_target_migrate(CommonGraphicsChannel *self, gboolean value)
+{
+    self->priv->during_target_migrate = value;
+}
+
+gboolean common_graphics_channel_get_during_target_migrate(CommonGraphicsChannel *self)
+{
+    return self->priv->during_target_migrate;
+}
+
+QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self)
+{
+    return self->priv->qxl;
 }
 

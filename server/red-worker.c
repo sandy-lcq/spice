@@ -533,7 +533,9 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
                                    line_0, surface.flags & QXL_SURF_FLAG_KEEP_DATA, TRUE);
     display_channel_set_monitors_config_to_primary(display);
 
-    if (display_is_connected(worker) && !worker->display_channel->common.during_target_migrate) {
+    CommonGraphicsChannel *common = COMMON_GRAPHICS_CHANNEL(worker->display_channel);
+    if (display_is_connected(worker) &&
+        !common_graphics_channel_get_during_target_migrate(common)) {
         /* guest created primary, so it will (hopefully) send a monitors_config
          * now, don't send our own temporary one */
         if (!worker->driver_cap_monitors_config) {
@@ -638,10 +640,12 @@ static void handle_dev_start(void *opaque, void *payload)
 
     spice_assert(!worker->running);
     if (worker->cursor_channel) {
-        COMMON_GRAPHICS_CHANNEL(worker->cursor_channel)->during_target_migrate = FALSE;
+        CommonGraphicsChannel *common = COMMON_GRAPHICS_CHANNEL(worker->cursor_channel);
+        common_graphics_channel_set_during_target_migrate(common, FALSE);
     }
     if (worker->display_channel) {
-        worker->display_channel->common.during_target_migrate = FALSE;
+        CommonGraphicsChannel *common = COMMON_GRAPHICS_CHANNEL(worker->display_channel);
+        common_graphics_channel_set_during_target_migrate(common, FALSE);
         display_channel_wait_for_migrate_data(worker->display_channel);
     }
     worker->running = TRUE;

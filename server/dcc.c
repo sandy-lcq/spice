@@ -284,7 +284,8 @@ void dcc_create_surface(DisplayChannelClient *dcc, int surface_id)
     flags = is_primary_surface(DCC_TO_DC(dcc), surface_id) ? SPICE_SURFACE_FLAGS_PRIMARY : 0;
 
     /* don't send redundant create surface commands to client */
-    if (!dcc || display->common.during_target_migrate ||
+    if (!dcc ||
+        common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(display)) ||
         dcc->priv->surface_client_created[surface_id]) {
         return;
     }
@@ -514,8 +515,8 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
                          "zlib-glz-state", zlib_glz_state,
                          NULL);
     spice_info("New display (client %p) dcc %p stream %p", client, dcc, stream);
-    display->common.during_target_migrate = mig_target;
-    dcc->priv->id = display->common.qxl->id;
+    common_graphics_channel_set_during_target_migrate(COMMON_GRAPHICS_CHANNEL(display), mig_target);
+    dcc->priv->id = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display))->id;
 
     if (common_caps_array)
         g_array_unref(common_caps_array);
@@ -749,7 +750,7 @@ void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
     display = DCC_TO_DC(dcc);
     channel = RED_CHANNEL(display);
 
-    if (COMMON_GRAPHICS_CHANNEL(display)->during_target_migrate ||
+    if (common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(display)) ||
         !dcc->priv->surface_client_created[surface_id]) {
         return;
     }

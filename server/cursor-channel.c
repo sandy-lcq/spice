@@ -337,11 +337,13 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 {
     CursorItem *cursor_item;
     int cursor_show = FALSE;
+    QXLInstance *qxl;
 
     spice_return_if_fail(cursor);
     spice_return_if_fail(cursor_cmd);
 
-    cursor_item = cursor_item_new(cursor->common.qxl, cursor_cmd);
+    qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(cursor));
+    cursor_item = cursor_item_new(qxl, cursor_cmd);
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
@@ -389,7 +391,7 @@ void cursor_channel_reset(CursorChannel *cursor)
 
     if (red_channel_is_connected(channel)) {
         red_channel_pipes_add_type(channel, RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
-        if (!cursor->common.during_target_migrate) {
+        if (!common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor))) {
             red_pipes_add_verb(channel, SPICE_MSG_CURSOR_RESET);
         }
         if (!red_channel_wait_all_sent(&cursor->common.base,
@@ -405,7 +407,7 @@ static void cursor_channel_init_client(CursorChannel *cursor, CursorChannelClien
     spice_return_if_fail(cursor);
 
     if (!red_channel_is_connected(&cursor->common.base)
-        || COMMON_GRAPHICS_CHANNEL(cursor)->during_target_migrate) {
+        || common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor))) {
         spice_debug("during_target_migrate: skip init");
         return;
     }

@@ -124,7 +124,7 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
                          "common-caps", common_caps_array,
                          "caps", caps_array,
                          NULL);
-    COMMON_GRAPHICS_CHANNEL(cursor)->during_target_migrate = mig_target;
+    common_graphics_channel_set_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor), mig_target);
 
     if (caps_array)
         g_array_unref(caps_array);
