@@ -49,9 +49,61 @@
 // Maximal length of APDU
 #define APDUBufSize 270
 
+#define RED_TYPE_SMARTCARD_CHANNEL red_smartcard_channel_get_type()
+
+#define RED_SMARTCARD_CHANNEL(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_SMARTCARD_CHANNEL, RedSmartcardChannel))
+#define RED_SMARTCARD_CHANNEL_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_SMARTCARD_CHANNEL, RedSmartcardChannelClass))
+#define RED_IS_SMARTCARD_CHANNEL(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_SMARTCARD_CHANNEL))
+#define RED_IS_SMARTCARD_CHANNEL_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_SMARTCARD_CHANNEL))
+#define RED_SMARTCARD_CHANNEL_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_SMARTCARD_CHANNEL, RedSmartcardChannelClass))
+
+typedef struct RedSmartcardChannel RedSmartcardChannel;
+typedef struct RedSmartcardChannelClass RedSmartcardChannelClass;
+
+struct RedSmartcardChannel
+{
+    RedChannel parent;
+};
+
+struct RedSmartcardChannelClass
+{
+    RedChannelClass parent_class;
+};
+
+GType red_smartcard_channel_get_type(void) G_GNUC_CONST;
+
+G_DEFINE_TYPE(RedSmartcardChannel, red_smartcard_channel, RED_TYPE_CHANNEL)
+
+static void
+red_smartcard_channel_init(RedSmartcardChannel *self)
+{
+}
+
+static RedSmartcardChannel *
+red_smartcard_channel_new(RedsState *reds)
+{
+    return g_object_new(RED_TYPE_SMARTCARD_CHANNEL,
+                        "spice-server", reds,
+                        "core-interface", reds_get_core_interface(reds),
+                        "channel-type", SPICE_CHANNEL_SMARTCARD,
+                        "id", 0,
+                        "handle-acks", FALSE /* handle_acks */,
+                        "migration-flags",
+                        (SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER),
+                        NULL);
+}
+
+
 G_DEFINE_TYPE(RedCharDeviceSmartcard, red_char_device_smartcard, RED_TYPE_CHAR_DEVICE)
 
-#define RED_CHAR_DEVICE_SMARTCARD_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), RED_TYPE_CHAR_DEVICE_SMARTCARD, RedCharDeviceSmartcardPrivate))
+#define RED_CHAR_DEVICE_SMARTCARD_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE ((o), RED_TYPE_CHAR_DEVICE_SMARTCARD, \
+                                  RedCharDeviceSmartcardPrivate))
 
 struct RedCharDeviceSmartcardPrivate {
     uint32_t             reader_id;
@@ -73,10 +125,6 @@ typedef struct RedMsgItem {
 
 static RedMsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc, VSCMsgHeader *vheader);
 static void smartcard_channel_client_pipe_add_push(RedChannelClient *rcc, RedPipeItem *item);
-
-typedef struct SmartCardChannel {
-    RedChannel base;
-} SmartCardChannel;
 
 static struct Readers {
     uint32_t num;
@@ -519,41 +567,49 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
     }
 }
 
-SmartCardChannel *g_smartcard_channel;
+static void
+red_smartcard_channel_constructed(GObject *object)
+{
+    RedSmartcardChannel *self = RED_SMARTCARD_CHANNEL(object);
+    RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
+    ClientCbs client_cbs = { NULL, };
+
+    G_OBJECT_CLASS(red_smartcard_channel_parent_class)->constructed(object);
+
+    client_cbs.connect = smartcard_connect_client;
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
+
+    reds_register_channel(reds, RED_CHANNEL(self));
+}
+
+static void
+red_smartcard_channel_class_init(RedSmartcardChannelClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+
+    object_class->constructed = red_smartcard_channel_constructed;
+
+    channel_class->handle_message = smartcard_channel_client_handle_message,
+
+    channel_class->config_socket = smartcard_channel_client_config_socket;
+    channel_class->on_disconnect = smartcard_channel_client_on_disconnect;
+    channel_class->send_item = smartcard_channel_send_item;
+    channel_class->alloc_recv_buf = smartcard_channel_client_alloc_msg_rcv_buf;
+    channel_class->release_recv_buf = smartcard_channel_client_release_msg_rcv_buf;
+    channel_class->handle_migrate_flush_mark = smartcard_channel_client_handle_migrate_flush_mark;
+    channel_class->handle_migrate_data = smartcard_channel_client_handle_migrate_data;
+
+}
+
+/* FIXME: remove global */
+RedSmartcardChannel *g_smartcard_channel;
 
 static void smartcard_init(RedsState *reds)
 {
-    ChannelCbs channel_cbs = { NULL, };
-    ClientCbs client_cbs = { NULL, };
-    uint32_t migration_flags = SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER;
-
     spice_assert(!g_smartcard_channel);
 
-    channel_cbs.config_socket = smartcard_channel_client_config_socket;
-    channel_cbs.on_disconnect = smartcard_channel_client_on_disconnect;
-    channel_cbs.send_item = smartcard_channel_send_item;
-    channel_cbs.alloc_recv_buf = smartcard_channel_client_alloc_msg_rcv_buf;
-    channel_cbs.release_recv_buf = smartcard_channel_client_release_msg_rcv_buf;
-    channel_cbs.handle_migrate_flush_mark = smartcard_channel_client_handle_migrate_flush_mark;
-    channel_cbs.handle_migrate_data = smartcard_channel_client_handle_migrate_data;
-
-    g_smartcard_channel = (SmartCardChannel*)red_channel_create(sizeof(SmartCardChannel),
-                                             reds,
-                                             reds_get_core_interface(reds),
-                                             SPICE_CHANNEL_SMARTCARD, 0,
-                                             FALSE /* handle_acks */,
-                                             smartcard_channel_client_handle_message,
-                                             &channel_cbs,
-                                             migration_flags);
-
-    if (!g_smartcard_channel) {
-        spice_error("failed to allocate Smartcard Channel");
-    }
-
-    client_cbs.connect = smartcard_connect_client;
-    red_channel_register_client_cbs(&g_smartcard_channel->base, &client_cbs, NULL);
-
-    reds_register_channel(reds, &g_smartcard_channel->base);
+    g_smartcard_channel = red_smartcard_channel_new(reds);
 }
 
 

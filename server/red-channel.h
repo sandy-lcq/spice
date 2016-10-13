@@ -24,6 +24,7 @@
 
 #include <pthread.h>
 #include <limits.h>
+#include <glib-object.h>
 #include <common/ring.h>
 #include <common/marshaller.h>
 
@@ -33,6 +34,8 @@
 #include "reds-stream.h"
 #include "stat.h"
 #include "red-pipe-item.h"
+
+G_BEGIN_DECLS
 
 typedef struct SpiceDataHeaderOpaque SpiceDataHeaderOpaque;
 
@@ -125,23 +128,6 @@ typedef void (*channel_client_connect_proc)(RedChannel *channel, RedClient *clie
 typedef void (*channel_client_disconnect_proc)(RedChannelClient *base);
 typedef void (*channel_client_migrate_proc)(RedChannelClient *base);
 
-// TODO: add ASSERTS for thread_id  in client and channel calls
-//
-/*
- * callbacks that are triggered from channel client stream events.
- * They are called from the thread that listen to the stream events.
- */
-typedef struct {
-    channel_configure_socket_proc config_socket;
-    channel_disconnect_proc on_disconnect;
-    channel_send_pipe_item_proc send_item;
-    channel_alloc_msg_recv_buf_proc alloc_recv_buf;
-    channel_release_msg_recv_buf_proc release_recv_buf;
-    channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark;
-    channel_handle_migrate_data_proc handle_migrate_data;
-    channel_handle_migrate_data_get_serial_proc handle_migrate_data_get_serial;
-} ChannelCbs;
-
 
 /*
  * callbacks that are triggered from client events.
@@ -153,6 +139,63 @@ typedef struct {
     channel_client_migrate_proc migrate;
 } ClientCbs;
 
+static inline gboolean test_capability(const uint32_t *caps, int num_caps, uint32_t cap)
+{
+    return VD_AGENT_HAS_CAPABILITY(caps, num_caps, cap);
+}
+
+#define RED_TYPE_CHANNEL red_channel_get_type()
+
+#define RED_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHANNEL, RedChannel))
+#define RED_CHANNEL_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_CHANNEL, RedChannelClass))
+#define RED_IS_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_CHANNEL))
+#define RED_IS_CHANNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_CHANNEL))
+#define RED_CHANNEL_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHANNEL, RedChannelClass))
+
+typedef struct RedChannel RedChannel;
+typedef struct RedChannelClass RedChannelClass;
+typedef struct RedChannelPrivate RedChannelPrivate;
+
+struct RedChannel
+{
+    GObject parent;
+
+    RedChannelPrivate *priv;
+};
+
+struct RedChannelClass
+{
+    GObjectClass parent_class;
+
+    /* subclasses must implement either handle_message(), or both parser() and
+     * handle_parsed() */
+    channel_handle_message_proc handle_message;
+    spice_parse_channel_func_t parser;
+    channel_handle_parsed_proc handle_parsed;
+
+    // TODO: add ASSERTS for thread_id  in client and channel calls
+    /*
+     * callbacks that are triggered from channel client stream events.
+     * They are called from the thread that listen to the stream events.
+     */
+    channel_configure_socket_proc config_socket;
+    channel_disconnect_proc on_disconnect;
+    channel_send_pipe_item_proc send_item;
+    channel_alloc_msg_recv_buf_proc alloc_recv_buf;
+    channel_release_msg_recv_buf_proc release_recv_buf;
+    channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark;
+    channel_handle_migrate_data_proc handle_migrate_data;
+    channel_handle_migrate_data_get_serial_proc handle_migrate_data_get_serial;
+};
+
+#define FOREACH_CLIENT(_channel, _iter, _data) \
+    GLIST_FOREACH((_channel ? red_channel_get_clients(RED_CHANNEL(_channel)) : NULL), \
+                  _iter, RedChannelClient, _data)
+
+/* Red Channel interface */
+
 typedef struct RedChannelCapabilities {
     int num_common_caps;
     uint32_t *common_caps;
@@ -160,100 +203,20 @@ typedef struct RedChannelCapabilities {
     uint32_t *caps;
 } RedChannelCapabilities;
 
-static inline gboolean test_capability(const uint32_t *caps, int num_caps, uint32_t cap)
-{
-    return VD_AGENT_HAS_CAPABILITY(caps, num_caps, cap);
-}
-
-typedef struct RedChannelClientLatencyMonitor {
-    int state;
-    uint64_t last_pong_time;
-    SpiceTimer *timer;
-    uint32_t id;
-    int tcp_nodelay;
-    int warmup_was_sent;
-
-    int64_t roundtrip;
-} RedChannelClientLatencyMonitor;
-
-typedef struct RedChannelClientConnectivityMonitor {
-    int state;
-    uint32_t out_bytes;
-    uint32_t in_bytes;
-    uint32_t timeout;
-    SpiceTimer *timer;
-} RedChannelClientConnectivityMonitor;
-
-struct RedChannel {
-    uint32_t type;
-    uint32_t id;
-
-    uint32_t refs;
-
-    RingItem link; // channels link for reds
-
-    const SpiceCoreInterfaceInternal *core;
-    int handle_acks;
-
-    // RedChannel will hold only connected channel clients (logic - when pushing pipe item to all channel clients, there
-    // is no need to go over disconnect clients)
-    // . While client will hold the channel clients till it is destroyed
-    // and then it will destroy them as well.
-    // However RCC still holds a reference to the Channel.
-    // Maybe replace these logic with ref count?
-    // TODO: rename to 'connected_clients'?
-    GList *clients;
-
-    OutgoingHandlerInterface outgoing_cb;
-    IncomingHandlerInterface incoming_cb;
-
-    ChannelCbs channel_cbs;
-    ClientCbs client_cbs;
-
-    RedChannelCapabilities local_caps;
-    uint32_t migration_flags;
-
-    void *data;
-
-    // TODO: when different channel_clients are in different threads from Channel -> need to protect!
-    pthread_t thread_id;
-    RedsState *reds;
-#ifdef RED_STATISTICS
-    StatNodeRef stat;
-    uint64_t *out_bytes_counter;
-#endif
-};
-
-#define FOREACH_CLIENT(_channel, _iter, _data) \
-    GLIST_FOREACH((_channel ? RED_CHANNEL(_channel)->clients : NULL), \
-                  _iter, RedChannelClient, _data)
-
-#define RED_CHANNEL(Channel) ((RedChannel *)(Channel))
-
-/* if one of the callbacks should cause disconnect, use red_channel_shutdown and don't
- * explicitly destroy the channel */
-RedChannel *red_channel_create(int size,
-                               RedsState *reds,
-                               const SpiceCoreInterfaceInternal *core,
-                               uint32_t type, uint32_t id,
-                               int handle_acks,
-                               channel_handle_message_proc handle_message,
-                               const ChannelCbs *channel_cbs,
-                               uint32_t migration_flags);
+GType red_channel_get_type(void) G_GNUC_CONST;
 
 /* alternative constructor, meant for marshaller based (inputs,main) channels,
  * will become default eventually */
+/*
 RedChannel *red_channel_create_parser(int size,
                                       RedsState *reds,
                                       const SpiceCoreInterfaceInternal *core,
                                       uint32_t type, uint32_t id,
-                                      int handle_acks,
+                                      gboolean handle_acks,
                                       spice_parse_channel_func_t parser,
                                       channel_handle_parsed_proc handle_parsed,
-                                      const ChannelCbs *channel_cbs,
                                       uint32_t migration_flags);
-void red_channel_ref(RedChannel *channel);
-void red_channel_unref(RedChannel *channel);
+                                      */
 void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc);
 void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc);
 
@@ -263,11 +226,6 @@ void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *clien
 // caps are freed when the channel is destroyed
 void red_channel_set_common_cap(RedChannel *channel, uint32_t cap);
 void red_channel_set_cap(RedChannel *channel, uint32_t cap);
-
-// TODO: tmp, for channels that don't use RedChannel yet (e.g., snd channel), but
-// do use the client callbacks. So the channel clients are not connected (the channel doesn't
-// have list of them, but they do have a link to the channel, and the client has a list of them)
-RedChannel *red_channel_create_dummy(int size, RedsState *reds, uint32_t type, uint32_t id);
 
 int red_channel_is_connected(RedChannel *channel);
 
@@ -332,6 +290,9 @@ void red_channel_receive(RedChannel *channel);
 void red_channel_send(RedChannel *channel);
 // For red_worker
 void red_channel_disconnect(RedChannel *channel);
+void red_channel_connect(RedChannel *channel, RedClient *client,
+                         RedsStream *stream, int migration, int num_common_caps,
+                         uint32_t *common_caps, int num_caps, uint32_t *caps);
 
 /* return the sum of all the rcc pipe size */
 uint32_t red_channel_max_pipe_size(RedChannel *channel);
@@ -344,8 +305,26 @@ uint32_t red_channel_sum_pipes_size(RedChannel *channel);
 typedef void (*channel_client_callback)(RedChannelClient *rcc);
 typedef void (*channel_client_callback_data)(RedChannelClient *rcc, void *data);
 void red_channel_apply_clients(RedChannel *channel, channel_client_callback v);
-void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback_data v, void * data);
+void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback_data v,
+                                    void *data);
+GList *red_channel_get_clients(RedChannel *channel);
+guint red_channel_get_n_clients(RedChannel *channel);
 struct RedsState* red_channel_get_server(RedChannel *channel);
+SpiceCoreInterfaceInternal* red_channel_get_core_interface(RedChannel *channel);
+
+/* channel callback function */
+int red_channel_config_socket(RedChannel *self, RedChannelClient *rcc);
+void red_channel_on_disconnect(RedChannel *self, RedChannelClient *rcc);
+void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem *item);
+void red_channel_reset_thread_id(RedChannel *self);
+StatNodeRef red_channel_get_stat_node(RedChannel *channel);
+
+/* FIXME: do these even need to be in RedChannel? It's really only used in
+ * RedChannelClient. Needs refactoring */
+IncomingHandlerInterface* red_channel_get_incoming_handler(RedChannel *self);
+OutgoingHandlerInterface* red_channel_get_outgoing_handler(RedChannel *self);
+
+const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *self);
 
 struct RedClient {
     RedsState *reds;
@@ -418,5 +397,7 @@ int red_channel_wait_all_sent(RedChannel *channel,
                               int64_t timeout);
 
 #define CHANNEL_BLOCKED_SLEEP_DURATION 10000 //micro
+
+G_END_DECLS
 
 #endif

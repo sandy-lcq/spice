@@ -31,6 +31,7 @@
 
 #include "spice.h"
 #include "red-common.h"
+#include "dummy-channel.h"
 #include "dummy-channel-client.h"
 #include "main-channel.h"
 #include "reds.h"
@@ -218,6 +219,7 @@ static void snd_disconnect_channel(SndChannel *channel)
     SndWorker *worker;
     RedsState *reds;
     RedChannel *red_channel;
+    uint32_t type;
 
     if (!channel || !channel->stream) {
         spice_debug("not connected");
@@ -225,8 +227,9 @@ static void snd_disconnect_channel(SndChannel *channel)
     }
     red_channel = red_channel_client_get_channel(channel->channel_client);
     reds = snd_channel_get_server(channel);
+    g_object_get(red_channel, "channel-type", &type, NULL);
     spice_debug("SndChannel=%p rcc=%p type=%d",
-                 channel, channel->channel_client, red_channel->type);
+                 channel, channel->channel_client, type);
     worker = channel->worker;
     channel->cleanup(channel);
     red_channel_client_disconnect(worker->connection->channel_client);
@@ -998,12 +1001,14 @@ static void snd_disconnect_channel_client(RedChannelClient *rcc)
 {
     SndWorker *worker;
     RedChannel *channel = red_channel_client_get_channel(rcc);
+    uint32_t type;
 
     spice_assert(channel);
-    spice_assert(channel->data);
-    worker = (SndWorker *)channel->data;
+    worker = (SndWorker *)g_object_get_data(G_OBJECT(channel), "sound-worker");
+    spice_assert(worker);
+    g_object_get(channel, "channel-type", &type, NULL);
 
-    spice_debug("channel-type=%d", channel->type);
+    spice_debug("channel-type=%d", type);
     if (worker->connection) {
         spice_assert(worker->connection->channel_client == rcc);
         snd_disconnect_channel(worker->connection);
@@ -1145,7 +1150,9 @@ void snd_set_playback_latency(RedClient *client, uint32_t latency)
     SndWorker *now = workers;
 
     for (; now; now = now->next) {
-        if (now->base_channel->type == SPICE_CHANNEL_PLAYBACK && now->connection &&
+        uint32_t type;
+        g_object_get(now->base_channel, "channel-type", &type, NULL);
+        if (type == SPICE_CHANNEL_PLAYBACK && now->connection &&
             red_channel_client_get_client(now->connection->channel_client) == client) {
 
             if (red_channel_client_test_remote_cap(now->connection->channel_client,
@@ -1213,7 +1220,7 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
                                   int migration, int num_common_caps, uint32_t *common_caps,
                                   int num_caps, uint32_t *caps)
 {
-    SndWorker *worker = channel->data;
+    SndWorker *worker = g_object_get_data(G_OBJECT(channel), "sound-worker");
     PlaybackChannel *playback_channel;
     SpicePlaybackState *st = SPICE_CONTAINEROF(worker, SpicePlaybackState, worker);
 
@@ -1242,7 +1249,8 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
                                           SPICE_PLAYBACK_CAP_CELT_0_5_1);
     int client_can_opus = red_channel_client_test_remote_cap(playback_channel->base.channel_client,
                                           SPICE_PLAYBACK_CAP_OPUS);
-    int playback_compression = reds_config_get_playback_compression(channel->reds);
+    int playback_compression =
+        reds_config_get_playback_compression(red_channel_get_server(channel));
     int desired_mode = snd_desired_audio_mode(playback_compression, st->frequency,
                                               client_can_celt, client_can_opus);
     playback_channel->mode = SPICE_AUDIO_DATA_MODE_RAW;
@@ -1271,8 +1279,8 @@ static void snd_record_migrate_channel_client(RedChannelClient *rcc)
 
     spice_debug(NULL);
     spice_assert(channel);
-    spice_assert(channel->data);
-    worker = (SndWorker *)channel->data;
+    worker = (SndWorker *)g_object_get_data(G_OBJECT(channel), "sound-worker");
+    spice_assert(worker);
 
     if (worker->connection) {
         spice_assert(worker->connection->channel_client == rcc);
@@ -1462,7 +1470,7 @@ static void snd_set_record_peer(RedChannel *channel, RedClient *client, RedsStre
                                 int migration, int num_common_caps, uint32_t *common_caps,
                                 int num_caps, uint32_t *caps)
 {
-    SndWorker *worker = channel->data;
+    SndWorker *worker = g_object_get_data(G_OBJECT(channel), "sound-worker");
     RecordChannel *record_channel;
     SpiceRecordState *st = SPICE_CONTAINEROF(worker, SpiceRecordState, worker);
 
@@ -1500,8 +1508,8 @@ static void snd_playback_migrate_channel_client(RedChannelClient *rcc)
     RedChannel *channel = red_channel_client_get_channel(rcc);
 
     spice_assert(channel);
-    spice_assert(channel->data);
-    worker = (SndWorker *)channel->data;
+    worker = (SndWorker *)g_object_get_data(G_OBJECT(channel), "sound-worker");
+    spice_assert(worker);
     spice_debug(NULL);
 
     if (worker->connection) {
@@ -1542,8 +1550,9 @@ void snd_attach_playback(RedsState *reds, SpicePlaybackInstance *sin)
     sin->st->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
-    channel = red_channel_create_dummy(sizeof(RedChannel), reds, SPICE_CHANNEL_PLAYBACK, 0);
+    channel = dummy_channel_new(reds, SPICE_CHANNEL_PLAYBACK, 0);
 
+    g_object_set_data(G_OBJECT(channel), "sound-worker", playback_worker);
     client_cbs.connect = snd_set_playback_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_playback_migrate_channel_client;
@@ -1571,8 +1580,9 @@ void snd_attach_record(RedsState *reds, SpiceRecordInstance *sin)
     sin->st->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
-    channel = red_channel_create_dummy(sizeof(RedChannel), reds, SPICE_CHANNEL_RECORD, 0);
+    channel = dummy_channel_new(reds, SPICE_CHANNEL_RECORD, 0);
 
+    g_object_set_data(G_OBJECT(channel), "sound-worker", record_worker);
     client_cbs.connect = snd_set_record_peer;
     client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_record_migrate_channel_client;
@@ -1628,7 +1638,9 @@ void snd_set_playback_compression(int on)
     SndWorker *now = workers;
 
     for (; now; now = now->next) {
-        if (now->base_channel->type == SPICE_CHANNEL_PLAYBACK && now->connection) {
+        uint32_t type;
+        g_object_get(now->base_channel, "channel-type", &type, NULL);
+        if (type == SPICE_CHANNEL_PLAYBACK && now->connection) {
             PlaybackChannel* playback = (PlaybackChannel*)now->connection;
             SpicePlaybackState *st = SPICE_CONTAINEROF(now, SpicePlaybackState, worker);
             int client_can_celt = red_channel_client_test_remote_cap(playback->base.channel_client,

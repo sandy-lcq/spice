@@ -37,7 +37,6 @@
 #include "migration-protocol.h"
 #include "main-dispatcher.h"
 #include "spice-bitmap-utils.h"
-#include "image-cache.h"
 #include "utils.h"
 #include "tree.h"
 #include "stream.h"
@@ -45,7 +44,36 @@
 #include "image-encoders.h"
 #include "common-graphics-channel.h"
 
-#define DISPLAY_CHANNEL(channel) ((DisplayChannel*)(channel))
+G_BEGIN_DECLS
+
+#define TYPE_DISPLAY_CHANNEL display_channel_get_type()
+
+#define DISPLAY_CHANNEL(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_DISPLAY_CHANNEL, DisplayChannel))
+#define DISPLAY_CHANNEL_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_DISPLAY_CHANNEL, DisplayChannelClass))
+#define IS_DISPLAY_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_DISPLAY_CHANNEL))
+#define IS_DISPLAY_CHANNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_DISPLAY_CHANNEL))
+#define DISPLAY_CHANNEL_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_DISPLAY_CHANNEL, DisplayChannelClass))
+
+typedef struct DisplayChannel DisplayChannel;
+typedef struct DisplayChannelClass DisplayChannelClass;
+typedef struct DisplayChannelPrivate DisplayChannelPrivate;
+
+struct DisplayChannel
+{
+    CommonGraphicsChannel parent;
+
+    DisplayChannelPrivate *priv;
+};
+
+struct DisplayChannelClass
+{
+    CommonGraphicsChannelClass parent_class;
+};
+
+GType display_channel_get_type(void) G_GNUC_CONST;
 
 typedef struct DependItem {
     Drawable *drawable;
@@ -154,69 +182,8 @@ struct _Drawable {
     } u;
 };
 
-typedef struct DisplayChannelPrivate DisplayChannelPrivate;
-/* FIXME: move to separate file */
-struct DisplayChannelPrivate
-{
-    DisplayChannel *pub;
-
-    uint32_t bits_unique;
-
-    MonitorsConfig *monitors_config;
-
-    uint32_t renderer;
-    int enable_jpeg;
-    int enable_zlib_glz_wrap;
-
-    Ring current_list; // of TreeItem
-    uint32_t current_size;
-
-    uint32_t drawable_count;
-    _Drawable drawables[NUM_DRAWABLES];
-    _Drawable *free_drawables;
-
-    int stream_video;
-    GArray *video_codecs;
-    uint32_t stream_count;
-    Stream streams_buf[NUM_STREAMS];
-    Stream *free_streams;
-    Ring streams;
-    ItemTrace items_trace[NUM_TRACE_ITEMS];
-    uint32_t next_item_trace;
-    uint64_t streams_size_total;
-
-    RedSurface surfaces[NUM_SURFACES];
-    uint32_t n_surfaces;
-    SpiceImageSurfaces image_surfaces;
-
-    ImageCache image_cache;
-
-    int gl_draw_async_count;
-
-/* TODO: some day unify this, make it more runtime.. */
-    stat_info_t add_stat;
-    stat_info_t exclude_stat;
-    stat_info_t __exclude_stat;
-#ifdef RED_WORKER_STAT
-    uint32_t add_count;
-    uint32_t add_with_shadow_count;
-#endif
-#ifdef RED_STATISTICS
-    uint64_t *cache_hits_counter;
-    uint64_t *add_to_cache_counter;
-    uint64_t *non_cache_counter;
-#endif
-    ImageEncoderSharedData encoder_shared_data;
-};
-
-struct DisplayChannel {
-    CommonGraphicsChannel common; // Must be the first thing
-
-    DisplayChannelPrivate priv[1];
-};
-
 #define FOREACH_DCC(_channel, _iter, _data) \
-    GLIST_FOREACH((_channel ? RED_CHANNEL(_channel)->clients : NULL), \
+    GLIST_FOREACH((_channel ? red_channel_get_clients(RED_CHANNEL(_channel)) : NULL), \
                   _iter, DisplayChannelClient, _data)
 
 int display_channel_get_stream_id(DisplayChannel *display, Stream *stream);
@@ -262,8 +229,9 @@ void                       display_channel_set_stream_video          (DisplayCha
                                                                       int stream_video);
 void                       display_channel_set_video_codecs          (DisplayChannel *display,
                                                                       GArray *video_codecs);
+int                        display_channel_get_stream_video          (DisplayChannel *display);
 int                        display_channel_get_streams_timeout       (DisplayChannel *display);
-void                       display_channel_compress_stats_print      (const DisplayChannel *display);
+void                       display_channel_compress_stats_print      (DisplayChannel *display);
 void                       display_channel_compress_stats_reset      (DisplayChannel *display);
 void                       display_channel_surface_unref             (DisplayChannel *display,
                                                                       uint32_t surface_id);
@@ -414,5 +382,7 @@ static inline void region_add_clip_rects(QRegion *rgn, SpiceClipRects *data)
         region_add(rgn, data->rects + i);
     }
 }
+
+G_END_DECLS
 
 #endif /* DISPLAY_CHANNEL_H_ */

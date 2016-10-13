@@ -21,6 +21,7 @@
 
 #include "dcc-private.h"
 #include "display-channel.h"
+#include "display-channel-private.h"
 #include "red-channel-client-private.h"
 #include "main-channel-client.h"
 #include "spice-server-enums.h"

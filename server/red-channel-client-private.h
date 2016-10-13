@@ -21,6 +21,25 @@
 #include "red-channel.h"
 #include "red-channel-client.h"
 
+typedef struct RedChannelClientLatencyMonitor {
+    int state;
+    uint64_t last_pong_time;
+    SpiceTimer *timer;
+    uint32_t id;
+    int tcp_nodelay;
+    int warmup_was_sent;
+
+    int64_t roundtrip;
+} RedChannelClientLatencyMonitor;
+
+typedef struct RedChannelClientConnectivityMonitor {
+    int state;
+    uint32_t out_bytes;
+    uint32_t in_bytes;
+    uint32_t timeout;
+    SpiceTimer *timer;
+} RedChannelClientConnectivityMonitor;
+
 typedef struct OutgoingHandler {
     OutgoingHandlerInterface *cb;
     void *opaque;

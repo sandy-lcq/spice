@@ -65,6 +65,8 @@ static inline RedDrawable *red_drawable_ref(RedDrawable *drawable)
     return drawable;
 }
 
+void red_drawable_unref(RedDrawable *red_drawable);
+
 typedef struct RedUpdateCmd {
     QXLReleaseInfoExt release_info_ext;
     SpiceRect area;

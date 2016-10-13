@@ -23,16 +23,12 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <poll.h>
 #include <pthread.h>
-#include <netinet/tcp.h>
 #include <openssl/ssl.h>
 #include <inttypes.h>
 #include <glib.h>
@@ -93,8 +89,8 @@ struct RedWorker {
 
 static int display_is_connected(RedWorker *worker)
 {
-    return (worker->display_channel && red_channel_is_connected(
-        &worker->display_channel->common.base));
+    return worker->display_channel &&
+        red_channel_is_connected(RED_CHANNEL(worker->display_channel));
 }
 
 void red_drawable_unref(RedDrawable *red_drawable)
@@ -261,7 +257,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             spice_error("bad command type");
         }
         n++;
-        if (red_channel_all_blocked(&worker->display_channel->common.base)
+        if (red_channel_all_blocked(RED_CHANNEL(worker->display_channel))
             || spice_get_monotonic_time_ns() - start > NSEC_PER_SEC / 100) {
             worker->event_timeout = 0;
             return n;
@@ -404,7 +400,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
         return;
     }
     if ((worker->display_channel == NULL) ||
-        (RED_CHANNEL(worker->display_channel)->clients == NULL)) {
+        (red_channel_get_n_clients(RED_CHANNEL(worker->display_channel)) == 0)) {
         red_qxl_set_client_capabilities(worker->qxl, FALSE, caps);
     } else {
         // Take least common denominator
@@ -541,12 +537,12 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
         if (!worker->driver_cap_monitors_config) {
             red_worker_push_monitors_config(worker);
         }
-        red_pipes_add_verb(&worker->display_channel->common.base,
+        red_pipes_add_verb(RED_CHANNEL(worker->display_channel),
                            SPICE_MSG_DISPLAY_MARK);
-        red_channel_push(&worker->display_channel->common.base);
+        red_channel_push(RED_CHANNEL(worker->display_channel));
     }
 
-    cursor_channel_init(worker->cursor_channel);
+    cursor_channel_do_init(worker->cursor_channel);
 }
 
 static void handle_dev_create_primary_surface(void *opaque, void *payload)
@@ -665,7 +661,7 @@ static void handle_dev_oom(void *opaque, void *payload)
     RedWorker *worker = opaque;
     DisplayChannel *display = worker->display_channel;
 
-    RedChannel *display_red_channel = &display->common.base;
+    RedChannel *display_red_channel = RED_CHANNEL(display);
     int ring_is_empty;
 
     spice_return_if_fail(worker->running);
@@ -1371,6 +1367,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     channel = RED_CHANNEL(worker->cursor_channel);
     red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, "cursor_channel", TRUE));
     red_channel_register_client_cbs(channel, client_cursor_cbs, dispatcher);
+    g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
     reds_register_channel(reds, channel);
 
     // TODO: handle seemless migration. Temp, setting migrate to FALSE
@@ -1378,10 +1375,10 @@ RedWorker* red_worker_new(QXLInstance *qxl,
                                                   reds_get_streaming_video(reds),
                                                   reds_get_video_codecs(reds),
                                                   init_info.n_surfaces);
-
     channel = RED_CHANNEL(worker->display_channel);
     red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, "display_channel", TRUE));
     red_channel_register_client_cbs(channel, client_display_cbs, dispatcher);
+    g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
@@ -1398,8 +1395,8 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
     spice_assert(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
            MAX_PIPE_SIZE > NARROW_CLIENT_ACK_WINDOW); //ensure wakeup by ack message
 
-    RED_CHANNEL(worker->cursor_channel)->thread_id = pthread_self();
-    RED_CHANNEL(worker->display_channel)->thread_id = pthread_self();
+    red_channel_reset_thread_id(RED_CHANNEL(worker->cursor_channel));
+    red_channel_reset_thread_id(RED_CHANNEL(worker->display_channel));
 
     GMainLoop *loop = g_main_loop_new(worker->core.main_context, FALSE);
     g_main_loop_run(loop);

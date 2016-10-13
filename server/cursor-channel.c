@@ -28,8 +28,6 @@
 #include "reds.h"
 #include "red-qxl.h"
 
-#define CURSOR_CHANNEL(channel) ((CursorChannel*)(channel))
-
 typedef struct CursorItem {
     QXLInstance *qxl;
     int refs;
@@ -38,13 +36,10 @@ typedef struct CursorItem {
 
 G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
 
-typedef struct RedCursorPipeItem {
-    RedPipeItem base;
-    CursorItem *cursor_item;
-} RedCursorPipeItem;
+struct CursorChannel
+{
+    CommonGraphicsChannel parent;
 
-typedef struct CursorChannelPrivate CursorChannelPrivate;
-struct CursorChannelPrivate {
     CursorItem *item;
     int cursor_visible;
     SpicePoint16 cursor_position;
@@ -53,11 +48,17 @@ struct CursorChannelPrivate {
     uint32_t mouse_mode;
 };
 
-struct CursorChannel {
-    CommonGraphicsChannel common; // Must be the first thing
-
-    CursorChannelPrivate priv[1];
+struct CursorChannelClass
+{
+    CommonGraphicsChannelClass parent_class;
 };
+
+typedef struct RedCursorPipeItem {
+    RedPipeItem base;
+    CursorItem *cursor_item;
+} RedCursorPipeItem;
+
+G_DEFINE_TYPE(CursorChannel, cursor_channel, TYPE_COMMON_GRAPHICS_CHANNEL)
 
 static void cursor_pipe_item_free(RedPipeItem *pipe_item);
 
@@ -105,10 +106,10 @@ static void cursor_item_unref(CursorItem *item)
 
 static void cursor_set_item(CursorChannel *cursor, CursorItem *item)
 {
-    if (cursor->priv->item)
-        cursor_item_unref(cursor->priv->item);
+    if (cursor->item)
+        cursor_item_unref(cursor->item);
 
-    cursor->priv->item = item ? cursor_item_ref(item) : NULL;
+    cursor->item = item ? cursor_item_ref(item) : NULL;
 }
 
 static RedPipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int num)
@@ -197,12 +198,12 @@ static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *
     cursor_channel = CURSOR_CHANNEL(red_channel_client_get_channel(rcc));
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_INIT, NULL);
-    msg.visible = cursor_channel->priv->cursor_visible;
-    msg.position = cursor_channel->priv->cursor_position;
-    msg.trail_length = cursor_channel->priv->cursor_trail_length;
-    msg.trail_frequency = cursor_channel->priv->cursor_trail_frequency;
+    msg.visible = cursor_channel->cursor_visible;
+    msg.position = cursor_channel->cursor_position;
+    msg.trail_length = cursor_channel->cursor_trail_length;
+    msg.trail_frequency = cursor_channel->cursor_trail_frequency;
 
-    cursor_fill(ccc, &msg.cursor, cursor_channel->priv->item, &info);
+    cursor_fill(ccc, &msg.cursor, cursor_channel->item, &info);
     spice_marshall_msg_cursor_init(base_marshaller, &msg);
     add_buf_from_info(base_marshaller, &info);
 }
@@ -212,8 +213,7 @@ static void cursor_marshall(CursorChannelClient *ccc,
                             RedCursorPipeItem *cursor_pipe_item)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
-    CursorChannel *cursor_channel = SPICE_CONTAINEROF(red_channel_client_get_channel(rcc),
-                                                      CursorChannel, common.base);
+    CursorChannel *cursor_channel = CURSOR_CHANNEL(red_channel_client_get_channel(rcc));
     CursorItem *item = cursor_pipe_item->cursor_item;
     RedPipeItem *pipe_item = &cursor_pipe_item->base;
     RedCursorCmd *cmd;
@@ -237,7 +237,7 @@ static void cursor_marshall(CursorChannelClient *ccc,
 
             red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_SET, pipe_item);
             cursor_set.position = cmd->u.set.position;
-            cursor_set.visible = cursor_channel->priv->cursor_visible;
+            cursor_set.visible = cursor_channel->cursor_visible;
 
             cursor_fill(ccc, &cursor_set.cursor, item, &info);
             spice_marshall_msg_cursor_set(m, &cursor_set);
@@ -307,24 +307,14 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
 CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
                                   const SpiceCoreInterfaceInternal *core)
 {
-    CursorChannel *cursor_channel;
-    CommonGraphicsChannel *channel = NULL;
-    ChannelCbs cbs = {
-        .on_disconnect =  cursor_channel_client_on_disconnect,
-        .send_item = cursor_channel_send_item,
-    };
-
     spice_info("create cursor channel");
-    channel = common_graphics_channel_new(server, qxl, core,
-                                          sizeof(CursorChannel),
-                                          SPICE_CHANNEL_CURSOR, 0,
-                                          &cbs, red_channel_client_handle_message);
-
-    cursor_channel = CURSOR_CHANNEL(channel);
-    cursor_channel->priv->cursor_visible = TRUE;
-    cursor_channel->priv->mouse_mode = SPICE_MOUSE_MODE_SERVER;
-
-    return cursor_channel;
+    return g_object_new(TYPE_CURSOR_CHANNEL,
+                        "spice-server", server,
+                        "core-interface", core,
+                        "channel-type", SPICE_CHANNEL_CURSOR,
+                        "migration-flags", 0,
+                        "qxl", qxl,
+                        NULL);
 }
 
 void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
@@ -341,31 +331,31 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
-        cursor->priv->cursor_visible = cursor_cmd->u.set.visible;
+        cursor->cursor_visible = cursor_cmd->u.set.visible;
         cursor_set_item(cursor, cursor_item);
         break;
     case QXL_CURSOR_MOVE:
-        cursor_show = !cursor->priv->cursor_visible;
-        cursor->priv->cursor_visible = TRUE;
-        cursor->priv->cursor_position = cursor_cmd->u.position;
+        cursor_show = !cursor->cursor_visible;
+        cursor->cursor_visible = TRUE;
+        cursor->cursor_position = cursor_cmd->u.position;
         break;
     case QXL_CURSOR_HIDE:
-        cursor->priv->cursor_visible = FALSE;
+        cursor->cursor_visible = FALSE;
         break;
     case QXL_CURSOR_TRAIL:
-        cursor->priv->cursor_trail_length = cursor_cmd->u.trail.length;
-        cursor->priv->cursor_trail_frequency = cursor_cmd->u.trail.frequency;
+        cursor->cursor_trail_length = cursor_cmd->u.trail.length;
+        cursor->cursor_trail_frequency = cursor_cmd->u.trail.frequency;
         break;
     default:
         spice_warning("invalid cursor command %u", cursor_cmd->type);
         return;
     }
 
-    if (red_channel_is_connected(&cursor->common.base) &&
-        (cursor->priv->mouse_mode == SPICE_MOUSE_MODE_SERVER
+    if (red_channel_is_connected(RED_CHANNEL(cursor)) &&
+        (cursor->mouse_mode == SPICE_MOUSE_MODE_SERVER
          || cursor_cmd->type != QXL_CURSOR_MOVE
          || cursor_show)) {
-        red_channel_pipes_new_add(&cursor->common.base,
+        red_channel_pipes_new_add(RED_CHANNEL(cursor),
                                   new_cursor_pipe_item, cursor_item);
     }
 
@@ -374,21 +364,21 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 
 void cursor_channel_reset(CursorChannel *cursor)
 {
-    RedChannel *channel = &cursor->common.base;
+    RedChannel *channel = RED_CHANNEL(cursor);
 
     spice_return_if_fail(cursor);
 
     cursor_set_item(cursor, NULL);
-    cursor->priv->cursor_visible = TRUE;
-    cursor->priv->cursor_position.x = cursor->priv->cursor_position.y = 0;
-    cursor->priv->cursor_trail_length = cursor->priv->cursor_trail_frequency = 0;
+    cursor->cursor_visible = TRUE;
+    cursor->cursor_position.x = cursor->cursor_position.y = 0;
+    cursor->cursor_trail_length = cursor->cursor_trail_frequency = 0;
 
     if (red_channel_is_connected(channel)) {
         red_channel_pipes_add_type(channel, RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE);
         if (!common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor))) {
             red_pipes_add_verb(channel, SPICE_MSG_CURSOR_RESET);
         }
-        if (!red_channel_wait_all_sent(&cursor->common.base,
+        if (!red_channel_wait_all_sent(channel,
                                        COMMON_CLIENT_TIMEOUT)) {
             red_channel_apply_clients(channel,
                                       red_channel_client_disconnect_if_pending_send);
@@ -400,7 +390,7 @@ static void cursor_channel_init_client(CursorChannel *cursor, CursorChannelClien
 {
     spice_return_if_fail(cursor);
 
-    if (!red_channel_is_connected(&cursor->common.base)
+    if (!red_channel_is_connected(RED_CHANNEL(cursor))
         || common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor))) {
         spice_debug("during_target_migrate: skip init");
         return;
@@ -413,7 +403,7 @@ static void cursor_channel_init_client(CursorChannel *cursor, CursorChannelClien
         red_channel_pipes_add_type(RED_CHANNEL(cursor), RED_PIPE_ITEM_TYPE_CURSOR_INIT);
 }
 
-void cursor_channel_init(CursorChannel *cursor)
+void cursor_channel_do_init(CursorChannel *cursor)
 {
     cursor_channel_init_client(cursor, NULL);
 }
@@ -422,7 +412,7 @@ void cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32_t mode)
 {
     spice_return_if_fail(cursor);
 
-    cursor->priv->mouse_mode = mode;
+    cursor->mouse_mode = mode;
 }
 
 void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream *stream,
@@ -446,4 +436,23 @@ void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream
     red_channel_client_push_set_ack(rcc);
 
     cursor_channel_init_client(cursor, ccc);
+}
+
+static void
+cursor_channel_class_init(CursorChannelClass *klass)
+{
+    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+
+    channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_CURSOR, NULL);
+    channel_class->handle_parsed = red_channel_client_handle_message;
+
+    channel_class->on_disconnect =  cursor_channel_client_on_disconnect;
+    channel_class->send_item = cursor_channel_send_item;
+}
+
+static void
+cursor_channel_init(CursorChannel *self)
+{
+    self->cursor_visible = TRUE;
+    self->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 }

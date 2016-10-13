@@ -29,6 +29,11 @@
 
 #define CHANNEL_RECEIVE_BUF_SIZE 1024
 
+G_DEFINE_ABSTRACT_TYPE(CommonGraphicsChannel, common_graphics_channel, RED_TYPE_CHANNEL)
+
+#define GRAPHICS_CHANNEL_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_COMMON_GRAPHICS_CHANNEL, CommonGraphicsChannelPrivate))
+
 struct CommonGraphicsChannelPrivate
 {
     QXLInstance *qxl;
@@ -43,7 +48,7 @@ struct CommonGraphicsChannelPrivate
 static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    CommonGraphicsChannel *common = SPICE_CONTAINEROF(channel, CommonGraphicsChannel, base);
+    CommonGraphicsChannel *common = COMMON_GRAPHICS_CHANNEL(channel);
 
     /* SPICE_MSGC_MIGRATE_DATA is the only client message whose size is dynamic */
     if (type == SPICE_MSGC_MIGRATE_DATA) {
@@ -62,6 +67,48 @@ static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
 {
     if (type == SPICE_MSGC_MIGRATE_DATA) {
         free(msg);
+    }
+}
+
+
+enum {
+    PROP0,
+    PROP_QXL
+};
+
+static void
+common_graphics_channel_get_property(GObject *object,
+                                   guint property_id,
+                                   GValue *value,
+                                   GParamSpec *pspec)
+{
+    CommonGraphicsChannel *self = COMMON_GRAPHICS_CHANNEL(object);
+
+    switch (property_id)
+    {
+        case PROP_QXL:
+            g_value_set_pointer(value, self->priv->qxl);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+common_graphics_channel_set_property(GObject *object,
+                                   guint property_id,
+                                   const GValue *value,
+                                   GParamSpec *pspec)
+{
+    CommonGraphicsChannel *self = COMMON_GRAPHICS_CHANNEL(object);
+
+    switch (property_id)
+    {
+        case PROP_QXL:
+            self->priv->qxl = g_value_get_pointer(value);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
 }
 
@@ -106,40 +153,36 @@ int common_channel_config_socket(RedChannelClient *rcc)
     return TRUE;
 }
 
-CommonGraphicsChannel* common_graphics_channel_new(RedsState *server,
-                                                   QXLInstance *qxl,
-                                                   const SpiceCoreInterfaceInternal *core,
-                                                   int size, uint32_t channel_type,
-                                                   int migration_flags,
-                                                   ChannelCbs *channel_cbs,
-                                                   channel_handle_parsed_proc handle_parsed)
+
+static void
+common_graphics_channel_class_init(CommonGraphicsChannelClass *klass)
 {
-    RedChannel *channel = NULL;
-    CommonGraphicsChannel *common;
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
 
-    spice_return_val_if_fail(channel_cbs, NULL);
-    spice_return_val_if_fail(!channel_cbs->alloc_recv_buf, NULL);
-    spice_return_val_if_fail(!channel_cbs->release_recv_buf, NULL);
+    g_type_class_add_private(klass, sizeof(CommonGraphicsChannelPrivate));
 
-    if (!channel_cbs->config_socket)
-        channel_cbs->config_socket = common_channel_config_socket;
-    channel_cbs->alloc_recv_buf = common_alloc_recv_buf;
-    channel_cbs->release_recv_buf = common_release_recv_buf;
+    object_class->get_property = common_graphics_channel_get_property;
+    object_class->set_property = common_graphics_channel_set_property;
 
-    channel = red_channel_create_parser(size, server,
-                                        core, channel_type,
-                                        qxl->id, TRUE /* handle_acks */,
-                                        spice_get_client_channel_parser(channel_type, NULL),
-                                        handle_parsed,
-                                        channel_cbs,
-                                        migration_flags);
-    spice_return_val_if_fail(channel, NULL);
+    channel_class->config_socket = common_channel_config_socket;
+    channel_class->alloc_recv_buf = common_alloc_recv_buf;
+    channel_class->release_recv_buf = common_release_recv_buf;
 
-    common = COMMON_GRAPHICS_CHANNEL(channel);
-    /* FIXME remove leak */
-    common->priv = g_new0(CommonGraphicsChannelPrivate, 1);
-    common->priv->qxl = qxl;
-    return common;
+    g_object_class_install_property(object_class,
+                                    PROP_QXL,
+                                    g_param_spec_pointer("qxl",
+                                                         "qxl",
+                                                         "QXLInstance for this channel",
+                                                         G_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT_ONLY |
+                                                         G_PARAM_STATIC_STRINGS));
+}
+
+static void
+common_graphics_channel_init(CommonGraphicsChannel *self)
+{
+    self->priv = GRAPHICS_CHANNEL_PRIVATE(self);
 }
 
 void common_graphics_channel_set_during_target_migrate(CommonGraphicsChannel *self, gboolean value)

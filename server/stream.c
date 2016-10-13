@@ -19,7 +19,7 @@
 #endif
 
 #include "stream.h"
-#include "display-channel.h"
+#include "display-channel-private.h"
 #include "main-channel-client.h"
 
 #define FPS_TEST_INTERVAL 1
@@ -198,7 +198,7 @@ static void update_copy_graduality(DisplayChannel *display, Drawable *drawable)
     SpiceBitmap *bitmap;
     spice_return_if_fail(drawable->red_drawable->type == QXL_DRAW_COPY);
 
-    if (display->priv->stream_video != SPICE_STREAM_VIDEO_FILTER) {
+    if (display_channel_get_stream_video(display) != SPICE_STREAM_VIDEO_FILTER) {
         drawable->copy_bitmap_graduality = BITMAP_GRADUAL_INVALID;
         return;
     }

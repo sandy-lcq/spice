@@ -62,8 +62,10 @@ GType red_channel_client_get_type(void) G_GNUC_CONST;
 #define spice_channel_client_error(rcc, format, ...)                                     \
     do {                                                                                 \
         RedChannel *_ch = red_channel_client_get_channel(rcc);                           \
+        uint32_t _type, _id;                                                             \
+        g_object_get(_ch, "channel-type", &_type, "id", &_id, NULL);                     \
         spice_warning("rcc %p type %u id %u: " format, rcc,                              \
-                    _ch->type, _ch->id, ## __VA_ARGS__);                                 \
+                    type, id, ## __VA_ARGS__);                                           \
         red_channel_client_shutdown(rcc);                                                \
     } while (0)
 

@@ -20,7 +20,69 @@
 
 #include <common/sw_canvas.h>
 
-#include "display-channel.h"
+#include "display-channel-private.h"
+
+G_DEFINE_TYPE(DisplayChannel, display_channel, TYPE_COMMON_GRAPHICS_CHANNEL)
+
+enum {
+    PROP0,
+    PROP_N_SURFACES,
+    PROP_VIDEO_CODECS
+};
+
+static void
+display_channel_get_property(GObject *object,
+                             guint property_id,
+                             GValue *value,
+                             GParamSpec *pspec)
+{
+    DisplayChannel *self = DISPLAY_CHANNEL(object);
+
+    switch (property_id)
+    {
+        case PROP_N_SURFACES:
+            g_value_set_uint(value, self->priv->n_surfaces);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+display_channel_set_property(GObject *object,
+                             guint property_id,
+                             const GValue *value,
+                             GParamSpec *pspec)
+{
+    DisplayChannel *self = DISPLAY_CHANNEL(object);
+
+    switch (property_id)
+    {
+        case PROP_N_SURFACES:
+            self->priv->n_surfaces = g_value_get_uint(value);
+            self->priv->n_surfaces = MIN(self->priv->n_surfaces, NUM_SURFACES);
+            break;
+        case PROP_VIDEO_CODECS:
+            if (self->priv->video_codecs) {
+                g_array_unref(self->priv->video_codecs);
+            }
+            self->priv->video_codecs = g_array_ref(g_value_get_boxed(value));
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
+static void
+display_channel_finalize(GObject *object)
+{
+    DisplayChannel *self = DISPLAY_CHANNEL(object);
+
+    G_OBJECT_CLASS(display_channel_parent_class)->finalize(object);
+
+    g_free(self->priv);
+    g_array_unref(self->priv->video_codecs);
+}
 
 static void drawable_draw(DisplayChannel *display, Drawable *drawable);
 static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
@@ -43,12 +105,16 @@ void display_channel_compress_stats_reset(DisplayChannel *display)
     image_encoder_shared_stat_reset(&display->priv->encoder_shared_data);
 }
 
-void display_channel_compress_stats_print(const DisplayChannel *display_channel)
+void display_channel_compress_stats_print(DisplayChannel *display_channel)
 {
 #ifdef COMPRESS_STAT
+    uint32_t id;
+
     spice_return_if_fail(display_channel);
 
-    spice_info("==> Compression stats for display %u", display_channel->common.base.id);
+    g_object_get(display_channel, "id", &id, NULL);
+
+    spice_info("==> Compression stats for display %u", id);
     image_encoder_shared_stat_print(&display_channel->priv->encoder_shared_data);
 #endif
 }
@@ -148,6 +214,11 @@ void display_channel_set_video_codecs(DisplayChannel *display, GArray *video_cod
 
     g_array_unref(display->priv->video_codecs);
     display->priv->video_codecs = g_array_ref(video_codecs);
+}
+
+int display_channel_get_stream_video(DisplayChannel *display)
+{
+    return display->priv->stream_video;
 }
 
 static void stop_streams(DisplayChannel *display)
@@ -280,7 +351,7 @@ static void pipes_add_drawable_after(DisplayChannel *display,
         pipes_add_drawable(display, drawable);
         return;
     }
-    if (num_other_linked != g_list_length(display->common.base.clients)) {
+    if (num_other_linked != red_channel_get_n_clients(RED_CHANNEL(display))) {
         GListIter iter;
         spice_debug("TODO: not O(n^2)");
         FOREACH_DCC(display, iter, dcc) {
@@ -1115,18 +1186,18 @@ void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_draw
 int display_channel_wait_for_migrate_data(DisplayChannel *display)
 {
     uint64_t end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT;
-    RedChannel *channel = &display->common.base;
     RedChannelClient *rcc;
     int ret = FALSE;
+    GList *clients = red_channel_get_clients(RED_CHANNEL(display));
 
-    if (!red_channel_is_waiting_for_migrate_data(&display->common.base)) {
+    if (!red_channel_is_waiting_for_migrate_data(RED_CHANNEL(display))) {
         return FALSE;
     }
 
     spice_debug(NULL);
-    spice_warn_if_fail(g_list_length(channel->clients) == 1);
+    spice_warn_if_fail(g_list_length(clients) == 1);
 
-    rcc = g_list_nth_data(channel->clients, 0);
+    rcc = g_list_nth_data(clients, 0);
 
     g_object_ref(rcc);
     for (;;) {
@@ -1831,8 +1902,7 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
 
     if (display->priv->renderer == RED_RENDERER_INVALID) {
         int i;
-        QXLInstance *qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display));
-        RedsState *reds = red_qxl_get_server(qxl->st);
+        RedsState *reds = red_channel_get_server(RED_CHANNEL(display));
         GArray *renderers = reds_get_renderers(reds);
         for (i = 0; i < renderers->len; i++) {
             uint32_t renderer = g_array_index(renderers, uint32_t, i);
@@ -1900,7 +1970,7 @@ static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t su
 
     spice_return_val_if_fail(display_channel_validate_surface(display, surface_id), NULL);
 
-    return display->priv->surfaces[surface_id].context.canvas;
+    return p->surfaces[surface_id].context.canvas;
 }
 
 DisplayChannel* display_channel_new(RedsState *reds,
@@ -1911,53 +1981,76 @@ DisplayChannel* display_channel_new(RedsState *reds,
                                     uint32_t n_surfaces)
 {
     DisplayChannel *display;
-    ChannelCbs cbs = {
-        .on_disconnect = on_disconnect,
-        .send_item = dcc_send_item,
-        .handle_migrate_flush_mark = handle_migrate_flush_mark,
-        .handle_migrate_data = handle_migrate_data,
-        .handle_migrate_data_get_serial = handle_migrate_data_get_serial,
-        .config_socket = dcc_config_socket
-    };
+
+    /* FIXME: migrate is not used...? */
+    spice_info("create display channel");
+    display = g_object_new(TYPE_DISPLAY_CHANNEL,
+                           "spice-server", reds,
+                           "core-interface", core,
+                           "channel-type", SPICE_CHANNEL_DISPLAY,
+                           "migration-flags",
+                           (SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER),
+                           "qxl", qxl,
+                           "n-surfaces", n_surfaces,
+                           "video-codecs", video_codecs,
+                           NULL);
+    if (display) {
+        display_channel_set_stream_video(display, stream_video);
+    }
+    return display;
+}
+
+static SpiceCanvas *image_surfaces_get(SpiceImageSurfaces *surfaces, uint32_t surface_id);
+static void drawables_init(DisplayChannel *display);
+static void
+display_channel_init(DisplayChannel *self)
+{
     static SpiceImageSurfacesOps image_surfaces_ops = {
         image_surfaces_get,
     };
 
-    spice_info("create display channel");
-    display = DISPLAY_CHANNEL(common_graphics_channel_new(
-        reds, qxl, core, sizeof(*display), SPICE_CHANNEL_DISPLAY,
-        SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER,
-        &cbs, dcc_handle_message));
-    spice_return_val_if_fail(display, NULL);
-    display->priv->pub = display;
+    /* must be manually allocated here since g_type_class_add_private() only
+     * supports structs smaller than 64k */
+    self->priv = g_new0(DisplayChannelPrivate, 1);
+    self->priv->pub = self;
 
-    clockid_t stat_clock = CLOCK_THREAD_CPUTIME_ID;
-    stat_init(&display->priv->add_stat, "add", stat_clock);
-    stat_init(&display->priv->exclude_stat, "exclude", stat_clock);
-    stat_init(&display->priv->__exclude_stat, "__exclude", stat_clock);
+    image_encoder_shared_init(&self->priv->encoder_shared_data);
+
+    ring_init(&self->priv->current_list);
+    drawables_init(self);
+    self->priv->image_surfaces.ops = &image_surfaces_ops;
+}
+
+static void
+display_channel_constructed(GObject *object)
+{
+    DisplayChannel *self = DISPLAY_CHANNEL(object);
+
+    G_OBJECT_CLASS(display_channel_parent_class)->constructed(object);
+
+    spice_assert(self->priv->video_codecs);
+
+    self->priv->renderer = RED_RENDERER_INVALID;
+
+    stat_init(&self->priv->add_stat, "add", CLOCK_THREAD_CPUTIME_ID);
+    stat_init(&self->priv->exclude_stat, "exclude", CLOCK_THREAD_CPUTIME_ID);
+    stat_init(&self->priv->__exclude_stat, "__exclude", CLOCK_THREAD_CPUTIME_ID);
 #ifdef RED_STATISTICS
-    RedChannel *channel = RED_CHANNEL(display);
-    display->priv->cache_hits_counter = stat_add_counter(reds, channel->stat,
-                                                         "cache_hits", TRUE);
-    display->priv->add_to_cache_counter = stat_add_counter(reds, channel->stat,
-                                                           "add_to_cache", TRUE);
-    display->priv->non_cache_counter = stat_add_counter(reds, channel->stat,
-                                                        "non_cache", TRUE);
+    RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
+    RedChannel *channel = RED_CHANNEL(self);
+    self->priv->cache_hits_counter =
+        stat_add_counter(reds, red_channel_get_stat_node(channel),
+                         "cache_hits", TRUE);
+    self->priv->add_to_cache_counter =
+        stat_add_counter(reds, red_channel_get_stat_node(channel),
+                         "add_to_cache", TRUE);
+    self->priv->non_cache_counter =
+        stat_add_counter(reds, red_channel_get_stat_node(channel),
+                         "non_cache", TRUE);
 #endif
-    image_encoder_shared_init(&display->priv->encoder_shared_data);
-
-    display->priv->n_surfaces = MIN(n_surfaces, NUM_SURFACES);
-    display->priv->renderer = RED_RENDERER_INVALID;
-
-    ring_init(&display->priv->current_list);
-    display->priv->image_surfaces.ops = &image_surfaces_ops;
-    drawables_init(display);
-    image_cache_init(&display->priv->image_cache);
-    display->priv->stream_video = stream_video;
-    display->priv->video_codecs = g_array_ref(video_codecs);
-    display_channel_init_streams(display);
-
-    return display;
+    image_cache_init(&self->priv->image_cache);
+    self->priv->stream_video = SPICE_STREAM_VIDEO_OFF;
+    display_channel_init_streams(self);
 }
 
 void display_channel_process_surface_cmd(DisplayChannel *display,
@@ -2111,6 +2204,48 @@ void display_channel_set_monitors_config_to_primary(DisplayChannel *display)
 void display_channel_reset_image_cache(DisplayChannel *self)
 {
     image_cache_reset(&self->priv->image_cache);
+}
+
+static void
+display_channel_class_init(DisplayChannelClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+
+    object_class->get_property = display_channel_get_property;
+    object_class->set_property = display_channel_set_property;
+    object_class->constructed = display_channel_constructed;
+    object_class->finalize = display_channel_finalize;
+
+    channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_DISPLAY, NULL);
+    channel_class->handle_parsed = dcc_handle_message;
+
+    channel_class->on_disconnect = on_disconnect;
+    channel_class->send_item = dcc_send_item;
+    channel_class->handle_migrate_flush_mark = handle_migrate_flush_mark;
+    channel_class->handle_migrate_data = handle_migrate_data;
+    channel_class->handle_migrate_data_get_serial = handle_migrate_data_get_serial;
+    channel_class->config_socket = dcc_config_socket;
+
+    g_object_class_install_property(object_class,
+                                    PROP_N_SURFACES,
+                                    g_param_spec_uint("n-surfaces",
+                                                      "number of surfaces",
+                                                      "Number of surfaces for this channel",
+                                                      0, G_MAXUINT,
+                                                      0,
+                                                      G_PARAM_CONSTRUCT_ONLY |
+                                                      G_PARAM_READWRITE |
+                                                      G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(object_class,
+                                    PROP_VIDEO_CODECS,
+                                    g_param_spec_boxed("video-codecs",
+                                                       "video codecs",
+                                                       "Video Codecs",
+                                                       G_TYPE_ARRAY,
+                                                       G_PARAM_CONSTRUCT_ONLY |
+                                                       G_PARAM_WRITABLE |
+                                                       G_PARAM_STATIC_STRINGS));
 }
 
 void display_channel_debug_oom(DisplayChannel *display, const char *msg)

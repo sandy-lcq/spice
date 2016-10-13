@@ -27,9 +27,30 @@
 #include "main-channel.h"
 #include "main-channel-client.h"
 
+// approximate max receive message size for main channel
+#define MAIN_CHANNEL_RECEIVE_BUF_SIZE \
+    (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
+
+struct MainChannel
+{
+    RedChannel parent;
+
+    uint8_t recv_buf[MAIN_CHANNEL_RECEIVE_BUF_SIZE];
+    // TODO: add refs and release (afrer all clients completed migration in one way or the other?)
+    RedsMigSpice mig_target;
+    int num_clients_mig_wait;
+};
+
+struct MainChannelClass
+{
+    RedChannelClass parent_class;
+};
+
+G_DEFINE_TYPE(MainChannel, main_channel, RED_TYPE_CHANNEL)
+
 int main_channel_is_connected(MainChannel *main_chan)
 {
-    return red_channel_is_connected(&main_chan->base);
+    return red_channel_is_connected(RED_CHANNEL(main_chan));
 }
 
 /*
@@ -76,27 +97,29 @@ void main_channel_push_mouse_mode(MainChannel *main_chan, int current_mode,
         .is_client_mouse_allowed=is_client_mouse_allowed,
     };
 
-    red_channel_pipes_new_add_push(&main_chan->base,
+    red_channel_pipes_new_add_push(RED_CHANNEL(main_chan),
         main_mouse_mode_item_new, &info);
 }
 
 void main_channel_push_agent_connected(MainChannel *main_chan)
 {
-    if (red_channel_test_remote_cap(&main_chan->base, SPICE_MAIN_CAP_AGENT_CONNECTED_TOKENS)) {
-        red_channel_pipes_add_type(&main_chan->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS);
+    if (red_channel_test_remote_cap(RED_CHANNEL(main_chan),
+                                    SPICE_MAIN_CAP_AGENT_CONNECTED_TOKENS)) {
+        red_channel_pipes_add_type(RED_CHANNEL(main_chan),
+                                   RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS);
     } else {
-        red_channel_pipes_add_empty_msg(&main_chan->base, SPICE_MSG_MAIN_AGENT_CONNECTED);
+        red_channel_pipes_add_empty_msg(RED_CHANNEL(main_chan), SPICE_MSG_MAIN_AGENT_CONNECTED);
     }
 }
 
 void main_channel_push_agent_disconnected(MainChannel *main_chan)
 {
-    red_channel_pipes_add_type(&main_chan->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_DISCONNECTED);
+    red_channel_pipes_add_type(RED_CHANNEL(main_chan), RED_PIPE_ITEM_TYPE_MAIN_AGENT_DISCONNECTED);
 }
 
 static void main_channel_push_migrate_data_item(MainChannel *main_chan)
 {
-    red_channel_pipes_add_type(&main_chan->base, RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_DATA);
+    red_channel_pipes_add_type(RED_CHANNEL(main_chan), RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_DATA);
 }
 
 static int main_channel_handle_migrate_data(RedChannelClient *rcc,
@@ -107,7 +130,7 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
     SpiceMigrateDataHeader *header = (SpiceMigrateDataHeader *)message;
 
     /* not supported with multi-clients */
-    spice_assert(g_list_length(channel->clients) == 1);
+    spice_assert(red_channel_get_n_clients(channel) == 1);
 
     if (size < sizeof(SpiceMigrateDataHeader) + sizeof(SpiceMigrateDataMain)) {
         spice_printerr("bad message size %u", size);
@@ -119,7 +142,9 @@ static int main_channel_handle_migrate_data(RedChannelClient *rcc,
         spice_error("bad header");
         return FALSE;
     }
-    return reds_handle_migrate_data(channel->reds, mcc, (SpiceMigrateDataMain *)(header + 1), size);
+    return reds_handle_migrate_data(red_channel_get_server(channel), mcc,
+                                    (SpiceMigrateDataMain *)(header + 1),
+                                    size);
 }
 
 void main_channel_push_multi_media_time(MainChannel *main_chan, int time)
@@ -128,7 +153,7 @@ void main_channel_push_multi_media_time(MainChannel *main_chan, int time)
         .time = time,
     };
 
-    red_channel_pipes_new_add_push(&main_chan->base,
+    red_channel_pipes_new_add_push(RED_CHANNEL(main_chan),
         main_multi_media_time_item_new, &info);
 }
 
@@ -150,15 +175,16 @@ static void main_channel_fill_mig_target(MainChannel *main_channel, RedsMigSpice
 void main_channel_migrate_switch(MainChannel *main_chan, RedsMigSpice *mig_target)
 {
     main_channel_fill_mig_target(main_chan, mig_target);
-    red_channel_pipes_add_type(&main_chan->base, RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_SWITCH_HOST);
+    red_channel_pipes_add_type(RED_CHANNEL(main_chan), RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_SWITCH_HOST);
 }
 
 static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint16_t type,
                                       void *message)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    MainChannel *main_chan = SPICE_CONTAINEROF(channel, MainChannel, base);
+    MainChannel *main_chan = MAIN_CHANNEL(channel);
     MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
+    RedsState *reds = red_channel_get_server(channel);
 
     switch (type) {
     case SPICE_MSGC_MAIN_AGENT_START: {
@@ -169,18 +195,18 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             return FALSE;
         }
         tokens = (SpiceMsgcMainAgentStart *)message;
-        reds_on_main_agent_start(channel->reds, mcc, tokens->num_tokens);
+        reds_on_main_agent_start(reds, mcc, tokens->num_tokens);
         break;
     }
     case SPICE_MSGC_MAIN_AGENT_DATA: {
-        reds_on_main_agent_data(channel->reds, mcc, message, size);
+        reds_on_main_agent_data(reds, mcc, message, size);
         break;
     }
     case SPICE_MSGC_MAIN_AGENT_TOKEN: {
         SpiceMsgcMainAgentTokens *tokens;
 
         tokens = (SpiceMsgcMainAgentTokens *)message;
-        reds_on_main_agent_tokens(channel->reds, mcc, tokens->num_tokens);
+        reds_on_main_agent_tokens(reds, mcc, tokens->num_tokens);
         break;
     }
     case SPICE_MSGC_MAIN_ATTACH_CHANNELS:
@@ -204,7 +230,7 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
             ((SpiceMsgcMainMigrateDstDoSeamless *)message)->src_version);
         break;
     case SPICE_MSGC_MAIN_MOUSE_MODE_REQUEST:
-        reds_on_main_mouse_mode_request(channel->reds, message, size);
+        reds_on_main_mouse_mode_request(reds, message, size);
         break;
     case SPICE_MSGC_PONG: {
         main_channel_client_handle_pong(mcc, (SpiceMsgPing *)message, size);
@@ -226,11 +252,11 @@ static uint8_t *main_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                uint32_t size)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    MainChannel *main_chan = SPICE_CONTAINEROF(channel, MainChannel, base);
+    MainChannel *main_chan = MAIN_CHANNEL(channel);
     MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
 
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        return reds_get_agent_data_buffer(channel->reds, mcc, size);
+        return reds_get_agent_data_buffer(red_channel_get_server(channel), mcc, size);
     } else {
         return main_chan->recv_buf;
     }
@@ -243,7 +269,7 @@ static void main_channel_release_msg_rcv_buf(RedChannelClient *rcc,
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        reds_release_agent_data_buffer(channel->reds, msg);
+        reds_release_agent_data_buffer(red_channel_get_server(channel), msg);
     }
 }
 
@@ -256,8 +282,7 @@ static int main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     spice_debug(NULL);
-    main_channel_push_migrate_data_item(SPICE_CONTAINEROF(channel,
-                                        MainChannel, base));
+    main_channel_push_migrate_data_item(MAIN_CHANNEL(channel));
     return TRUE;
 }
 
@@ -282,12 +307,14 @@ MainChannelClient *main_channel_link(MainChannel *channel, RedClient *client,
 
 int main_channel_getsockname(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen)
 {
-    return main_chan ? getsockname(red_channel_get_first_socket(&main_chan->base), sa, salen) : -1;
+    return main_chan ?
+        getsockname(red_channel_get_first_socket(RED_CHANNEL(main_chan)), sa, salen) : -1;
 }
 
 int main_channel_getpeername(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen)
 {
-    return main_chan ? getpeername(red_channel_get_first_socket(&main_chan->base), sa, salen) : -1;
+    return main_chan ?
+        getpeername(red_channel_get_first_socket(RED_CHANNEL(main_chan)), sa, salen) : -1;
 }
 
 // TODO: ? shouldn't it disonnect all clients? or shutdown all main_channels?
@@ -295,42 +322,64 @@ void main_channel_close(MainChannel *main_chan)
 {
     int socketfd;
 
-    if (main_chan && (socketfd = red_channel_get_first_socket(&main_chan->base)) != -1) {
+    if (main_chan && (socketfd = red_channel_get_first_socket(RED_CHANNEL(main_chan))) != -1) {
         close(socketfd);
     }
 }
 
 MainChannel* main_channel_new(RedsState *reds)
 {
-    RedChannel *channel;
-    ChannelCbs channel_cbs = { NULL, };
-    ClientCbs client_cbs = {NULL, };
-
-    channel_cbs.config_socket = main_channel_config_socket;
-    channel_cbs.on_disconnect = main_channel_client_on_disconnect;
-    channel_cbs.send_item = main_channel_client_send_item;
-    channel_cbs.alloc_recv_buf = main_channel_alloc_msg_rcv_buf;
-    channel_cbs.release_recv_buf = main_channel_release_msg_rcv_buf;
-    channel_cbs.handle_migrate_flush_mark = main_channel_handle_migrate_flush_mark;
-    channel_cbs.handle_migrate_data = main_channel_handle_migrate_data;
-
     // TODO: set the migration flag of the channel
-    channel = red_channel_create_parser(sizeof(MainChannel), reds,
-                                        reds_get_core_interface(reds),
-                                        SPICE_CHANNEL_MAIN, 0,
-                                        FALSE, /* handle_acks */
-                                        spice_get_client_channel_parser(SPICE_CHANNEL_MAIN, NULL),
-                                        main_channel_handle_parsed,
-                                        &channel_cbs,
-                                        SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER);
-    spice_assert(channel);
-    red_channel_set_cap(channel, SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE);
-    red_channel_set_cap(channel, SPICE_MAIN_CAP_SEAMLESS_MIGRATE);
+    return g_object_new(TYPE_MAIN_CHANNEL,
+                        "spice-server", reds,
+                        "core-interface", reds_get_core_interface(reds),
+                        "channel-type", (gint)SPICE_CHANNEL_MAIN,
+                        "id", 0,
+                        "handle-acks", FALSE, /* handle_acks */
+                        "migration-flags",
+                        (SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER),
+                        NULL);
+}
+
+static void
+main_channel_constructed(GObject *object)
+{
+    MainChannel *self = MAIN_CHANNEL(object);
+    ClientCbs client_cbs = { NULL, };
+
+    G_OBJECT_CLASS(main_channel_parent_class)->constructed(object);
+
+    red_channel_set_cap(RED_CHANNEL(self), SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE);
+    red_channel_set_cap(RED_CHANNEL(self), SPICE_MAIN_CAP_SEAMLESS_MIGRATE);
 
     client_cbs.migrate = main_channel_client_migrate;
-    red_channel_register_client_cbs(channel, &client_cbs, NULL);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
+}
 
-    return MAIN_CHANNEL(channel);
+static void
+main_channel_init(MainChannel *self)
+{
+}
+
+static void
+main_channel_class_init(MainChannelClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+
+    object_class->constructed = main_channel_constructed;
+
+    channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_MAIN, NULL);
+    channel_class->handle_parsed = main_channel_handle_parsed;
+
+    /* channel callbacks */
+    channel_class->config_socket = main_channel_config_socket;
+    channel_class->on_disconnect = main_channel_client_on_disconnect;
+    channel_class->send_item = main_channel_client_send_item;
+    channel_class->alloc_recv_buf = main_channel_alloc_msg_rcv_buf;
+    channel_class->release_recv_buf = main_channel_release_msg_rcv_buf;
+    channel_class->handle_migrate_flush_mark = main_channel_handle_migrate_flush_mark;
+    channel_class->handle_migrate_data = main_channel_handle_migrate_data;
 }
 
 static int main_channel_connect_semi_seamless(MainChannel *main_channel)
@@ -351,7 +400,7 @@ static int main_channel_connect_seamless(MainChannel *main_channel)
     GListIter iter;
     RedChannelClient *rcc;
 
-    spice_assert(g_list_length(main_channel->base.clients) == 1);
+    spice_assert(red_channel_get_n_clients(RED_CHANNEL(main_channel)) == 1);
 
     FOREACH_CLIENT(main_channel, iter, rcc) {
         MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
@@ -375,8 +424,10 @@ int main_channel_migrate_connect(MainChannel *main_channel, RedsMigSpice *mig_ta
         return main_channel_connect_semi_seamless(main_channel);
     } else {
         RedChannelClient *rcc;
+        GList *clients = red_channel_get_clients(RED_CHANNEL(main_channel));
 
-        rcc = g_list_nth_data(main_channel->base.clients, 0);
+        /* just test the first one */
+        rcc = g_list_nth_data(clients, 0);
 
         if (!red_channel_client_test_remote_cap(rcc,
                                                 SPICE_MAIN_CAP_SEAMLESS_MIGRATE)) {
@@ -408,7 +459,7 @@ int main_channel_migrate_src_complete(MainChannel *main_chan, int success)
 
     spice_printerr("");
 
-    if (!main_chan->base.clients) {
+    if (!red_channel_get_clients(RED_CHANNEL(main_chan))) {
         spice_printerr("no peer connected");
         return 0;
     }

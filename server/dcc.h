@@ -23,7 +23,6 @@
 #include "image-encoders.h"
 #include "image-cache.h"
 #include "pixmap-cache.h"
-#include "red-worker.h"
 #include "display-limits.h"
 #include "red-channel-client.h"
 

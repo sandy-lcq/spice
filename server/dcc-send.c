@@ -20,7 +20,7 @@
 #endif
 
 #include "dcc-private.h"
-#include "display-channel.h"
+#include "display-channel-private.h"
 #include "red-channel-client-private.h"
 
 #include <common/marshaller.h>
@@ -185,8 +185,9 @@ static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
                                                   SpiceImage *image, SpiceImage *io_image,
                                                   int is_lossy)
 {
+    DisplayChannel *display_channel =
+        DISPLAY_CHANNEL(red_channel_client_get_channel(rcc));
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    DisplayChannel *display_channel = DCC_TO_DC(dcc);
 
     if ((image->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_ME)) {
         spice_assert(image->descriptor.width * image->descriptor.height > 0);
@@ -1817,7 +1818,7 @@ static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
     ImageEncoders *encoders = dcc_get_encoders(dcc);
     SpiceMigrateDataDisplay display_data = {0,};
 
-    display_channel = DCC_TO_DC(dcc);
+    display_channel = DISPLAY_CHANNEL(red_channel_client_get_channel(rcc));
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, NULL);
     spice_marshaller_add_uint32(base_marshaller, SPICE_MIGRATE_DATA_DISPLAY_MAGIC);
@@ -2120,8 +2121,8 @@ static void marshall_qxl_drawable(RedChannelClient *rcc,
     spice_return_if_fail(rcc);
 
     Drawable *item = dpi->drawable;
-    DisplayChannel *display = SPICE_CONTAINEROF(red_channel_client_get_channel(rcc),
-                                                DisplayChannel, common.base);
+    DisplayChannel *display =
+        DISPLAY_CHANNEL(red_channel_client_get_channel(rcc));
 
     spice_return_if_fail(display);
     /* allow sized frames to be streamed, even if they where replaced by another frame, since

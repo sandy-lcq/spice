@@ -57,6 +57,27 @@
 #define RECEIVE_BUF_SIZE \
     (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
 
+struct InputsChannel
+{
+    RedChannel parent;
+
+    uint8_t recv_buf[RECEIVE_BUF_SIZE];
+    VDAgentMouseState mouse_state;
+    int src_during_migrate;
+    SpiceTimer *key_modifiers_timer;
+
+    SpiceKbdInstance *keyboard;
+    SpiceMouseInstance *mouse;
+    SpiceTabletInstance *tablet;
+};
+
+struct InputsChannelClass
+{
+    RedChannelClass parent_class;
+};
+
+G_DEFINE_TYPE(InputsChannel, inputs_channel, RED_TYPE_CHANNEL)
+
 struct SpiceKbdState {
     uint8_t push_ext_type;
 
@@ -104,18 +125,6 @@ RedsState* spice_tablet_state_get_server(SpiceTabletState *st)
 {
     return st->reds;
 }
-
-struct InputsChannel {
-    RedChannel base;
-    uint8_t recv_buf[RECEIVE_BUF_SIZE];
-    VDAgentMouseState mouse_state;
-    int src_during_migrate;
-    SpiceTimer *key_modifiers_timer;
-
-    SpiceKbdInstance *keyboard;
-    SpiceMouseInstance *mouse;
-    SpiceTabletInstance *tablet;
-};
 
 typedef struct RedKeyModifiersPipeItem {
     RedPipeItem base;
@@ -275,7 +284,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
     InputsChannel *inputs_channel = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
     InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
     uint32_t i;
-    RedsState *reds = red_channel_get_server(&inputs_channel->base);
+    RedsState *reds = red_channel_get_server(RED_CHANNEL(inputs_channel));
 
     switch (type) {
     case SPICE_MSGC_INPUTS_KEY_DOWN: {
@@ -359,12 +368,15 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
                 reds_handle_agent_mouse_event(reds, &inputs_channel->mouse_state);
             } else if (inputs_channel_get_tablet(inputs_channel)) {
                 SpiceTabletInterface *sif;
-                sif = SPICE_CONTAINEROF(inputs_channel_get_tablet(inputs_channel)->base.sif, SpiceTabletInterface, base);
-                sif->wheel(inputs_channel_get_tablet(inputs_channel), dz, RED_MOUSE_STATE_TO_LOCAL(mouse_press->buttons_state));
+                sif = SPICE_CONTAINEROF(inputs_channel_get_tablet(inputs_channel)->base.sif,
+                                        SpiceTabletInterface, base);
+                sif->wheel(inputs_channel_get_tablet(inputs_channel), dz,
+                           RED_MOUSE_STATE_TO_LOCAL(mouse_press->buttons_state));
             }
         } else if (inputs_channel_get_mouse(inputs_channel)) {
             SpiceMouseInterface *sif;
-            sif = SPICE_CONTAINEROF(inputs_channel_get_mouse(inputs_channel)->base.sif, SpiceMouseInterface, base);
+            sif = SPICE_CONTAINEROF(inputs_channel_get_mouse(inputs_channel)->base.sif,
+                                    SpiceMouseInterface, base);
             sif->motion(inputs_channel_get_mouse(inputs_channel), 0, 0, dz,
                         RED_MOUSE_STATE_TO_LOCAL(mouse_press->buttons_state));
         }
@@ -379,12 +391,15 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
                 reds_handle_agent_mouse_event(reds, &inputs_channel->mouse_state);
             } else if (inputs_channel_get_tablet(inputs_channel)) {
                 SpiceTabletInterface *sif;
-                sif = SPICE_CONTAINEROF(inputs_channel_get_tablet(inputs_channel)->base.sif, SpiceTabletInterface, base);
-                sif->buttons(inputs_channel_get_tablet(inputs_channel), RED_MOUSE_STATE_TO_LOCAL(mouse_release->buttons_state));
+                sif = SPICE_CONTAINEROF(inputs_channel_get_tablet(inputs_channel)->base.sif,
+                                        SpiceTabletInterface, base);
+                sif->buttons(inputs_channel_get_tablet(inputs_channel),
+                             RED_MOUSE_STATE_TO_LOCAL(mouse_release->buttons_state));
             }
         } else if (inputs_channel_get_mouse(inputs_channel)) {
             SpiceMouseInterface *sif;
-            sif = SPICE_CONTAINEROF(inputs_channel_get_mouse(inputs_channel)->base.sif, SpiceMouseInterface, base);
+            sif = SPICE_CONTAINEROF(inputs_channel_get_mouse(inputs_channel)->base.sif,
+                                    SpiceMouseInterface, base);
             sif->buttons(inputs_channel_get_mouse(inputs_channel),
                          RED_MOUSE_STATE_TO_LOCAL(mouse_release->buttons_state));
         }
@@ -519,11 +534,11 @@ static void inputs_migrate(RedChannelClient *rcc)
 
 static void inputs_channel_push_keyboard_modifiers(InputsChannel *inputs, uint8_t modifiers)
 {
-    if (!inputs || !red_channel_is_connected(&inputs->base) ||
+    if (!inputs || !red_channel_is_connected(RED_CHANNEL(inputs)) ||
         inputs->src_during_migrate) {
         return;
     }
-    red_channel_pipes_new_add_push(&inputs->base,
+    red_channel_pipes_new_add_push(RED_CHANNEL(inputs),
         red_inputs_key_modifiers_item_new, (void*)&modifiers);
 }
 
@@ -569,44 +584,65 @@ static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
 
 InputsChannel* inputs_channel_new(RedsState *reds)
 {
-    ChannelCbs channel_cbs = { NULL, };
+    return  g_object_new(TYPE_INPUTS_CHANNEL,
+                         "spice-server", reds,
+                         "core-interface", reds_get_core_interface(reds),
+                         "channel-type", (int)SPICE_CHANNEL_INPUTS,
+                         "id", 0,
+                         "handle-acks", FALSE,
+                         "migration-flags", 
+                         (guint)(SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER),
+                         NULL);
+
+}
+
+static void
+inputs_channel_constructed(GObject *object)
+{
     ClientCbs client_cbs = { NULL, };
-    InputsChannel *inputs;
+    InputsChannel *self = INPUTS_CHANNEL(object);
+    RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
 
-    channel_cbs.config_socket = inputs_channel_config_socket;
-    channel_cbs.on_disconnect = inputs_channel_on_disconnect;
-    channel_cbs.send_item = inputs_channel_send_item;
-    channel_cbs.alloc_recv_buf = inputs_channel_alloc_msg_rcv_buf;
-    channel_cbs.release_recv_buf = inputs_channel_release_msg_rcv_buf;
-    channel_cbs.handle_migrate_data = inputs_channel_handle_migrate_data;
-    channel_cbs.handle_migrate_flush_mark = inputs_channel_handle_migrate_flush_mark;
-
-    inputs = INPUTS_CHANNEL(red_channel_create_parser(
-                                    sizeof(InputsChannel),
-                                    reds,
-                                    reds_get_core_interface(reds),
-                                    SPICE_CHANNEL_INPUTS, 0,
-                                    FALSE, /* handle_acks */
-                                    spice_get_client_channel_parser(SPICE_CHANNEL_INPUTS, NULL),
-                                    inputs_channel_handle_parsed,
-                                    &channel_cbs,
-                                    SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER));
-
-    if (!inputs) {
-        spice_error("failed to allocate Inputs Channel");
-    }
+    G_OBJECT_CLASS(inputs_channel_parent_class)->constructed(object);
 
     client_cbs.connect = inputs_connect;
     client_cbs.migrate = inputs_migrate;
-    red_channel_register_client_cbs(&inputs->base, &client_cbs, NULL);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
 
-    red_channel_set_cap(&inputs->base, SPICE_INPUTS_CAP_KEY_SCANCODE);
-    reds_register_channel(reds, &inputs->base);
+    red_channel_set_cap(RED_CHANNEL(self), SPICE_INPUTS_CAP_KEY_SCANCODE);
+    reds_register_channel(reds, RED_CHANNEL(self));
 
-    if (!(inputs->key_modifiers_timer = reds_core_timer_add(reds, key_modifiers_sender, inputs))) {
+    self->key_modifiers_timer = reds_core_timer_add(reds, key_modifiers_sender, self);
+    if (!self->key_modifiers_timer) {
         spice_error("key modifiers timer create failed");
     }
-    return inputs;
+}
+
+static void
+inputs_channel_init(InputsChannel *self)
+{
+}
+
+
+static void
+inputs_channel_class_init(InputsChannelClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+
+    object_class->constructed = inputs_channel_constructed;
+
+    channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_INPUTS, NULL);
+    channel_class->handle_parsed = inputs_channel_handle_parsed;
+
+    /* channel callbacks */
+    channel_class->config_socket = inputs_channel_config_socket;
+    channel_class->on_disconnect = inputs_channel_on_disconnect;
+    channel_class->send_item = inputs_channel_send_item;
+    channel_class->alloc_recv_buf = inputs_channel_alloc_msg_rcv_buf;
+    channel_class->release_recv_buf = inputs_channel_release_msg_rcv_buf;
+    channel_class->handle_migrate_data = inputs_channel_handle_migrate_data;
+    channel_class->handle_migrate_flush_mark = inputs_channel_handle_migrate_flush_mark;
 }
 
 static SpiceKbdInstance* inputs_channel_get_keyboard(InputsChannel *inputs)
@@ -621,7 +657,7 @@ int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboar
         return -1;
     }
     inputs->keyboard = keyboard;
-    inputs->keyboard->st = spice_kbd_state_new(red_channel_get_server(&inputs->base));
+    inputs->keyboard->st = spice_kbd_state_new(red_channel_get_server(RED_CHANNEL(inputs)));
     return 0;
 }
 

@@ -22,15 +22,30 @@
 // This include should only be used by reds.c and inputs-channel.c
 
 #include <stdint.h>
+#include <glib-object.h>
 #include <spice/vd_agent.h>
 
 #include "red-channel.h"
 
-#define INPUTS_CHANNEL(channel) ((InputsChannel*)(channel))
+G_BEGIN_DECLS
+
+#define TYPE_INPUTS_CHANNEL inputs_channel_get_type()
+
+#define INPUTS_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_INPUTS_CHANNEL, InputsChannel))
+#define INPUTS_CHANNEL_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_INPUTS_CHANNEL, InputsChannelClass))
+#define INPUTS_IS_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_INPUTS_CHANNEL))
+#define INPUTS_IS_CHANNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_INPUTS_CHANNEL))
+#define INPUTS_CHANNEL_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_INPUTS_CHANNEL, InputsChannelClass))
 
 typedef struct InputsChannel InputsChannel;
+typedef struct InputsChannelClass InputsChannelClass;
+
+GType inputs_channel_get_type(void) G_GNUC_CONST;
 
 InputsChannel* inputs_channel_new(RedsState *reds);
+
 const VDAgentMouseState *inputs_channel_get_mouse_state(InputsChannel *inputs);
 void inputs_channel_on_keyboard_leds_change(InputsChannel *inputs, uint8_t leds);
 void inputs_channel_set_tablet_logical_size(InputsChannel *inputs, int x_res, int y_res);
@@ -43,5 +58,7 @@ void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *ta
 RedsState* spice_tablet_state_get_server(SpiceTabletState *dev);
 RedsState* spice_kbd_state_get_server(SpiceKbdState *dev);
 gboolean inputs_channel_is_src_during_migrate(InputsChannel *inputs);
+
+G_END_DECLS
 
 #endif

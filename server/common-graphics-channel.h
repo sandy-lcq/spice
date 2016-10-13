@@ -18,21 +18,47 @@
 #ifndef _COMMON_GRAPHICS_CHANNEL_H
 #define _COMMON_GRAPHICS_CHANNEL_H
 
+#include <glib-object.h>
+
 #include "red-channel.h"
 #include "red-channel-client.h"
+
+G_BEGIN_DECLS
 
 int common_channel_config_socket(RedChannelClient *rcc);
 
 #define COMMON_CLIENT_TIMEOUT (NSEC_PER_SEC * 30)
 
+#define TYPE_COMMON_GRAPHICS_CHANNEL common_graphics_channel_get_type()
+
+#define COMMON_GRAPHICS_CHANNEL(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_COMMON_GRAPHICS_CHANNEL, CommonGraphicsChannel))
+#define COMMON_GRAPHICS_CHANNEL_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_COMMON_GRAPHICS_CHANNEL, CommonGraphicsChannelClass))
+#define COMMON_IS_GRAPHICS_CHANNEL(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_COMMON_GRAPHICS_CHANNEL))
+#define COMMON_IS_GRAPHICS_CHANNEL_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_COMMON_GRAPHICS_CHANNEL))
+#define COMMON_GRAPHICS_CHANNEL_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_COMMON_GRAPHICS_CHANNEL, CommonGraphicsChannelClass))
+
+typedef struct CommonGraphicsChannel CommonGraphicsChannel;
+typedef struct CommonGraphicsChannelClass CommonGraphicsChannelClass;
 typedef struct CommonGraphicsChannelPrivate CommonGraphicsChannelPrivate;
-typedef struct CommonGraphicsChannel {
-    RedChannel base; // Must be the first thing
+
+struct CommonGraphicsChannel
+{
+    RedChannel parent;
 
     CommonGraphicsChannelPrivate *priv;
-} CommonGraphicsChannel;
+};
 
-#define COMMON_GRAPHICS_CHANNEL(Channel) ((CommonGraphicsChannel*)(Channel))
+struct CommonGraphicsChannelClass
+{
+    RedChannelClass parent_class;
+};
+
+GType common_graphics_channel_get_type(void) G_GNUC_CONST;
 
 void common_graphics_channel_set_during_target_migrate(CommonGraphicsChannel *self, gboolean value);
 gboolean common_graphics_channel_get_during_target_migrate(CommonGraphicsChannel *self);
@@ -76,12 +102,6 @@ static inline void red_pipes_add_verb(RedChannel *channel, uint16_t verb)
     red_channel_apply_clients_data(channel, red_pipe_add_verb_proxy, GUINT_TO_POINTER(verb));
 }
 
-CommonGraphicsChannel* common_graphics_channel_new(RedsState *server,
-                                                   QXLInstance *qxl,
-                                                   const SpiceCoreInterfaceInternal *core,
-                                                   int size, uint32_t channel_type,
-                                                   int migration_flags,
-                                                   ChannelCbs *channel_cbs,
-                                                   channel_handle_parsed_proc handle_parsed);
+G_END_DECLS
 
 #endif /* _COMMON_GRAPHICS_CHANNEL_H */

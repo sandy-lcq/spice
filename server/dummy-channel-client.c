@@ -37,9 +37,11 @@ struct DummyChannelClientPrivate
 
 static int dummy_channel_client_pre_create_validate(RedChannel *channel, RedClient  *client)
 {
-    if (red_client_get_channel(client, channel->type, channel->id)) {
+    uint32_t type, id;
+    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
+    if (red_client_get_channel(client, type, id)) {
         spice_printerr("Error client %p: duplicate channel type %d id %d",
-                       client, channel->type, channel->id);
+                       client, type, id);
         return FALSE;
     }
     return TRUE;
@@ -54,6 +56,9 @@ static gboolean dummy_channel_client_initable_init(GInitable *initable,
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(self);
     RedClient *client = red_channel_client_get_client(rcc);
     RedChannel *channel = red_channel_client_get_channel(rcc);
+    uint32_t type, id;
+
+    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
     pthread_mutex_lock(&client->lock);
     if (!dummy_channel_client_pre_create_validate(channel,
                                                   client)) {
@@ -61,7 +66,7 @@ static gboolean dummy_channel_client_initable_init(GInitable *initable,
                     SPICE_SERVER_ERROR,
                     SPICE_SERVER_ERROR_FAILED,
                     "Client %p: duplicate channel type %d id %d",
-                    client, channel->type, channel->id);
+                    client, type, id);
         goto cleanup;
     }
 
@@ -94,10 +99,12 @@ static void dummy_channel_client_disconnect(RedChannelClient *rcc)
     DummyChannelClient *self = DUMMY_CHANNEL_CLIENT(rcc);
     RedChannel *channel = red_channel_client_get_channel(rcc);
     GList *link;
+    uint32_t type, id;
 
-    if (channel && (link = g_list_find(channel->clients, rcc))) {
+    if (channel && (link = g_list_find(red_channel_get_clients(channel), rcc))) {
+        g_object_get(channel, "channel-type", &type, "id", &id, NULL);
         spice_printerr("rcc=%p (channel=%p type=%d id=%d)", rcc, channel,
-                       channel->type, channel->id);
+                       type, id);
         red_channel_remove_client(channel, link->data);
     }
     self->priv->connected = FALSE;

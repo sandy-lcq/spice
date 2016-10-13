@@ -114,8 +114,7 @@ struct RedsState {
                                     between the 2 servers */
     GList *mig_target_clients;
 
-    int num_of_channels;
-    Ring channels;
+    GList *channels;
     int mouse_mode;
     int is_client_mouse_allowed;
     int dispatcher_allows_client_mouse;
