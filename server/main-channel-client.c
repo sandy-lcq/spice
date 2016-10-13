@@ -439,11 +439,7 @@ void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
 
         mcc->priv->mig_wait_connect = FALSE;
         mcc->priv->mig_connect_ok = success;
-        spice_assert(main_channel->num_clients_mig_wait);
-        spice_assert(!seamless || main_channel->num_clients_mig_wait == 1);
-        if (!--main_channel->num_clients_mig_wait) {
-            reds_on_main_migrate_connected(channel->reds, seamless && success);
-        }
+        main_channel_on_migrate_connected(main_channel, success, seamless);
     } else {
         if (success) {
             spice_printerr("client %p MIGRATE_CANCEL", client);
@@ -876,7 +872,7 @@ static void main_channel_marshall_notify(RedChannelClient *rcc,
 static void main_channel_fill_migrate_dst_info(MainChannel *main_channel,
                                                SpiceMigrationDstInfo *dst_info)
 {
-    RedsMigSpice *mig_dst = &main_channel->mig_target;
+    const RedsMigSpice *mig_dst = main_channel_get_migration_target(main_channel);
     dst_info->port = mig_dst->port;
     dst_info->sport = mig_dst->sport;
     dst_info->host_size = strlen(mig_dst->host) + 1;
@@ -935,17 +931,19 @@ static void main_channel_marshall_migrate_switch(SpiceMarshaller *m, RedChannelC
     RedChannel *channel = red_channel_client_get_channel(rcc);
     SpiceMsgMainMigrationSwitchHost migrate;
     MainChannel *main_ch;
+    const RedsMigSpice *mig_target;
 
     spice_printerr("");
     red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_SWITCH_HOST, item);
     main_ch = SPICE_CONTAINEROF(channel, MainChannel, base);
-    migrate.port = main_ch->mig_target.port;
-    migrate.sport = main_ch->mig_target.sport;
-    migrate.host_size = strlen(main_ch->mig_target.host) + 1;
-    migrate.host_data = (uint8_t *)main_ch->mig_target.host;
-    if (main_ch->mig_target.cert_subject) {
-        migrate.cert_subject_size = strlen(main_ch->mig_target.cert_subject) + 1;
-        migrate.cert_subject_data = (uint8_t *)main_ch->mig_target.cert_subject;
+    mig_target = main_channel_get_migration_target(main_ch);
+    migrate.port = mig_target->port;
+    migrate.sport = mig_target->sport;
+    migrate.host_size = strlen(mig_target->host) + 1;
+    migrate.host_data = (uint8_t *)mig_target->host;
+    if (mig_target->cert_subject) {
+        migrate.cert_subject_size = strlen(mig_target->cert_subject) + 1;
+        migrate.cert_subject_data = (uint8_t *)mig_target->cert_subject;
     } else {
         migrate.cert_subject_size = 0;
         migrate.cert_subject_data = NULL;

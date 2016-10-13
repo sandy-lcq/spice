@@ -78,7 +78,10 @@ void main_channel_migrate_switch(MainChannel *main_chan, RedsMigSpice *mig_targe
 int main_channel_migrate_connect(MainChannel *main_channel, RedsMigSpice *mig_target,
                                  int try_seamless);
 void main_channel_migrate_cancel_wait(MainChannel *main_chan);
+const RedsMigSpice* main_channel_get_migration_target(MainChannel *main_chan);
 /* returns the number of clients for which SPICE_MSG_MAIN_MIGRATE_END was sent*/
 int main_channel_migrate_src_complete(MainChannel *main_chan, int success);
+void main_channel_on_migrate_connected(MainChannel *main_channel,
+                                       gboolean success, gboolean seamless);
 
 #endif

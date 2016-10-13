@@ -419,3 +419,19 @@ int main_channel_migrate_src_complete(MainChannel *main_chan, int success)
    }
    return semi_seamless_count;
 }
+
+void main_channel_on_migrate_connected(MainChannel *main_channel,
+                                       gboolean success, gboolean seamless)
+{
+        spice_assert(main_channel->num_clients_mig_wait);
+        spice_assert(!seamless || main_channel->num_clients_mig_wait == 1);
+        if (!--main_channel->num_clients_mig_wait) {
+            reds_on_main_migrate_connected(red_channel_get_server(RED_CHANNEL(main_channel)),
+                                           seamless && success);
+        }
+}
+
+const RedsMigSpice* main_channel_get_migration_target(MainChannel *main_chan)
+{
+    return &main_chan->mig_target;
+}
