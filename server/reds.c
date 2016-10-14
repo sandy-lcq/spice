@@ -147,8 +147,6 @@ static SpiceCoreInterfaceInternal core_interface_adapter = {
 #define REDS_TOKENS_TO_SEND 5
 #define REDS_VDI_PORT_NUM_RECEIVE_BUFFS 5
 
-static pthread_mutex_t *lock_cs;
-
 /* TODO while we can technically create more than one server in a process,
  * the intended use is to support a single server per process */
 static GList *servers = NULL;
@@ -2759,6 +2757,8 @@ static int ssl_password_cb(char *buf, int size, int flags, void *userdata)
 }
 
 #if OPENSSL_VERSION_NUMBER < 0x1010000FL
+static pthread_mutex_t *lock_cs;
+
 static unsigned long pthreads_thread_id(void)
 {
     unsigned long ret;
