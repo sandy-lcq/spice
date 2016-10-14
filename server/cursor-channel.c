@@ -26,8 +26,6 @@
 #include "cursor-channel-client.h"
 #include "reds.h"
 
-typedef struct CursorChannelClient CursorChannelClient;
-
 enum {
     RED_PIPE_ITEM_TYPE_CURSOR = RED_PIPE_ITEM_TYPE_COMMON_LAST,
     RED_PIPE_ITEM_TYPE_CURSOR_INIT,
