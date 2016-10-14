@@ -51,7 +51,6 @@ G_BEGIN_DECLS
 
 typedef struct RedChannel RedChannel;
 typedef struct RedClient RedClient;
-typedef struct IncomingHandler IncomingHandler;
 
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedChannelClientClass RedChannelClientClass;
