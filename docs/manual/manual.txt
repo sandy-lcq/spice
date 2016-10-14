@@ -1176,9 +1176,8 @@ this value to `/sys/module/drm/parameters/debug`.
 
 It's also possible to get some host-side debugging logs from the guest QXL driver.
 The driver reads a guestdebug parameter from the rom, which can be set when starting
-the VM. Only the Windows QXL driver is using this feature, see `qxl.cmdlog` for
-something guest-agnostic.  This can be enabled with `-global
-qxl-vga.guestdebug=3`, or `-global qxl.guestdebug=3` for secondary devices.
+the VM. This can be enabled with `-global qxl-vga.guestdebug=3`, or `-global
+qxl.guestdebug=3` for secondary devices.
 
 The corresponding libvirt XML is:
 
