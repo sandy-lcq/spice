@@ -72,6 +72,12 @@ void cursor_channel_client_on_disconnect(RedChannelClient *rcc);
 RedCacheItem* cursor_channel_client_cache_find(CursorChannelClient *ccc, uint64_t id);
 int cursor_channel_client_cache_add(CursorChannelClient *ccc, uint64_t id, size_t size);
 
+enum {
+    RED_PIPE_ITEM_TYPE_CURSOR = RED_PIPE_ITEM_TYPE_COMMON_LAST,
+    RED_PIPE_ITEM_TYPE_CURSOR_INIT,
+    RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE,
+};
+
 G_END_DECLS
 
 #endif /* CURSOR_CHANNEL_CLIENT_H_ */

@@ -30,12 +30,6 @@
 
 #define CURSOR_CHANNEL(channel) ((CursorChannel*)(channel))
 
-enum {
-    RED_PIPE_ITEM_TYPE_CURSOR = RED_PIPE_ITEM_TYPE_COMMON_LAST,
-    RED_PIPE_ITEM_TYPE_CURSOR_INIT,
-    RED_PIPE_ITEM_TYPE_INVAL_CURSOR_CACHE,
-};
-
 typedef struct CursorItem {
     QXLInstance *qxl;
     int refs;
