@@ -191,16 +191,6 @@ gboolean red_channel_client_set_migration_seamless(RedChannelClient *rcc);
 void red_channel_client_set_destroying(RedChannelClient *rcc);
 gboolean red_channel_client_is_destroying(RedChannelClient *rcc);
 
-typedef struct OutgoingHandler {
-    OutgoingHandlerInterface *cb;
-    void *opaque;
-    struct iovec vec_buf[IOV_MAX];
-    int vec_size;
-    struct iovec *vec;
-    int pos;
-    int size;
-} OutgoingHandler;
-
 typedef struct IncomingHandler {
     IncomingHandlerInterface *cb;
     void *opaque;
@@ -216,7 +206,6 @@ struct RedChannelClient
     GObject parent;
 
     /* protected */
-    OutgoingHandler outgoing;
     IncomingHandler incoming;
 
     RedChannelClientPrivate *priv;

@@ -21,6 +21,16 @@
 #include "red-channel.h"
 #include "red-channel-client.h"
 
+typedef struct OutgoingHandler {
+    OutgoingHandlerInterface *cb;
+    void *opaque;
+    struct iovec vec_buf[IOV_MAX];
+    int vec_size;
+    struct iovec *vec;
+    int pos;
+    int size;
+} OutgoingHandler;
+
 struct RedChannelClientPrivate
 {
     RedChannel *channel;
@@ -70,6 +80,8 @@ struct RedChannelClientPrivate
 
     RedChannelClientLatencyMonitor latency_monitor;
     RedChannelClientConnectivityMonitor connectivity_monitor;
+
+    OutgoingHandler outgoing;
 };
 
 #endif /* _H_RED_CHANNEL_CLIENT_PRIVATE */

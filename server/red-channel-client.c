@@ -874,10 +874,10 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     self->incoming.cb = &self->priv->channel->incoming_cb;
     self->incoming.header.data = self->incoming.header_buf;
 
-    self->outgoing.opaque = self;
-    self->outgoing.cb = &self->priv->channel->outgoing_cb;
-    self->outgoing.pos = 0;
-    self->outgoing.size = 0;
+    self->priv->outgoing.opaque = self;
+    self->priv->outgoing.cb = &self->priv->channel->outgoing_cb;
+    self->priv->outgoing.pos = 0;
+    self->priv->outgoing.size = 0;
 
     g_queue_init(&self->priv->pipe);
     if (self->priv->stream)
@@ -1189,7 +1189,7 @@ void red_channel_client_receive(RedChannelClient *rcc)
 void red_channel_client_send(RedChannelClient *rcc)
 {
     g_object_ref(rcc);
-    red_peer_handle_outgoing(rcc->priv->stream, &rcc->outgoing);
+    red_peer_handle_outgoing(rcc->priv->stream, &rcc->priv->outgoing);
     g_object_unref(rcc);
 }
 
