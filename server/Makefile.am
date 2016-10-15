@@ -162,6 +162,7 @@ libserver_la_SOURCES =				\
 	dcc-private.h				\
 	image-encoders.c					\
 	image-encoders.h					\
+	glib-compat.h				\
 	$(spice_built_sources)		\
 	$(NULL)
 
