@@ -285,6 +285,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
             key_down->code == SCROLL_LOCK_SCAN_CODE) {
             activate_modifiers_watch(inputs_channel, reds);
         }
+        /* fallthrough */
     }
     case SPICE_MSGC_INPUTS_KEY_UP: {
         SpiceMsgcKeyUp *key_up = message;
