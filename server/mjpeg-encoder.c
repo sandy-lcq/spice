@@ -1372,10 +1372,11 @@ VideoEncoder *mjpeg_encoder_new(SpiceVideoCodecType codec_type,
                                 bitmap_ref_t bitmap_ref,
                                 bitmap_unref_t bitmap_unref)
 {
-    MJpegEncoder *encoder = spice_new0(MJpegEncoder, 1);
+    MJpegEncoder *encoder;
 
     spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG, NULL);
 
+    encoder = spice_new0(MJpegEncoder, 1);
     encoder->base.destroy = mjpeg_encoder_destroy;
     encoder->base.encode_frame = mjpeg_encoder_encode_frame;
     encoder->base.client_stream_report = mjpeg_encoder_client_stream_report;
