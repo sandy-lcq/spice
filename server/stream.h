@@ -42,9 +42,6 @@
 #define RED_STREAM_DEFAULT_LOW_START_BIT_RATE (2.5 * 1024 * 1024) // 2.5Mbps
 #define MAX_FPS 30
 
-/* move back to display_channel once struct private */
-typedef struct DisplayChannel DisplayChannel;
-
 typedef struct Stream Stream;
 
 typedef struct RedStreamActivateReportItem {
