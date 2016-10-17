@@ -24,6 +24,7 @@
 #include "red-common.h"
 #include "red-channel-client.h"
 #include "reds-stream.h"
+#include "cursor-channel.h"
 
 G_BEGIN_DECLS
 
@@ -43,7 +44,6 @@ G_BEGIN_DECLS
 typedef struct CursorChannelClient CursorChannelClient;
 typedef struct CursorChannelClientClass CursorChannelClientClass;
 typedef struct CursorChannelClientPrivate CursorChannelClientPrivate;
-typedef struct CursorChannel CursorChannel;
 
 struct CursorChannelClient
 {
