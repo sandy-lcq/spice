@@ -25,6 +25,7 @@
 #include "pixmap-cache.h"
 #include "red-worker.h"
 #include "display-limits.h"
+#include "red-channel-client.h"
 
 G_BEGIN_DECLS
 
