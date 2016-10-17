@@ -44,6 +44,7 @@
 
 #include "spice.h"
 #include "red-worker.h"
+#include "red-qxl.h"
 #include "cursor-channel.h"
 #include "tree.h"
 

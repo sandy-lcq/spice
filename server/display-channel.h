@@ -32,7 +32,6 @@
 #include "red-record-qxl.h"
 #include "demarshallers.h"
 #include "red-channel.h"
-#include "red-qxl.h"
 #include "dispatcher.h"
 #include "main-channel.h"
 #include "migration-protocol.h"
