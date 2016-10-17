@@ -22,9 +22,10 @@
 #include <common/ring.h>
 
 #include "red-common.h"
-#include "main-channel.h"
 #include "reds.h"
 #include "red-channel-client.h"
+#include "main-channel.h"
+#include "main-channel-client.h"
 
 int main_channel_is_connected(MainChannel *main_chan)
 {

@@ -22,6 +22,7 @@
 #include "dcc-private.h"
 #include "display-channel.h"
 #include "red-channel-client-private.h"
+#include "main-channel-client.h"
 #include "spice-server-enums.h"
 
 G_DEFINE_TYPE(DisplayChannelClient, display_channel_client, RED_TYPE_CHANNEL_CLIENT)

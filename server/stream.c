@@ -20,6 +20,7 @@
 
 #include "stream.h"
 #include "display-channel.h"
+#include "main-channel-client.h"
 
 #define FPS_TEST_INTERVAL 1
 #define FOREACH_STREAMS(display, item)                  \

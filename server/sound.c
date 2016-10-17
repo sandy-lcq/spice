@@ -41,6 +41,7 @@
 #include "sound.h"
 #include <common/snd_codec.h>
 #include "demarshallers.h"
+#include "main-channel-client.h"
 
 #ifndef IOV_MAX
 #define IOV_MAX 1024
