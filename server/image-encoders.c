@@ -23,7 +23,7 @@
 
 #include "image-encoders.h"
 #include "spice-bitmap-utils.h"
-#include "red-worker.h" // red_drawable_unref
+#include "red-parse-qxl.h" // red_drawable_unref
 #include "pixmap-cache.h" // MAX_CACHE_CLIENTS
 
 #define ZLIB_DEFAULT_COMPRESSION_LEVEL 3
