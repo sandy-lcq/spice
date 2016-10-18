@@ -36,7 +36,7 @@ LDADD =								\
 	$(SPICE_NONPKGCONFIG_LIBS)		                \
 	$(NULL)
 
-TESTS =						\
+check_PROGRAMS =				\
 	spice-options-test			\
 	stat_test				\
 	stream-test				\
@@ -57,10 +57,11 @@ noinst_PROGRAMS =				\
 	test_vdagent				\
 	test_display_width_stride		\
 	spice-server-replay			\
-	$(TESTS)				\
+	$(check_PROGRAMS)			\
 	$(NULL)
 
-check_PROGRAMS = $(TESTS)
+TESTS = $(check_PROGRAMS)			\
+	$(NULL)
 
 noinst_LIBRARIES += \
 	libstat_test1.a \
