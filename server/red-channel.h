@@ -358,7 +358,7 @@ struct RedClient {
 
     int disconnecting;
     /* Note that while semi-seamless migration is conducted by the main thread, seamless migration
-     * involves all channels, and thus the related varaibles can be accessed from different
+     * involves all channels, and thus the related variables can be accessed from different
      * threads */
     int during_target_migrate; /* if seamless=TRUE, migration_target is turned off when all
                                   the clients received their migration data. Otherwise (semi-seamless),
