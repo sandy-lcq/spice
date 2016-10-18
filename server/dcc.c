@@ -658,7 +658,7 @@ static RedMonitorsConfigItem *red_monitors_config_item_new(RedChannel* channel,
     RedMonitorsConfigItem *mci;
 
     mci = spice_new(RedMonitorsConfigItem, 1);
-    mci->monitors_config = monitors_config;
+    mci->monitors_config = monitors_config_ref(monitors_config);
 
     red_pipe_item_init_full(&mci->pipe_item, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
                             red_monitors_config_item_free);
@@ -682,7 +682,7 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
     }
 
     mci = red_monitors_config_item_new(red_channel_client_get_channel(RED_CHANNEL_CLIENT(dcc)),
-                                       monitors_config_ref(dc->priv->monitors_config));
+                                       monitors_config);
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &mci->pipe_item);
     red_channel_client_push(RED_CHANNEL_CLIENT(dcc));
 }
