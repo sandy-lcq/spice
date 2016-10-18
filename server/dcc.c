@@ -177,7 +177,7 @@ static RedSurfaceCreateItem *red_surface_create_item_new(RedChannel* channel,
 {
     RedSurfaceCreateItem *create;
 
-    create = spice_malloc(sizeof(RedSurfaceCreateItem));
+    create = spice_new(RedSurfaceCreateItem, 1);
 
     create->surface_create.surface_id = surface_id;
     create->surface_create.width = width;
@@ -692,7 +692,7 @@ static RedSurfaceDestroyItem *red_surface_destroy_item_new(RedChannel *channel,
 {
     RedSurfaceDestroyItem *destroy;
 
-    destroy = spice_malloc(sizeof(RedSurfaceDestroyItem));
+    destroy = spice_new(RedSurfaceDestroyItem, 1);
     destroy->surface_destroy.surface_id = surface_id;
     red_pipe_item_init(&destroy->pipe_item, RED_PIPE_ITEM_TYPE_DESTROY_SURFACE);
 
