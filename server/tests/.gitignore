@@ -22,3 +22,4 @@ test-stat-file
 test-stream
 test-two-servers
 test-vdagent
+test-gst
