@@ -19,8 +19,6 @@
 #endif
 
 #include <inttypes.h>
-
-#include "main-channel-client.h"
 #include <common/generated_server_marshallers.h>
 
 #include "main-channel-client.h"
