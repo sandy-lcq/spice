@@ -36,7 +36,7 @@
 #include "reds.h"
 #include "dispatcher.h"
 #include "red-parse-qxl.h"
-#include "main-channel-client.h"
+#include "red-channel-client.h"
 
 #include "red-qxl.h"
 
