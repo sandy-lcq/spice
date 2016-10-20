@@ -759,7 +759,7 @@ static const SpiceFormatForGStreamer format_map[] =  {
     {SPICE_BITMAP_FMT_INVALID, "", 0, 0, 0, 0, 0, 0},
     {SPICE_BITMAP_FMT_RGBA, "BGRA", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
     {SPICE_BITMAP_FMT_16BIT, "RGB15", 16, 15, 4321, 0x001f, 0x03E0, 0x7C00},
-    /* TODO: Test the other formats */
+    /* TODO: Test the other formats under GStreamer 0.10*/
     {SPICE_BITMAP_FMT_32BIT, "BGRx", 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
     {SPICE_BITMAP_FMT_24BIT, "BGR", 24, 24, 4321, 0xff0000, 0xff00, 0xff},
 };
@@ -771,9 +771,11 @@ static const SpiceFormatForGStreamer *map_format(SpiceBitmapFmt format)
     int i;
     for (i = 0; i < G_N_ELEMENTS(format_map); i++) {
         if (format_map[i].spice_format == format) {
+#ifdef HAVE_GSTREAMER_0_10
             if (i > 2) {
                 spice_warning("The %d format has not been tested yet", format);
             }
+#endif
             return &format_map[i];
         }
     }
