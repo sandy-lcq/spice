@@ -1946,7 +1946,7 @@ DisplayChannel* display_channel_new(RedsState *reds,
 #endif
     image_encoder_shared_init(&display->priv->encoder_shared_data);
 
-    display->priv->n_surfaces = n_surfaces;
+    display->priv->n_surfaces = MIN(n_surfaces, NUM_SURFACES);
     display->priv->renderer = RED_RENDERER_INVALID;
 
     ring_init(&display->priv->current_list);
