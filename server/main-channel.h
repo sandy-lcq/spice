@@ -23,7 +23,6 @@
 #include <common/marshaller.h>
 
 #include "red-channel.h"
-#include "main-channel-client.h"
 
 #define MAIN_CHANNEL(channel) ((MainChannel*)(channel))
 

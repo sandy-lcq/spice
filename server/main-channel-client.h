@@ -21,11 +21,9 @@
 #include <common/messages.h>
 
 #include "red-channel-client.h"
+#include "main-channel.h"
 
 G_BEGIN_DECLS
-
-/* FIXME: remove extra MainChannel typedef when possible */
-typedef struct MainChannel MainChannel;
 
 #define TYPE_MAIN_CHANNEL_CLIENT main_channel_client_get_type()
 
