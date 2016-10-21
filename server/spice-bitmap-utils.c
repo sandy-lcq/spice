@@ -269,7 +269,7 @@ void dump_bitmap(SpiceBitmap *bitmap)
     put_32le(&ptr, bitmap_data_offset);
     put_32le(&ptr, header_size - 14);
     put_32le(&ptr, bitmap->x);
-    put_32le(&ptr, bitmap->y);
+    put_32le(&ptr, bitmap->flags & SPICE_BITMAP_FLAGS_TOP_DOWN ? -bitmap->y : bitmap->y);
 
     put_16le(&ptr, 1); // plane
     put_16le(&ptr, n_pixel_bits);
