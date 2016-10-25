@@ -50,14 +50,6 @@ typedef struct MonitorMode {
 #define REDS_MAX_STAT_NODES 100
 #define REDS_STAT_SHM_SIZE (sizeof(SpiceStat) + REDS_MAX_STAT_NODES * sizeof(SpiceStatNode))
 
-typedef struct RedsStatValue {
-    uint32_t value;
-    uint32_t min;
-    uint32_t max;
-    uint32_t average;
-    uint32_t count;
-} RedsStatValue;
-
 #endif
 
 typedef struct RedsMigPendingLink {
