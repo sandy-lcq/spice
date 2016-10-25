@@ -126,6 +126,7 @@ libserver_la_SOURCES =				\
 	red-worker.h				\
 	display-channel.c			\
 	display-channel.h			\
+	display-channel-private.h		\
 	cursor-channel-client.c			\
 	cursor-channel-client.h			\
 	cursor-channel.c			\
