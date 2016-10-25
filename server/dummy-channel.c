@@ -7,9 +7,37 @@
 
 G_DEFINE_TYPE(DummyChannel, dummy_channel, RED_TYPE_CHANNEL)
 
+static int dummy_config_socket(RedChannelClient *self)
+{
+    return 1;
+}
+
+static void dummy_on_disconnect(RedChannelClient *self)
+{
+}
+
+static uint8_t* dummy_alloc_recv_buf(RedChannelClient *self,
+                                     uint16_t type,
+                                     uint32_t size)
+{
+    return NULL;
+}
+
+static void dummy_release_recv_buf(RedChannelClient *self,
+                                   uint16_t type,
+                                   uint32_t size,
+                                   uint8_t *msg)
+{
+}
+
 static void
 dummy_channel_class_init(DummyChannelClass *klass)
 {
+    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+    channel_class->config_socket = dummy_config_socket;
+    channel_class->on_disconnect = dummy_on_disconnect;
+    channel_class->alloc_recv_buf = dummy_alloc_recv_buf;
+    channel_class->release_recv_buf = dummy_release_recv_buf;
 }
 
 static void
