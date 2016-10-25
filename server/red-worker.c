@@ -1379,9 +1379,6 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, "display_channel", TRUE));
     red_channel_register_client_cbs(channel, client_display_cbs, dispatcher);
     g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
-    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
-    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
-    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
     reds_register_channel(reds, channel);
 
     return worker;

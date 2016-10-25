@@ -2027,6 +2027,7 @@ static void
 display_channel_constructed(GObject *object)
 {
     DisplayChannel *self = DISPLAY_CHANNEL(object);
+    RedChannel *channel = RED_CHANNEL(self);
 
     G_OBJECT_CLASS(display_channel_parent_class)->constructed(object);
 
@@ -2039,7 +2040,6 @@ display_channel_constructed(GObject *object)
     stat_init(&self->priv->__exclude_stat, "__exclude", CLOCK_THREAD_CPUTIME_ID);
 #ifdef RED_STATISTICS
     RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
-    RedChannel *channel = RED_CHANNEL(self);
     self->priv->cache_hits_counter =
         stat_add_counter(reds, red_channel_get_stat_node(channel),
                          "cache_hits", TRUE);
@@ -2053,6 +2053,10 @@ display_channel_constructed(GObject *object)
     image_cache_init(&self->priv->image_cache);
     self->priv->stream_video = SPICE_STREAM_VIDEO_OFF;
     display_channel_init_streams(self);
+
+    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
+    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
+    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
 }
 
 void display_channel_process_surface_cmd(DisplayChannel *display,
