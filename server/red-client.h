@@ -19,7 +19,25 @@
 #ifndef _H_RED_CLIENT
 #define _H_RED_CLIENT
 
+#include <glib-object.h>
+
 #include "main-channel-client.h"
+
+G_BEGIN_DECLS
+
+#define RED_TYPE_CLIENT red_client_get_type()
+
+#define RED_CLIENT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), RED_TYPE_CLIENT, RedClient))
+#define RED_CLIENT_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), RED_TYPE_CLIENT, RedClientClass))
+#define RED_IS_CLIENT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), RED_TYPE_CLIENT))
+#define RED_IS_CLIENT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), RED_TYPE_CLIENT))
+#define RED_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS ((obj), RED_TYPE_CLIENT, RedClientClass))
+
+typedef struct RedClient RedClient;
+typedef struct RedClientClass RedClientClass;
+
+GType red_client_get_type (void) G_GNUC_CONST;
 
 RedClient *red_client_new(RedsState *reds, int migrated);
 
@@ -27,15 +45,6 @@ RedClient *red_client_new(RedsState *reds, int migrated);
  * disconnects all the client's channels (should be called from the client's thread)
  */
 void red_client_destroy(RedClient *client);
-
-RedClient *red_client_ref(RedClient *client);
-
-/*
- * releases the client resources when refs == 0.
- * We assume the red_client_destroy was called before
- * we reached refs==0
- */
-RedClient *red_client_unref(RedClient *client);
 
 gboolean red_client_add_channel(RedClient *client, RedChannelClient *rcc, GError **error);
 void red_client_remove_channel(RedChannelClient *rcc);
@@ -61,5 +70,7 @@ void red_client_migrate(RedClient *client);
 gboolean red_client_is_disconnecting(RedClient *client);
 void red_client_set_disconnecting(RedClient *client);
 RedsState* red_client_get_server(RedClient *client);
+
+G_END_DECLS
 
 #endif /* _H_RED_CLIENT */

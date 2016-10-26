@@ -68,7 +68,7 @@
 #include "smartcard.h"
 #endif
 #include "reds-stream.h"
-#include "utils.h"
+#include "red-client.h"
 
 #include "reds-private.h"
 #include "video-encoder.h"

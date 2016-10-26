@@ -27,6 +27,7 @@
     GLIST_FOREACH((_client ? (_client)->channels : NULL), _iter, RedChannelClient, _data)
 
 struct RedClient {
+    GObject parent;
     RedsState *reds;
     GList *channels;
     MainChannelClient *mcc;
@@ -45,39 +46,111 @@ struct RedClient {
     int during_target_migrate;
     int seamless_migrate;
     int num_migrated_channels; /* for seamless - number of channels that wait for migrate data*/
-    int refs;
 };
 
-RedClient *red_client_ref(RedClient *client)
+struct RedClientClass
 {
-    spice_assert(client);
-    g_atomic_int_inc(&client->refs);
-    return client;
+    GObjectClass parent_class;
+};
+
+G_DEFINE_TYPE(RedClient, red_client, G_TYPE_OBJECT)
+
+enum {
+    PROP0,
+    PROP_SPICE_SERVER,
+    PROP_MIGRATED
+};
+
+static void
+red_client_get_property (GObject    *object,
+                         guint       property_id,
+                         GValue     *value,
+                         GParamSpec *pspec)
+{
+    RedClient *self = RED_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_SPICE_SERVER:
+            g_value_set_pointer(value, self->reds);
+            break;
+        case PROP_MIGRATED:
+            g_value_set_boolean(value, self->during_target_migrate);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+    }
 }
 
-RedClient *red_client_unref(RedClient *client)
+static void
+red_client_set_property (GObject      *object,
+                         guint         property_id,
+                         const GValue *value,
+                         GParamSpec   *pspec)
 {
-    if (g_atomic_int_dec_and_test(&client->refs)) {
-        spice_debug("release client=%p", client);
-        pthread_mutex_destroy(&client->lock);
-        free(client);
-        return NULL;
+    RedClient *self = RED_CLIENT(object);
+
+    switch (property_id)
+    {
+        case PROP_SPICE_SERVER:
+            self->reds = g_value_get_pointer(value);
+            break;
+        case PROP_MIGRATED:
+            self->during_target_migrate = g_value_get_boolean(value);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
-    return client;
+}
+
+static void
+red_client_finalize (GObject *object)
+{
+    RedClient *self = RED_CLIENT(object);
+
+    spice_debug("release client=%p", self);
+    pthread_mutex_destroy(&self->lock);
+
+    G_OBJECT_CLASS (red_client_parent_class)->finalize (object);
+}
+
+static void
+red_client_class_init (RedClientClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->get_property = red_client_get_property;
+  object_class->set_property = red_client_set_property;
+  object_class->finalize = red_client_finalize;
+
+  g_object_class_install_property(object_class,
+                                  PROP_SPICE_SERVER,
+                                  g_param_spec_pointer("spice-server",
+                                                       "Spice server",
+                                                       "The Spice Server",
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+  g_object_class_install_property(object_class,
+                                  PROP_MIGRATED,
+                                  g_param_spec_boolean("migrated",
+                                                       "migrated",
+                                                       "Whether this client was migrated",
+                                                       FALSE,
+                                                       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+}
+
+static void
+red_client_init (RedClient *self)
+{
+    pthread_mutex_init(&self->lock, NULL);
+    self->thread_id = pthread_self();
 }
 
 RedClient *red_client_new(RedsState *reds, int migrated)
 {
-    RedClient *client;
-
-    client = spice_malloc0(sizeof(RedClient));
-    client->reds = reds;
-    pthread_mutex_init(&client->lock, NULL);
-    client->thread_id = pthread_self();
-    client->during_target_migrate = migrated;
-    client->refs = 1;
-
-    return client;
+  return g_object_new (RED_TYPE_CLIENT,
+                       "spice-server", reds,
+                       "migrated", migrated,
+                       NULL);
 }
 
 void red_client_set_migration_seamless(RedClient *client) // dest
@@ -148,8 +221,9 @@ void red_client_destroy(RedClient *client)
         spice_assert(red_channel_client_no_item_being_sent(rcc));
         red_channel_client_destroy(rcc);
     }
-    red_client_unref(client);
+    g_object_unref(client);
 }
+
 
 /* client->lock should be locked */
 RedChannelClient *red_client_get_channel(RedClient *client, int type, int id)
