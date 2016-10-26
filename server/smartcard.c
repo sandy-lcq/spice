@@ -602,14 +602,11 @@ red_smartcard_channel_class_init(RedSmartcardChannelClass *klass)
 
 }
 
-/* FIXME: remove global */
-RedSmartcardChannel *g_smartcard_channel;
-
 static void smartcard_init(RedsState *reds)
 {
-    spice_assert(!g_smartcard_channel);
+    spice_assert(!reds_find_channel(reds, SPICE_CHANNEL_SMARTCARD, 0));
 
-    g_smartcard_channel = red_smartcard_channel_new(reds);
+    red_smartcard_channel_new(reds);
 }
 
 

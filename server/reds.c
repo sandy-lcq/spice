@@ -467,7 +467,7 @@ void reds_unregister_channel(RedsState *reds, RedChannel *channel)
     }
 }
 
-static RedChannel *reds_find_channel(RedsState *reds, uint32_t type, uint32_t id)
+RedChannel *reds_find_channel(RedsState *reds, uint32_t type, uint32_t id)
 {
     GListIter it;
     RedChannel *channel;
