@@ -25,18 +25,22 @@
 #include <string.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <sys/stat.h>
 #include <spice/stats.h>
+#include <common/verify.h>
 
 #define TAB_LEN 4
 #define VALUE_TABS 7
 #define INVALID_STAT_REF (~(uint32_t)0)
 
-static SpiceStat *reds_stat = (SpiceStat *)MAP_FAILED;
+verify(sizeof(SpiceStat) == 20 || sizeof(SpiceStat) == 24);
+
+static SpiceStatNode *reds_nodes = NULL;
 static uint64_t *values = NULL;
 
 static void print_stat_tree(int32_t node_index, int depth)
 {
-    SpiceStatNode *node = &reds_stat->nodes[node_index];
+    SpiceStatNode *node = &reds_nodes[node_index];
 
     if ((node->flags & SPICE_STAT_NODE_MASK_SHOW) == SPICE_STAT_NODE_MASK_SHOW) {
         printf("%*s%s", depth * TAB_LEN, "", node->name);
@@ -66,6 +70,9 @@ int main(int argc, char **argv)
     int shm_name_len;
     int ret = -1;
     int fd;
+    struct stat st;
+    unsigned header_size = sizeof(SpiceStat);
+    SpiceStat *reds_stat = (SpiceStat *)MAP_FAILED;
 
     if (argc != 2 || !(kvm_pid = atoi(argv[1]))) {
         printf("usage: reds_stat [qemu_pid] (e.g. `pgrep qemu`)\n");
@@ -84,6 +91,12 @@ int main(int argc, char **argv)
     }
     shm_size = sizeof(SpiceStat);
     reds_stat = (SpiceStat *)mmap(NULL, shm_size, PROT_READ, MAP_SHARED, fd, 0);
+    if (fstat(fd, &st) == 0) {
+        unsigned size = st.st_size % sizeof(SpiceStatNode);
+        if (size == 20 || size == 24) {
+            header_size = size;
+        }
+    }
     if (reds_stat == (SpiceStat *)MAP_FAILED) {
         perror("mmap");
         goto error;
@@ -104,12 +117,13 @@ int main(int argc, char **argv)
         if (num_of_nodes != reds_stat->num_of_nodes) {
             num_of_nodes = reds_stat->num_of_nodes;
             shm_old_size = shm_size;
-            shm_size = sizeof(SpiceStat) + num_of_nodes * sizeof(SpiceStatNode);
+            shm_size = header_size + num_of_nodes * sizeof(SpiceStatNode);
             reds_stat = mremap(reds_stat, shm_old_size, shm_size, MREMAP_MAYMOVE);
             if (reds_stat == (SpiceStat *)MAP_FAILED) {
                 perror("mremap");
                 goto error;
             }
+            reds_nodes = (SpiceStatNode *)((char *) reds_stat + header_size);
             values = (uint64_t *)realloc(values, num_of_nodes * sizeof(uint64_t));
             if (values == NULL) {
                 perror("realloc");
