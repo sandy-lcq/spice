@@ -363,7 +363,7 @@ RedClient *red_client_ref(RedClient *client);
 RedClient *red_client_unref(RedClient *client);
 
 /* client->lock should be locked */
-void red_client_add_channel(RedClient *client, RedChannelClient *rcc);
+gboolean red_client_add_channel(RedClient *client, RedChannelClient *rcc, GError **error);
 void red_client_remove_channel(RedChannelClient *rcc);
 RedChannelClient *red_client_get_channel(RedClient *client, int type, int id);
 

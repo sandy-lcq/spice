@@ -35,46 +35,20 @@ struct DummyChannelClientPrivate
     gboolean connected;
 };
 
-static int dummy_channel_client_pre_create_validate(RedChannel *channel, RedClient  *client)
-{
-    uint32_t type, id;
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
-    if (red_client_get_channel(client, type, id)) {
-        spice_printerr("Error client %p: duplicate channel type %d id %d",
-                       client, type, id);
-        return FALSE;
-    }
-    return TRUE;
-}
-
 static gboolean dummy_channel_client_initable_init(GInitable *initable,
                                                    GCancellable *cancellable,
                                                    GError **error)
 {
     GError *local_error = NULL;
-    DummyChannelClient *self = DUMMY_CHANNEL_CLIENT(initable);
-    RedChannelClient *rcc = RED_CHANNEL_CLIENT(self);
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(initable);
     RedClient *client = red_channel_client_get_client(rcc);
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    uint32_t type, id;
-
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
-    pthread_mutex_lock(&client->lock);
-    if (!dummy_channel_client_pre_create_validate(channel,
-                                                  client)) {
-        g_set_error(&local_error,
-                    SPICE_SERVER_ERROR,
-                    SPICE_SERVER_ERROR_FAILED,
-                    "Client %p: duplicate channel type %d id %d",
-                    client, type, id);
-        goto cleanup;
-    }
 
     red_channel_add_client(channel, rcc);
-    red_client_add_channel(client, rcc);
+    if (!red_client_add_channel(client, rcc, &local_error)) {
+        red_channel_remove_client(channel, rcc);
+    }
 
-cleanup:
-    pthread_mutex_unlock(&client->lock);
     if (local_error) {
         g_warning("Failed to create channel client: %s", local_error->message);
         g_propagate_error(error, local_error);

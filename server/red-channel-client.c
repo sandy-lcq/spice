@@ -862,18 +862,6 @@ static const SpiceDataHeaderOpaque mini_header_wrapper = {NULL, sizeof(SpiceMini
                                                           mini_header_get_msg_type,
                                                           mini_header_get_msg_size};
 
-static int red_channel_client_pre_create_validate(RedChannel *channel, RedClient  *client)
-{
-    uint32_t type, id;
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
-    if (red_client_get_channel(client, type, id)) {
-        spice_printerr("Error client %p: duplicate channel type %d id %d",
-                       client, type, id);
-        return FALSE;
-    }
-    return TRUE;
-}
-
 static gboolean red_channel_client_initable_init(GInitable *initable,
                                                  GCancellable *cancellable,
                                                  GError **error)
@@ -881,20 +869,6 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     GError *local_error = NULL;
     SpiceCoreInterfaceInternal *core;
     RedChannelClient *self = RED_CHANNEL_CLIENT(initable);
-    pthread_mutex_lock(&self->priv->client->lock);
-    if (!red_channel_client_pre_create_validate(self->priv->channel, self->priv->client)) {
-        uint32_t id, type;
-        g_object_get(self->priv->channel,
-                     "channel-type", &type,
-                     "id", &id,
-                     NULL);
-        g_set_error(&local_error,
-                    SPICE_SERVER_ERROR,
-                    SPICE_SERVER_ERROR_FAILED,
-                    "Client %p: duplicate channel type %d id %d",
-                    self->priv->client, type, id);
-        goto cleanup;
-    }
 
     if (!red_channel_config_socket(self->priv->channel, self)) {
         g_set_error_literal(&local_error,
@@ -917,7 +891,7 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
         self->priv->latency_monitor.timer =
             core->timer_add(core, red_channel_client_ping_timer, self);
 
-        if (!self->priv->client->during_target_migrate) {
+        if (!red_client_during_migrate_at_target(self->priv->client)) {
             red_channel_client_start_ping_timer(self,
                                                 PING_TEST_IDLE_NET_TIMEOUT_MS);
         }
@@ -925,10 +899,11 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     }
 
     red_channel_add_client(self->priv->channel, self);
-    red_client_add_channel(self->priv->client, self);
+    if (!red_client_add_channel(self->priv->client, self, &local_error)) {
+        red_channel_remove_client(self->priv->channel, self);
+    }
 
 cleanup:
-    pthread_mutex_unlock(&self->priv->client->lock);
     if (local_error) {
         g_warning("Failed to create channel client: %s", local_error->message);
         g_propagate_error(error, local_error);

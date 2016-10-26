@@ -797,15 +797,37 @@ RedChannelClient *red_client_get_channel(RedClient *client, int type, int id)
     return ret;
 }
 
-/* client->lock should be locked */
-void red_client_add_channel(RedClient *client, RedChannelClient *rcc)
+gboolean red_client_add_channel(RedClient *client, RedChannelClient *rcc, GError **error)
 {
+    uint32_t type, id;
+    RedChannel *channel;
+    gboolean result = TRUE;
+
     spice_assert(rcc && client);
+    channel = red_channel_client_get_channel(rcc);
+
+    pthread_mutex_lock(&client->lock);
+
+    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
+    if (red_client_get_channel(client, type, id)) {
+        g_set_error(error,
+                    SPICE_SERVER_ERROR,
+                    SPICE_SERVER_ERROR_FAILED,
+                    "Client %p: duplicate channel type %d id %d",
+                    client, type, id);
+        result = FALSE;
+        goto cleanup;
+    }
+
     client->channels = g_list_prepend(client->channels, rcc);
     if (client->during_target_migrate && client->seamless_migrate) {
         if (red_channel_client_set_migration_seamless(rcc))
             client->num_migrated_channels++;
     }
+
+cleanup:
+    pthread_mutex_unlock(&client->lock);
+    return result;
 }
 
 MainChannelClient *red_client_get_main(RedClient *client) {
