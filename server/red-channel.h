@@ -325,64 +325,6 @@ OutgoingHandlerInterface* red_channel_get_outgoing_handler(RedChannel *self);
 
 const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *self);
 
-struct RedClient {
-    RedsState *reds;
-    GList *channels;
-    MainChannelClient *mcc;
-    pthread_mutex_t lock; // different channels can be in different threads
-
-    pthread_t thread_id;
-
-    int disconnecting;
-    /* Note that while semi-seamless migration is conducted by the main thread, seamless migration
-     * involves all channels, and thus the related variables can be accessed from different
-     * threads */
-    int during_target_migrate; /* if seamless=TRUE, migration_target is turned off when all
-                                  the clients received their migration data. Otherwise (semi-seamless),
-                                  it is turned off, when red_client_semi_seamless_migrate_complete
-                                  is called */
-    int seamless_migrate;
-    int num_migrated_channels; /* for seamless - number of channels that wait for migrate data*/
-    int refs;
-};
-
-RedClient *red_client_new(RedsState *reds, int migrated);
-
-/*
- * disconnects all the client's channels (should be called from the client's thread)
- */
-void red_client_destroy(RedClient *client);
-
-RedClient *red_client_ref(RedClient *client);
-
-/*
- * releases the client resources when refs == 0.
- * We assume the red_client_destroy was called before
- * we reached refs==0
- */
-RedClient *red_client_unref(RedClient *client);
-
-/* client->lock should be locked */
-gboolean red_client_add_channel(RedClient *client, RedChannelClient *rcc, GError **error);
-void red_client_remove_channel(RedChannelClient *rcc);
-RedChannelClient *red_client_get_channel(RedClient *client, int type, int id);
-
-MainChannelClient *red_client_get_main(RedClient *client);
-// main should be set once before all the other channels are created
-void red_client_set_main(RedClient *client, MainChannelClient *mcc);
-
-/* called when the migration handshake results in seamless migration (dst side).
- * By default we assume semi-seamless */
-void red_client_set_migration_seamless(RedClient *client);
-void red_client_semi_seamless_migrate_complete(RedClient *client); /* dst side */
-/* TRUE if the migration is seamless and there are still channels that wait from migration data.
- * Or, during semi-seamless migration, and the main channel still waits for MIGRATE_END
- * from the client.
- * Note: Call it only from the main thread */
-int red_client_during_migrate_at_target(RedClient *client);
-
-void red_client_migrate(RedClient *client);
-gboolean red_client_seamless_migration_done_for_channel(RedClient *client);
 /*
  * blocking functions.
  *
@@ -393,6 +335,10 @@ gboolean red_client_seamless_migration_done_for_channel(RedClient *client);
 
 int red_channel_wait_all_sent(RedChannel *channel,
                               int64_t timeout);
+
+/* wrappers for client callbacks */
+void red_channel_migrate_client(RedChannel *channel, RedChannelClient *rcc);
+void red_channel_disconnect_client(RedChannel *channel, RedChannelClient *rcc);
 
 #define CHANNEL_BLOCKED_SLEEP_DURATION 10000 //micro
 

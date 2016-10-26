@@ -39,6 +39,7 @@
 #include "red-channel-client.h"
 /* FIXME: for now, allow sound channel access to private RedChannelClient data */
 #include "red-channel-client-private.h"
+#include "red-client.h"
 #include "sound.h"
 #include <common/snd_codec.h>
 #include "demarshallers.h"

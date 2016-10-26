@@ -25,7 +25,7 @@
 
 #include "common-graphics-channel.h"
 #include "dcc.h"
-#include "main-channel-client.h"
+#include "red-client.h"
 
 #define CHANNEL_RECEIVE_BUF_SIZE 1024
 

@@ -23,7 +23,7 @@
 #include <config.h>
 #include <inttypes.h>
 #include "char-device.h"
-#include "red-channel.h"
+#include "red-client.h"
 #include "reds.h"
 #include "glib-compat.h"
 
@@ -711,8 +711,10 @@ static RedCharDeviceClient *red_char_device_client_new(RedClient *client,
     dev_client->max_send_queue_size = max_send_queue_size;
     dev_client->do_flow_control = do_flow_control;
     if (do_flow_control) {
+        RedsState *reds = red_client_get_server(client);
+
         dev_client->wait_for_tokens_timer =
-            reds_core_timer_add(client->reds, device_client_wait_for_tokens_timeout,
+            reds_core_timer_add(reds, device_client_wait_for_tokens_timeout,
                                 dev_client);
         if (!dev_client->wait_for_tokens_timer) {
             spice_error("failed to create wait for tokens timer");

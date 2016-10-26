@@ -23,6 +23,7 @@
 #include "display-channel.h"
 #include "display-channel-private.h"
 #include "red-channel-client-private.h"
+#include "red-client.h"
 #include "main-channel-client.h"
 #include "spice-server-enums.h"
 

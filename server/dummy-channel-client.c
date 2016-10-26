@@ -20,6 +20,7 @@
 
 #include "dummy-channel-client.h"
 #include "red-channel.h"
+#include "red-client.h"
 
 static void dummy_channel_client_initable_interface_init(GInitableIface *iface);
 

@@ -24,6 +24,7 @@
 #include "red-common.h"
 #include "reds.h"
 #include "red-channel-client.h"
+#include "red-client.h"
 #include "main-channel.h"
 #include "main-channel-client.h"
 

@@ -24,7 +24,7 @@
 #include "red-common.h"
 #include "dispatcher.h"
 #include "main-dispatcher.h"
-#include "red-channel.h"
+#include "red-client.h"
 #include "reds.h"
 
 /*
@@ -265,7 +265,7 @@ void main_dispatcher_client_disconnect(MainDispatcher *self, RedClient *client)
 {
     MainDispatcherClientDisconnectMessage msg;
 
-    if (!client->disconnecting) {
+    if (!red_client_is_disconnecting(client)) {
         spice_debug("client %p", client);
         msg.client = red_client_ref(client);
         dispatcher_send_message(DISPATCHER(self), MAIN_DISPATCHER_CLIENT_DISCONNECT,

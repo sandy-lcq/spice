@@ -74,6 +74,7 @@
 #include "video-encoder.h"
 #include "red-channel-client.h"
 #include "main-channel-client.h"
+#include "red-client.h"
 
 static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
 static gboolean reds_use_client_monitors_config(RedsState *reds);
@@ -565,7 +566,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
         exit(0);
     }
 
-    if (!client || client->disconnecting) {
+    if (!client || red_client_is_disconnecting(client)) {
         spice_debug("client %p already during disconnection", client);
         return;
     }
@@ -575,7 +576,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
      * main_channel_client_on_disconnect->
      *  reds_client_disconnect->red_client_destroy->main_channel...
      */
-    client->disconnecting = TRUE;
+    red_client_set_disconnecting(client);
 
     // TODO: we need to handle agent properly for all clients!!!! (e.g., cut and paste, how?)
     // We shouldn't initialize the agent when there are still clients connected

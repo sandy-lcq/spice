@@ -40,6 +40,7 @@
 #include "reds-stream.h"
 #include "red-channel.h"
 #include "red-channel-client.h"
+#include "red-client.h"
 #include "inputs-channel-client.h"
 #include "main-channel-client.h"
 #include "inputs-channel.h"

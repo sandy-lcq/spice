@@ -21,6 +21,7 @@
 #include "stream.h"
 #include "display-channel-private.h"
 #include "main-channel-client.h"
+#include "red-client.h"
 
 #define FPS_TEST_INTERVAL 1
 #define FOREACH_STREAMS(display, item)                  \

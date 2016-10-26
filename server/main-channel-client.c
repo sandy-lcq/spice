@@ -24,6 +24,7 @@
 #include "main-channel-client.h"
 #include "main-channel.h"
 #include "red-channel-client.h"
+#include "red-client.h"
 #include "reds.h"
 
 #define NET_TEST_WARMUP_BYTES 0

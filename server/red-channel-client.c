@@ -35,7 +35,7 @@
 
 #include "red-channel-client.h"
 #include "red-channel-client-private.h"
-#include "red-channel.h"
+#include "red-client.h"
 #include "glib-compat.h"
 
 static const SpiceDataHeaderOpaque full_header_wrapper;
