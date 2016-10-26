@@ -94,8 +94,7 @@ struct RedsState {
     SpiceWatch *secure_listen_watch;
     RedCharDeviceVDIPort *agent_dev;
     int pending_mouse_event;
-    Ring clients;
-    int num_clients;
+    GList *clients;
     MainChannel *main_channel;
     InputsChannel *inputs_channel;
 

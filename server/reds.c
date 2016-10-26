@@ -595,13 +595,12 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
         red_char_device_client_remove(RED_CHAR_DEVICE(reds->agent_dev), client);
     }
 
-    ring_remove(&client->link);
-    reds->num_clients--;
+    reds->clients = g_list_remove(reds->clients, client);
     red_client_destroy(client);
 
    // TODO: we need to handle agent properly for all clients!!!! (e.g., cut and paste, how? Maybe throw away messages
    // if we are in the middle of one from another client)
-    if (reds->num_clients == 0) {
+    if (g_list_length(reds->clients) == 0) {
         /* Let the agent know the client is disconnected */
         if (reds->agent_dev->priv->agent_attached) {
             RedCharDeviceWriteBuffer *char_dev_buf;
@@ -644,11 +643,12 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
 // reds_client_disconnect
 static void reds_disconnect(RedsState *reds)
 {
-    RingItem *link, *next;
+    GListIter iter;
+    RedClient *client;
 
     spice_info(NULL);
-    RING_FOREACH_SAFE(link, next, &reds->clients) {
-        reds_client_disconnect(reds, SPICE_CONTAINEROF(link, RedClient, link));
+    GLIST_FOREACH(reds->clients, iter, RedClient, client) {
+        reds_client_disconnect(reds, client);
     }
     reds_mig_cleanup(reds);
 }
@@ -973,7 +973,7 @@ void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mou
 
 static int reds_get_n_clients(RedsState *reds)
 {
-    return reds ? reds->num_clients : 0;
+    return reds ? g_list_length(reds->clients) : 0;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *reds)
@@ -1003,7 +1003,7 @@ static void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
 
     GLIST_FOREACH(reds->channels, it, RedChannel, channel) {
         uint32_t type, id;
-        if (reds->num_clients > 1 &&
+        if (g_list_length(reds->clients) > 1 &&
             !channel_supports_multiple_clients(channel)) {
             continue;
         }
@@ -1245,7 +1245,7 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
     RedCharDeviceVDIPort *agent_dev = reds->agent_dev;
     uint32_t read_data_len;
 
-    spice_assert(reds->num_clients == 1);
+    spice_assert(g_list_length(reds->clients) == 1);
 
     if (agent_dev->priv->read_state != VDI_PORT_READ_STATE_READ_DATA) {
         return;
@@ -1718,12 +1718,10 @@ static void reds_mig_target_client_disconnect_all(RedsState *reds)
 
 static int reds_find_client(RedsState *reds, RedClient *client)
 {
-    RingItem *item;
+    GListIter iter;
+    RedClient *list_client;
 
-    RING_FOREACH(item, &reds->clients) {
-        RedClient *list_client;
-
-        list_client = SPICE_CONTAINEROF(item, RedClient, link);
+    GLIST_FOREACH(reds->clients, iter, RedClient, list_client) {
         if (list_client == client) {
             return TRUE;
         }
@@ -1734,13 +1732,14 @@ static int reds_find_client(RedsState *reds, RedClient *client)
 /* should be used only when there is one client */
 static RedClient *reds_get_client(RedsState *reds)
 {
-    spice_assert(reds->num_clients <= 1);
+    gint n = g_list_length(reds->clients);
+    spice_assert(n <= 1);
 
-    if (reds->num_clients == 0) {
+    if (n == 0) {
         return NULL;
     }
 
-    return SPICE_CONTAINEROF(ring_get_head(&reds->clients), RedClient, link);
+    return reds->clients->data;
 }
 
 // TODO: now that main is a separate channel this should
@@ -1787,8 +1786,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     reds_link_free(link);
     caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
     client = red_client_new(reds, mig_target);
-    ring_add(&reds->clients, &client->link);
-    reds->num_clients++;
+    reds->clients = g_list_prepend(reds->clients, client);
     mcc = main_channel_link(reds->main_channel, client,
                             stream, connection_id, mig_target,
                             link_mess->num_common_caps,
@@ -2983,14 +2981,13 @@ static void reds_mig_started(RedsState *reds)
 
 static void reds_mig_fill_wait_disconnect(RedsState *reds)
 {
-    RingItem *client_item;
+    GListIter iter;
+    RedClient *client;
 
-    spice_assert(reds->num_clients > 0);
+    spice_assert(reds->clients != NULL);
     /* tracking the clients, in order to ignore disconnection
      * of clients that got connected to the src after migration completion.*/
-    RING_FOREACH(client_item, &reds->clients) {
-        RedClient *client = SPICE_CONTAINEROF(client_item, RedClient, link);
-
+    GLIST_FOREACH(reds->clients, iter, RedClient, client) {
         reds->mig_wait_disconnect_clients = g_list_append(reds->mig_wait_disconnect_clients, client);
     }
     reds->mig_wait_connect = FALSE;
@@ -3431,8 +3428,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     reds->secure_listen_socket = -1;
     reds->agent_dev = red_char_device_vdi_port_new(reds);
     reds_update_agent_properties(reds);
-    ring_init(&reds->clients);
-    reds->num_clients = 0;
+    reds->clients = NULL;
     reds->main_dispatcher = main_dispatcher_new(reds, reds->core);
     reds->channels = NULL;
     reds->mig_target_clients = NULL;
@@ -4101,7 +4097,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *reds, const cha
                                      try_seamless)) {
         reds_mig_started(reds);
     } else {
-        if (reds->num_clients == 0) {
+        if (reds->clients == NULL) {
             reds_mig_release(reds);
             spice_info("no client connected");
         }
@@ -4143,7 +4139,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *reds, int completed
     spice_assert(reds->migration_interface);
 
     sif = SPICE_CONTAINEROF(reds->migration_interface->base.sif, SpiceMigrateInterface, base);
-    if (completed && !reds->expect_migrate && reds->num_clients) {
+    if (completed && !reds->expect_migrate && g_list_length(reds->clients) > 0) {
         spice_warning("spice_server_migrate_info was not called, disconnecting clients");
         reds_disconnect(reds);
         ret = -1;
@@ -4168,7 +4164,7 @@ complete:
 SPICE_GNUC_VISIBLE int spice_server_migrate_switch(SpiceServer *reds)
 {
     spice_info(NULL);
-    if (!reds->num_clients) {
+    if (reds->clients == NULL) {
        return 0;
     }
     reds->expect_migrate = FALSE;

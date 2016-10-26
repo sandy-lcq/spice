@@ -327,7 +327,6 @@ const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *sel
 
 struct RedClient {
     RedsState *reds;
-    RingItem link;
     GList *channels;
     MainChannelClient *mcc;
     pthread_mutex_t lock; // different channels can be in different threads
