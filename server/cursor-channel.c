@@ -314,6 +314,7 @@ CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
                         "channel-type", SPICE_CHANNEL_CURSOR,
                         "migration-flags", 0,
                         "qxl", qxl,
+                        "handle-acks", TRUE,
                         NULL);
 }
 

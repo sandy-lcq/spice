@@ -1993,6 +1993,7 @@ DisplayChannel* display_channel_new(RedsState *reds,
                            "qxl", qxl,
                            "n-surfaces", n_surfaces,
                            "video-codecs", video_codecs,
+                           "handle-acks", TRUE,
                            NULL);
     if (display) {
         display_channel_set_stream_video(display, stream_video);
