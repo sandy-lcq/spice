@@ -50,7 +50,8 @@ static void dummy_watch_update_mask(SpiceWatch *watch, int event_mask)
 {
 }
 
-static SpiceWatch *dummy_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
+static SpiceWatch *dummy_watch_add(const SpiceCoreInterfaceInternal *iface,
+                                   int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
     return NULL; // apparently allowed?
 }
@@ -59,8 +60,8 @@ static void dummy_watch_remove(SpiceWatch *watch)
 {
 }
 
-// TODO: actually, since I also use channel_client_dummym, no need for core. Can be NULL
-static const SpiceCoreInterface dummy_core = {
+// TODO: actually, since I also use channel_client_dummy, no need for core. Can be NULL
+static const SpiceCoreInterfaceInternal dummy_core = {
     .watch_update_mask = dummy_watch_update_mask,
     .watch_add = dummy_watch_add,
     .watch_remove = dummy_watch_remove,
