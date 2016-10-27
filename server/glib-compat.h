@@ -24,9 +24,9 @@
 static inline void
 g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
 {
-	/* quite hack cast but work with standard C call convention */
-	g_queue_foreach(queue, (GFunc) free_func, NULL);
-	g_queue_clear(queue);
+    /* quite hack cast but work with standard C call convention */
+    g_queue_foreach(queue, (GFunc) free_func, NULL);
+    g_queue_clear(queue);
 }
 #endif
 
@@ -34,12 +34,12 @@ g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
 static inline gboolean
 g_queue_remove_boolean(GQueue *queue, gconstpointer data)
 {
-	GList *link = g_queue_find(queue, data);
-	if (!link) {
-		return FALSE;
-	}
-	g_queue_unlink(queue, link);
-	return TRUE;
+    GList *link = g_queue_find(queue, data);
+    if (!link) {
+        return FALSE;
+    }
+    g_queue_unlink(queue, link);
+    return TRUE;
 }
 #define g_queue_remove g_queue_remove_boolean
 #endif
