@@ -896,7 +896,22 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
         goto cleanup;
     }
 
+    if (!red_channel_config_socket(self->priv->channel, self)) {
+        g_set_error_literal(&local_error,
+                            SPICE_SERVER_ERROR,
+                            SPICE_SERVER_ERROR_FAILED,
+                            "Unable to configure socket");
+        goto cleanup;
+    }
+
     core = red_channel_get_core_interface(self->priv->channel);
+    if (self->priv->stream)
+        self->priv->stream->watch =
+            core->watch_add(core, self->priv->stream->socket,
+                            SPICE_WATCH_EVENT_READ,
+                            red_channel_client_event,
+                            self);
+
     if (self->priv->monitor_latency
         && reds_stream_get_family(self->priv->stream) != AF_UNIX) {
         self->priv->latency_monitor.timer =
@@ -909,21 +924,8 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
         self->priv->latency_monitor.roundtrip = -1;
     }
 
-    if (self->priv->stream)
-        self->priv->stream->watch =
-            core->watch_add(core, self->priv->stream->socket,
-                            SPICE_WATCH_EVENT_READ,
-                            red_channel_client_event,
-                            self);
     red_channel_add_client(self->priv->channel, self);
     red_client_add_channel(self->priv->client, self);
-
-    if (!red_channel_config_socket(self->priv->channel, self)) {
-        g_set_error_literal(&local_error,
-                            SPICE_SERVER_ERROR,
-                            SPICE_SERVER_ERROR_FAILED,
-                            "Unable to configure socket");
-    }
 
 cleanup:
     pthread_mutex_unlock(&self->priv->client->lock);
