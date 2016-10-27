@@ -72,7 +72,7 @@ void                 cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32
  * This is the equivalent of RedChannel client connect callback.
  * See comment on cursor_channel_new.
  */
-void                 cursor_channel_connect     (CursorChannel *cursor, RedClient *client, 
+void                 cursor_channel_connect     (CursorChannel *cursor, RedClient *client,
                                                  RedsStream *stream,
                                                  int migrate,
                                                  uint32_t *common_caps, int num_common_caps,

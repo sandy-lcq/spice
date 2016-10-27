@@ -199,4 +199,3 @@ QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self)
 {
     return self->priv->qxl;
 }
-

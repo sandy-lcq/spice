@@ -415,4 +415,3 @@ RedCharDeviceSmartcard* smartcard_channel_client_get_char_device(SmartCardChanne
 {
     return scc->priv->smartcard;
 }
-

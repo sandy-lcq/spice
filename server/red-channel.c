@@ -81,7 +81,7 @@ struct RedChannelPrivate
     SpiceCoreInterfaceInternal *core;
     gboolean handle_acks;
 
-    // RedChannel will hold only connected channel clients 
+    // RedChannel will hold only connected channel clients
     // (logic - when pushing pipe item to all channel clients, there
     // is no need to go over disconnect clients)
     // . While client will hold the channel clients till it is destroyed
