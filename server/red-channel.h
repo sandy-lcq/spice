@@ -359,7 +359,7 @@ RedClient *red_client_ref(RedClient *client);
 
 /*
  * releases the client resources when refs == 0.
- * We assume the red_client_derstroy was called before
+ * We assume the red_client_destroy was called before
  * we reached refs==0
  */
 RedClient *red_client_unref(RedClient *client);
