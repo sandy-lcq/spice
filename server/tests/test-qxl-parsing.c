@@ -1,5 +1,8 @@
 /* Do some tests on memory parsing
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #undef NDEBUG
 #include <string.h>
