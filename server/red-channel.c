@@ -226,6 +226,8 @@ red_channel_constructed(GObject *object)
 
     RedChannelClass *klass = RED_CHANNEL_GET_CLASS(self);
 
+    G_OBJECT_CLASS(red_channel_parent_class)->constructed(object);
+
     spice_assert(klass->config_socket && klass->on_disconnect &&
                  klass->alloc_recv_buf && klass->release_recv_buf);
     spice_assert(klass->handle_migrate_data ||
@@ -238,8 +240,6 @@ red_channel_constructed(GObject *object)
     self->priv->incoming_cb.handle_message = (handle_message_proc)klass->handle_message;
     self->priv->incoming_cb.handle_parsed = (handle_parsed_proc)klass->handle_parsed;
     self->priv->incoming_cb.parser = klass->parser;
-
-    G_OBJECT_CLASS(red_channel_parent_class)->constructed(object);
 }
 
 static void red_channel_client_default_connect(RedChannel *channel, RedClient *client,
