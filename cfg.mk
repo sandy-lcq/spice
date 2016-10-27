@@ -145,3 +145,5 @@ exclude_file_name_regexp--sc_unmarked_diagnostics = ^.*\.(c|py|h)
 exclude_file_name_regexp--sc_prohibit_path_max_allocation = server/tests/test_display_base.c
 
 exclude_file_name_regexp--sc_cast_of_argument_to_free = server/red-replay-qxl.c
+
+exclude_file_name_regexp--sc_avoid_attribute_unused_in_header = server/stat.h
