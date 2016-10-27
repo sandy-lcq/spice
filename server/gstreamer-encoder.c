@@ -932,11 +932,14 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
     case SPICE_VIDEO_CODEC_TYPE_H264:
         /* - Set tune and sliced-threads to ensure a zero-frame latency
          * - qp-min ensures the bitrate does not get needlessly high.
+         * - qp-max ensures the compression does not go so high that the video
+         *   is unrecognizable. When that threshold is reached it is better to
+         *   drop frames to lower the bit rate further.
          * - Set speed-preset to get realtime speed.
          * - Set intra-refresh to get more uniform compressed frame sizes,
          *   thus helping with streaming.
          */
-        gstenc_opts = g_strdup("byte-stream=true aud=true qp-min=15 tune=4 sliced-threads=true speed-preset=ultrafast intra-refresh=true");
+        gstenc_opts = g_strdup("byte-stream=true aud=true qp-min=15 qp-max=35 tune=4 sliced-threads=true speed-preset=ultrafast intra-refresh=true");
         break;
     default:
         /* gstreamer_encoder_new() should have rejected this codec type */
