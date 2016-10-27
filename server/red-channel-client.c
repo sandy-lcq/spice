@@ -269,6 +269,14 @@ static void red_channel_client_constructed(GObject *object)
 {
     RedChannelClient *self =  RED_CHANNEL_CLIENT(object);
 
+    self->incoming.opaque = self;
+    self->incoming.cb = red_channel_get_incoming_handler(self->priv->channel);
+
+    self->priv->outgoing.opaque = self;
+    self->priv->outgoing.cb = red_channel_get_outgoing_handler(self->priv->channel);
+    self->priv->outgoing.pos = 0;
+    self->priv->outgoing.size = 0;
+
     if (red_channel_client_test_remote_common_cap(self, SPICE_COMMON_CAP_MINI_HEADER)) {
         self->incoming.header = mini_header_wrapper;
         self->priv->send_data.header = mini_header_wrapper;
@@ -278,6 +286,7 @@ static void red_channel_client_constructed(GObject *object)
         self->priv->send_data.header = full_header_wrapper;
         self->priv->is_mini_header = FALSE;
     }
+    self->incoming.header.data = self->incoming.header_buf;
 }
 
 static void red_channel_client_class_init(RedChannelClientClass *klass)
@@ -899,15 +908,6 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
         }
         self->priv->latency_monitor.roundtrip = -1;
     }
-
-    self->incoming.opaque = self;
-    self->incoming.cb = red_channel_get_incoming_handler(self->priv->channel);
-    self->incoming.header.data = self->incoming.header_buf;
-
-    self->priv->outgoing.opaque = self;
-    self->priv->outgoing.cb = red_channel_get_outgoing_handler(self->priv->channel);
-    self->priv->outgoing.pos = 0;
-    self->priv->outgoing.size = 0;
 
     if (self->priv->stream)
         self->priv->stream->watch =

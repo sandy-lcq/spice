@@ -70,8 +70,6 @@ static gboolean dummy_channel_client_initable_init(GInitable *initable,
         goto cleanup;
     }
 
-    rcc->incoming.header.data = rcc->incoming.header_buf;
-
     red_channel_add_client(channel, rcc);
     red_client_add_channel(client, rcc);
 
