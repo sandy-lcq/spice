@@ -73,12 +73,9 @@ typedef struct StreamAgent {
                            displays fragments of the video */
 
     Stream *stream;
-    uint64_t last_send_time;
     VideoEncoder *video_encoder;
     DisplayChannelClient *dcc;
 
-    int frames;
-    int drops;
     int fps;
 
     uint32_t report_id;

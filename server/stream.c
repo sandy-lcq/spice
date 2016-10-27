@@ -110,7 +110,7 @@ void stream_stop(DisplayChannel *display, Stream *stream)
         stream_agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
         region_clear(&stream_agent->vis_region);
         region_clear(&stream_agent->clip);
-        if (stream_agent->video_encoder && dcc_use_video_encoder_rate_control(dcc)) {
+        if (stream_agent->video_encoder) {
             uint64_t stream_bit_rate = stream_agent->video_encoder->get_bit_rate(stream_agent->video_encoder);
 
             if (stream_bit_rate > dcc_get_max_stream_bit_rate(dcc)) {
@@ -337,7 +337,6 @@ static void before_reattach_stream(DisplayChannel *display,
     int index;
     StreamAgent *agent;
     GList *dpi_link, *dpi_next;
-    GListIter iter;
 
     spice_return_if_fail(stream->current);
 
@@ -357,53 +356,13 @@ static void before_reattach_stream(DisplayChannel *display,
         dcc = dpi->dcc;
         agent = dcc_get_stream_agent(dcc, index);
 
-        if (!dcc_use_video_encoder_rate_control(dcc) &&
-            !dcc_is_low_bandwidth(dcc)) {
-            continue;
-        }
-
         if (red_channel_client_pipe_item_is_linked(RED_CHANNEL_CLIENT(dcc),
                                                    &dpi->dpi_pipe_item)) {
 #ifdef STREAM_STATS
             agent->stats.num_drops_pipe++;
 #endif
-            if (dcc_use_video_encoder_rate_control(dcc)) {
-                agent->video_encoder->notify_server_frame_drop(agent->video_encoder);
-            } else {
-                ++agent->drops;
-            }
+            agent->video_encoder->notify_server_frame_drop(agent->video_encoder);
         }
-    }
-
-
-    FOREACH_DCC(display, iter, dcc) {
-        double drop_factor;
-
-        agent = dcc_get_stream_agent(dcc, index);
-
-        if (dcc_use_video_encoder_rate_control(dcc)) {
-            continue;
-        }
-        if (agent->frames / agent->fps < FPS_TEST_INTERVAL) {
-            agent->frames++;
-            continue;
-        }
-        drop_factor = ((double)agent->frames - (double)agent->drops) /
-            (double)agent->frames;
-        spice_debug("stream %d: #frames %u #drops %u", index, agent->frames, agent->drops);
-        if (drop_factor == 1) {
-            if (agent->fps < MAX_FPS) {
-                agent->fps++;
-                spice_debug("stream %d: fps++ %u", index, agent->fps);
-            }
-        } else if (drop_factor < 0.9) {
-            if (agent->fps > 1) {
-                agent->fps--;
-                spice_debug("stream %d: fps--%u", index, agent->fps);
-            }
-        }
-        agent->frames = 1;
-        agent->drops = 0;
     }
 }
 
@@ -768,30 +727,20 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
     spice_return_if_fail(region_is_empty(&agent->vis_region));
 
     if (stream->current) {
-        agent->frames = 1;
         region_clone(&agent->vis_region, &stream->current->tree_item.base.rgn);
         region_clone(&agent->clip, &agent->vis_region);
-    } else {
-        agent->frames = 0;
     }
-    agent->drops = 0;
     agent->fps = MAX_FPS;
     agent->dcc = dcc;
 
-    if (dcc_use_video_encoder_rate_control(dcc)) {
-        VideoEncoderRateControlCbs video_cbs;
-        uint64_t initial_bit_rate;
+    VideoEncoderRateControlCbs video_cbs;
+    video_cbs.opaque = agent;
+    video_cbs.get_roundtrip_ms = get_roundtrip_ms;
+    video_cbs.get_source_fps = get_source_fps;
+    video_cbs.update_client_playback_delay = update_client_playback_delay;
 
-        video_cbs.opaque = agent;
-        video_cbs.get_roundtrip_ms = get_roundtrip_ms;
-        video_cbs.get_source_fps = get_source_fps;
-        video_cbs.update_client_playback_delay = update_client_playback_delay;
-
-        initial_bit_rate = get_initial_bit_rate(dcc, stream);
-        agent->video_encoder = dcc_create_video_encoder(dcc, initial_bit_rate, &video_cbs);
-    } else {
-        agent->video_encoder = dcc_create_video_encoder(dcc, 0, NULL);
-    }
+    uint64_t initial_bit_rate = get_initial_bit_rate(dcc, stream);
+    agent->video_encoder = dcc_create_video_encoder(dcc, initial_bit_rate, &video_cbs);
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), stream_create_item_new(agent));
 
     if (red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT)) {

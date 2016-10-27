@@ -1500,9 +1500,8 @@ static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
         return VIDEO_ENCODER_FRAME_UNSUPPORTED;
     }
 
-    if (rate_control_is_active(encoder) &&
-        (handle_server_drops(encoder, frame_mm_time) ||
-         frame_mm_time < encoder->next_frame_mm_time)) {
+    if (handle_server_drops(encoder, frame_mm_time) ||
+        frame_mm_time < encoder->next_frame_mm_time) {
         /* Drop the frame to limit the outgoing bit rate. */
         return VIDEO_ENCODER_FRAME_DROP;
     }
@@ -1716,10 +1715,8 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
     encoder->unused_bitmap_opaques = g_async_queue_new();
 #endif
 
-    if (cbs) {
-        encoder->cbs = *cbs;
-    }
     encoder->starting_bit_rate = starting_bit_rate;
+    encoder->cbs = *cbs;
     encoder->bitmap_ref = bitmap_ref;
     encoder->bitmap_unref = bitmap_unref;
     encoder->format = GSTREAMER_FORMAT_INVALID;

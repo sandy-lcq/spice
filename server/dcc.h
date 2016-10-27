@@ -198,7 +198,6 @@ StreamAgent *              dcc_get_stream_agent                      (DisplayCha
 ImageEncoders *dcc_get_encoders(DisplayChannelClient *dcc);
 spice_wan_compression_t    dcc_get_jpeg_state                        (DisplayChannelClient *dcc);
 spice_wan_compression_t    dcc_get_zlib_glz_state                    (DisplayChannelClient *dcc);
-gboolean                   dcc_use_video_encoder_rate_control        (DisplayChannelClient *dcc);
 uint32_t dcc_get_max_stream_latency(DisplayChannelClient *dcc);
 void dcc_set_max_stream_latency(DisplayChannelClient *dcc, uint32_t latency);
 uint64_t dcc_get_max_stream_bit_rate(DisplayChannelClient *dcc);

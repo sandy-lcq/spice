@@ -32,8 +32,6 @@
 #define MJPEG_QUALITY_SAMPLE_NUM 7
 static const int mjpeg_quality_samples[MJPEG_QUALITY_SAMPLE_NUM] = {20, 30, 40, 50, 60, 70, 80};
 
-#define MJPEG_LEGACY_STATIC_QUALITY_ID 5 // jpeg quality 70
-
 #define MJPEG_IMPROVE_QUALITY_FPS_STRICT_TH 10
 #define MJPEG_IMPROVE_QUALITY_FPS_PERMISSIVE_TH 5
 
@@ -206,11 +204,6 @@ static MJpegVideoBuffer* create_mjpeg_video_buffer(void)
         buffer = NULL;
     }
     return buffer;
-}
-
-static inline int rate_control_is_active(MJpegEncoder* encoder)
-{
-    return encoder->cbs.get_roundtrip_ms != NULL;
 }
 
 static void mjpeg_encoder_destroy(VideoEncoder *video_encoder)
@@ -592,8 +585,6 @@ static void mjpeg_encoder_adjust_params_to_bit_rate(MJpegEncoder *encoder)
     uint32_t latency = 0;
     uint32_t src_fps;
 
-    spice_assert(rate_control_is_active(encoder));
-
     rate_control = &encoder->rate_control;
     quality_eval = &rate_control->quality_eval_data;
 
@@ -677,8 +668,6 @@ static void mjpeg_encoder_adjust_fps(MJpegEncoder *encoder, uint64_t now)
     MJpegEncoderRateControl *rate_control = &encoder->rate_control;
     uint64_t adjusted_fps_time_passed;
 
-    spice_assert(rate_control_is_active(encoder));
-
     adjusted_fps_time_passed = (now - rate_control->adjusted_fps_start_time) / NSEC_PER_MILLISEC;
 
     if (!rate_control->during_quality_eval &&
@@ -731,37 +720,35 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
 {
     uint32_t quality;
 
-    if (rate_control_is_active(encoder)) {
-        MJpegEncoderRateControl *rate_control = &encoder->rate_control;
-        uint64_t now;
-        uint64_t interval;
+    MJpegEncoderRateControl *rate_control = &encoder->rate_control;
+    uint64_t now;
+    uint64_t interval;
 
-        now = spice_get_monotonic_time_ns();
+    now = spice_get_monotonic_time_ns();
 
-        if (!rate_control->adjusted_fps_start_time) {
-            rate_control->adjusted_fps_start_time = now;
+    if (!rate_control->adjusted_fps_start_time) {
+        rate_control->adjusted_fps_start_time = now;
+    }
+    mjpeg_encoder_adjust_fps(encoder, now);
+    interval = (now - rate_control->bit_rate_info.last_frame_time);
+
+    if (interval < NSEC_PER_SEC / rate_control->adjusted_fps) {
+        return VIDEO_ENCODER_FRAME_DROP;
+    }
+
+    mjpeg_encoder_adjust_params_to_bit_rate(encoder);
+
+    if (!rate_control->during_quality_eval ||
+        rate_control->quality_eval_data.reason == MJPEG_QUALITY_EVAL_REASON_SIZE_CHANGE) {
+        MJpegEncoderBitRateInfo *bit_rate_info;
+
+        bit_rate_info = &encoder->rate_control.bit_rate_info;
+
+        if (!bit_rate_info->change_start_time) {
+            bit_rate_info->change_start_time = now;
+            bit_rate_info->change_start_mm_time = frame_mm_time;
         }
-        mjpeg_encoder_adjust_fps(encoder, now);
-        interval = (now - rate_control->bit_rate_info.last_frame_time);
-
-        if (interval < NSEC_PER_SEC / rate_control->adjusted_fps) {
-            return VIDEO_ENCODER_FRAME_DROP;
-        }
-
-        mjpeg_encoder_adjust_params_to_bit_rate(encoder);
-
-        if (!rate_control->during_quality_eval ||
-            rate_control->quality_eval_data.reason == MJPEG_QUALITY_EVAL_REASON_SIZE_CHANGE) {
-            MJpegEncoderBitRateInfo *bit_rate_info;
-
-            bit_rate_info = &encoder->rate_control.bit_rate_info;
-
-            if (!bit_rate_info->change_start_time) {
-                bit_rate_info->change_start_time = now;
-                bit_rate_info->change_start_mm_time = frame_mm_time;
-            }
-            bit_rate_info->last_frame_time = now;
-        }
+        bit_rate_info->last_frame_time = now;
     }
 
     encoder->cinfo.in_color_space   = JCS_RGB;
@@ -1222,10 +1209,6 @@ static void mjpeg_encoder_client_stream_report(VideoEncoder *video_encoder,
                 end_frame_mm_time - start_frame_mm_time,
                 end_frame_delay, audio_delay);
 
-    if (!rate_control_is_active(encoder)) {
-        spice_debug("rate control was not activated: ignoring");
-        return;
-    }
     if (rate_control->during_quality_eval) {
         if (rate_control->quality_eval_data.type == MJPEG_QUALITY_EVAL_TYPE_DOWNGRADE &&
             rate_control->quality_eval_data.reason == MJPEG_QUALITY_EVAL_REASON_RATE_CHANGE) {
@@ -1388,17 +1371,12 @@ VideoEncoder *mjpeg_encoder_new(SpiceVideoCodecType codec_type,
     encoder->rate_control.byte_rate = starting_bit_rate / 8;
     encoder->starting_bit_rate = starting_bit_rate;
 
-    if (cbs) {
-        encoder->cbs = *cbs;
-        mjpeg_encoder_reset_quality(encoder, MJPEG_QUALITY_SAMPLE_NUM / 2, 5, 0);
-        encoder->rate_control.during_quality_eval = TRUE;
-        encoder->rate_control.quality_eval_data.type = MJPEG_QUALITY_EVAL_TYPE_SET;
-        encoder->rate_control.quality_eval_data.reason = MJPEG_QUALITY_EVAL_REASON_RATE_CHANGE;
-        encoder->rate_control.warmup_start_time = spice_get_monotonic_time_ns();
-    } else {
-        encoder->cbs.get_roundtrip_ms = NULL;
-        mjpeg_encoder_reset_quality(encoder, MJPEG_LEGACY_STATIC_QUALITY_ID, MJPEG_MAX_FPS, 0);
-    }
+    encoder->cbs = *cbs;
+    mjpeg_encoder_reset_quality(encoder, MJPEG_QUALITY_SAMPLE_NUM / 2, 5, 0);
+    encoder->rate_control.during_quality_eval = TRUE;
+    encoder->rate_control.quality_eval_data.type = MJPEG_QUALITY_EVAL_TYPE_SET;
+    encoder->rate_control.quality_eval_data.reason = MJPEG_QUALITY_EVAL_REASON_RATE_CHANGE;
+    encoder->rate_control.warmup_start_time = spice_get_monotonic_time_ns();
 
     encoder->cinfo.err = jpeg_std_error(&encoder->jerr);
     jpeg_create_compress(&encoder->cinfo);

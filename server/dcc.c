@@ -478,8 +478,6 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
         region_init(&agent->vis_region);
         region_init(&agent->clip);
     }
-    dcc->priv->use_video_encoder_rate_control =
-        red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT);
 }
 
 DisplayChannelClient *dcc_new(DisplayChannel *display,
@@ -1281,11 +1279,6 @@ spice_wan_compression_t dcc_get_jpeg_state(DisplayChannelClient *dcc)
 spice_wan_compression_t dcc_get_zlib_glz_state(DisplayChannelClient *dcc)
 {
     return dcc->priv->zlib_glz_state;
-}
-
-gboolean dcc_use_video_encoder_rate_control(DisplayChannelClient *dcc)
-{
-    return dcc->priv->use_video_encoder_rate_control;
 }
 
 uint32_t dcc_get_max_stream_latency(DisplayChannelClient *dcc)
