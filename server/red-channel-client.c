@@ -354,6 +354,8 @@ red_channel_client_init(RedChannelClient *self)
     self->priv->send_data.urgent.marshaller = spice_marshaller_new();
 
     self->priv->send_data.marshaller = self->priv->send_data.main.marshaller;
+
+    g_queue_init(&self->priv->pipe);
 }
 
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
@@ -907,7 +909,6 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     self->priv->outgoing.pos = 0;
     self->priv->outgoing.size = 0;
 
-    g_queue_init(&self->priv->pipe);
     if (self->priv->stream)
         self->priv->stream->watch =
             core->watch_add(core, self->priv->stream->socket,
