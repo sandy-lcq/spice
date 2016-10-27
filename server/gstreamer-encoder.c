@@ -182,7 +182,8 @@ typedef struct SpiceGstEncoder {
     /* The bit rate control is performed using a virtual buffer to allow
      * short term variations: bursts are allowed until the virtual buffer is
      * full. Then frames are dropped to limit the bit rate. VBUFFER_SIZE
-     * defines the size of the virtual buffer in milliseconds worth of data.
+     * defines the size of the virtual buffer in milliseconds worth of data
+     * while vbuffer_size holds the limit in bytes for the current bit rate.
      */
 #   define SPICE_GST_VBUFFER_SIZE 300
 
