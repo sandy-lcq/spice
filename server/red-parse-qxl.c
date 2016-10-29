@@ -706,15 +706,8 @@ static void red_put_copy(SpiceCopy *red)
     red_put_qmask(&red->mask);
 }
 
-static void red_get_blend_ptr(RedMemSlotInfo *slots, int group_id,
-                             SpiceBlend *red, QXLBlend *qxl, uint32_t flags)
-{
-    red->src_bitmap      = red_get_image(slots, group_id, qxl->src_bitmap, flags, FALSE);
-   red_get_rect_ptr(&red->src_area, &qxl->src_area);
-   red->rop_descriptor  = qxl->rop_descriptor;
-   red->scale_mode      = qxl->scale_mode;
-   red_get_qmask_ptr(slots, group_id, &red->mask, &qxl->mask, flags);
-}
+// these types are really the same thing
+#define red_get_blend_ptr red_get_copy_ptr
 
 static void red_put_blend(SpiceBlend *red)
 {
@@ -1074,7 +1067,7 @@ static int red_get_native_drawable(RedMemSlotInfo *slots, int group_id,
                               &red->u.blackness, &qxl->u.blackness, flags);
         break;
     case QXL_DRAW_BLEND:
-        red_get_blend_ptr(slots, group_id, &red->u.blend, &qxl->u.blend, flags);
+        error = red_get_blend_ptr(slots, group_id, &red->u.blend, &qxl->u.blend, flags);
         break;
     case QXL_DRAW_COPY:
         error = red_get_copy_ptr(slots, group_id, &red->u.copy, &qxl->u.copy, flags);
@@ -1157,7 +1150,7 @@ static int red_get_compat_drawable(RedMemSlotInfo *slots, int group_id,
                               &red->u.blackness, &qxl->u.blackness, flags);
         break;
     case QXL_DRAW_BLEND:
-        red_get_blend_ptr(slots, group_id, &red->u.blend, &qxl->u.blend, flags);
+        error = red_get_blend_ptr(slots, group_id, &red->u.blend, &qxl->u.blend, flags);
         break;
     case QXL_DRAW_COPY:
         error = red_get_copy_ptr(slots, group_id, &red->u.copy, &qxl->u.copy, flags);
