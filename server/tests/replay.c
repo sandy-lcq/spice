@@ -36,7 +36,6 @@
 #include <pthread.h>
 
 #include <spice/macros.h>
-#include "red-replay-qxl.h"
 #include "test_display_base.h"
 #include <common/log.h>
 

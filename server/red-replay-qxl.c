@@ -28,7 +28,6 @@
 #include "red-common.h"
 #include "memslot.h"
 #include "red-parse-qxl.h"
-#include "red-replay-qxl.h"
 #include <glib.h>
 
 #define QXLPHYSICAL_FROM_PTR(ptr) ((QXLPHYSICAL)(intptr_t)(ptr))

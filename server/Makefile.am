@@ -64,6 +64,7 @@ libspice_serverinclude_HEADERS =		\
 	spice-qxl.h				\
 	spice-server.h				\
 	spice-version.h				\
+	spice-replay.h				\
 	spice.h					\
 	$(NULL)
 
@@ -121,7 +122,6 @@ libserver_la_SOURCES =				\
 	red-record-qxl.c			\
 	red-record-qxl.h			\
 	red-replay-qxl.c			\
-	red-replay-qxl.h			\
 	red-parse-qxl.h				\
 	red-worker.c				\
 	red-worker.h				\

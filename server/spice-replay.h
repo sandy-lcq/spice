@@ -15,13 +15,15 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef RED_REPLAY_QXL_H
-#define RED_REPLAY_QXL_H
+#ifndef SPICE_REPLAY_H_
+#define SPICE_REPLAY_H_
+
+#if !defined(SPICE_H_INSIDE) && !defined(SPICE_SERVER_INTERNAL)
+#error "Only spice.h can be included directly."
+#endif
 
 #include <stdio.h>
-#include <spice/qxl_dev.h>
-
-#include "spice.h"
+#include "spice-core.h"
 
 typedef struct SpiceReplay SpiceReplay;
 
@@ -32,4 +34,4 @@ void            spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt *cmd);
 void            spice_replay_free(SpiceReplay *replay);
 SpiceReplay *   spice_replay_new(FILE *file, int nsurfaces);
 
-#endif // RED_REPLAY_QXL_H
+#endif // SPICE_REPLAY_H_

@@ -28,6 +28,7 @@
 #include "spice-audio.h"
 #include "spice-char.h"
 #include "spice-migration.h"
+#include "spice-replay.h"
 
 #undef SPICE_H_INSIDE
 
