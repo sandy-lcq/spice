@@ -1358,8 +1358,6 @@ RedWorker* red_worker_new(QXLInstance *qxl,
                       init_info.memslot_id_bits,
                       init_info.internal_groupslot_id);
 
-    spice_warn_if_fail(init_info.n_surfaces <= NUM_SURFACES);
-
     worker->event_timeout = INF_EVENT_WAIT;
 
     worker->cursor_channel = cursor_channel_new(reds, qxl,

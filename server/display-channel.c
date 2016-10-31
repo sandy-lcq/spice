@@ -60,7 +60,6 @@ display_channel_set_property(GObject *object,
     {
         case PROP_N_SURFACES:
             self->priv->n_surfaces = g_value_get_uint(value);
-            self->priv->n_surfaces = MIN(self->priv->n_surfaces, NUM_SURFACES);
             break;
         case PROP_VIDEO_CODECS:
             if (self->priv->video_codecs) {
@@ -2238,8 +2237,8 @@ display_channel_class_init(DisplayChannelClass *klass)
                                     g_param_spec_uint("n-surfaces",
                                                       "number of surfaces",
                                                       "Number of surfaces for this channel",
-                                                      0, G_MAXUINT,
-                                                      0,
+                                                      1, NUM_SURFACES,
+                                                      1,
                                                       G_PARAM_CONSTRUCT_ONLY |
                                                       G_PARAM_READWRITE |
                                                       G_PARAM_STATIC_STRINGS));
