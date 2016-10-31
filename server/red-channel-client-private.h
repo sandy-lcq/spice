@@ -87,7 +87,6 @@ struct RedChannelClientPrivate
     } send_data;
 
     int during_send;
-    int id; // debugging purposes
     GQueue pipe;
 
     RedChannelCapabilities remote_caps;

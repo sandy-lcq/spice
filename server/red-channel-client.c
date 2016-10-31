@@ -914,7 +914,6 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
                             SPICE_WATCH_EVENT_READ,
                             red_channel_client_event,
                             self);
-    self->priv->id = red_channel_get_n_clients(self->priv->channel);
     red_channel_add_client(self->priv->channel, self);
     red_client_add_channel(self->priv->client, self);
 
