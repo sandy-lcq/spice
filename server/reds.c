@@ -3602,7 +3602,7 @@ static const EnumNames video_codec_names[] = {
     {0, NULL},
 };
 
-static int video_codec_caps[] = {
+static const int video_codec_caps[] = {
     SPICE_DISPLAY_CAP_CODEC_MJPEG,
     SPICE_DISPLAY_CAP_CODEC_VP8,
     SPICE_DISPLAY_CAP_CODEC_H264,
