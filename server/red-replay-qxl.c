@@ -1280,7 +1280,7 @@ static void replay_handle_dev_input(QXLWorker *worker, SpiceReplay *replay,
         // we want to ignore this one - it is sent on client connection, we
         // shall have our own clients
     case RED_WORKER_MESSAGE_WAKEUP:
-        // safe to ignore
+        worker->wakeup(worker);
         break;
     default:
         spice_debug("unhandled %d\n", message);
