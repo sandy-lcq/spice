@@ -224,7 +224,7 @@ red_vmc_channel_finalize(GObject *object)
 static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type)
 {
     GType gtype = G_TYPE_NONE;
-    static uint8_t id[256] = { 0, };
+    static uint8_t id[SPICE_END_CHANNEL] = { 0, };
 
     switch (channel_type) {
         case SPICE_CHANNEL_USBREDIR:
