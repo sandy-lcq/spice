@@ -1,0 +1,18 @@
+image: fedora:latest
+
+before_script:
+  - dnf install 'dnf-command(copr)' git libtool make -y 
+  - dnf copr enable @spice/nightly -y
+  - dnf builddep spice -y
+
+makecheck:
+  script:
+  - ./autogen.sh
+  - make
+  - make -C server check
+
+statistics:
+  script:
+  - CFLAGS="$CFLAGS -DRED_STATISTICS " ./autogen.sh
+  - make
+  - make -C server check
