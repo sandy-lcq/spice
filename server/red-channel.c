@@ -209,12 +209,14 @@ static void red_channel_client_default_peer_on_error(RedChannelClient *rcc)
 
 static void red_channel_on_output(void *opaque, int n)
 {
-    RedChannelClient *rcc = opaque;
-    RedChannel *self = red_channel_client_get_channel(rcc);
+    RedChannelClient *rcc G_GNUC_UNUSED;
+    RedChannel *self G_GNUC_UNUSED;
 
     red_channel_client_on_output(opaque, n);
-
+#ifdef RED_STATISTICS
+    self = red_channel_client_get_channel((RedChannelClient *)opaque);
     stat_inc_counter(self->priv->reds, self->priv->out_bytes_counter, n);
+#endif
 }
 
 static void
@@ -336,7 +338,6 @@ red_channel_init(RedChannel *self)
 
     red_channel_set_common_cap(self, SPICE_COMMON_CAP_MINI_HEADER);
     self->priv->thread_id = pthread_self();
-    self->priv->out_bytes_counter = 0;
 
     // TODO: send incoming_cb as parameters instead of duplicating?
     self->priv->incoming_cb.on_error =
@@ -436,9 +437,9 @@ int red_channel_is_waiting_for_migrate_data(RedChannel *channel)
 void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat)
 {
     spice_return_if_fail(channel != NULL);
+#ifdef RED_STATISTICS
     spice_return_if_fail(channel->priv->stat == 0);
 
-#ifdef RED_STATISTICS
     channel->priv->stat = stat;
     channel->priv->out_bytes_counter =
         stat_add_counter(channel->priv->reds, stat, "out_bytes", TRUE);

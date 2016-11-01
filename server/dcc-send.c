@@ -185,7 +185,7 @@ static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
                                                   SpiceImage *image, SpiceImage *io_image,
                                                   int is_lossy)
 {
-    DisplayChannel *display_channel =
+    DisplayChannel *display_channel G_GNUC_UNUSED =
         DISPLAY_CHANNEL(red_channel_client_get_channel(rcc));
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
 

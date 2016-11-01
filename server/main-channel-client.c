@@ -161,7 +161,10 @@ static void main_channel_client_set_property(GObject *object,
     }
 }
 
+#ifdef RED_STATISTICS
 static void ping_timer_cb(void *opaque);
+#endif
+
 static void main_channel_client_constructed(GObject *object)
 {
     G_OBJECT_CLASS(main_channel_client_parent_class)->constructed(object);
