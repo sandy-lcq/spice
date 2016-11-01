@@ -154,7 +154,6 @@ static inline gboolean test_capability(const uint32_t *caps, int num_caps, uint3
 #define RED_CHANNEL_GET_CLASS(obj) \
     (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHANNEL, RedChannelClass))
 
-typedef struct RedChannel RedChannel;
 typedef struct RedChannelClass RedChannelClass;
 typedef struct RedChannelPrivate RedChannelPrivate;
 
