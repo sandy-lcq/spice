@@ -403,7 +403,7 @@ static void spicevmc_port_send_init(RedChannelClient *rcc)
 {
     RedVmcChannel *channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
     SpiceCharDeviceInstance *sin = channel->chardev_sin;
-    RedPortInitPipeItem *item = spice_malloc(sizeof(RedPortInitPipeItem));
+    RedPortInitPipeItem *item = spice_new(RedPortInitPipeItem, 1);
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_PORT_INIT, red_port_init_item_free);
     item->name = strdup(sin->portname);
@@ -413,7 +413,7 @@ static void spicevmc_port_send_init(RedChannelClient *rcc)
 
 static void spicevmc_port_send_event(RedChannelClient *rcc, uint8_t event)
 {
-    RedPortEventPipeItem *item = spice_malloc(sizeof(RedPortEventPipeItem));
+    RedPortEventPipeItem *item = spice_new(RedPortEventPipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_PORT_EVENT);
     item->event = event;
