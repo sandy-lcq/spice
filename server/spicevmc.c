@@ -251,6 +251,18 @@ red_vmc_channel_init(RedVmcChannel *self)
 {
 }
 
+static void
+red_vmc_channel_finalize(GObject *object)
+{
+    RedVmcChannel *self = RED_VMC_CHANNEL(object);
+
+    if (self->pipe_item) {
+        red_pipe_item_unref(&self->pipe_item->base);
+    }
+
+    G_OBJECT_CLASS(red_vmc_channel_parent_class)->finalize(object);
+}
+
 static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type,
                                           SpiceCharDeviceInstance *sin)
 {
@@ -756,6 +768,7 @@ red_vmc_channel_class_init(RedVmcChannelClass *klass)
     object_class->get_property = red_vmc_channel_get_property;
     object_class->set_property = red_vmc_channel_set_property;
     object_class->constructed = red_vmc_channel_constructed;
+    object_class->finalize = red_vmc_channel_finalize;
 
     channel_class->handle_parsed = spicevmc_red_channel_client_handle_message_parsed;
 
@@ -878,7 +891,6 @@ void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
     sin->st = NULL;
 
     reds_unregister_channel(reds, RED_CHANNEL(channel));
-    free(channel->pipe_item);
     red_channel_destroy(RED_CHANNEL(channel));
 }
 
