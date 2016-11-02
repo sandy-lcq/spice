@@ -376,13 +376,21 @@ static void spicevmc_chardev_send_msg_to_client(RedCharDevice *self,
     red_channel_client_pipe_add_push(channel->rcc, msg);
 }
 
+static void red_port_init_item_free(struct RedPipeItem *base)
+{
+    RedPortInitPipeItem *item = SPICE_UPCAST(RedPortInitPipeItem, base);
+
+    free(item->name);
+    free(item);
+}
+
 static void spicevmc_port_send_init(RedChannelClient *rcc)
 {
     RedVmcChannel *channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
     SpiceCharDeviceInstance *sin = channel->chardev_sin;
     RedPortInitPipeItem *item = spice_malloc(sizeof(RedPortInitPipeItem));
 
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_PORT_INIT);
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_PORT_INIT, red_port_init_item_free);
     item->name = strdup(sin->portname);
     item->opened = channel->port_opened;
     red_channel_client_pipe_add_push(rcc, &item->base);
