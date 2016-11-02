@@ -592,13 +592,12 @@ static uint8_t *spicevmc_red_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                        uint16_t type,
                                                        uint32_t size)
 {
-    RedVmcChannel *channel;
-    RedClient *client = red_channel_client_get_client(rcc);
-
-    channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
 
     switch (type) {
-    case SPICE_MSGC_SPICEVMC_DATA:
+    case SPICE_MSGC_SPICEVMC_DATA: {
+        RedClient *client = red_channel_client_get_client(rcc);
+        RedVmcChannel *channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
+
         assert(!channel->recv_from_client_buf);
 
         channel->recv_from_client_buf = red_char_device_write_buffer_get(channel->chardev,
@@ -609,6 +608,7 @@ static uint8_t *spicevmc_red_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
             return NULL;
         }
         return channel->recv_from_client_buf->buf;
+    }
 
     default:
         return spice_malloc(size);
@@ -621,15 +621,14 @@ static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
                                                      uint32_t size,
                                                      uint8_t *msg)
 {
-    RedVmcChannel *channel;
-
-    channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
 
     switch (type) {
-    case SPICE_MSGC_SPICEVMC_DATA:
+    case SPICE_MSGC_SPICEVMC_DATA: {
+        RedVmcChannel *channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
         /* buffer wasn't pushed to device */
         red_char_device_write_buffer_release(channel->chardev, &channel->recv_from_client_buf);
         break;
+    }
     default:
         free(msg);
     }
