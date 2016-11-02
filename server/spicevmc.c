@@ -574,7 +574,7 @@ static int spicevmc_red_channel_client_handle_message_parsed(RedChannelClient *r
             sif->event(channel->chardev_sin, *(uint8_t*)msg);
         break;
     default:
-        return red_channel_client_handle_message(rcc, size, type, (uint8_t*)msg);
+        return red_channel_client_handle_message(rcc, size, type, msg);
     }
 
     return TRUE;
