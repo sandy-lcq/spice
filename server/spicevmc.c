@@ -47,6 +47,9 @@
 #define BUF_SIZE (64 * 1024 + 32)
 #define COMPRESS_THRESHOLD 1000
 
+typedef struct RedVmcChannel RedVmcChannel;
+typedef struct RedVmcChannelClass RedVmcChannelClass;
+
 typedef struct RedVmcPipeItem {
     RedPipeItem base;
 
@@ -75,6 +78,7 @@ typedef struct RedCharDeviceSpiceVmcClass RedCharDeviceSpiceVmcClass;
 
 struct RedCharDeviceSpiceVmc {
     RedCharDevice parent;
+    RedVmcChannel *channel;
 };
 
 struct RedCharDeviceSpiceVmcClass
@@ -89,9 +93,6 @@ static RedCharDevice *red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
 
 G_DEFINE_TYPE(RedCharDeviceSpiceVmc, red_char_device_spicevmc, RED_TYPE_CHAR_DEVICE)
 
-#define RED_CHAR_DEVICE_SPICEVMC_PRIVATE(o) \
-    (G_TYPE_INSTANCE_GET_PRIVATE ((o), RED_TYPE_CHAR_DEVICE_SPICEVMC, RedCharDeviceSpiceVmcPrivate))
-
 #define RED_TYPE_VMC_CHANNEL red_vmc_channel_get_type()
 
 #define RED_VMC_CHANNEL(obj) \
@@ -102,9 +103,6 @@ G_DEFINE_TYPE(RedCharDeviceSpiceVmc, red_char_device_spicevmc, RED_TYPE_CHAR_DEV
 #define RED_IS_VMC_CHANNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_VMC_CHANNEL))
 #define RED_VMC_CHANNEL_GET_CLASS(obj) \
     (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_VMC_CHANNEL, RedVmcChannelClass))
-
-typedef struct RedVmcChannel RedVmcChannel;
-typedef struct RedVmcChannelClass RedVmcChannelClass;
 
 struct RedVmcChannel
 {
@@ -855,28 +853,33 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
                                        SpiceCharDeviceInstance *sin,
                                        uint8_t channel_type)
 {
+    RedCharDeviceSpiceVmc *dev_state;
     RedVmcChannel *state = red_vmc_channel_new(reds, channel_type, sin);
 
-    return state->chardev;
+    dev_state = RED_CHAR_DEVICE_SPICEVMC(state->chardev);
+    dev_state->channel = state;
+
+    return RED_CHAR_DEVICE(dev_state);
 }
 
 /* Must be called from RedClient handling thread. */
 void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
-    RedVmcChannel *state;
+    RedVmcChannel *channel;
+    RedCharDeviceSpiceVmc *vmc = RED_CHAR_DEVICE_SPICEVMC(sin->st);
 
-    /* FIXME */
-    state = (RedVmcChannel *)red_char_device_opaque_get((RedCharDevice*)sin->st);
+    channel = vmc->channel;
+    vmc->channel = NULL;
 
-    red_char_device_write_buffer_release(state->chardev, &state->recv_from_client_buf);
+    red_char_device_write_buffer_release(channel->chardev, &channel->recv_from_client_buf);
     /* FIXME */
-    red_char_device_destroy((RedCharDevice*)sin->st);
-    state->chardev = NULL;
+    red_char_device_destroy(RED_CHAR_DEVICE(vmc));
+    channel->chardev = NULL;
     sin->st = NULL;
 
-    reds_unregister_channel(reds, RED_CHANNEL(state));
-    free(state->pipe_item);
-    red_channel_destroy(RED_CHANNEL(state));
+    reds_unregister_channel(reds, RED_CHANNEL(channel));
+    free(channel->pipe_item);
+    red_channel_destroy(RED_CHANNEL(channel));
 }
 
 SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, uint8_t event)
@@ -904,9 +907,20 @@ SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, ui
 }
 
 static void
+red_char_device_spicevmc_dispose(GObject *object)
+{
+    RedCharDeviceSpiceVmc *self = RED_CHAR_DEVICE_SPICEVMC(object);
+
+    g_clear_object(&self->channel);
+}
+
+static void
 red_char_device_spicevmc_class_init(RedCharDeviceSpiceVmcClass *klass)
 {
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
     RedCharDeviceClass *char_dev_class = RED_CHAR_DEVICE_CLASS(klass);
+
+    object_class->dispose = red_char_device_spicevmc_dispose;
 
     char_dev_class->read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev;
     char_dev_class->send_msg_to_client = spicevmc_chardev_send_msg_to_client;
