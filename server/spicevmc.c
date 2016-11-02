@@ -482,10 +482,6 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
     SpiceCharDeviceInterface *sif;
     RedClient *client = red_channel_client_get_client(rcc);
 
-    if (!rcc) {
-        return;
-    }
-
     channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
 
     /* partial message which wasn't pushed to device */
