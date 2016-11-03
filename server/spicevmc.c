@@ -256,6 +256,7 @@ red_vmc_channel_finalize(GObject *object)
 {
     RedVmcChannel *self = RED_VMC_CHANNEL(object);
 
+    red_char_device_write_buffer_release(self->chardev, &self->recv_from_client_buf);
     if (self->pipe_item) {
         red_pipe_item_unref(&self->pipe_item->base);
     }
@@ -884,7 +885,6 @@ void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
     channel = vmc->channel;
     vmc->channel = NULL;
 
-    red_char_device_write_buffer_release(channel->chardev, &channel->recv_from_client_buf);
     /* FIXME */
     red_char_device_destroy(RED_CHAR_DEVICE(vmc));
     channel->chardev = NULL;
