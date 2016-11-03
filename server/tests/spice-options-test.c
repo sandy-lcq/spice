@@ -26,7 +26,7 @@
 #define g_assert_nonnull g_assert
 #endif
 
-int main(int argc, char *argv[])
+static void agent_options(void)
 {
     SpiceCoreInterface *core ;
     SpiceServer *server = spice_server_new();
@@ -49,6 +49,13 @@ int main(int argc, char *argv[])
     spice_server_set_agent_file_xfer(server, 0);
 
     spice_server_destroy(server);
+}
 
-    return 0;
+int main(int argc, char *argv[])
+{
+    g_test_init(&argc, &argv, NULL);
+
+    g_test_add_func("/server/agent options", agent_options);
+
+    return g_test_run();
 }
