@@ -20,8 +20,9 @@
 
 #include "test-glib-compat.h"
 #include "basic-event-loop.h"
+#include "test-display-base.h"
 
-static void leaks(void)
+static void server_leaks(void)
 {
     int result;
     SpiceCoreInterface *core;
@@ -45,11 +46,73 @@ static void leaks(void)
     basic_event_loop_destroy();
 }
 
+static int vmc_write(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
+                     SPICE_GNUC_UNUSED const uint8_t *buf,
+                     int len)
+{
+    return len;
+}
+
+static int vmc_read(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
+                    SPICE_GNUC_UNUSED uint8_t *buf,
+                    SPICE_GNUC_UNUSED int len)
+{
+    return 0;
+}
+
+static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
+                      SPICE_GNUC_UNUSED int connected)
+{
+}
+
+static SpiceCharDeviceInterface vmc_interface = {
+    .base.type          = SPICE_INTERFACE_CHAR_DEVICE,
+    .base.description   = "test spice virtual channel char device",
+    .base.major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
+    .base.minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
+    .state              = vmc_state,
+    .write              = vmc_write,
+    .read               = vmc_read,
+};
+
+static SpiceCharDeviceInstance vmc_instance;
+
+static void vmc_leaks(void)
+{
+    SpiceCoreInterface *core = basic_event_loop_init();
+    Test *test = test_new(core);
+    int status;
+
+    vmc_instance.subtype = "usbredir";
+    vmc_instance.base.sif = &vmc_interface.base;
+    spice_server_add_interface(test->server, &vmc_instance.base);
+    status = spice_server_remove_interface(&vmc_instance.base);
+    g_assert_cmpint(status, ==, 0);
+
+    vmc_instance.subtype = "port";
+    vmc_instance.portname = "org.spice-space.webdav.0";
+    vmc_instance.base.sif = &vmc_interface.base;
+    spice_server_add_interface(test->server, &vmc_instance.base);
+    status = spice_server_remove_interface(&vmc_instance.base);
+    g_assert_cmpint(status, ==, 0);
+
+    vmc_instance.subtype = "port";
+    vmc_instance.portname = "default_port";
+    vmc_instance.base.sif = &vmc_interface.base;
+    spice_server_add_interface(test->server, &vmc_instance.base);
+    status = spice_server_remove_interface(&vmc_instance.base);
+    g_assert_cmpint(status, ==, 0);
+
+    test_destroy(test);
+    basic_event_loop_destroy();
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
 
-    g_test_add_func("/server/server leaks", leaks);
+    g_test_add_func("/server/server leaks", server_leaks);
+    g_test_add_func("/server/vmc leaks", vmc_leaks);
 
     return g_test_run();
 }
