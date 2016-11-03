@@ -879,19 +879,8 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
 /* Must be called from RedClient handling thread. */
 void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
-    RedVmcChannel *channel;
-    RedCharDeviceSpiceVmc *vmc = RED_CHAR_DEVICE_SPICEVMC(sin->st);
-
-    channel = vmc->channel;
-    vmc->channel = NULL;
-
-    /* FIXME */
-    red_char_device_destroy(RED_CHAR_DEVICE(vmc));
-    channel->chardev = NULL;
+    g_object_unref(RED_CHAR_DEVICE(sin->st));
     sin->st = NULL;
-
-    reds_unregister_channel(reds, RED_CHANNEL(channel));
-    red_channel_destroy(RED_CHANNEL(channel));
 }
 
 SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, uint8_t event)
@@ -923,7 +912,20 @@ red_char_device_spicevmc_dispose(GObject *object)
 {
     RedCharDeviceSpiceVmc *self = RED_CHAR_DEVICE_SPICEVMC(object);
 
-    g_clear_object(&self->channel);
+    if (self->channel) {
+        RedChannel *channel = RED_CHANNEL(self->channel);
+        RedsState *reds = red_char_device_get_server(RED_CHAR_DEVICE(self));
+
+        // prevent possible recursive calls
+        self->channel->chardev = NULL;
+
+        // prevent future connection
+        reds_unregister_channel(reds, channel);
+
+        // close all current connections and drop the reference
+        red_channel_destroy(channel);
+        self->channel = NULL;
+    }
 }
 
 static void
