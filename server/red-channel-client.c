@@ -150,10 +150,10 @@ red_channel_client_get_property(GObject *object,
             g_value_set_pointer(value, self->priv->stream);
             break;
         case PROP_CHANNEL:
-            g_value_set_pointer(value, self->priv->channel);
+            g_value_set_object(value, self->priv->channel);
             break;
         case PROP_CLIENT:
-            g_value_set_pointer(value, self->priv->client);
+            g_value_set_object(value, self->priv->client);
             break;
         case PROP_MONITOR_LATENCY:
             g_value_set_boolean(value, self->priv->monitor_latency);
@@ -195,12 +195,10 @@ red_channel_client_set_property(GObject *object,
         case PROP_CHANNEL:
             if (self->priv->channel)
                 g_object_unref(self->priv->channel);
-            self->priv->channel = g_value_get_pointer(value);
-            if (self->priv->channel)
-                g_object_ref(self->priv->channel);
+            self->priv->channel = g_value_dup_object(value);
             break;
         case PROP_CLIENT:
-            self->priv->client = g_value_get_pointer(value);
+            self->priv->client = g_value_get_object(value);
             break;
         case PROP_MONITOR_LATENCY:
             self->priv->monitor_latency = g_value_get_boolean(value);
@@ -312,18 +310,20 @@ static void red_channel_client_class_init(RedChannelClientClass *klass)
                                 | G_PARAM_CONSTRUCT_ONLY);
     g_object_class_install_property(object_class, PROP_STREAM, spec);
 
-    spec = g_param_spec_pointer("channel", "channel",
-                                "Associated RedChannel",
-                                G_PARAM_STATIC_STRINGS
-                                | G_PARAM_READWRITE
-                                | G_PARAM_CONSTRUCT_ONLY);
+    spec = g_param_spec_object("channel", "channel",
+                               "Associated RedChannel",
+                               RED_TYPE_CHANNEL,
+                               G_PARAM_STATIC_STRINGS
+                               | G_PARAM_READWRITE
+                               | G_PARAM_CONSTRUCT_ONLY);
     g_object_class_install_property(object_class, PROP_CHANNEL, spec);
 
-    spec = g_param_spec_pointer("client", "client",
-                                "Associated RedClient",
-                                G_PARAM_STATIC_STRINGS
-                                | G_PARAM_READWRITE
-                                | G_PARAM_CONSTRUCT_ONLY);
+    spec = g_param_spec_object("client", "client",
+                               "Associated RedClient",
+                               RED_TYPE_CLIENT,
+                               G_PARAM_STATIC_STRINGS
+                               | G_PARAM_READWRITE
+                               | G_PARAM_CONSTRUCT_ONLY);
     g_object_class_install_property(object_class, PROP_CLIENT, spec);
 
     spec = g_param_spec_boolean("monitor-latency", "monitor-latency",
