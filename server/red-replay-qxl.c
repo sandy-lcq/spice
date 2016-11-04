@@ -1416,7 +1416,7 @@ SpiceReplay *spice_replay_new(FILE *file, int nsurfaces)
     spice_return_val_if_fail(file != NULL, NULL);
 
     if (fscanf(file, "SPICE_REPLAY %u\n", &version) == 1) {
-        if (version > 1) {
+        if (version != 1) {
             spice_warning("Replay file version unsupported");
             return NULL;
         }
