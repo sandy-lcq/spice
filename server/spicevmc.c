@@ -89,7 +89,7 @@ struct RedCharDeviceSpiceVmcClass
 static GType red_char_device_spicevmc_get_type(void) G_GNUC_CONST;
 static RedCharDevice *red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                                                    RedsState *reds,
-                                                   void *opaque);
+                                                   RedVmcChannel *channel);
 
 G_DEFINE_TYPE(RedCharDeviceSpiceVmc, red_char_device_spicevmc, RED_TYPE_CHAR_DEVICE)
 
@@ -109,7 +109,7 @@ struct RedVmcChannel
     RedChannel parent;
 
     RedChannelClient *rcc;
-    RedCharDevice *chardev;
+    RedCharDevice *chardev; /* weak */
     SpiceCharDeviceInstance *chardev_sin;
     RedVmcPipeItem *pipe_item;
     RedCharDeviceWriteBuffer *recv_from_client_buf;
@@ -178,47 +178,6 @@ static void red_vmc_channel_port_init(RedVmcChannelPort *self)
 }
 G_DEFINE_TYPE(RedVmcChannelPort, red_vmc_channel_port, RED_TYPE_VMC_CHANNEL)
 
-enum {
-    PROP0,
-    PROP_DEVICE_INSTANCE
-};
-
-static void
-red_vmc_channel_get_property(GObject *object,
-                             guint property_id,
-                             GValue *value,
-                             GParamSpec *pspec)
-{
-    RedVmcChannel *self = RED_VMC_CHANNEL(object);
-
-    switch (property_id)
-    {
-        case PROP_DEVICE_INSTANCE:
-            g_value_set_pointer(value, self->chardev_sin);
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-    }
-}
-
-static void
-red_vmc_channel_set_property(GObject *object,
-                             guint property_id,
-                             const GValue *value,
-                             GParamSpec *pspec)
-{
-    RedVmcChannel *self = RED_VMC_CHANNEL(object);
-
-    switch (property_id)
-    {
-        case PROP_DEVICE_INSTANCE:
-            self->chardev_sin = g_value_get_pointer(value);
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-    }
-}
-
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
                              RedsStream *stream, int migration, int num_common_caps,
                              uint32_t *common_caps, int num_caps, uint32_t *caps);
@@ -241,8 +200,6 @@ red_vmc_channel_constructed(GObject *object)
 
     red_channel_init_outgoing_messages_window(RED_CHANNEL(self));
 
-    self->chardev = red_char_device_spicevmc_new(self->chardev_sin, reds, self);
-
     reds_register_channel(reds, RED_CHANNEL(self));
 }
 
@@ -264,8 +221,7 @@ red_vmc_channel_finalize(GObject *object)
     G_OBJECT_CLASS(red_vmc_channel_parent_class)->finalize(object);
 }
 
-static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type,
-                                          SpiceCharDeviceInstance *sin)
+static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type)
 {
     GType gtype = G_TYPE_NONE;
     static uint8_t id[256] = { 0, };
@@ -282,6 +238,7 @@ static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type,
             break;
         default:
             g_error("Unsupported channel_type for red_vmc_channel_new(): %u", channel_type);
+            return NULL;
     }
     return g_object_new(gtype,
                         "spice-server", reds,
@@ -291,7 +248,6 @@ static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type,
                         "handle-acks", FALSE,
                         "migration-flags",
                         (SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER),
-                        "device-instance", sin,
                         NULL);
 }
 
@@ -760,8 +716,6 @@ red_vmc_channel_class_init(RedVmcChannelClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
     RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
 
-    object_class->get_property = red_vmc_channel_get_property;
-    object_class->set_property = red_vmc_channel_set_property;
     object_class->constructed = red_vmc_channel_constructed;
     object_class->finalize = red_vmc_channel_finalize;
 
@@ -774,15 +728,6 @@ red_vmc_channel_class_init(RedVmcChannelClass *klass)
     channel_class->release_recv_buf = spicevmc_red_channel_release_msg_rcv_buf;
     channel_class->handle_migrate_flush_mark = spicevmc_channel_client_handle_migrate_flush_mark;
     channel_class->handle_migrate_data = spicevmc_channel_client_handle_migrate_data;
-
-    g_object_class_install_property(object_class,
-                                    PROP_DEVICE_INSTANCE,
-                                    g_param_spec_pointer("device-instance",
-                                                         "device instance",
-                                                         "Device instance for this channel",
-                                                         G_PARAM_READWRITE |
-                                                         G_PARAM_CONSTRUCT_ONLY |
-                                                         G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -861,13 +806,19 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
                                        SpiceCharDeviceInstance *sin,
                                        uint8_t channel_type)
 {
-    RedCharDeviceSpiceVmc *dev_state;
-    RedVmcChannel *state = red_vmc_channel_new(reds, channel_type, sin);
+    RedCharDevice *dev;
+    RedVmcChannel *channel = red_vmc_channel_new(reds, channel_type);
+    if (!channel) {
+        return NULL;
+    }
 
-    dev_state = RED_CHAR_DEVICE_SPICEVMC(state->chardev);
-    dev_state->channel = state;
+    /* char device takes ownership of channel */
+    dev = red_char_device_spicevmc_new(sin, reds, channel);
 
-    return RED_CHAR_DEVICE(dev_state);
+    channel->chardev_sin = sin;
+    g_object_unref(channel);
+
+    return dev;
 }
 
 /* Must be called from RedClient handling thread. */
@@ -922,18 +873,56 @@ red_char_device_spicevmc_dispose(GObject *object)
     }
 }
 
+enum {
+    PROP0,
+    PROP_CHANNEL
+};
+
+static void
+red_char_device_spicevmc_set_property(GObject *object,
+                                      guint property_id,
+                                      const GValue *value,
+                                      GParamSpec *pspec)
+{
+    RedCharDeviceSpiceVmc *self = RED_CHAR_DEVICE_SPICEVMC(object);
+
+    switch (property_id)
+    {
+        case PROP_CHANNEL:
+            spice_assert(self->channel == NULL);
+            self->channel = g_value_dup_object(value);
+            spice_assert(self->channel != NULL);
+            self->channel->chardev = RED_CHAR_DEVICE(self);
+
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+    }
+}
+
 static void
 red_char_device_spicevmc_class_init(RedCharDeviceSpiceVmcClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
     RedCharDeviceClass *char_dev_class = RED_CHAR_DEVICE_CLASS(klass);
 
+    object_class->set_property = red_char_device_spicevmc_set_property;
     object_class->dispose = red_char_device_spicevmc_dispose;
 
     char_dev_class->read_one_msg_from_device = spicevmc_chardev_read_msg_from_dev;
     char_dev_class->send_msg_to_client = spicevmc_chardev_send_msg_to_client;
     char_dev_class->send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client;
     char_dev_class->remove_client = spicevmc_char_dev_remove_client;
+
+    g_object_class_install_property(object_class,
+                                    PROP_CHANNEL,
+                                    g_param_spec_object("channel",
+                                                        "Channel",
+                                                        "Channel associated with this device",
+                                                        RED_TYPE_VMC_CHANNEL,
+                                                        G_PARAM_STATIC_STRINGS |
+                                                        G_PARAM_WRITABLE |
+                                                        G_PARAM_CONSTRUCT));
 }
 
 static void
@@ -944,13 +933,14 @@ red_char_device_spicevmc_init(RedCharDeviceSpiceVmc *self)
 static RedCharDevice *
 red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                              RedsState *reds,
-                             void *opaque)
+                             RedVmcChannel *channel)
 {
     return g_object_new(RED_TYPE_CHAR_DEVICE_SPICEVMC,
                         "sin", sin,
                         "spice-server", reds,
                         "client-tokens-interval", 0ULL,
                         "self-tokens", ~0ULL,
-                        "opaque", opaque,
+                        "channel", channel,
+                        "opaque", channel,
                         NULL);
 }
