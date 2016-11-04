@@ -127,9 +127,9 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
             return n;
         }
 
-        if (worker->record)
-            red_record_qxl_command(worker->record, &worker->mem_slots, ext_cmd,
-                                   spice_get_monotonic_time_ns());
+        if (worker->record) {
+            red_record_qxl_command(worker->record, &worker->mem_slots, ext_cmd);
+        }
 
         worker->cursor_poll_tries = 0;
         switch (ext_cmd.cmd.type) {
@@ -190,9 +190,9 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             return n;
         }
 
-        if (worker->record)
-            red_record_qxl_command(worker->record, &worker->mem_slots, ext_cmd,
-                                   spice_get_monotonic_time_ns());
+        if (worker->record) {
+            red_record_qxl_command(worker->record, &worker->mem_slots, ext_cmd);
+        }
 
         stat_inc_counter(reds, worker->command_counter, 1);
         worker->display_poll_tries = 0;
@@ -1032,7 +1032,7 @@ static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *
 {
     RedWorker *worker = opaque;
 
-    red_record_event(worker->record, 1, message_type, spice_get_monotonic_time_ns());
+    red_record_event(worker->record, 1, message_type);
 }
 
 static void register_callbacks(Dispatcher *dispatcher)

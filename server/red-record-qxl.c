@@ -803,8 +803,9 @@ void red_record_primary_surface_create(RedRecord *record,
         line_0);
 }
 
-void red_record_event(RedRecord *record, int what, uint32_t type, red_time_t ts)
+void red_record_event(RedRecord *record, int what, uint32_t type)
 {
+    red_time_t ts = spice_get_monotonic_time_ns();
     // TODO: record the size of the packet in the header. This would make
     // navigating it much faster (well, I can add an index while I'm at it..)
     // and make it trivial to get a histogram from a file.
@@ -814,11 +815,11 @@ void red_record_event(RedRecord *record, int what, uint32_t type, red_time_t ts)
 }
 
 void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
-                            QXLCommandExt ext_cmd, red_time_t ts)
+                            QXLCommandExt ext_cmd)
 {
     FILE *fd = record->fd;
 
-    red_record_event(record, 0, ext_cmd.cmd.type, ts);
+    red_record_event(record, 0, ext_cmd.cmd.type);
 
     switch (ext_cmd.cmd.type) {
     case QXL_CMD_DRAW:

@@ -39,9 +39,9 @@ void red_record_primary_surface_create(RedRecord *record,
                                        QXLDevSurfaceCreate *surface,
                                        uint8_t *line_0);
 
-void red_record_event(RedRecord *record, int what, uint32_t type, red_time_t ts);
+void red_record_event(RedRecord *record, int what, uint32_t type);
 
 void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
-                            QXLCommandExt ext_cmd, red_time_t ts);
+                            QXLCommandExt ext_cmd);
 
 #endif
