@@ -318,7 +318,7 @@ int main_channel_getpeername(MainChannel *main_chan, struct sockaddr *sa, sockle
         getpeername(red_channel_get_first_socket(RED_CHANNEL(main_chan)), sa, salen) : -1;
 }
 
-// TODO: ? shouldn't it disonnect all clients? or shutdown all main_channels?
+// TODO: ? shouldn't it disconnect all clients? or shutdown all main_channels?
 void main_channel_close(MainChannel *main_chan)
 {
     int socketfd;
