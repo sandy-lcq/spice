@@ -841,4 +841,3 @@ void red_channel_disconnect_client(RedChannel *channel, RedChannelClient *rcc)
 {
     channel->priv->client_cbs.disconnect(rcc);
 }
-
