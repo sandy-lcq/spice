@@ -171,19 +171,15 @@ struct QXLDevSurfaceCreate {
 struct QXLInterface {
     SpiceBaseInterface base;
 
-    // ONLY QXL, used to see id
     void (*attache_worker)(QXLInstance *qin, QXLWorker *qxl_worker);
     void (*set_compression_level)(QXLInstance *qin, int level);
-    // REMOVED
     void (*set_mm_time)(QXLInstance *qin, uint32_t mm_time) SPICE_GNUC_DEPRECATED;
 
-    // ONLY QXL
     void (*get_init_info)(QXLInstance *qin, QXLDevInitInfo *info);
 
     /* Retrieve the next command to be processed
      * This call should be non-blocking. If no commands are available, it
      * should return 0, or 1 if a command was retrieved */
-    // ONLY QXL
     int (*get_command)(QXLInstance *qin, struct QXLCommandExt *cmd);
 
     /* Request notification when new commands are available
@@ -191,21 +187,13 @@ struct QXLInterface {
      * notified by calling spice_qxl_wakeup(). If commands are already
      * available, this function should return false and no notification
      * triggered */
-    // ONLY QXL
     int (*req_cmd_notification)(QXLInstance *qin);
-    // ONLY QXL
     void (*release_resource)(QXLInstance *qin, struct QXLReleaseInfoExt release_info);
-    // ONLY QXL
     int (*get_cursor_command)(QXLInstance *qin, struct QXLCommandExt *cmd);
-    // ONLY QXL
     int (*req_cursor_notification)(QXLInstance *qin);
-    // REMOVED
     void (*notify_update)(QXLInstance *qin, uint32_t update_id);
-    // abort for display, do something in HW called in OOM
     int (*flush_resources)(QXLInstance *qin);
-    // both for sure
     void (*async_complete)(QXLInstance *qin, uint64_t cookie);
-    // abort for display, do something in HW spice_qxl_update_area_async, only QXL
     void (*update_area_complete)(QXLInstance *qin, uint32_t surface_id,
                                  struct QXLRect *updated_rects,
                                  uint32_t num_updated_rects);

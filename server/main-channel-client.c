@@ -19,7 +19,6 @@
 #endif
 
 #include <inttypes.h>
-#include <netinet/tcp.h>
 #include <common/generated_server_marshallers.h>
 
 #include "main-channel-client.h"
@@ -465,34 +464,9 @@ void main_channel_client_handle_migrate_dst_do_seamless(MainChannelClient *mcc,
                                               SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_NACK);
     }
 }
-
-#ifdef __linux__
-static uint64_t reds_stream_rtt(const RedsStream *stream)
-{
-    if (!stream || stream->socket < 0) {
-        return 0;
-    }
-
-    struct tcp_info ti;
-    socklen_t ti_len = sizeof(ti);
-    if (getsockopt(stream->socket, SOL_TCP, TCP_INFO, &ti, &ti_len)) {
-        return 0;
-    }
-
-    fprintf(stderr, "RCV RTT %u\n", ti.tcpi_rttvar);
-    fprintf(stderr, "RCV MTU %u\n", ti.tcpi_pmtu);
-    return ti.tcpi_rtt;
-}
-#else
-static inline uint64_t reds_stream_rtt(const RedsStream *stream)
-{
-    return 0;
-}
-#endif
-
 void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping, uint32_t size)
 {
-    uint64_t roundtrip, rtt;
+    uint64_t roundtrip;
     RedChannelClient* rcc = RED_CHANNEL_CLIENT(mcc);
 
     roundtrip = g_get_monotonic_time() - ping->timestamp;
@@ -517,10 +491,6 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
         mcc->priv->latency = MIN(mcc->priv->latency, roundtrip);
         break;
     case NET_TEST_STAGE_RATE:
-        rtt = reds_stream_rtt(red_channel_client_get_stream(rcc));
-        if (rtt)
-            mcc->priv->latency = MIN(mcc->priv->latency, rtt);
-
         mcc->priv->net_test_id = 0;
         if (roundtrip <= mcc->priv->latency) {
             // probably high load on client or server result with incorrect values

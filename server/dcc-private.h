@@ -24,16 +24,6 @@
 #include "stream.h"
 #include "red-channel-client.h"
 
-typedef struct DCCStreams {
-    uint32_t outbuf_size;
-    uint8_t *outbuf; // caution stream buffer is also used as compress bufs!!!
-
-    StreamAgent agents[NUM_STREAMS];
-    int use_video_encoder_rate_control;
-    uint32_t max_latency;
-    uint64_t max_bit_rate;
-} DCCStreams;
-
 typedef struct DisplayChannelClientPrivate DisplayChannelClientPrivate;
 struct DisplayChannelClientPrivate
 {
@@ -64,8 +54,10 @@ struct DisplayChannelClientPrivate
     uint8_t surface_client_created[NUM_SURFACES];
     QRegion surface_client_lossy_region[NUM_SURFACES];
 
-    DCCStreams streams;
-
+    StreamAgent stream_agents[NUM_STREAMS];
+    int use_video_encoder_rate_control;
+    uint32_t streams_max_latency;
+    uint64_t streams_max_bit_rate;
     bool gl_draw_ongoing;
 };
 
