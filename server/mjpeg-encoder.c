@@ -969,7 +969,7 @@ static int mjpeg_encoder_encode_frame(VideoEncoder *video_encoder,
     }
 
     if (ret != VIDEO_ENCODER_FRAME_ENCODE_DONE) {
-        buffer->base.free((VideoBuffer*)buffer);
+        buffer->base.free(&buffer->base);
     }
     return ret;
 }
