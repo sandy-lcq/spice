@@ -817,11 +817,11 @@ static void vdi_port_read_buf_free(RedPipeItem *base)
 
 /* reads from the device till completes reading a message that is addressed to the client,
  * or otherwise, when reading from the device fails */
-static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *sin,
-                                                      void *opaque)
+static RedPipeItem *vdi_port_read_one_msg_from_device(RedCharDevice *self,
+                                                      SpiceCharDeviceInstance *sin)
 {
     RedsState *reds;
-    RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(sin->st);
+    RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(self);
     SpiceCharDeviceInterface *sif;
     RedVDIReadBuf *dispatch_buf;
     int n;
@@ -894,9 +894,9 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(SpiceCharDeviceInstance *s
 }
 
 /* after calling this, we unref the message, and the ref is in the instance side */
-static void vdi_port_send_msg_to_client(RedPipeItem *msg,
-                                        RedClient *client,
-                                        void *opaque)
+static void vdi_port_send_msg_to_client(RedCharDevice *self,
+                                        RedPipeItem *msg,
+                                        RedClient *client)
 {
     RedVDIReadBuf *agent_data_buf = (RedVDIReadBuf *)msg;
 
@@ -908,15 +908,17 @@ static void vdi_port_send_msg_to_client(RedPipeItem *msg,
                                         agent_data_buf);
 }
 
-static void vdi_port_send_tokens_to_client(RedClient *client, uint32_t tokens, void *opaque)
+static void vdi_port_send_tokens_to_client(RedCharDevice *self,
+                                           RedClient *client,
+                                           uint32_t tokens)
 {
     main_channel_client_push_agent_tokens(red_client_get_main(client),
                                           tokens);
 }
 
-static void vdi_port_on_free_self_token(void *opaque)
+static void vdi_port_on_free_self_token(RedCharDevice *self)
 {
-    RedsState *reds = opaque;
+    RedsState *reds = red_char_device_get_server(self);
 
     if (reds->inputs_channel && reds->pending_mouse_event) {
         spice_debug("pending mouse event");
@@ -924,7 +926,8 @@ static void vdi_port_on_free_self_token(void *opaque)
     }
 }
 
-static void vdi_port_remove_client(RedClient *client, void *opaque)
+static void vdi_port_remove_client(RedCharDevice *self,
+                                   RedClient *client)
 {
     red_channel_client_shutdown(RED_CHANNEL_CLIENT(red_client_get_main(client)));
 }
@@ -4514,6 +4517,5 @@ static RedCharDeviceVDIPort *red_char_device_vdi_port_new(RedsState *reds)
                         "spice-server", reds,
                         "client-tokens-interval", (guint64)REDS_TOKENS_TO_SEND,
                         "self-tokens", (guint64)REDS_NUM_INTERNAL_AGENT_MESSAGES,
-                        "opaque", reds,
                         NULL);
 }

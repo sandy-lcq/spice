@@ -86,6 +86,9 @@ struct RedCharDeviceSpiceVmcClass
     RedCharDeviceClass parent_class;
 };
 
+typedef struct RedVmcChannel RedVmcChannel;
+typedef struct RedVmcChannelClass RedVmcChannelClass;
+
 static GType red_char_device_spicevmc_get_type(void) G_GNUC_CONST;
 static RedCharDevice *red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                                                    RedsState *reds,
@@ -318,10 +321,11 @@ static RedVmcPipeItem* try_compress_lz4(RedVmcChannel *channel, int n, RedVmcPip
 }
 #endif
 
-static RedPipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *sin,
-                                                       void *opaque)
+static RedPipeItem *spicevmc_chardev_read_msg_from_dev(RedCharDevice *self,
+                                                       SpiceCharDeviceInstance *sin)
 {
-    RedVmcChannel *channel = opaque;
+    RedCharDeviceSpiceVmc *vmc = RED_CHAR_DEVICE_SPICEVMC(self);
+    RedVmcChannel *channel = RED_VMC_CHANNEL(vmc->channel);
     SpiceCharDeviceInterface *sif;
     RedVmcPipeItem *msg_item;
     int n;
@@ -363,11 +367,12 @@ static RedPipeItem *spicevmc_chardev_read_msg_from_dev(SpiceCharDeviceInstance *
     }
 }
 
-static void spicevmc_chardev_send_msg_to_client(RedPipeItem *msg,
-                                                RedClient *client,
-                                                void *opaque)
+static void spicevmc_chardev_send_msg_to_client(RedCharDevice *self,
+                                                RedPipeItem *msg,
+                                                RedClient *client)
 {
-    RedVmcChannel *channel = opaque;
+    RedCharDeviceSpiceVmc *vmc = RED_CHAR_DEVICE_SPICEVMC(self);
+    RedVmcChannel *channel = RED_VMC_CHANNEL(vmc->channel);
 
     spice_assert(red_channel_client_get_client(channel->rcc) == client);
     red_pipe_item_ref(msg);
@@ -395,16 +400,18 @@ static void spicevmc_port_send_event(RedChannelClient *rcc, uint8_t event)
     red_channel_client_pipe_add_push(rcc, &item->base);
 }
 
-static void spicevmc_char_dev_send_tokens_to_client(RedClient *client,
-                                                    uint32_t tokens,
-                                                    void *opaque)
+static void spicevmc_char_dev_send_tokens_to_client(RedCharDevice *self,
+                                                    RedClient *client,
+                                                    uint32_t tokens)
 {
     spice_printerr("Not implemented!");
 }
 
-static void spicevmc_char_dev_remove_client(RedClient *client, void *opaque)
+static void spicevmc_char_dev_remove_client(RedCharDevice *self,
+                                            RedClient *client)
 {
-    RedVmcChannel *channel = opaque;
+    RedCharDeviceSpiceVmc *vmc = RED_CHAR_DEVICE_SPICEVMC(self);
+    RedVmcChannel *channel = RED_VMC_CHANNEL(vmc->channel);
 
     spice_printerr("vmc channel %p, client %p", channel, client);
     spice_assert(channel->rcc &&
@@ -831,14 +838,15 @@ void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
 SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, uint8_t event)
 {
     RedVmcChannel *channel;
+    RedCharDeviceSpiceVmc *device = RED_CHAR_DEVICE_SPICEVMC(sin->st);
 
     if (sin->st == NULL) {
         spice_warning("no SpiceCharDeviceState attached to instance %p", sin);
         return;
     }
 
-    /* FIXME */
-    channel = (RedVmcChannel *)red_char_device_opaque_get((RedCharDevice*)sin->st);
+    channel = RED_VMC_CHANNEL(device->channel);
+
     if (event == SPICE_PORT_EVENT_OPENED) {
         channel->port_opened = TRUE;
     } else if (event == SPICE_PORT_EVENT_CLOSED) {
@@ -941,6 +949,5 @@ red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                         "client-tokens-interval", 0ULL,
                         "self-tokens", ~0ULL,
                         "channel", channel,
-                        "opaque", channel,
                         NULL);
 }

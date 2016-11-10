@@ -149,10 +149,10 @@ static void smartcard_read_buf_prepare(RedCharDeviceSmartcard *dev, VSCMsgHeader
     }
 }
 
-static RedPipeItem *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
-                                                   void *opaque)
+static RedPipeItem *smartcard_read_msg_from_device(RedCharDevice *self,
+                                                   SpiceCharDeviceInstance *sin)
 {
-    RedCharDeviceSmartcard *dev = opaque;
+    RedCharDeviceSmartcard *dev = RED_CHAR_DEVICE_SMARTCARD(self);
     SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
     VSCMsgHeader *vheader = (VSCMsgHeader*)dev->priv->buf;
     int n;
@@ -186,11 +186,11 @@ static RedPipeItem *smartcard_read_msg_from_device(SpiceCharDeviceInstance *sin,
     return NULL;
 }
 
-static void smartcard_send_msg_to_client(RedPipeItem *msg,
-                                         RedClient *client,
-                                         void *opaque)
+static void smartcard_send_msg_to_client(RedCharDevice *self,
+                                         RedPipeItem *msg,
+                                         RedClient *client)
 {
-    RedCharDeviceSmartcard *dev = opaque;
+    RedCharDeviceSmartcard *dev = RED_CHAR_DEVICE_SMARTCARD(self);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dev->priv->scc);
 
     spice_assert(dev->priv->scc &&
@@ -199,14 +199,16 @@ static void smartcard_send_msg_to_client(RedPipeItem *msg,
     smartcard_channel_client_pipe_add_push(rcc, msg);
 }
 
-static void smartcard_send_tokens_to_client(RedClient *client, uint32_t tokens, void *opaque)
+static void smartcard_send_tokens_to_client(RedCharDevice *self,
+                                            RedClient *client,
+                                            uint32_t tokens)
 {
     spice_error("not implemented");
 }
 
-static void smartcard_remove_client(RedClient *client, void *opaque)
+static void smartcard_remove_client(RedCharDevice *self, RedClient *client)
 {
-    RedCharDeviceSmartcard *dev = opaque;
+    RedCharDeviceSmartcard *dev = RED_CHAR_DEVICE_SMARTCARD(self);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dev->priv->scc);
 
     spice_printerr("smartcard  dev %p, client %p", dev, client);
@@ -247,7 +249,7 @@ RedMsgItem *smartcard_char_device_on_message_from_device(RedCharDeviceSmartcard 
 
 static int smartcard_char_device_add_to_readers(RedsState *reds, SpiceCharDeviceInstance *char_device)
 {
-    RedCharDeviceSmartcard *dev = red_char_device_opaque_get(char_device->st);
+    RedCharDeviceSmartcard *dev = RED_CHAR_DEVICE_SMARTCARD(char_device->st);
 
     if (g_smartcard_readers.num >= SMARTCARD_MAX_READERS) {
         return -1;
@@ -272,7 +274,7 @@ SpiceCharDeviceInstance *smartcard_readers_get_unattached(void)
     RedCharDeviceSmartcard* dev;
 
     for (i = 0; i < g_smartcard_readers.num; ++i) {
-        dev = red_char_device_opaque_get(g_smartcard_readers.sin[i]->st);
+        dev = RED_CHAR_DEVICE_SMARTCARD(g_smartcard_readers.sin[i]->st);
         if (!dev->priv->scc) {
             return g_smartcard_readers.sin[i];
         }
@@ -290,8 +292,6 @@ static RedCharDeviceSmartcard *smartcard_device_new(RedsState *reds, SpiceCharDe
                             "client-tokens-interval", 0ULL,
                             "self-tokens", ~0ULL,
                             NULL);
-
-    g_object_set(char_dev, "opaque", char_dev, NULL);
 
     return RED_CHAR_DEVICE_SMARTCARD(char_dev);
 }
@@ -336,7 +336,7 @@ void smartcard_char_device_notify_reader_add(RedCharDeviceSmartcard *dev)
 void smartcard_char_device_attach_client(SpiceCharDeviceInstance *char_device,
                                          SmartCardChannelClient *scc)
 {
-    RedCharDeviceSmartcard *dev = red_char_device_opaque_get(char_device->st);
+    RedCharDeviceSmartcard *dev = RED_CHAR_DEVICE_SMARTCARD(char_device->st);
     int client_added;
 
     spice_assert(!smartcard_channel_client_get_char_device(scc) && !dev->priv->scc);
@@ -499,7 +499,7 @@ void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_buf)
 
     spice_assert(vheader->reader_id <= g_smartcard_readers.num);
     sin = g_smartcard_readers.sin[vheader->reader_id];
-    dev = (RedCharDeviceSmartcard *)red_char_device_opaque_get(sin->st);
+    dev = RED_CHAR_DEVICE_SMARTCARD(sin->st);
     spice_assert(!dev->priv->scc ||
                  dev == smartcard_channel_client_get_device(dev->priv->scc));
     /* protocol requires messages to be in network endianess */

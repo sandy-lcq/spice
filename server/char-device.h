@@ -56,25 +56,27 @@ struct RedCharDeviceClass
 
     /* reads from the device till reaching a msg that should be sent to the client,
      * or till the reading fails */
-    RedPipeItem* (*read_one_msg_from_device)(SpiceCharDeviceInstance *sin,
-                                             void *opaque);
+    RedPipeItem* (*read_one_msg_from_device)(RedCharDevice *self,
+                                             SpiceCharDeviceInstance *sin);
     /* after this call, the message is unreferenced */
-    void (*send_msg_to_client)(RedPipeItem *msg,
-                               RedClient *client,
-                               void *opaque);
+    void (*send_msg_to_client)(RedCharDevice *self,
+                               RedPipeItem *msg,
+                               RedClient *client);
 
     /* The cb is called when a predefined number of write buffers were consumed by the
      * device */
-    void (*send_tokens_to_client)(RedClient *client, uint32_t tokens, void *opaque);
+    void (*send_tokens_to_client)(RedCharDevice *self,
+                                  RedClient *client,
+                                  uint32_t tokens);
 
     /* The cb is called when a server (self) message that was addressed to the device,
      * has been completely written to it */
-    void (*on_free_self_token)(void *opaque);
+    void (*on_free_self_token)(RedCharDevice *self);
 
     /* This cb is called if it is recommended to remove the client
      * due to slow flow or due to some other error.
      * The called instance should disconnect the client, or at least the corresponding channel */
-    void (*remove_client)(RedClient *client, void *opaque);
+    void (*remove_client)(RedCharDevice *self, RedClient *client);
 };
 
 GType red_char_device_get_type(void) G_GNUC_CONST;
@@ -158,8 +160,6 @@ typedef struct RedCharDeviceWriteBuffer {
 void red_char_device_reset_dev_instance(RedCharDevice *dev,
                                         SpiceCharDeviceInstance *sin);
 void red_char_device_destroy(RedCharDevice *dev);
-
-void *red_char_device_opaque_get(RedCharDevice *dev);
 
 /* only one client is supported */
 void red_char_device_migrate_data_marshall(RedCharDevice *dev,

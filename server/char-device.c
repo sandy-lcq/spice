@@ -66,7 +66,6 @@ struct RedCharDevicePrivate {
     int during_read_from_device;
     int during_write_to_device;
 
-    void *opaque;
     SpiceServer *reds;
 };
 
@@ -88,7 +87,6 @@ enum {
     PROP_SPICE_SERVER,
     PROP_CLIENT_TOKENS_INTERVAL,
     PROP_SELF_TOKENS,
-    PROP_OPAQUE
 };
 
 static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_buf);
@@ -99,7 +97,7 @@ red_char_device_read_one_msg_from_device(RedCharDevice *dev)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
 
-   return klass->read_one_msg_from_device(dev->priv->sin, dev->priv->opaque);
+   return klass->read_one_msg_from_device(dev, dev->priv->sin);
 }
 
 static void
@@ -109,7 +107,7 @@ red_char_device_send_msg_to_client(RedCharDevice *dev,
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
 
-   klass->send_msg_to_client(msg, client, dev->priv->opaque);
+   klass->send_msg_to_client(dev, msg, client);
 }
 
 static void
@@ -119,7 +117,7 @@ red_char_device_send_tokens_to_client(RedCharDevice *dev,
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
 
-   klass->send_tokens_to_client(client, tokens, dev->priv->opaque);
+   klass->send_tokens_to_client(dev, client, tokens);
 }
 
 static void
@@ -128,7 +126,7 @@ red_char_device_on_free_self_token(RedCharDevice *dev)
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
 
    if (klass->on_free_self_token != NULL) {
-       klass->on_free_self_token(dev->priv->opaque);
+       klass->on_free_self_token(dev);
    }
 }
 
@@ -137,7 +135,7 @@ red_char_device_remove_client(RedCharDevice *dev, RedClient *client)
 {
    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(dev);
 
-   klass->remove_client(client, dev->priv->opaque);
+   klass->remove_client(dev, client);
 }
 
 static void red_char_device_write_buffer_free(RedCharDeviceWriteBuffer *buf)
@@ -686,11 +684,6 @@ void red_char_device_reset_dev_instance(RedCharDevice *dev,
     g_object_notify(G_OBJECT(dev), "sin");
 }
 
-void *red_char_device_opaque_get(RedCharDevice *dev)
-{
-    return dev->priv->opaque;
-}
-
 void red_char_device_destroy(RedCharDevice *char_dev)
 {
     g_return_if_fail(RED_IS_CHAR_DEVICE(char_dev));
@@ -1041,9 +1034,6 @@ red_char_device_get_property(GObject    *object,
         case PROP_SELF_TOKENS:
             g_value_set_uint64(value, self->priv->num_self_tokens);
             break;
-        case PROP_OPAQUE:
-            g_value_set_pointer(value, self->priv->opaque);
-            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -1070,9 +1060,6 @@ red_char_device_set_property(GObject      *object,
             break;
         case PROP_SELF_TOKENS:
             self->priv->num_self_tokens = g_value_get_uint64(value);
-            break;
-        case PROP_OPAQUE:
-            self->priv->opaque = g_value_get_pointer(value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -1156,14 +1143,6 @@ red_char_device_class_init(RedCharDeviceClass *klass)
                                                         0, G_MAXUINT64, 0,
                                                         G_PARAM_STATIC_STRINGS |
                                                         G_PARAM_READWRITE));
-    g_object_class_install_property(object_class,
-                                    PROP_OPAQUE,
-                                    g_param_spec_pointer("opaque",
-                                                         "opaque",
-                                                         "User data to pass to callbacks",
-                                                      G_PARAM_STATIC_STRINGS |
-                                                      G_PARAM_READWRITE));
-
 }
 
 static void

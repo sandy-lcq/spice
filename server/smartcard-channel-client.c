@@ -273,7 +273,7 @@ static void smartcard_channel_client_remove_reader(SmartCardChannelClient *scc,
         return;
     }
 
-    dev = red_char_device_opaque_get(char_device->st);
+    dev = RED_CHAR_DEVICE_SMARTCARD(char_device->st);
     spice_assert(scc->priv->smartcard == dev);
     if (!smartcard_char_device_notify_reader_remove(dev)) {
         smartcard_channel_client_push_error(RED_CHANNEL_CLIENT(scc),
