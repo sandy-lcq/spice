@@ -71,18 +71,6 @@ AC_DEFUN([SPICE_COMPILE_WARNINGS],[
     # decl mess with  gtk/generated_*.c
     dontwarn="$dontwarn -Wmissing-declarations"
 
-    # Stuff that C++ won't allow. Turn them back on later
-    dontwarn="$dontwarn -Waggregate-return"
-    dontwarn="$dontwarn -Wstrict-prototypes"
-    dontwarn="$dontwarn -Wold-style-definition"
-    dontwarn="$dontwarn -Wnested-externs"
-    dontwarn="$dontwarn -Wformat-zero-length"
-    dontwarn="$dontwarn -Wpointer-to-int-cast"
-    dontwarn="$dontwarn -Wjump-misses-init"
-
-    # Issues in x11/platform_utils.cpp prevent us turning this on
-    dontwarn="$dontwarn -Wmissing-format-attribute"
-
     # Get all possible GCC warnings
     gl_MANYWARN_ALL_GCC([maybewarn])
 
@@ -102,15 +90,6 @@ AC_DEFUN([SPICE_COMPILE_WARNINGS],[
     gl_WARN_ADD([-Wno-unused-parameter])
     # We can't enable this due to horrible spice_usb_device_get_description
     # signature
-    gl_WARN_ADD([-Wno-format-nonliteral])
-    # CEGui headers cause violation of this
-    gl_WARN_ADD([-Wno-ignored-qualifiers])
-
-
-
-
-    # GNULIB turns on -Wformat=2 which implies -Wformat-nonliteral,
-    # so we need to manually re-exclude it.
     gl_WARN_ADD([-Wno-format-nonliteral])
 
     # This should be < 1024 really. pixman_utils is the blackspot
@@ -157,18 +136,6 @@ AC_DEFUN([SPICE_COMPILE_WARNINGS],[
     fi
     WARN_CXXFLAGS=$WARN_CFLAGS
     AC_SUBST([WARN_CXXFLAGS])
-
-    # These are C-only warnings
-    if test "x$enable_tunnel" != "xyes"; then
-        # Slirp causes pain :-(
-        gl_WARN_ADD([-Waggregate-return])
-    fi
-    gl_WARN_ADD([-Wstrict-prototypes])
-    gl_WARN_ADD([-Wold-style-definition])
-    gl_WARN_ADD([-Wnested-externs])
-    gl_WARN_ADD([-Wformat-zero-length])
-    gl_WARN_ADD([-Wpointer-to-int-cast])
-    gl_WARN_ADD([-Wjump-misses-init])
 
     WARN_LDFLAGS=$WARN_CFLAGS
     AC_SUBST([WARN_CFLAGS])
