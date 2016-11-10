@@ -1288,8 +1288,8 @@ static void replay_handle_dev_input(QXLWorker *worker, SpiceReplay *replay,
 
 /*
  * NOTE: This reads from a saved file and performs all io actions, calling the
- * dispatcher, until it sees a command, at which point it returns it via the
- * last parameter [ext_cmd]. Hence you cannot call this from the worker thread
+ * dispatcher, until it sees a command, at which point it returns it.
+ * Hence you cannot call this from the worker thread
  * since it will block reading from the dispatcher pipe.
  */
 SPICE_GNUC_VISIBLE QXLCommandExt* spice_replay_next_cmd(SpiceReplay *replay,
