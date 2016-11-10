@@ -2,7 +2,6 @@ NULL =
 
 AM_CPPFLAGS =					\
 	-I$(top_srcdir)				\
-	-I$(top_srcdir)/common			\
 	-I$(top_srcdir)/server			\
 	-I$(top_builddir)/server		\
 	-I$(top_srcdir)/server/tests		\
