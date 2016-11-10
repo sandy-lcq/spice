@@ -61,8 +61,13 @@ AC_DEFUN([SPICE_COMPILE_WARNINGS],[
     dontwarn="$dontwarn -Winline"
     dontwarn="$dontwarn -Wbad-function-cast"
     dontwarn="$dontwarn -Wshadow"
+    dontwarn="$dontwarn -Wformat-signedness"
+    dontwarn="$dontwarn -Wnull-dereference"
 
-    # We want to enable thse, but need to sort out the
+    # This causes an error to be detected in glib headers
+    dontwarn="$dontwarn -Wshift-overflow=2"
+
+    # We want to enable these, but need to sort out the
     # decl mess with  gtk/generated_*.c
     dontwarn="$dontwarn -Wmissing-declarations"
 
