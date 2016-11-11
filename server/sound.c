@@ -1166,13 +1166,13 @@ static int snd_desired_audio_mode(int playback_compression, int frequency,
     return SPICE_AUDIO_DATA_MODE_RAW;
 }
 
-static void on_new_playback_channel(SndWorker *worker)
+static void on_new_playback_channel(SndWorker *worker, SndChannel *snd_channel)
 {
     RedsState *reds = red_channel_get_server(worker->base_channel);
-    SndChannel *snd_channel = worker->connection;
 
     spice_assert(snd_channel);
 
+    worker->connection = snd_channel;
     snd_set_command(snd_channel, SND_PLAYBACK_MODE_MASK);
     if (snd_channel->active) {
         snd_set_command(snd_channel, SND_PLAYBACK_CTRL_MASK);
@@ -1220,7 +1220,6 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
                                                               caps, num_caps))) {
         return;
     }
-    worker->connection = &playback_channel->base;
     snd_playback_free_frame(playback_channel, &playback_channel->frames[0]);
     snd_playback_free_frame(playback_channel, &playback_channel->frames[1]);
     snd_playback_free_frame(playback_channel, &playback_channel->frames[2]);
@@ -1243,7 +1242,7 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
     }
 
     if (!red_client_during_migrate_at_target(client)) {
-        on_new_playback_channel(worker);
+        on_new_playback_channel(worker, &playback_channel->base);
     }
 
     if (worker->active) {
@@ -1425,12 +1424,11 @@ SPICE_GNUC_VISIBLE void spice_server_set_record_rate(SpiceRecordInstance *sin, u
         red_channel_set_cap(channel, SPICE_RECORD_CAP_OPUS);
 }
 
-static void on_new_record_channel(SndWorker *worker)
+static void on_new_record_channel(SndWorker *worker, SndChannel *snd_channel)
 {
-    SndChannel *snd_channel = worker->connection;
-
     spice_assert(snd_channel);
 
+    worker->connection = snd_channel ;
     if (worker->volume.volume_nchannels) {
         snd_set_command(snd_channel, SND_RECORD_VOLUME_MASK);
     }
@@ -1472,9 +1470,7 @@ static void snd_set_record_peer(RedChannel *channel, RedClient *client, RedsStre
 
     record_channel->mode = SPICE_AUDIO_DATA_MODE_RAW;
 
-    worker->connection = &record_channel->base;
-
-    on_new_record_channel(worker);
+    on_new_record_channel(worker, &record_channel->base);
     if (worker->active) {
         spice_server_record_start(st->sin);
     }
