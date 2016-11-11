@@ -576,10 +576,15 @@ static int snd_playback_send_migrate(PlaybackChannel *channel)
     return snd_channel_send_migrate(&channel->base);
 }
 
-static int snd_send_volume(SndChannel *channel, SpiceVolumeState *st, int msg)
+static int snd_send_volume(SndChannel *channel, uint32_t cap, int msg)
 {
     SpiceMsgAudioVolume *vol;
     uint8_t c;
+    SpiceVolumeState *st = &channel->worker->volume;
+
+    if (!red_channel_client_test_remote_cap(channel->channel_client, cap)) {
+        return TRUE;
+    }
 
     vol = alloca(sizeof (SpiceMsgAudioVolume) +
                  st->volume_nchannels * sizeof (uint16_t));
@@ -597,20 +602,18 @@ static int snd_send_volume(SndChannel *channel, SpiceVolumeState *st, int msg)
 
 static int snd_playback_send_volume(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = &playback_channel->base;
-    SpicePlaybackState *st = SPICE_CONTAINEROF(channel->worker, SpicePlaybackState, worker);
-
-    if (!red_channel_client_test_remote_cap(channel->channel_client,
-                                            SPICE_PLAYBACK_CAP_VOLUME)) {
-        return TRUE;
-    }
-
-    return snd_send_volume(channel, &st->worker.volume, SPICE_MSG_PLAYBACK_VOLUME);
+    return snd_send_volume(&playback_channel->base, SPICE_PLAYBACK_CAP_VOLUME,
+                           SPICE_MSG_PLAYBACK_VOLUME);
 }
 
-static int snd_send_mute(SndChannel *channel, SpiceVolumeState *st, int msg)
+static int snd_send_mute(SndChannel *channel, uint32_t cap, int msg)
 {
     SpiceMsgAudioMute mute;
+    SpiceVolumeState *st = &channel->worker->volume;
+
+    if (!red_channel_client_test_remote_cap(channel->channel_client, cap)) {
+        return TRUE;
+    }
 
     if (!snd_reset_send_data(channel, msg)) {
         return FALSE;
@@ -623,15 +626,8 @@ static int snd_send_mute(SndChannel *channel, SpiceVolumeState *st, int msg)
 
 static int snd_playback_send_mute(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = &playback_channel->base;
-    SpicePlaybackState *st = SPICE_CONTAINEROF(channel->worker, SpicePlaybackState, worker);
-
-    if (!red_channel_client_test_remote_cap(channel->channel_client,
-                                            SPICE_PLAYBACK_CAP_VOLUME)) {
-        return TRUE;
-    }
-
-    return snd_send_mute(channel, &st->worker.volume, SPICE_MSG_PLAYBACK_MUTE);
+    return snd_send_mute(&playback_channel->base, SPICE_PLAYBACK_CAP_VOLUME,
+                         SPICE_MSG_PLAYBACK_MUTE);
 }
 
 static int snd_playback_send_latency(PlaybackChannel *playback_channel)
@@ -733,28 +729,14 @@ static int snd_record_send_ctl(RecordChannel *record_channel)
 
 static int snd_record_send_volume(RecordChannel *record_channel)
 {
-    SndChannel *channel = &record_channel->base;
-    SpiceRecordState *st = SPICE_CONTAINEROF(channel->worker, SpiceRecordState, worker);
-
-    if (!red_channel_client_test_remote_cap(channel->channel_client,
-                                            SPICE_RECORD_CAP_VOLUME)) {
-        return TRUE;
-    }
-
-    return snd_send_volume(channel, &st->worker.volume, SPICE_MSG_RECORD_VOLUME);
+    return snd_send_volume(&record_channel->base, SPICE_RECORD_CAP_VOLUME,
+                           SPICE_MSG_RECORD_VOLUME);
 }
 
 static int snd_record_send_mute(RecordChannel *record_channel)
 {
-    SndChannel *channel = &record_channel->base;
-    SpiceRecordState *st = SPICE_CONTAINEROF(channel->worker, SpiceRecordState, worker);
-
-    if (!red_channel_client_test_remote_cap(channel->channel_client,
-                                            SPICE_RECORD_CAP_VOLUME)) {
-        return TRUE;
-    }
-
-    return snd_send_mute(channel, &st->worker.volume, SPICE_MSG_RECORD_MUTE);
+    return snd_send_mute(&record_channel->base, SPICE_RECORD_CAP_VOLUME,
+                         SPICE_MSG_RECORD_MUTE);
 }
 
 static int snd_record_send_migrate(RecordChannel *record_channel)
@@ -1187,20 +1169,18 @@ static int snd_desired_audio_mode(int playback_compression, int frequency,
 static void on_new_playback_channel(SndWorker *worker)
 {
     RedsState *reds = red_channel_get_server(worker->base_channel);
-    PlaybackChannel *playback_channel =
-        SPICE_CONTAINEROF(worker->connection, PlaybackChannel, base);
-    SpicePlaybackState *st = SPICE_CONTAINEROF(worker, SpicePlaybackState, worker);
+    SndChannel *snd_channel = worker->connection;
 
-    spice_assert(playback_channel);
+    spice_assert(snd_channel);
 
-    snd_set_command((SndChannel *)playback_channel, SND_PLAYBACK_MODE_MASK);
-    if (playback_channel->base.active) {
-        snd_set_command((SndChannel *)playback_channel, SND_PLAYBACK_CTRL_MASK);
+    snd_set_command(snd_channel, SND_PLAYBACK_MODE_MASK);
+    if (snd_channel->active) {
+        snd_set_command(snd_channel, SND_PLAYBACK_CTRL_MASK);
     }
-    if (st->worker.volume.volume_nchannels) {
-        snd_set_command((SndChannel *)playback_channel, SND_PLAYBACK_VOLUME_MASK);
+    if (worker->volume.volume_nchannels) {
+        snd_set_command(snd_channel, SND_PLAYBACK_VOLUME_MASK);
     }
-    if (playback_channel->base.active) {
+    if (snd_channel->active) {
         reds_disable_mm_time(reds);
     }
 }
@@ -1447,16 +1427,15 @@ SPICE_GNUC_VISIBLE void spice_server_set_record_rate(SpiceRecordInstance *sin, u
 
 static void on_new_record_channel(SndWorker *worker)
 {
-    RecordChannel *record_channel = (RecordChannel *)worker->connection;
-    SpiceRecordState *st = SPICE_CONTAINEROF(worker, SpiceRecordState, worker);
+    SndChannel *snd_channel = worker->connection;
 
-    spice_assert(record_channel);
+    spice_assert(snd_channel);
 
-    if (st->worker.volume.volume_nchannels) {
-        snd_set_command((SndChannel *)record_channel, SND_RECORD_VOLUME_MASK);
+    if (worker->volume.volume_nchannels) {
+        snd_set_command(snd_channel, SND_RECORD_VOLUME_MASK);
     }
-    if (record_channel->base.active) {
-        snd_set_command((SndChannel *)record_channel, SND_RECORD_CTRL_MASK);
+    if (snd_channel->active) {
+        snd_set_command(snd_channel, SND_RECORD_CTRL_MASK);
     }
 }
 
