@@ -1375,14 +1375,11 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
     return len;
 }
 
-SPICE_GNUC_VISIBLE uint32_t spice_server_get_best_playback_rate(SpicePlaybackInstance *sin)
+static uint32_t snd_get_best_rate(SndChannel *channel, uint32_t cap_opus)
 {
     int client_can_opus = TRUE;
-    if (sin && sin->st->worker.connection) {
-        SndChannel *channel = sin->st->worker.connection;
-        PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
-        client_can_opus = red_channel_client_test_remote_cap(playback_channel->base.channel_client,
-                                          SPICE_PLAYBACK_CAP_OPUS);
+    if (channel) {
+        client_can_opus = red_channel_client_test_remote_cap(channel->channel_client, cap_opus);
     }
 
     if (client_can_opus && snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, SND_CODEC_ANY_FREQUENCY))
@@ -1400,6 +1397,11 @@ static void snd_set_rate(SndWorker *worker, uint32_t frequency, uint32_t cap_opu
     }
 }
 
+SPICE_GNUC_VISIBLE uint32_t spice_server_get_best_playback_rate(SpicePlaybackInstance *sin)
+{
+    return snd_get_best_rate(sin ? sin->st->worker.connection : NULL, SPICE_PLAYBACK_CAP_OPUS);
+}
+
 SPICE_GNUC_VISIBLE void spice_server_set_playback_rate(SpicePlaybackInstance *sin, uint32_t frequency)
 {
     snd_set_rate(&sin->st->worker, frequency, SPICE_PLAYBACK_CAP_OPUS);
@@ -1407,18 +1409,7 @@ SPICE_GNUC_VISIBLE void spice_server_set_playback_rate(SpicePlaybackInstance *si
 
 SPICE_GNUC_VISIBLE uint32_t spice_server_get_best_record_rate(SpiceRecordInstance *sin)
 {
-    int client_can_opus = TRUE;
-    if (sin && sin->st->worker.connection) {
-        SndChannel *channel = sin->st->worker.connection;
-        RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
-        client_can_opus = red_channel_client_test_remote_cap(record_channel->base.channel_client,
-                                          SPICE_RECORD_CAP_OPUS);
-    }
-
-    if (client_can_opus && snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, SND_CODEC_ANY_FREQUENCY))
-        return SND_CODEC_OPUS_PLAYBACK_FREQ;
-
-    return SND_CODEC_CELT_PLAYBACK_FREQ;
+    return snd_get_best_rate(sin ? sin->st->worker.connection : NULL, SPICE_RECORD_CAP_OPUS);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_set_record_rate(SpiceRecordInstance *sin, uint32_t frequency)
