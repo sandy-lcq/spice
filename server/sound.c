@@ -52,31 +52,26 @@
 #define SND_RECEIVE_BUF_SIZE     (16 * 1024 * 2)
 #define RECORD_SAMPLES_SIZE (SND_RECEIVE_BUF_SIZE >> 2)
 
+enum SndCommand {
+    SND_MIGRATE,
+    SND_CTRL,
+    SND_VOLUME,
+    SND_END_COMMAND,
+};
+
 enum PlaybackCommand {
-    SND_PLAYBACK_MIGRATE,
-    SND_PLAYBACK_MODE,
-    SND_PLAYBACK_CTRL,
+    SND_PLAYBACK_MODE = SND_END_COMMAND,
     SND_PLAYBACK_PCM,
-    SND_PLAYBACK_VOLUME,
     SND_PLAYBACK_LATENCY,
 };
 
-enum RecordCommand {
-    SND_RECORD_MIGRATE,
-    SND_RECORD_CTRL,
-    SND_RECORD_VOLUME,
-};
+#define SND_MIGRATE_MASK (1 << SND_MIGRATE)
+#define SND_CTRL_MASK (1 << SND_CTRL)
+#define SND_VOLUME_MASK (1 << SND_VOLUME)
 
-#define SND_PLAYBACK_MIGRATE_MASK (1 << SND_PLAYBACK_MIGRATE)
 #define SND_PLAYBACK_MODE_MASK (1 << SND_PLAYBACK_MODE)
-#define SND_PLAYBACK_CTRL_MASK (1 << SND_PLAYBACK_CTRL)
 #define SND_PLAYBACK_PCM_MASK (1 << SND_PLAYBACK_PCM)
-#define SND_PLAYBACK_VOLUME_MASK (1 << SND_PLAYBACK_VOLUME)
 #define SND_PLAYBACK_LATENCY_MASK ( 1 << SND_PLAYBACK_LATENCY)
-
-#define SND_RECORD_MIGRATE_MASK (1 << SND_RECORD_MIGRATE)
-#define SND_RECORD_CTRL_MASK (1 << SND_RECORD_CTRL)
-#define SND_RECORD_VOLUME_MASK (1 << SND_RECORD_VOLUME)
 
 typedef struct SndChannel SndChannel;
 typedef void (*snd_channel_send_messages_proc)(void *in_channel);
@@ -818,24 +813,24 @@ static void snd_playback_send(void* data)
                 return;
             }
         }
-        if (channel->command & SND_PLAYBACK_CTRL_MASK) {
+        if (channel->command & SND_CTRL_MASK) {
             if (!snd_playback_send_ctl(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_PLAYBACK_CTRL_MASK;
+            channel->command &= ~SND_CTRL_MASK;
         }
-        if (channel->command & SND_PLAYBACK_VOLUME_MASK) {
+        if (channel->command & SND_VOLUME_MASK) {
             if (!snd_playback_send_volume(playback_channel) ||
                 !snd_playback_send_mute(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_PLAYBACK_VOLUME_MASK;
+            channel->command &= ~SND_VOLUME_MASK;
         }
-        if (channel->command & SND_PLAYBACK_MIGRATE_MASK) {
+        if (channel->command & SND_MIGRATE_MASK) {
             if (!snd_playback_send_migrate(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_PLAYBACK_MIGRATE_MASK;
+            channel->command &= ~SND_MIGRATE_MASK;
         }
         if (channel->command & SND_PLAYBACK_LATENCY_MASK) {
             if (!snd_playback_send_latency(playback_channel)) {
@@ -856,24 +851,24 @@ static void snd_record_send(void* data)
     }
 
     while (channel->command) {
-        if (channel->command & SND_RECORD_CTRL_MASK) {
+        if (channel->command & SND_CTRL_MASK) {
             if (!snd_record_send_ctl(record_channel)) {
                 return;
             }
-            channel->command &= ~SND_RECORD_CTRL_MASK;
+            channel->command &= ~SND_CTRL_MASK;
         }
-        if (channel->command & SND_RECORD_VOLUME_MASK) {
+        if (channel->command & SND_VOLUME_MASK) {
             if (!snd_record_send_volume(record_channel) ||
                 !snd_record_send_mute(record_channel)) {
                 return;
             }
-            channel->command &= ~SND_RECORD_VOLUME_MASK;
+            channel->command &= ~SND_VOLUME_MASK;
         }
-        if (channel->command & SND_RECORD_MIGRATE_MASK) {
+        if (channel->command & SND_MIGRATE_MASK) {
             if (!snd_record_send_migrate(record_channel)) {
                 return;
             }
-            channel->command &= ~SND_RECORD_MIGRATE_MASK;
+            channel->command &= ~SND_MIGRATE_MASK;
         }
     }
 }
@@ -1042,10 +1037,10 @@ static void snd_playback_start(SpicePlaybackState *st)
     reds_disable_mm_time(snd_channel_get_server(channel));
     channel->active = TRUE;
     if (!channel->client_active) {
-        snd_set_command(channel, SND_PLAYBACK_CTRL_MASK);
+        snd_set_command(channel, SND_CTRL_MASK);
         snd_playback_send(channel);
     } else {
-        channel->command &= ~SND_PLAYBACK_CTRL_MASK;
+        channel->command &= ~SND_CTRL_MASK;
     }
 }
 
@@ -1066,10 +1061,10 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
     reds_enable_mm_time(snd_channel_get_server(channel));
     playback_channel->base.active = FALSE;
     if (playback_channel->base.client_active) {
-        snd_set_command(&playback_channel->base, SND_PLAYBACK_CTRL_MASK);
+        snd_set_command(&playback_channel->base, SND_CTRL_MASK);
         snd_playback_send(&playback_channel->base);
     } else {
-        playback_channel->base.command &= ~SND_PLAYBACK_CTRL_MASK;
+        playback_channel->base.command &= ~SND_CTRL_MASK;
         playback_channel->base.command &= ~SND_PLAYBACK_PCM_MASK;
 
         if (playback_channel->pending_frame) {
@@ -1173,10 +1168,10 @@ static void on_new_playback_channel(SndWorker *worker, SndChannel *snd_channel)
     worker->connection = snd_channel;
     snd_set_command(snd_channel, SND_PLAYBACK_MODE_MASK);
     if (snd_channel->active) {
-        snd_set_command(snd_channel, SND_PLAYBACK_CTRL_MASK);
+        snd_set_command(snd_channel, SND_CTRL_MASK);
     }
     if (worker->volume.volume_nchannels) {
-        snd_set_command(snd_channel, SND_PLAYBACK_VOLUME_MASK);
+        snd_set_command(snd_channel, SND_VOLUME_MASK);
     }
     if (snd_channel->active) {
         reds_disable_mm_time(reds);
@@ -1262,7 +1257,7 @@ static void snd_record_migrate_channel_client(RedChannelClient *rcc)
 
     if (worker->connection) {
         spice_assert(worker->connection->channel_client == rcc);
-        snd_set_command(worker->connection, SND_RECORD_MIGRATE_MASK);
+        snd_set_command(worker->connection, SND_MIGRATE_MASK);
         snd_record_send(worker->connection);
     }
 }
@@ -1312,10 +1307,10 @@ static void snd_record_start(SpiceRecordState *st)
                                                                 //stream generation
     channel->active = TRUE;
     if (!channel->client_active) {
-        snd_set_command(channel, SND_RECORD_CTRL_MASK);
+        snd_set_command(channel, SND_CTRL_MASK);
         snd_record_send(channel);
     } else {
-        channel->command &= ~SND_RECORD_CTRL_MASK;
+        channel->command &= ~SND_CTRL_MASK;
     }
 }
 
@@ -1335,10 +1330,10 @@ SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
     spice_assert(record_channel->base.active);
     record_channel->base.active = FALSE;
     if (record_channel->base.client_active) {
-        snd_set_command(&record_channel->base, SND_RECORD_CTRL_MASK);
+        snd_set_command(&record_channel->base, SND_CTRL_MASK);
         snd_record_send(&record_channel->base);
     } else {
-        record_channel->base.command &= ~SND_RECORD_CTRL_MASK;
+        record_channel->base.command &= ~SND_CTRL_MASK;
     }
 }
 
@@ -1428,10 +1423,10 @@ static void on_new_record_channel(SndWorker *worker, SndChannel *snd_channel)
 
     worker->connection = snd_channel ;
     if (worker->volume.volume_nchannels) {
-        snd_set_command(snd_channel, SND_RECORD_VOLUME_MASK);
+        snd_set_command(snd_channel, SND_VOLUME_MASK);
     }
     if (snd_channel->active) {
-        snd_set_command(snd_channel, SND_RECORD_CTRL_MASK);
+        snd_set_command(snd_channel, SND_CTRL_MASK);
     }
 }
 
@@ -1487,7 +1482,7 @@ static void snd_playback_migrate_channel_client(RedChannelClient *rcc)
 
     if (worker->connection) {
         spice_assert(worker->connection->channel_client == rcc);
-        snd_set_command(worker->connection, SND_PLAYBACK_MIGRATE_MASK);
+        snd_set_command(worker->connection, SND_MIGRATE_MASK);
         snd_playback_send(worker->connection);
     }
 }
