@@ -148,8 +148,8 @@ struct PlaybackChannel {
 };
 
 typedef struct SpiceVolumeState {
-    uint8_t volume_nchannels;
     uint16_t *volume;
+    uint8_t volume_nchannels;
     int mute;
 } SpiceVolumeState;
 
