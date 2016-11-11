@@ -1582,11 +1582,12 @@ static void snd_detach_common(SndWorker *worker)
     snd_disconnect_channel(worker->connection);
     reds_unregister_channel(reds, worker->base_channel);
     red_channel_destroy(worker->base_channel);
+    free(worker->volume.volume);
+    worker->volume.volume = NULL;
 }
 
 static void spice_playback_state_free(SpicePlaybackState *st)
 {
-    free(st->worker.volume.volume);
     free(st);
 }
 
@@ -1598,7 +1599,6 @@ void snd_detach_playback(SpicePlaybackInstance *sin)
 
 static void spice_record_state_free(SpiceRecordState *st)
 {
-    free(st->worker.volume.volume);
     free(st);
 }
 
