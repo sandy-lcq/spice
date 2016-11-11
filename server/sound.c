@@ -147,6 +147,12 @@ struct PlaybackChannel {
     uint8_t  encode_buf[SND_CODEC_MAX_COMPRESSED_BYTES];
 };
 
+typedef struct SpiceVolumeState {
+    uint8_t volume_nchannels;
+    uint16_t *volume;
+    int mute;
+} SpiceVolumeState;
+
 /* Base class for SpicePlaybackState and SpiceRecordState */
 struct SndWorker {
     RedChannel *base_channel;
@@ -154,25 +160,18 @@ struct SndWorker {
     SndWorker *next; /* For the global SndWorker list */
 
     int active;
+    SpiceVolumeState volume;
 };
-
-typedef struct SpiceVolumeState {
-    uint8_t volume_nchannels;
-    uint16_t *volume;
-    int mute;
-} SpiceVolumeState;
 
 struct SpicePlaybackState {
     struct SndWorker worker;
     SpicePlaybackInstance *sin;
-    SpiceVolumeState volume;
     uint32_t frequency;
 };
 
 struct SpiceRecordState {
     struct SndWorker worker;
     SpiceRecordInstance *sin;
-    SpiceVolumeState volume;
     uint32_t frequency;
 };
 
@@ -606,7 +605,7 @@ static int snd_playback_send_volume(PlaybackChannel *playback_channel)
         return TRUE;
     }
 
-    return snd_send_volume(channel, &st->volume, SPICE_MSG_PLAYBACK_VOLUME);
+    return snd_send_volume(channel, &st->worker.volume, SPICE_MSG_PLAYBACK_VOLUME);
 }
 
 static int snd_send_mute(SndChannel *channel, SpiceVolumeState *st, int msg)
@@ -632,7 +631,7 @@ static int snd_playback_send_mute(PlaybackChannel *playback_channel)
         return TRUE;
     }
 
-    return snd_send_mute(channel, &st->volume, SPICE_MSG_PLAYBACK_MUTE);
+    return snd_send_mute(channel, &st->worker.volume, SPICE_MSG_PLAYBACK_MUTE);
 }
 
 static int snd_playback_send_latency(PlaybackChannel *playback_channel)
@@ -742,7 +741,7 @@ static int snd_record_send_volume(RecordChannel *record_channel)
         return TRUE;
     }
 
-    return snd_send_volume(channel, &st->volume, SPICE_MSG_RECORD_VOLUME);
+    return snd_send_volume(channel, &st->worker.volume, SPICE_MSG_RECORD_VOLUME);
 }
 
 static int snd_record_send_mute(RecordChannel *record_channel)
@@ -755,7 +754,7 @@ static int snd_record_send_mute(RecordChannel *record_channel)
         return TRUE;
     }
 
-    return snd_send_mute(channel, &st->volume, SPICE_MSG_RECORD_MUTE);
+    return snd_send_mute(channel, &st->worker.volume, SPICE_MSG_RECORD_MUTE);
 }
 
 static int snd_record_send_migrate(RecordChannel *record_channel)
@@ -1028,7 +1027,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *
                                                   uint8_t nchannels,
                                                   uint16_t *volume)
 {
-    SpiceVolumeState *st = &sin->st->volume;
+    SpiceVolumeState *st = &sin->st->worker.volume;
     SndChannel *channel = sin->st->worker.connection;
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
 
@@ -1044,7 +1043,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *
 
 SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *sin, uint8_t mute)
 {
-    SpiceVolumeState *st = &sin->st->volume;
+    SpiceVolumeState *st = &sin->st->worker.volume;
     SndChannel *channel = sin->st->worker.connection;
     PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
 
@@ -1198,7 +1197,7 @@ static void on_new_playback_channel(SndWorker *worker)
     if (playback_channel->base.active) {
         snd_set_command((SndChannel *)playback_channel, SND_PLAYBACK_CTRL_MASK);
     }
-    if (st->volume.volume_nchannels) {
+    if (st->worker.volume.volume_nchannels) {
         snd_set_command((SndChannel *)playback_channel, SND_PLAYBACK_VOLUME_MASK);
     }
     if (playback_channel->base.active) {
@@ -1294,7 +1293,7 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
                                                 uint8_t nchannels,
                                                 uint16_t *volume)
 {
-    SpiceVolumeState *st = &sin->st->volume;
+    SpiceVolumeState *st = &sin->st->worker.volume;
     SndChannel *channel = sin->st->worker.connection;
     RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
 
@@ -1310,7 +1309,7 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
 
 SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, uint8_t mute)
 {
-    SpiceVolumeState *st = &sin->st->volume;
+    SpiceVolumeState *st = &sin->st->worker.volume;
     SndChannel *channel = sin->st->worker.connection;
     RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
 
@@ -1453,7 +1452,7 @@ static void on_new_record_channel(SndWorker *worker)
 
     spice_assert(record_channel);
 
-    if (st->volume.volume_nchannels) {
+    if (st->worker.volume.volume_nchannels) {
         snd_set_command((SndChannel *)record_channel, SND_RECORD_VOLUME_MASK);
     }
     if (record_channel->base.active) {
@@ -1612,7 +1611,7 @@ static void snd_detach_common(SndWorker *worker)
 
 static void spice_playback_state_free(SpicePlaybackState *st)
 {
-    free(st->volume.volume);
+    free(st->worker.volume.volume);
     free(st);
 }
 
@@ -1624,7 +1623,7 @@ void snd_detach_playback(SpicePlaybackInstance *sin)
 
 static void spice_record_state_free(SpiceRecordState *st)
 {
-    free(st->volume.volume);
+    free(st->worker.volume.volume);
     free(st);
 }
 
