@@ -161,18 +161,17 @@ struct SndWorker {
 
     int active;
     SpiceVolumeState volume;
+    uint32_t frequency;
 };
 
 struct SpicePlaybackState {
     struct SndWorker worker;
     SpicePlaybackInstance *sin;
-    uint32_t frequency;
 };
 
 struct SpiceRecordState {
     struct SndWorker worker;
     SpiceRecordInstance *sin;
-    uint32_t frequency;
 };
 
 typedef struct RecordChannel {
@@ -394,11 +393,12 @@ static int snd_record_handle_message(SndChannel *channel, size_t size, uint32_t 
         return snd_record_handle_write((RecordChannel *)channel, size, message);
     case SPICE_MSGC_RECORD_MODE: {
         SpiceMsgcRecordMode *mode = (SpiceMsgcRecordMode *)message;
-        SpiceRecordState *st = SPICE_CONTAINEROF(channel->worker, SpiceRecordState, worker);
+        SndWorker *worker = channel->worker;
         record_channel->mode_time = mode->time;
         if (mode->mode != SPICE_AUDIO_DATA_MODE_RAW) {
-            if (snd_codec_is_capable(mode->mode, st->frequency)) {
-                if (snd_codec_create(&record_channel->codec, mode->mode, st->frequency, SND_CODEC_DECODE) == SND_CODEC_OK) {
+            if (snd_codec_is_capable(mode->mode, worker->frequency)) {
+                if (snd_codec_create(&record_channel->codec, mode->mode, worker->frequency,
+                                     SND_CODEC_DECODE) == SND_CODEC_OK) {
                     record_channel->mode = mode->mode;
                 } else {
                     spice_printerr("create decoder failed");
@@ -647,7 +647,6 @@ static int snd_playback_send_latency(PlaybackChannel *playback_channel)
 static int snd_playback_send_start(PlaybackChannel *playback_channel)
 {
     SndChannel *channel = (SndChannel *)playback_channel;
-    SpicePlaybackState *st = SPICE_CONTAINEROF(channel->worker, SpicePlaybackState, worker);
     SpiceMsgPlaybackStart start;
 
     if (!snd_reset_send_data(channel, SPICE_MSG_PLAYBACK_START)) {
@@ -655,7 +654,7 @@ static int snd_playback_send_start(PlaybackChannel *playback_channel)
     }
 
     start.channels = SPICE_INTERFACE_PLAYBACK_CHAN;
-    start.frequency = st->frequency;
+    start.frequency = channel->worker->frequency;
     spice_assert(SPICE_INTERFACE_PLAYBACK_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
     start.time = reds_get_mm_time();
@@ -689,7 +688,6 @@ static int snd_playback_send_ctl(PlaybackChannel *playback_channel)
 static int snd_record_send_start(RecordChannel *record_channel)
 {
     SndChannel *channel = (SndChannel *)record_channel;
-    SpiceRecordState *st = SPICE_CONTAINEROF(channel->worker, SpiceRecordState, worker);
     SpiceMsgRecordStart start;
 
     if (!snd_reset_send_data(channel, SPICE_MSG_RECORD_START)) {
@@ -697,7 +695,7 @@ static int snd_record_send_start(RecordChannel *record_channel)
     }
 
     start.channels = SPICE_INTERFACE_RECORD_CHAN;
-    start.frequency = st->frequency;
+    start.frequency = channel->worker->frequency;
     spice_assert(SPICE_INTERFACE_RECORD_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
     spice_marshall_msg_record_start(channel->send_data.marshaller, &start);
@@ -1230,11 +1228,12 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
                                           SPICE_PLAYBACK_CAP_OPUS);
     int playback_compression =
         reds_config_get_playback_compression(red_channel_get_server(channel));
-    int desired_mode = snd_desired_audio_mode(playback_compression, st->frequency,
+    int desired_mode = snd_desired_audio_mode(playback_compression, worker->frequency,
                                               client_can_celt, client_can_opus);
     playback_channel->mode = SPICE_AUDIO_DATA_MODE_RAW;
     if (desired_mode != SPICE_AUDIO_DATA_MODE_RAW) {
-        if (snd_codec_create(&playback_channel->codec, desired_mode, st->frequency, SND_CODEC_ENCODE) == SND_CODEC_OK) {
+        if (snd_codec_create(&playback_channel->codec, desired_mode, worker->frequency,
+                             SND_CODEC_ENCODE) == SND_CODEC_OK) {
             playback_channel->mode = desired_mode;
         } else {
             spice_printerr("create encoder failed");
@@ -1392,12 +1391,18 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_get_best_playback_rate(SpicePlaybackIns
     return SND_CODEC_CELT_PLAYBACK_FREQ;
 }
 
+static void snd_set_rate(SndWorker *worker, uint32_t frequency, uint32_t cap_opus)
+{
+    RedChannel *channel = worker->base_channel;
+    worker->frequency = frequency;
+    if (channel && snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, frequency)) {
+        red_channel_set_cap(channel, cap_opus);
+    }
+}
+
 SPICE_GNUC_VISIBLE void spice_server_set_playback_rate(SpicePlaybackInstance *sin, uint32_t frequency)
 {
-    RedChannel *channel = sin->st->worker.base_channel;
-    sin->st->frequency = frequency;
-    if (channel && snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, frequency))
-        red_channel_set_cap(channel, SPICE_PLAYBACK_CAP_OPUS);
+    snd_set_rate(&sin->st->worker, frequency, SPICE_PLAYBACK_CAP_OPUS);
 }
 
 SPICE_GNUC_VISIBLE uint32_t spice_server_get_best_record_rate(SpiceRecordInstance *sin)
@@ -1418,10 +1423,7 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_get_best_record_rate(SpiceRecordInstanc
 
 SPICE_GNUC_VISIBLE void spice_server_set_record_rate(SpiceRecordInstance *sin, uint32_t frequency)
 {
-    RedChannel *channel = sin->st->worker.base_channel;
-    sin->st->frequency = frequency;
-    if (channel && snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, frequency))
-        red_channel_set_cap(channel, SPICE_RECORD_CAP_OPUS);
+    snd_set_rate(&sin->st->worker, frequency, SPICE_RECORD_CAP_OPUS);
 }
 
 static void on_new_record_channel(SndWorker *worker, SndChannel *snd_channel)
@@ -1522,7 +1524,7 @@ void snd_attach_playback(RedsState *reds, SpicePlaybackInstance *sin)
     sin->st = spice_new0(SpicePlaybackState, 1);
     sin->st->sin = sin;
     playback_worker = &sin->st->worker;
-    sin->st->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
+    playback_worker->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
     channel = dummy_channel_new(reds, SPICE_CHANNEL_PLAYBACK, 0);
@@ -1552,7 +1554,7 @@ void snd_attach_record(RedsState *reds, SpiceRecordInstance *sin)
     sin->st = spice_new0(SpiceRecordState, 1);
     sin->st->sin = sin;
     record_worker = &sin->st->worker;
-    sin->st->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
+    record_worker->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
     // TODO: Make RedChannel base of worker? instead of assigning it to channel->data
     channel = dummy_channel_new(reds, SPICE_CHANNEL_RECORD, 0);
@@ -1617,12 +1619,11 @@ void snd_set_playback_compression(int on)
         g_object_get(now->base_channel, "channel-type", &type, NULL);
         if (type == SPICE_CHANNEL_PLAYBACK && now->connection) {
             PlaybackChannel* playback = (PlaybackChannel*)now->connection;
-            SpicePlaybackState *st = SPICE_CONTAINEROF(now, SpicePlaybackState, worker);
             int client_can_celt = red_channel_client_test_remote_cap(playback->base.channel_client,
                                     SPICE_PLAYBACK_CAP_CELT_0_5_1);
             int client_can_opus = red_channel_client_test_remote_cap(playback->base.channel_client,
                                     SPICE_PLAYBACK_CAP_OPUS);
-            int desired_mode = snd_desired_audio_mode(on, st->frequency,
+            int desired_mode = snd_desired_audio_mode(on, now->frequency,
                                                       client_can_opus, client_can_celt);
             if (playback->mode != desired_mode) {
                 playback->mode = desired_mode;
