@@ -83,7 +83,7 @@ int red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t ca
 int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap);
 /* shutdown is the only safe thing to do out of the client/channel
  * thread. It will not touch the rings, just shutdown the socket.
- * It should be followed by some way to gurantee a disconnection. */
+ * It should be followed by some way to guarantee a disconnection. */
 void red_channel_client_shutdown(RedChannelClient *rcc);
 /* handles general channel msgs from the client */
 int red_channel_client_handle_message(RedChannelClient *rcc, uint32_t size,
