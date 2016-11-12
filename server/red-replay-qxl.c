@@ -23,12 +23,13 @@
 #include <inttypes.h>
 #include <zlib.h>
 #include <pthread.h>
+#include <glib.h>
+
 #include "reds.h"
 #include "red-qxl.h"
 #include "red-common.h"
 #include "memslot.h"
 #include "red-parse-qxl.h"
-#include <glib.h>
 
 #define QXLPHYSICAL_FROM_PTR(ptr) ((QXLPHYSICAL)(intptr_t)(ptr))
 #define QXLPHYSICAL_TO_PTR(phy) ((void*)(intptr_t)(phy))

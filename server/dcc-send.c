@@ -19,12 +19,12 @@
 #include <config.h>
 #endif
 
+#include <common/marshaller.h>
+#include <common/generated_server_marshallers.h>
+
 #include "dcc-private.h"
 #include "display-channel-private.h"
 #include "red-channel-client-private.h"
-
-#include <common/marshaller.h>
-#include <common/generated_server_marshallers.h>
 
 typedef enum {
     FILL_BITS_TYPE_INVALID,

@@ -28,6 +28,7 @@
 
 #include <common/marshaller.h>
 #include <common/generated_server_marshallers.h>
+#include <common/snd_codec.h>
 
 #include "spice.h"
 #include "red-common.h"
@@ -41,7 +42,6 @@
 #include "red-channel-client-private.h"
 #include "red-client.h"
 #include "sound.h"
-#include <common/snd_codec.h>
 #include "demarshallers.h"
 #include "main-channel-client.h"
 
