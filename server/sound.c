@@ -166,12 +166,10 @@ struct SndWorker {
 
 struct SpicePlaybackState {
     struct SndWorker worker;
-    SpicePlaybackInstance *sin;
 };
 
 struct SpiceRecordState {
     struct SndWorker worker;
-    SpiceRecordInstance *sin;
 };
 
 typedef struct RecordChannel {
@@ -190,6 +188,8 @@ typedef struct RecordChannel {
 static SndWorker *workers;
 
 static void snd_receive(SndChannel *channel);
+static void snd_playback_start(SpicePlaybackState *st);
+static void snd_record_start(SpiceRecordState *st);
 
 static SndChannel *snd_channel_ref(SndChannel *channel)
 {
@@ -1035,23 +1035,27 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *si
     snd_playback_send_mute(playback_channel);
 }
 
-SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
+static void snd_playback_start(SpicePlaybackState *st)
 {
-    SndChannel *channel = sin->st->worker.connection;
-    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    SndChannel *channel = st->worker.connection;
 
-    sin->st->worker.active = 1;
+    st->worker.active = 1;
     if (!channel)
         return;
-    spice_assert(!playback_channel->base.active);
+    spice_assert(!channel->active);
     reds_disable_mm_time(snd_channel_get_server(channel));
-    playback_channel->base.active = TRUE;
-    if (!playback_channel->base.client_active) {
-        snd_set_command(&playback_channel->base, SND_PLAYBACK_CTRL_MASK);
-        snd_playback_send(&playback_channel->base);
+    channel->active = TRUE;
+    if (!channel->client_active) {
+        snd_set_command(channel, SND_PLAYBACK_CTRL_MASK);
+        snd_playback_send(channel);
     } else {
-        playback_channel->base.command &= ~SND_PLAYBACK_CTRL_MASK;
+        channel->command &= ~SND_PLAYBACK_CTRL_MASK;
     }
+}
+
+SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
+{
+    return snd_playback_start(sin->st);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
@@ -1245,7 +1249,7 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
     }
 
     if (worker->active) {
-        spice_server_playback_start(st->sin);
+        snd_playback_start(st);
     }
     snd_playback_send(worker->connection);
 }
@@ -1299,24 +1303,29 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, u
     snd_record_send_mute(record_channel);
 }
 
-SPICE_GNUC_VISIBLE void spice_server_record_start(SpiceRecordInstance *sin)
+static void snd_record_start(SpiceRecordState *st)
 {
-    SndChannel *channel = sin->st->worker.connection;
+    SndChannel *channel = st->worker.connection;
     RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
 
-    sin->st->worker.active = 1;
+    st->worker.active = 1;
     if (!channel)
         return;
-    spice_assert(!record_channel->base.active);
-    record_channel->base.active = TRUE;
+    spice_assert(!channel->active);
     record_channel->read_pos = record_channel->write_pos = 0;   //todo: improve by
                                                                 //stream generation
-    if (!record_channel->base.client_active) {
-        snd_set_command(&record_channel->base, SND_RECORD_CTRL_MASK);
-        snd_record_send(&record_channel->base);
+    channel->active = TRUE;
+    if (!channel->client_active) {
+        snd_set_command(channel, SND_RECORD_CTRL_MASK);
+        snd_record_send(channel);
     } else {
-        record_channel->base.command &= ~SND_RECORD_CTRL_MASK;
+        channel->command &= ~SND_RECORD_CTRL_MASK;
     }
+}
+
+SPICE_GNUC_VISIBLE void spice_server_record_start(SpiceRecordInstance *sin)
+{
+    snd_record_start(sin->st);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
@@ -1465,7 +1474,7 @@ static void snd_set_record_peer(RedChannel *channel, RedClient *client, RedsStre
 
     on_new_record_channel(worker, &record_channel->base);
     if (worker->active) {
-        spice_server_record_start(st->sin);
+        snd_record_start(st);
     }
     snd_record_send(worker->connection);
 }
@@ -1513,7 +1522,6 @@ void snd_attach_playback(RedsState *reds, SpicePlaybackInstance *sin)
     ClientCbs client_cbs = { NULL, };
 
     sin->st = spice_new0(SpicePlaybackState, 1);
-    sin->st->sin = sin;
     playback_worker = &sin->st->worker;
     playback_worker->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
@@ -1543,7 +1551,6 @@ void snd_attach_record(RedsState *reds, SpiceRecordInstance *sin)
     ClientCbs client_cbs = { NULL, };
 
     sin->st = spice_new0(SpiceRecordState, 1);
-    sin->st->sin = sin;
     record_worker = &sin->st->worker;
     record_worker->frequency = SND_CODEC_CELT_PLAYBACK_FREQ; /* Default to the legacy rate */
 
