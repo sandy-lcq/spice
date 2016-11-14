@@ -21,6 +21,7 @@
 #endif
 
 #include <inttypes.h>
+#include <pthread.h>
 
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
@@ -118,8 +119,8 @@ typedef struct SpiceGstEncoder {
     uint32_t set_pipeline;
 
     /* Output buffer */
-    GMutex outbuf_mutex;
-    GCond outbuf_cond;
+    pthread_mutex_t outbuf_mutex;
+    pthread_cond_t outbuf_cond;
     VideoBuffer *outbuf;
 
     /* The video bit rate. */
@@ -822,10 +823,10 @@ static GstBusSyncReply handle_pipeline_message(GstBus *bus, GstMessage *msg, gpo
         g_clear_error(&err);
 
         /* Unblock the main thread */
-        g_mutex_lock(&encoder->outbuf_mutex);
+        pthread_mutex_lock(&encoder->outbuf_mutex);
         encoder->outbuf = (VideoBuffer*)create_gst_video_buffer();
-        g_cond_signal(&encoder->outbuf_cond);
-        g_mutex_unlock(&encoder->outbuf_mutex);
+        pthread_cond_signal(&encoder->outbuf_cond);
+        pthread_mutex_unlock(&encoder->outbuf_mutex);
     }
     return GST_BUS_PASS;
 }
@@ -855,10 +856,10 @@ static GstFlowReturn new_sample(GstAppSink *gstappsink, gpointer video_encoder)
 #endif
 
     /* Notify the main thread that the output buffer is ready */
-    g_mutex_lock(&encoder->outbuf_mutex);
+    pthread_mutex_lock(&encoder->outbuf_mutex);
     encoder->outbuf = (VideoBuffer*)outbuf;
-    g_cond_signal(&encoder->outbuf_cond);
-    g_mutex_unlock(&encoder->outbuf_mutex);
+    pthread_cond_signal(&encoder->outbuf_cond);
+    pthread_mutex_unlock(&encoder->outbuf_mutex);
 
     return GST_FLOW_OK;
 }
@@ -1409,13 +1410,13 @@ static int push_raw_frame(SpiceGstEncoder *encoder,
 static int pull_compressed_buffer(SpiceGstEncoder *encoder,
                                   VideoBuffer **outbuf)
 {
-    g_mutex_lock(&encoder->outbuf_mutex);
+    pthread_mutex_lock(&encoder->outbuf_mutex);
     while (!encoder->outbuf) {
-        g_cond_wait(&encoder->outbuf_cond, &encoder->outbuf_mutex);
+        pthread_cond_wait(&encoder->outbuf_cond, &encoder->outbuf_mutex);
     }
     *outbuf = encoder->outbuf;
     encoder->outbuf = NULL;
-    g_mutex_unlock(&encoder->outbuf_mutex);
+    pthread_mutex_unlock(&encoder->outbuf_mutex);
 
     if ((*outbuf)->data) {
         return VIDEO_ENCODER_FRAME_ENCODE_DONE;
@@ -1435,8 +1436,8 @@ static void spice_gst_encoder_destroy(VideoEncoder *video_encoder)
     SpiceGstEncoder *encoder = (SpiceGstEncoder*)video_encoder;
 
     free_pipeline(encoder);
-    g_mutex_clear(&encoder->outbuf_mutex);
-    g_cond_clear(&encoder->outbuf_cond);
+    pthread_mutex_destroy(&encoder->outbuf_mutex);
+    pthread_cond_destroy(&encoder->outbuf_cond);
 
     /* Unref any lingering bitmap opaque structures from past frames */
     clear_zero_copy_queue(encoder, TRUE);
@@ -1722,8 +1723,8 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
     encoder->bitmap_ref = bitmap_ref;
     encoder->bitmap_unref = bitmap_unref;
     encoder->format = GSTREAMER_FORMAT_INVALID;
-    g_mutex_init(&encoder->outbuf_mutex);
-    g_cond_init(&encoder->outbuf_cond);
+    pthread_mutex_init(&encoder->outbuf_mutex, NULL);
+    pthread_cond_init(&encoder->outbuf_cond, NULL);
 
     /* All the other fields are initialized to zero by spice_new0(). */
 
