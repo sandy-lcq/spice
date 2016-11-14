@@ -981,7 +981,7 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
         NewCacheItem *tail;
         NewCacheItem **now;
 
-        verify(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
+        SPICE_VERIFY(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
         if (!(tail = (NewCacheItem *)ring_get_tail(&cache->lru)) ||
                                                    tail->sync[dcc->priv->id] == serial) {
             cache->available += size;

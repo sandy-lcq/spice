@@ -240,7 +240,7 @@ void container_cleanup(Container *container)
     while (container && container->items.next == container->items.prev) {
         Container *next = container->base.container;
         if (container->items.next != &container->items) {
-            verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
+            SPICE_VERIFY(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
             TreeItem *item = (TreeItem *)ring_get_head(&container->items);
             spice_assert(item);
             ring_remove(&item->siblings_link);
@@ -256,7 +256,7 @@ void container_cleanup(Container *container)
 Shadow* tree_item_find_shadow(TreeItem *item)
 {
     while (item->type == TREE_ITEM_TYPE_CONTAINER) {
-        verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
+        SPICE_VERIFY(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
         if (!(item = (TreeItem *)ring_get_tail(&CONTAINER(item)->items))) {
             return NULL;
         }

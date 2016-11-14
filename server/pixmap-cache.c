@@ -46,7 +46,7 @@ void pixmap_cache_clear(PixmapCache *cache)
         cache->frozen = FALSE;
     }
 
-    verify(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
+    SPICE_VERIFY(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
     while ((item = (NewCacheItem *)ring_get_head(&cache->lru))) {
         ring_remove(&item->lru_link);
         free(item);

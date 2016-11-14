@@ -640,7 +640,7 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
                 ring_item = now->siblings_link.prev;
                 current_remove(display, now);
                 if (last && *last == now) {
-                    verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
+                    SPICE_VERIFY(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
                     *last = (TreeItem *)ring_next(ring, ring_item);
                 }
             } else if (now->type == TREE_ITEM_TYPE_CONTAINER) {
@@ -659,7 +659,7 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
             }
         }
 
-        verify(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
+        SPICE_VERIFY(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
         while ((last && *last == (TreeItem *)ring_item) ||
                !(ring_item = ring_next(ring, ring_item))) {
             if (ring == top_ring) {
