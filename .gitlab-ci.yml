@@ -16,3 +16,8 @@ statistics:
   - CFLAGS="$CFLAGS -DRED_STATISTICS " ./autogen.sh
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
+
+syntax-check:
+  script:
+  - ./autogen.sh
+  - make syntax-check
