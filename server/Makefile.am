@@ -204,10 +204,10 @@ libspice_server_la_LIBADD = libserver.la
 libspice_server_la_SOURCES =
 
 spice-server-enums.c: spice-server.h spice-server-enums.tmpl.c
-	$(AM_V_GEN)glib-mkenums --template spice-server-enums.tmpl.c $< > $@
+	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.tmpl.c $< > $@
 
 spice-server-enums.h: spice-server.h spice-server-enums.tmpl.h
-	$(AM_V_GEN)glib-mkenums --template spice-server-enums.tmpl.h $< > $@
+	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.tmpl.h $< > $@
 
 EXTRA_DIST =					\
 	spice-bitmap-utils.tmpl.c			\
