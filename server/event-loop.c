@@ -56,7 +56,8 @@ static gboolean timer_func(gpointer user_data)
     return FALSE;
 }
 
-static void timer_cancel(SpiceTimer *timer)
+static void timer_cancel(const SpiceCoreInterfaceInternal *iface,
+                         SpiceTimer *timer)
 {
     if (timer->source) {
         g_source_destroy(timer->source);
@@ -65,9 +66,10 @@ static void timer_cancel(SpiceTimer *timer)
     }
 }
 
-static void timer_start(SpiceTimer *timer, uint32_t ms)
+static void timer_start(const SpiceCoreInterfaceInternal *iface,
+                        SpiceTimer *timer, uint32_t ms)
 {
-    timer_cancel(timer);
+    timer_cancel(iface, timer);
 
     timer->source = g_timeout_source_new(ms);
     spice_assert(timer->source != NULL);
@@ -77,9 +79,10 @@ static void timer_start(SpiceTimer *timer, uint32_t ms)
     g_source_attach(timer->source, timer->context);
 }
 
-static void timer_remove(SpiceTimer *timer)
+static void timer_remove(const SpiceCoreInterfaceInternal *iface,
+                         SpiceTimer *timer)
 {
-    timer_cancel(timer);
+    timer_cancel(iface, timer);
     spice_assert(timer->source == NULL);
     free(timer);
 }
@@ -127,7 +130,8 @@ static gboolean watch_func(GIOChannel *source, GIOCondition condition,
     return TRUE;
 }
 
-static void watch_update_mask(SpiceWatch *watch, int event_mask)
+static void watch_update_mask(const SpiceCoreInterfaceInternal *iface,
+                              SpiceWatch *watch, int event_mask)
 {
     if (watch->source) {
         g_source_destroy(watch->source);
@@ -157,14 +161,15 @@ static SpiceWatch *watch_add(const SpiceCoreInterfaceInternal *iface,
     watch->func = func;
     watch->opaque = opaque;
 
-    watch_update_mask(watch, event_mask);
+    watch_update_mask(iface, watch, event_mask);
 
     return watch;
 }
 
-static void watch_remove(SpiceWatch *watch)
+static void watch_remove(const SpiceCoreInterfaceInternal *iface,
+                         SpiceWatch *watch)
 {
-    watch_update_mask(watch, 0);
+    watch_update_mask(iface, watch, 0);
     spice_assert(watch->source == NULL);
 
     g_io_channel_unref(watch->channel);

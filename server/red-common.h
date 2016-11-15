@@ -45,17 +45,30 @@ typedef struct SpiceCoreInterfaceInternal SpiceCoreInterfaceInternal;
 
 struct SpiceCoreInterfaceInternal {
     SpiceTimer *(*timer_add)(const SpiceCoreInterfaceInternal *iface, SpiceTimerFunc func, void *opaque);
-    void (*timer_start)(SpiceTimer *timer, uint32_t ms);
-    void (*timer_cancel)(SpiceTimer *timer);
-    void (*timer_remove)(SpiceTimer *timer);
+    void (*timer_start)(const SpiceCoreInterfaceInternal *iface, SpiceTimer *timer, uint32_t ms);
+    void (*timer_cancel)(const SpiceCoreInterfaceInternal *iface, SpiceTimer *timer);
+    void (*timer_remove)(const SpiceCoreInterfaceInternal *iface, SpiceTimer *timer);
 
     SpiceWatch *(*watch_add)(const SpiceCoreInterfaceInternal *iface, int fd, int event_mask, SpiceWatchFunc func, void *opaque);
-    void (*watch_update_mask)(SpiceWatch *watch, int event_mask);
-    void (*watch_remove)(SpiceWatch *watch);
+    void (*watch_update_mask)(const SpiceCoreInterfaceInternal *iface, SpiceWatch *watch, int event_mask);
+    void (*watch_remove)(const SpiceCoreInterfaceInternal *iface, SpiceWatch *watch);
 
-    void (*channel_event)(int event, SpiceChannelEventInfo *info);
+    void (*channel_event)(const SpiceCoreInterfaceInternal *iface, int event, SpiceChannelEventInfo *info);
 
-    GMainContext *main_context;
+    /* This structure is an adapter that allows us to use the same API to
+     * implement the core interface in a couple different ways. The first
+     * method is to use a public SpiceCoreInterface provided to us by the
+     * library user (for example, qemu). The second method is to implement the
+     * core interface functions using the glib event loop. In order to avoid
+     * global variables, each method needs to store additional data in this
+     * adapter structure. Instead of using a generic void* data parameter, we
+     * provide a bit more type-safety by using a union to store the type of
+     * data needed by each implementation.
+     */
+    union {
+        GMainContext *main_context;
+        SpiceCoreInterface *public_interface;
+    };
 };
 
 extern const SpiceCoreInterfaceInternal event_loop_core;

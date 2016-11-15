@@ -73,9 +73,34 @@ static SpiceTimer* base_timer_add(SpiceTimerFunc func, void *opaque)
     return base_core_interface.timer_add(&base_core_interface, func, opaque);
 }
 
+static void base_timer_start(SpiceTimer *timer, uint32_t ms)
+{
+    base_core_interface.timer_start(&base_core_interface, timer, ms);
+}
+
+static void base_timer_cancel(SpiceTimer *timer)
+{
+    base_core_interface.timer_cancel(&base_core_interface, timer);
+}
+
+static void base_timer_remove(SpiceTimer *timer)
+{
+    base_core_interface.timer_remove(&base_core_interface, timer);
+}
+
 static SpiceWatch *base_watch_add(int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
     return base_core_interface.watch_add(&base_core_interface, fd, event_mask, func, opaque);
+}
+
+static void base_watch_update_mask(SpiceWatch *watch, int event_mask)
+{
+    base_core_interface.watch_update_mask(&base_core_interface, watch, event_mask);
+}
+
+static void base_watch_remove(SpiceWatch *watch)
+{
+    base_core_interface.watch_remove(&base_core_interface, watch);
 }
 
 static SpiceCoreInterface core = {
@@ -84,7 +109,13 @@ static SpiceCoreInterface core = {
         .minor_version = SPICE_INTERFACE_CORE_MINOR,
     },
     .timer_add = base_timer_add,
+    .timer_start = base_timer_start,
+    .timer_cancel = base_timer_cancel,
+    .timer_remove = base_timer_remove,
     .watch_add = base_watch_add,
+    .watch_update_mask = base_watch_update_mask,
+    .watch_remove = base_watch_remove,
+    .channel_event = event_loop_channel_event,
 };
 
 SpiceCoreInterface *basic_event_loop_init(void)
@@ -93,12 +124,6 @@ SpiceCoreInterface *basic_event_loop_init(void)
     spice_assert(main_context == NULL);
     main_context = g_main_context_new();
     base_core_interface = event_loop_core;
-    core.timer_start = base_core_interface.timer_start;
-    core.timer_cancel = base_core_interface.timer_cancel;
-    core.timer_remove = base_core_interface.timer_remove;
-    core.watch_update_mask = base_core_interface.watch_update_mask;
-    core.watch_remove = base_core_interface.watch_remove;
-    base_core_interface.channel_event = core.channel_event = event_loop_channel_event;
     base_core_interface.main_context = main_context;
 
     return &core;

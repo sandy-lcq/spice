@@ -61,7 +61,8 @@ dummy_channel_init(DummyChannel *self)
 }
 
 // TODO: red_worker can use this one
-static void dummy_watch_update_mask(SpiceWatch *watch, int event_mask)
+static void dummy_watch_update_mask(const SpiceCoreInterfaceInternal *iface,
+                                    SpiceWatch *watch, int event_mask)
 {
 }
 
@@ -71,7 +72,7 @@ static SpiceWatch *dummy_watch_add(const SpiceCoreInterfaceInternal *iface,
     return NULL; // apparently allowed?
 }
 
-static void dummy_watch_remove(SpiceWatch *watch)
+static void dummy_watch_remove(const SpiceCoreInterfaceInternal *iface, SpiceWatch *watch)
 {
 }
 

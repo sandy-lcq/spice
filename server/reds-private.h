@@ -140,7 +140,7 @@ struct RedsState {
     SpiceCharDeviceInstance *vdagent;
     SpiceMigrateInstance *migration_interface;
 
-    SpiceCoreInterfaceInternal *core;
+    SpiceCoreInterfaceInternal core;
     GList *qxl_instances;
     MainDispatcher *main_dispatcher;
 };

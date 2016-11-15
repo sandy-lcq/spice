@@ -104,7 +104,7 @@ static void red_channel_client_start_ping_timer(RedChannelClient *rcc, uint32_t 
     rcc->priv->latency_monitor.state = PING_STATE_TIMER;
 
     core = red_channel_get_core_interface(rcc->priv->channel);
-    core->timer_start(rcc->priv->latency_monitor.timer, timeout);
+    core->timer_start(core, rcc->priv->latency_monitor.timer, timeout);
 }
 
 static void red_channel_client_cancel_ping_timer(RedChannelClient *rcc)
@@ -119,7 +119,7 @@ static void red_channel_client_cancel_ping_timer(RedChannelClient *rcc)
     }
 
     core = red_channel_get_core_interface(rcc->priv->channel);
-    core->timer_cancel(rcc->priv->latency_monitor.timer);
+    core->timer_cancel(core, rcc->priv->latency_monitor.timer);
     rcc->priv->latency_monitor.state = PING_STATE_NONE;
 }
 
@@ -413,7 +413,7 @@ void red_channel_client_on_out_block(void *opaque)
 
     rcc->priv->send_data.blocked = TRUE;
     core = red_channel_get_core_interface(rcc->priv->channel);
-    core->watch_update_mask(rcc->priv->stream->watch,
+    core->watch_update_mask(core, rcc->priv->stream->watch,
                             SPICE_WATCH_EVENT_READ |
                             SPICE_WATCH_EVENT_WRITE);
 }
@@ -579,7 +579,7 @@ void red_channel_client_on_out_msg_done(void *opaque)
     if (rcc->priv->send_data.blocked) {
         SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
         rcc->priv->send_data.blocked = FALSE;
-        core->watch_update_mask(rcc->priv->stream->watch,
+        core->watch_update_mask(core, rcc->priv->stream->watch,
                                 SPICE_WATCH_EVENT_READ);
     }
 
@@ -723,8 +723,8 @@ static void red_channel_client_connectivity_timer(void *opaque)
         } else {
              monitor->state = CONNECTIVITY_STATE_CONNECTED;
         }
-        core->timer_start(rcc->priv->connectivity_monitor.timer,
-                                              rcc->priv->connectivity_monitor.timeout);
+        core->timer_start(core, rcc->priv->connectivity_monitor.timer,
+                          rcc->priv->connectivity_monitor.timeout);
     } else {
         uint32_t type, id;
         g_object_get(rcc->priv->channel,
@@ -766,7 +766,7 @@ void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uin
             core, red_channel_client_connectivity_timer, rcc);
         rcc->priv->connectivity_monitor.timeout = timeout_ms;
         if (!red_client_during_migrate_at_target(rcc->priv->client)) {
-            core->timer_start(rcc->priv->connectivity_monitor.timer,
+            core->timer_start(core, rcc->priv->connectivity_monitor.timer,
                               rcc->priv->connectivity_monitor.timeout);
         }
     }
@@ -957,7 +957,7 @@ static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
         }
         if (rcc->priv->connectivity_monitor.timer) {
             SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
-            core->timer_start(rcc->priv->connectivity_monitor.timer,
+            core->timer_start(core, rcc->priv->connectivity_monitor.timer,
                               rcc->priv->connectivity_monitor.timeout);
         }
     }
@@ -980,11 +980,11 @@ void red_channel_client_default_migrate(RedChannelClient *rcc)
     SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
     if (rcc->priv->latency_monitor.timer) {
         red_channel_client_cancel_ping_timer(rcc);
-        core->timer_remove(rcc->priv->latency_monitor.timer);
+        core->timer_remove(core, rcc->priv->latency_monitor.timer);
         rcc->priv->latency_monitor.timer = NULL;
     }
     if (rcc->priv->connectivity_monitor.timer) {
-        core->timer_remove(rcc->priv->connectivity_monitor.timer);
+        core->timer_remove(core, rcc->priv->connectivity_monitor.timer);
         rcc->priv->connectivity_monitor.timer = NULL;
     }
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MIGRATE);
@@ -1002,7 +1002,7 @@ void red_channel_client_shutdown(RedChannelClient *rcc)
 {
     if (rcc->priv->stream && !rcc->priv->stream->shutdown) {
         SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
-        core->watch_remove(rcc->priv->stream->watch);
+        core->watch_remove(core, rcc->priv->stream->watch);
         rcc->priv->stream->watch = NULL;
         shutdown(rcc->priv->stream->socket, SHUT_RDWR);
         rcc->priv->stream->shutdown = TRUE;
@@ -1235,7 +1235,7 @@ void red_channel_client_push(RedChannelClient *rcc)
         && rcc->priv->stream->watch) {
         SpiceCoreInterfaceInternal *core;
         core = red_channel_get_core_interface(rcc->priv->channel);
-        core->watch_update_mask(rcc->priv->stream->watch,
+        core->watch_update_mask(core, rcc->priv->stream->watch,
                                 SPICE_WATCH_EVENT_READ);
     }
     rcc->priv->during_send = FALSE;
@@ -1463,7 +1463,7 @@ static inline gboolean prepare_pipe_add(RedChannelClient *rcc, RedPipeItem *item
     if (g_queue_is_empty(&rcc->priv->pipe) && rcc->priv->stream->watch) {
         SpiceCoreInterfaceInternal *core;
         core = red_channel_get_core_interface(rcc->priv->channel);
-        core->watch_update_mask(rcc->priv->stream->watch,
+        core->watch_update_mask(core, rcc->priv->stream->watch,
                                 SPICE_WATCH_EVENT_READ | SPICE_WATCH_EVENT_WRITE);
     }
     return TRUE;
@@ -1638,15 +1638,15 @@ static void red_channel_client_default_disconnect(RedChannelClient *rcc)
                    type, id);
     red_channel_client_pipe_clear(rcc);
     if (rcc->priv->stream->watch) {
-        core->watch_remove(rcc->priv->stream->watch);
+        core->watch_remove(core, rcc->priv->stream->watch);
         rcc->priv->stream->watch = NULL;
     }
     if (rcc->priv->latency_monitor.timer) {
-        core->timer_remove(rcc->priv->latency_monitor.timer);
+        core->timer_remove(core, rcc->priv->latency_monitor.timer);
         rcc->priv->latency_monitor.timer = NULL;
     }
     if (rcc->priv->connectivity_monitor.timer) {
-        core->timer_remove(rcc->priv->connectivity_monitor.timer);
+        core->timer_remove(core, rcc->priv->connectivity_monitor.timer);
         rcc->priv->connectivity_monitor.timer = NULL;
     }
     red_channel_remove_client(channel, rcc);

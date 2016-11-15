@@ -79,52 +79,49 @@
 static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
 static gboolean reds_use_client_monitors_config(RedsState *reds);
 
-static SpiceCoreInterface *core_public = NULL;
-
 static SpiceTimer *adapter_timer_add(const SpiceCoreInterfaceInternal *iface, SpiceTimerFunc func, void *opaque)
 {
-    return core_public->timer_add(func, opaque);
+    return iface->public_interface->timer_add(func, opaque);
 }
 
-static void adapter_timer_start(SpiceTimer *timer, uint32_t ms)
+static void adapter_timer_start(const SpiceCoreInterfaceInternal *iface, SpiceTimer *timer, uint32_t ms)
 {
-    core_public->timer_start(timer, ms);
+    iface->public_interface->timer_start(timer, ms);
 }
 
-static void adapter_timer_cancel(SpiceTimer *timer)
+static void adapter_timer_cancel(const SpiceCoreInterfaceInternal *iface, SpiceTimer *timer)
 {
-    core_public->timer_cancel(timer);
+    iface->public_interface->timer_cancel(timer);
 }
 
-static void adapter_timer_remove(SpiceTimer *timer)
+static void adapter_timer_remove(const SpiceCoreInterfaceInternal *iface, SpiceTimer *timer)
 {
-    core_public->timer_remove(timer);
+    iface->public_interface->timer_remove(timer);
 }
 
 static SpiceWatch *adapter_watch_add(const SpiceCoreInterfaceInternal *iface,
                                      int fd, int event_mask, SpiceWatchFunc func, void *opaque)
 {
-    return core_public->watch_add(fd, event_mask, func, opaque);
+    return iface->public_interface->watch_add(fd, event_mask, func, opaque);
 }
 
-static void adapter_watch_update_mask(SpiceWatch *watch, int event_mask)
+static void adapter_watch_update_mask(const SpiceCoreInterfaceInternal *iface, SpiceWatch *watch, int event_mask)
 {
-    core_public->watch_update_mask(watch, event_mask);
+    iface->public_interface->watch_update_mask(watch, event_mask);
 }
 
-static void adapter_watch_remove(SpiceWatch *watch)
+static void adapter_watch_remove(const SpiceCoreInterfaceInternal *iface, SpiceWatch *watch)
 {
-    core_public->watch_remove(watch);
+    iface->public_interface->watch_remove(watch);
 }
 
-static void adapter_channel_event(int event, SpiceChannelEventInfo *info)
+static void adapter_channel_event(const SpiceCoreInterfaceInternal *iface, int event, SpiceChannelEventInfo *info)
 {
-    if (core_public->base.minor_version >= 3 && core_public->channel_event != NULL)
-        core_public->channel_event(event, info);
+    if (iface->public_interface->base.minor_version >= 3 && iface->public_interface->channel_event != NULL)
+        iface->public_interface->channel_event(event, info);
 }
 
-
-static SpiceCoreInterfaceInternal core_interface_adapter = {
+static const SpiceCoreInterfaceInternal core_interface_adapter = {
     .timer_add = adapter_timer_add,
     .timer_start = adapter_timer_start,
     .timer_cancel = adapter_timer_cancel,
@@ -323,7 +320,7 @@ static ChannelSecurityOptions *reds_find_channel_security(RedsState *reds, int i
 
 void reds_handle_channel_event(RedsState *reds, int event, SpiceChannelEventInfo *info)
 {
-    reds->core->channel_event(event, info);
+    reds->core.channel_event(&reds->core, event, info);
 
     if (event == SPICE_CHANNEL_EVENT_DISCONNECTED) {
         free(info);
@@ -502,7 +499,7 @@ static void reds_mig_cleanup(RedsState *reds)
         reds->mig_inprogress = FALSE;
         reds->mig_wait_connect = FALSE;
         reds->mig_wait_disconnect = FALSE;
-        reds->core->timer_cancel(reds->mig_timer);
+        reds_core_timer_cancel(reds, reds->mig_timer);
         reds_mig_cleanup_wait_disconnect(reds);
     }
 }
@@ -2980,7 +2977,7 @@ static void reds_mig_started(RedsState *reds)
 
     reds->mig_inprogress = TRUE;
     reds->mig_wait_connect = TRUE;
-    reds->core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
+    reds_core_timer_start(reds, reds->mig_timer, MIGRATE_TIMEOUT);
 }
 
 static void reds_mig_fill_wait_disconnect(RedsState *reds)
@@ -2996,7 +2993,7 @@ static void reds_mig_fill_wait_disconnect(RedsState *reds)
     }
     reds->mig_wait_connect = FALSE;
     reds->mig_wait_disconnect = TRUE;
-    reds->core->timer_start(reds->mig_timer, MIGRATE_TIMEOUT);
+    reds_core_timer_start(reds, reds->mig_timer, MIGRATE_TIMEOUT);
 }
 
 static void reds_mig_cleanup_wait_disconnect(RedsState *reds)
@@ -3426,21 +3423,21 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
         spice_warning("bad core interface version");
         goto err;
     }
-    core_public = core_interface;
-    reds->core = &core_interface_adapter;
+    reds->core = core_interface_adapter;
+    reds->core.public_interface = core_interface;
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
     reds->agent_dev = red_char_device_vdi_port_new(reds);
     reds_update_agent_properties(reds);
     reds->clients = NULL;
-    reds->main_dispatcher = main_dispatcher_new(reds, reds->core);
+    reds->main_dispatcher = main_dispatcher_new(reds, &reds->core);
     reds->channels = NULL;
     reds->mig_target_clients = NULL;
     reds->char_devices = NULL;
     reds->mig_wait_disconnect_clients = NULL;
     reds->vm_running = TRUE; /* for backward compatibility */
 
-    if (!(reds->mig_timer = reds->core->timer_add(reds->core, migrate_timeout, reds))) {
+    if (!(reds->mig_timer = reds->core.timer_add(&reds->core, migrate_timeout, reds))) {
         spice_error("migration timer create failed");
     }
 
@@ -4222,7 +4219,7 @@ spice_wan_compression_t reds_get_zlib_glz_state(const RedsState *reds)
 
 SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds)
 {
-    return reds->core;
+    return &reds->core;
 }
 
 SpiceWatch *reds_core_watch_add(RedsState *reds,
@@ -4231,10 +4228,9 @@ SpiceWatch *reds_core_watch_add(RedsState *reds,
                                 void *opaque)
 {
    g_return_val_if_fail(reds != NULL, NULL);
-   g_return_val_if_fail(reds->core != NULL, NULL);
-   g_return_val_if_fail(reds->core->watch_add != NULL, NULL);
+   g_return_val_if_fail(reds->core.watch_add != NULL, NULL);
 
-   return reds->core->watch_add(reds->core, fd, event_mask, func, opaque);
+   return reds->core.watch_add(&reds->core, fd, event_mask, func, opaque);
 }
 
 void reds_core_watch_update_mask(RedsState *reds,
@@ -4242,19 +4238,17 @@ void reds_core_watch_update_mask(RedsState *reds,
                                  int event_mask)
 {
    g_return_if_fail(reds != NULL);
-   g_return_if_fail(reds->core != NULL);
-   g_return_if_fail(reds->core->watch_update_mask != NULL);
+   g_return_if_fail(reds->core.watch_update_mask != NULL);
 
-   reds->core->watch_update_mask(watch, event_mask);
+   reds->core.watch_update_mask(&reds->core, watch, event_mask);
 }
 
 void reds_core_watch_remove(RedsState *reds, SpiceWatch *watch)
 {
    g_return_if_fail(reds != NULL);
-   g_return_if_fail(reds->core != NULL);
-   g_return_if_fail(reds->core->watch_remove != NULL);
+   g_return_if_fail(reds->core.watch_remove != NULL);
 
-   reds->core->watch_remove(watch);
+   reds->core.watch_remove(&reds->core, watch);
 }
 
 SpiceTimer *reds_core_timer_add(RedsState *reds,
@@ -4262,10 +4256,9 @@ SpiceTimer *reds_core_timer_add(RedsState *reds,
                                 void *opaque)
 {
    g_return_val_if_fail(reds != NULL, NULL);
-   g_return_val_if_fail(reds->core != NULL, NULL);
-   g_return_val_if_fail(reds->core->timer_add != NULL, NULL);
+   g_return_val_if_fail(reds->core.timer_add != NULL, NULL);
 
-   return reds->core->timer_add(reds->core, func, opaque);
+   return reds->core.timer_add(&reds->core, func, opaque);
 
 }
 
@@ -4274,30 +4267,27 @@ void reds_core_timer_start(RedsState *reds,
                            uint32_t ms)
 {
    g_return_if_fail(reds != NULL);
-   g_return_if_fail(reds->core != NULL);
-   g_return_if_fail(reds->core->timer_start != NULL);
+   g_return_if_fail(reds->core.timer_start != NULL);
 
-   return reds->core->timer_start(timer, ms);
+   return reds->core.timer_start(&reds->core, timer, ms);
 }
 
 void reds_core_timer_cancel(RedsState *reds,
                             SpiceTimer *timer)
 {
    g_return_if_fail(reds != NULL);
-   g_return_if_fail(reds->core != NULL);
-   g_return_if_fail(reds->core->timer_cancel != NULL);
+   g_return_if_fail(reds->core.timer_cancel != NULL);
 
-   return reds->core->timer_cancel(timer);
+   return reds->core.timer_cancel(&reds->core, timer);
 }
 
 void reds_core_timer_remove(RedsState *reds,
                             SpiceTimer *timer)
 {
    g_return_if_fail(reds != NULL);
-   g_return_if_fail(reds->core != NULL);
-   g_return_if_fail(reds->core->timer_remove != NULL);
+   g_return_if_fail(reds->core.timer_remove != NULL);
 
-   return reds->core->timer_remove(timer);
+   return reds->core.timer_remove(&reds->core, timer);
 }
 
 void reds_update_client_mouse_allowed(RedsState *reds)
