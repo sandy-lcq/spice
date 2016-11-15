@@ -9,10 +9,10 @@ makecheck:
   script:
   - ./autogen.sh
   - make
-  - make -C server check
+  - make -C server check || (cat server/tests/test-suite.log && exit 1)
 
 statistics:
   script:
   - CFLAGS="$CFLAGS -DRED_STATISTICS " ./autogen.sh
   - make
-  - make -C server check
+  - make -C server check || (cat server/tests/test-suite.log && exit 1)
