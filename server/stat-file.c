@@ -159,10 +159,35 @@ stat_file_add_counter(RedStatFile *stat_file, StatNodeRef parent, const char *na
 
 static void stat_file_remove(RedStatFile *stat_file, SpiceStatNode *node)
 {
+    const StatNodeRef node_ref = node - stat_file->stat->nodes;
+    const StatNodeRef node_next = node->next_sibling_index;
+    StatNodeRef ref;
+
     pthread_mutex_lock(&stat_file->lock);
     node->flags &= ~SPICE_STAT_NODE_FLAG_ENABLED;
     stat_file->stat->generation++;
     stat_file->stat->num_of_nodes--;
+    /* remove links from parent or siblings */
+    /* children will be orphans */
+    if (stat_file->stat->root_index == node_ref) {
+        stat_file->stat->root_index = node_next;
+    } else for (ref = 0; ref <= stat_file->max_nodes; ref++) {
+        node = &stat_file->stat->nodes[ref];
+        if (!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED)) {
+            continue;
+        }
+        /* in a tree there is only a link from a parent or
+         * previous sibling so we can exit the loop as
+         * soon as we found on link */
+        if (node->first_child_index == node_ref) {
+            node->first_child_index = node_next;
+            break;
+        }
+        if (node->next_sibling_index == node_ref) {
+            node->next_sibling_index = node_next;
+            break;
+        }
+    }
     pthread_mutex_unlock(&stat_file->lock);
 }
 
