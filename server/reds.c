@@ -76,6 +76,8 @@
 #include "main-channel-client.h"
 #include "red-client.h"
 
+#define REDS_MAX_STAT_NODES 100
+
 static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
 static gboolean reds_use_client_monitors_config(RedsState *reds);
 
@@ -348,105 +350,24 @@ static void reds_link_free(RedLinkInfo *link)
 
 #ifdef RED_STATISTICS
 
-static void reds_insert_stat_node(RedsState *reds, StatNodeRef parent, StatNodeRef ref)
-{
-    SpiceStatNode *node = &reds->stat->nodes[ref];
-    uint32_t pos = INVALID_STAT_REF;
-    uint32_t node_index;
-    uint32_t *head;
-    SpiceStatNode *n;
-
-    node->first_child_index = INVALID_STAT_REF;
-    head = (parent == INVALID_STAT_REF ? &reds->stat->root_index :
-                                         &reds->stat->nodes[parent].first_child_index);
-    node_index = *head;
-    while (node_index != INVALID_STAT_REF && (n = &reds->stat->nodes[node_index]) &&
-                                                     strcmp(node->name, n->name) > 0) {
-        pos = node_index;
-        node_index = n->next_sibling_index;
-    }
-    if (pos == INVALID_STAT_REF) {
-        node->next_sibling_index = *head;
-        *head = ref;
-    } else {
-        n = &reds->stat->nodes[pos];
-        node->next_sibling_index = n->next_sibling_index;
-        n->next_sibling_index = ref;
-    }
-}
-
 StatNodeRef stat_add_node(RedsState *reds, StatNodeRef parent, const char *name, int visible)
 {
-    StatNodeRef ref;
-    SpiceStatNode *node;
-
-    spice_assert(name && strlen(name) > 0);
-    if (strlen(name) >= sizeof(node->name)) {
-        return INVALID_STAT_REF;
-    }
-    pthread_mutex_lock(&reds->stat_lock);
-    ref = (parent == INVALID_STAT_REF ? reds->stat->root_index :
-                                        reds->stat->nodes[parent].first_child_index);
-    while (ref != INVALID_STAT_REF) {
-        node = &reds->stat->nodes[ref];
-        if (strcmp(name, node->name)) {
-            ref = node->next_sibling_index;
-        } else {
-            pthread_mutex_unlock(&reds->stat_lock);
-            return ref;
-        }
-    }
-    if (reds->stat->num_of_nodes >= REDS_MAX_STAT_NODES || reds->stat == NULL) {
-        pthread_mutex_unlock(&reds->stat_lock);
-        return INVALID_STAT_REF;
-    }
-    reds->stat->generation++;
-    reds->stat->num_of_nodes++;
-    for (ref = 0; ref <= REDS_MAX_STAT_NODES; ref++) {
-        node = &reds->stat->nodes[ref];
-        if (!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED)) {
-            break;
-        }
-    }
-    spice_assert(!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED));
-    node->value = 0;
-    node->flags = SPICE_STAT_NODE_FLAG_ENABLED | (visible ? SPICE_STAT_NODE_FLAG_VISIBLE : 0);
-    g_strlcpy(node->name, name, sizeof(node->name));
-    reds_insert_stat_node(reds, parent, ref);
-    pthread_mutex_unlock(&reds->stat_lock);
-    return ref;
-}
-
-static void reds_stat_remove(RedsState *reds, SpiceStatNode *node)
-{
-    pthread_mutex_lock(&reds->stat_lock);
-    node->flags &= ~SPICE_STAT_NODE_FLAG_ENABLED;
-    reds->stat->generation++;
-    reds->stat->num_of_nodes--;
-    pthread_mutex_unlock(&reds->stat_lock);
+    return stat_file_add_node(&reds->stat_file, parent, name, visible);
 }
 
 void stat_remove_node(RedsState *reds, StatNodeRef ref)
 {
-    reds_stat_remove(reds, &reds->stat->nodes[ref]);
+    stat_file_remove_node(&reds->stat_file, ref);
 }
 
 uint64_t *stat_add_counter(RedsState *reds, StatNodeRef parent, const char *name, int visible)
 {
-    StatNodeRef ref = stat_add_node(reds, parent, name, visible);
-    SpiceStatNode *node;
-
-    if (ref == INVALID_STAT_REF) {
-        return NULL;
-    }
-    node = &reds->stat->nodes[ref];
-    node->flags |= SPICE_STAT_NODE_FLAG_VALUE;
-    return &node->value;
+    return stat_file_add_counter(&reds->stat_file, parent, name, visible);
 }
 
 void stat_remove_counter(RedsState *reds, uint64_t *counter)
 {
-    reds_stat_remove(reds, (SpiceStatNode *)(counter - SPICE_OFFSETOF(SpiceStatNode, value)));
+    stat_file_remove_counter(&reds->stat_file, counter);
 }
 #endif
 
@@ -2906,11 +2827,7 @@ static int reds_init_ssl(RedsState *reds)
 static void reds_cleanup(RedsState *reds)
 {
 #ifdef RED_STATISTICS
-    if (reds->stat_shm_name) {
-        shm_unlink(reds->stat_shm_name);
-        free(reds->stat_shm_name);
-        reds->stat_shm_name = NULL;
-    }
+    stat_file_unlink(&reds->stat_file);
 #endif
 }
 
@@ -3442,30 +3359,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     }
 
 #ifdef RED_STATISTICS
-    int shm_name_len;
-    int fd;
-
-    shm_name_len = strlen(SPICE_STAT_SHM_NAME) + 20;
-    reds->stat_shm_name = (char *)spice_malloc(shm_name_len);
-    snprintf(reds->stat_shm_name, shm_name_len, SPICE_STAT_SHM_NAME, getpid());
-    shm_unlink(reds->stat_shm_name);
-    if ((fd = shm_open(reds->stat_shm_name, O_CREAT | O_RDWR, 0444)) == -1) {
-        spice_error("statistics shm_open failed, %s", strerror(errno));
-    }
-    if (ftruncate(fd, REDS_STAT_SHM_SIZE) == -1) {
-        spice_error("statistics ftruncate failed, %s", strerror(errno));
-    }
-    reds->stat = (SpiceStat *)mmap(NULL, REDS_STAT_SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (reds->stat == (SpiceStat *)MAP_FAILED) {
-        spice_error("statistics mmap failed, %s", strerror(errno));
-    }
-    memset(reds->stat, 0, REDS_STAT_SHM_SIZE);
-    reds->stat->magic = SPICE_STAT_MAGIC;
-    reds->stat->version = SPICE_STAT_VERSION;
-    reds->stat->root_index = INVALID_STAT_REF;
-    if (pthread_mutex_init(&reds->stat_lock, NULL)) {
-        spice_error("mutex init failed");
-    }
+    stat_file_init(&reds->stat_file, REDS_MAX_STAT_NODES);
 #endif
 
     if (reds_init_net(reds) < 0) {

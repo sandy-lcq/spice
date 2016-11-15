@@ -22,9 +22,7 @@
 #include <glib.h>
 
 #include "spice.h"
-
-typedef uint32_t StatNodeRef;
-#define INVALID_STAT_REF (~(StatNodeRef)0)
+#include "stat-file.h"
 
 #ifdef RED_STATISTICS
 StatNodeRef stat_add_node(SpiceServer *reds, StatNodeRef parent, const char *name, int visible);

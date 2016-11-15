@@ -24,6 +24,7 @@
 #include "main-dispatcher.h"
 #include "main-channel.h"
 #include "inputs-channel.h"
+#include "stat-file.h"
 
 #define MIGRATE_TIMEOUT (MSEC_PER_SEC * 10)
 #define MM_TIME_DELTA 400 /*ms*/
@@ -44,13 +45,6 @@ typedef struct MonitorMode {
     uint32_t x_res;
     uint32_t y_res;
 } MonitorMode;
-
-#ifdef RED_STATISTICS
-
-#define REDS_MAX_STAT_NODES 100
-#define REDS_STAT_SHM_SIZE (sizeof(SpiceStat) + REDS_MAX_STAT_NODES * sizeof(SpiceStatNode))
-
-#endif
 
 typedef struct RedsMigPendingLink {
     SpiceLinkMess *link_msg;
@@ -127,9 +121,7 @@ struct RedsState {
     SSL_CTX *ctx;
 
 #ifdef RED_STATISTICS
-    char *stat_shm_name;
-    SpiceStat *stat;
-    pthread_mutex_t stat_lock;
+    RedStatFile stat_file;
 #endif
     int allow_multiple_clients;
 

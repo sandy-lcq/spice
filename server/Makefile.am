@@ -143,6 +143,8 @@ libserver_la_SOURCES =				\
 	sound.c				\
 	sound.h				\
 	stat.h					\
+	stat-file.c				\
+	stat-file.h				\
 	spicevmc.c				\
 	video-encoder.h				\
 	zlib-encoder.c				\
