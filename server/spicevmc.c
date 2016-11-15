@@ -86,9 +86,6 @@ struct RedCharDeviceSpiceVmcClass
     RedCharDeviceClass parent_class;
 };
 
-typedef struct RedVmcChannel RedVmcChannel;
-typedef struct RedVmcChannelClass RedVmcChannelClass;
-
 static GType red_char_device_spicevmc_get_type(void) G_GNUC_CONST;
 static RedCharDevice *red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                                                    RedsState *reds,
