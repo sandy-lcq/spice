@@ -3507,7 +3507,12 @@ err:
 }
 
 static const char default_renderer[] = "sw";
-static const char default_video_codecs[] = "spice:mjpeg;gstreamer:mjpeg;gstreamer:h264;gstreamer:vp8";
+#if defined(HAVE_GSTREAMER_1_0) || defined(HAVE_GSTREAMER_0_10)
+#define GSTREAMER_CODECS "gstreamer:mjpeg;gstreamer:h264;gstreamer:vp8;"
+#else
+#define GSTREAMER_CODECS ""
+#endif
+static const char default_video_codecs[] = "spice:mjpeg;" GSTREAMER_CODECS;
 
 /* new interface */
 SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
