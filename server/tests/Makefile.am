@@ -43,6 +43,7 @@ check_PROGRAMS =				\
 	test-agent-msg-filter			\
 	test-loop				\
 	test-qxl-parsing			\
+	stat-file-test				\
 	$(NULL)
 
 noinst_PROGRAMS =				\
