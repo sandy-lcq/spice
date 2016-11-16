@@ -121,7 +121,7 @@ struct RedsState {
     SSL_CTX *ctx;
 
 #ifdef RED_STATISTICS
-    RedStatFile stat_file;
+    RedStatFile *stat_file;
 #endif
     int allow_multiple_clients;
 

@@ -24,15 +24,11 @@
 typedef uint32_t StatNodeRef;
 #define INVALID_STAT_REF (~(StatNodeRef)0)
 
-typedef struct {
-    char *shm_name;
-    SpiceStat *stat;
-    pthread_mutex_t lock;
-    unsigned int max_nodes;
-} RedStatFile;
+typedef struct RedStatFile RedStatFile;
 
-void stat_file_init(RedStatFile *stat_file, unsigned int max_nodes);
+RedStatFile *stat_file_new(unsigned int max_nodes);
 void stat_file_unlink(RedStatFile *file_stat);
+const char *stat_file_get_shm_name(RedStatFile *stat_file);
 StatNodeRef stat_file_add_node(RedStatFile *stat_file, StatNodeRef parent,
                                const char *name, int visible);
 uint64_t *stat_file_add_counter(RedStatFile *stat_file, StatNodeRef parent,

@@ -34,25 +34,36 @@
 #define STAT_SHM_SIZE(max_nodes) \
     (sizeof(SpiceStat) + (max_nodes) * sizeof(SpiceStatNode))
 
-void stat_file_init(RedStatFile *stat_file, unsigned int max_nodes)
+struct RedStatFile {
+    char *shm_name;
+    SpiceStat *stat;
+    pthread_mutex_t lock;
+    unsigned int max_nodes;
+};
+
+RedStatFile *stat_file_new(unsigned int max_nodes)
 {
     int fd;
     size_t shm_size = STAT_SHM_SIZE(max_nodes);
+    RedStatFile *stat_file = spice_new0(RedStatFile, 1);
 
     stat_file->max_nodes = max_nodes;
     stat_file->shm_name = g_strdup_printf(SPICE_STAT_SHM_NAME, getpid());
     shm_unlink(stat_file->shm_name);
     if ((fd = shm_open(stat_file->shm_name, O_CREAT | O_RDWR, 0444)) == -1) {
         spice_error("statistics shm_open failed, %s", strerror(errno));
+        goto cleanup;
     }
     if (ftruncate(fd, shm_size) == -1) {
         close(fd);
         spice_error("statistics ftruncate failed, %s", strerror(errno));
+        goto cleanup;
     }
     stat_file->stat = (SpiceStat *)mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);
     if (stat_file->stat == (SpiceStat *)MAP_FAILED) {
         spice_error("statistics mmap failed, %s", strerror(errno));
+        goto cleanup;
     }
     memset(stat_file->stat, 0, shm_size);
     stat_file->stat->magic = SPICE_STAT_MAGIC;
@@ -60,7 +71,18 @@ void stat_file_init(RedStatFile *stat_file, unsigned int max_nodes)
     stat_file->stat->root_index = INVALID_STAT_REF;
     if (pthread_mutex_init(&stat_file->lock, NULL)) {
         spice_error("mutex init failed");
+        goto cleanup;
     }
+    return stat_file;
+
+cleanup:
+    free(stat_file);
+    return NULL;
+}
+
+const char *stat_file_get_shm_name(RedStatFile *stat_file)
+{
+    return stat_file->shm_name;
 }
 
 void stat_file_unlink(RedStatFile *stat_file)

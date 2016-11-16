@@ -352,22 +352,22 @@ static void reds_link_free(RedLinkInfo *link)
 
 StatNodeRef stat_add_node(RedsState *reds, StatNodeRef parent, const char *name, int visible)
 {
-    return stat_file_add_node(&reds->stat_file, parent, name, visible);
+    return stat_file_add_node(reds->stat_file, parent, name, visible);
 }
 
 void stat_remove_node(RedsState *reds, StatNodeRef ref)
 {
-    stat_file_remove_node(&reds->stat_file, ref);
+    stat_file_remove_node(reds->stat_file, ref);
 }
 
 uint64_t *stat_add_counter(RedsState *reds, StatNodeRef parent, const char *name, int visible)
 {
-    return stat_file_add_counter(&reds->stat_file, parent, name, visible);
+    return stat_file_add_counter(reds->stat_file, parent, name, visible);
 }
 
 void stat_remove_counter(RedsState *reds, uint64_t *counter)
 {
-    stat_file_remove_counter(&reds->stat_file, counter);
+    stat_file_remove_counter(reds->stat_file, counter);
 }
 #endif
 
@@ -2827,7 +2827,7 @@ static int reds_init_ssl(RedsState *reds)
 static void reds_cleanup(RedsState *reds)
 {
 #ifdef RED_STATISTICS
-    stat_file_unlink(&reds->stat_file);
+    stat_file_unlink(reds->stat_file);
 #endif
 }
 
@@ -3359,7 +3359,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     }
 
 #ifdef RED_STATISTICS
-    stat_file_init(&reds->stat_file, REDS_MAX_STAT_NODES);
+    reds->stat_file = stat_file_new(REDS_MAX_STAT_NODES);
 #endif
 
     if (reds_init_net(reds) < 0) {

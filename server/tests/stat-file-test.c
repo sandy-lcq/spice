@@ -34,30 +34,31 @@
 
 static void stat_file(void)
 {
-    RedStatFile stat_file;
+    RedStatFile *stat_file;
     StatNodeRef ref, refs[10];
-    uint64_t *counter, *counters[10];
+    uint64_t *counter, *counters[10] SPICE_GNUC_UNUSED;
     int i;
     char *filename = NULL;
     char name[20];
 
     /* create */
-    stat_file_init(&stat_file, 10);
+    stat_file = stat_file_new(10);
 
-    g_assert_nonnull(stat_file.shm_name);
-    filename = strdup(stat_file.shm_name);
-    g_assert(access(stat_file.shm_name, R_OK));
+    g_assert_nonnull(stat_file);
+    g_assert_nonnull(stat_file_get_shm_name(stat_file));
+    filename = strdup(stat_file_get_shm_name(stat_file));
+    g_assert(access(filename, R_OK));
 
     /* fill all nodes */
     for (i = 0; i < 10; ++i) {
         sprintf(name, "node %d", i);
-        ref = stat_file_add_node(&stat_file, INVALID_STAT_REF, name, TRUE);
+        ref = stat_file_add_node(stat_file, INVALID_STAT_REF, name, TRUE);
         refs[i] = ref;
         g_assert_cmpuint(ref,!=,INVALID_STAT_REF);
     }
 
     /* should fail */
-    ref = stat_file_add_node(&stat_file, INVALID_STAT_REF, "invalid", TRUE);
+    ref = stat_file_add_node(stat_file, INVALID_STAT_REF, "invalid", TRUE);
     g_assert_cmpuint(ref,==,INVALID_STAT_REF);
 
     /* we should find already present nodes */
@@ -66,7 +67,7 @@ static void stat_file(void)
          * As 17 and 10 are coprime numbers you'll get the same numbers
          * after 10 iterations */
         sprintf(name, "node %d", (i * 17 + 5) % 10);
-        ref = stat_file_add_node(&stat_file, INVALID_STAT_REF, name, TRUE);
+        ref = stat_file_add_node(stat_file, INVALID_STAT_REF, name, TRUE);
         g_assert_cmpuint(ref,!=,INVALID_STAT_REF);
     }
 
@@ -74,22 +75,22 @@ static void stat_file(void)
     for (i = 0; i < 6; ++i) {
         /* see above why the formula is used */
         int n = (i * 23 + 3) % 10;
-        stat_file_remove_node(&stat_file, refs[n]);
+        stat_file_remove_node(stat_file, refs[n]);
         refs[n] = INVALID_STAT_REF;
     }
 
     /* now there should be some place for some counters */
     for (i = 0; i < 6; ++i) {
         sprintf(name, "counter %d", i);
-        counter = stat_file_add_counter(&stat_file, INVALID_STAT_REF, name, TRUE);
+        counter = stat_file_add_counter(stat_file, INVALID_STAT_REF, name, TRUE);
         counters[i] = counter;
         g_assert_nonnull(counter);
     }
-    counter = stat_file_add_counter(&stat_file, INVALID_STAT_REF, "invalid", TRUE);
+    counter = stat_file_add_counter(stat_file, INVALID_STAT_REF, "invalid", TRUE);
     g_assert_null(counter);
 
-    stat_file_unlink(&stat_file);
-    g_assert_null(stat_file.shm_name);
+    stat_file_unlink(stat_file);
+    g_assert_null(stat_file_get_shm_name(stat_file));
     g_assert_cmpint(access(filename, F_OK),==,-1);
     free(filename);
 }
