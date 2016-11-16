@@ -3532,6 +3532,8 @@ static void reds_set_video_codecs(RedsState *reds, const char *codecs)
 {
     char *encoder_name, *codec_name;
 
+    g_return_if_fail(codecs != NULL);
+
     if (strcmp(codecs, "auto") == 0) {
         codecs = default_video_codecs;
     }

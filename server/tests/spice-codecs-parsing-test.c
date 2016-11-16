@@ -59,33 +59,46 @@ static void codecs_bad(void)
     guint i;
     const struct {
         const gchar *codecs;
+        const GLogLevelFlags log_level;
         const gchar *error_message;
     } test_cases[] = {
         {
+            NULL,
+            G_LOG_LEVEL_CRITICAL,
+            "*assertion 'codecs != NULL' failed"
+        },{
             ";:;",
+            G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
         },{
             "::::",
+            G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
         },{
             "missingcolon",
+            G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
         },{
             ":missing_encoder",
+            G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
         },{
             "missing_value:;",
+            G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
         },{
             "unknown_encoder:mjpeg",
+            G_LOG_LEVEL_WARNING,
             "*spice: unknown video encoder unknown_encoder",
         },{
             "spice:unknown_codec",
+            G_LOG_LEVEL_WARNING,
             "*spice: unknown video codec unknown_codec",
         },
 #if !defined(HAVE_GSTREAMER_1_0) && !defined(HAVE_GSTREAMER_0_10)
         {
             "gstreamer:mjpeg",
+            G_LOG_LEVEL_WARNING,
             "*spice: unsupported video encoder gstreamer",
         }
 #endif
@@ -96,7 +109,7 @@ static void codecs_bad(void)
     g_assert_nonnull(server);
 
     for (i = 0; i < G_N_ELEMENTS(test_cases); ++i) {
-        g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, test_cases[i].error_message);
+        g_test_expect_message(G_LOG_DOMAIN, test_cases[i].log_level, test_cases[i].error_message);
         g_assert_cmpint(spice_server_set_video_codecs(server, test_cases[i].codecs), ==, 0);
         g_test_assert_expected_messages();
     }
