@@ -37,6 +37,7 @@ LDADD =								\
 	$(NULL)
 
 check_PROGRAMS =				\
+	spice-codecs-parsing-test		\
 	spice-options-test			\
 	stat_test				\
 	stream-test				\
