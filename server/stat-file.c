@@ -46,9 +46,11 @@ void stat_file_init(RedStatFile *stat_file, unsigned int max_nodes)
         spice_error("statistics shm_open failed, %s", strerror(errno));
     }
     if (ftruncate(fd, shm_size) == -1) {
+        close(fd);
         spice_error("statistics ftruncate failed, %s", strerror(errno));
     }
     stat_file->stat = (SpiceStat *)mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
     if (stat_file->stat == (SpiceStat *)MAP_FAILED) {
         spice_error("statistics mmap failed, %s", strerror(errno));
     }
