@@ -36,14 +36,11 @@
 
 void stat_file_init(RedStatFile *stat_file, unsigned int max_nodes)
 {
-    int shm_name_len;
     int fd;
     size_t shm_size = STAT_SHM_SIZE(max_nodes);
 
     stat_file->max_nodes = max_nodes;
-    shm_name_len = strlen(SPICE_STAT_SHM_NAME) + 20;
-    stat_file->shm_name = (char *)spice_malloc(shm_name_len);
-    snprintf(stat_file->shm_name, shm_name_len, SPICE_STAT_SHM_NAME, getpid());
+    stat_file->shm_name = g_strdup_printf(SPICE_STAT_SHM_NAME, getpid());
     shm_unlink(stat_file->shm_name);
     if ((fd = shm_open(stat_file->shm_name, O_CREAT | O_RDWR, 0444)) == -1) {
         spice_error("statistics shm_open failed, %s", strerror(errno));
@@ -68,7 +65,7 @@ void stat_file_unlink(RedStatFile *stat_file)
 {
     if (stat_file->shm_name) {
         shm_unlink(stat_file->shm_name);
-        free(stat_file->shm_name);
+        g_free(stat_file->shm_name);
         stat_file->shm_name = NULL;
     }
 }
