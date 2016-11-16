@@ -114,6 +114,12 @@ struct RedVmcChannel
     RedVmcPipeItem *pipe_item;
     RedCharDeviceWriteBuffer *recv_from_client_buf;
     uint8_t port_opened;
+    RedStatCounter in_data;
+    RedStatCounter in_compressed;
+    RedStatCounter in_decompressed;
+    RedStatCounter out_data;
+    RedStatCounter out_compressed;
+    RedStatCounter out_uncompressed;
 };
 
 struct RedVmcChannelClass
@@ -193,6 +199,15 @@ red_vmc_channel_constructed(GObject *object)
 
     client_cbs.connect = spicevmc_connect;
     red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
+
+    red_channel_init_stat_node(RED_CHANNEL(self), NULL, "spicevmc");
+    const RedStatNode *stat = red_channel_get_stat_node(RED_CHANNEL(self));
+    stat_init_counter(&self->in_data, reds, stat, "in_data", TRUE);
+    stat_init_counter(&self->in_compressed, reds, stat, "in_compressed", TRUE);
+    stat_init_counter(&self->in_decompressed, reds, stat, "in_decompressed", TRUE);
+    stat_init_counter(&self->out_data, reds, stat, "out_data", TRUE);
+    stat_init_counter(&self->out_compressed, reds, stat, "out_compressed", TRUE);
+    stat_init_counter(&self->out_uncompressed, reds, stat, "out_uncompressed", TRUE);
 
 #ifdef USE_LZ4
     red_channel_set_cap(RED_CHANNEL(self), SPICE_SPICEVMC_CAP_DATA_COMPRESS_LZ4);
@@ -305,6 +320,8 @@ static RedVmcPipeItem* try_compress_lz4(RedVmcChannel *channel, int n, RedVmcPip
                                                  BUF_SIZE);
 
     if (compressed_data_count > 0 && compressed_data_count < n) {
+        stat_inc_counter(channel->out_uncompressed, n);
+        stat_inc_counter(channel->out_compressed, compressed_data_count);
         msg_item_compressed->type = SPICE_DATA_COMPRESSION_TYPE_LZ4;
         msg_item_compressed->uncompressed_data_size = n;
         msg_item_compressed->buf_used = compressed_data_count;
@@ -355,6 +372,7 @@ static RedPipeItem *spicevmc_chardev_read_msg_from_dev(RedCharDevice *self,
             return &msg_item_compressed->base;
         }
 #endif
+        stat_inc_counter(channel->out_data, n);
         msg_item->uncompressed_data_size = n;
         msg_item->buf_used = n;
         return &msg_item->base;
@@ -532,6 +550,8 @@ static int handle_compressed_msg(RedVmcChannel *channel, RedChannelClient *rcc,
                                                  (char *)decompressed,
                                                  compressed_data_msg->compressed_size,
                                                  compressed_data_msg->uncompressed_size);
+        stat_inc_counter(channel->in_compressed, compressed_data_msg->compressed_size);
+        stat_inc_counter(channel->in_decompressed, decompressed_size);
         break;
     }
 #endif
@@ -566,6 +586,7 @@ static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
     switch (type) {
     case SPICE_MSGC_SPICEVMC_DATA:
         spice_assert(channel->recv_from_client_buf->buf == msg);
+        stat_inc_counter(channel->in_data, size);
         channel->recv_from_client_buf->buf_used = size;
         red_char_device_write_buffer_add(channel->chardev, channel->recv_from_client_buf);
         channel->recv_from_client_buf = NULL;
