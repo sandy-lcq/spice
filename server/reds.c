@@ -3603,6 +3603,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
 #ifdef RED_STATISTICS
     stat_file_free(reds->stat_file);
 #endif
+    free(reds);
 }
 
 SPICE_GNUC_VISIBLE spice_compat_version_t spice_get_current_compat_version(void)
