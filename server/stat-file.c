@@ -80,6 +80,23 @@ cleanup:
     return NULL;
 }
 
+void stat_file_free(RedStatFile *stat_file)
+{
+    if (!stat_file) {
+        return;
+    }
+
+    stat_file_unlink(stat_file);
+    /* TODO other part of the code is not ready for this! */
+#if 0
+    size_t shm_size = STAT_SHM_SIZE(stat_file->max_nodes);
+    munmap(stat_file->stat, shm_size);
+#endif
+
+    pthread_mutex_destroy(&stat_file->lock);
+    free(stat_file);
+}
+
 const char *stat_file_get_shm_name(RedStatFile *stat_file)
 {
     return stat_file->shm_name;

@@ -3599,6 +3599,10 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     pthread_mutex_lock(&global_reds_lock);
     servers = g_list_remove(servers, reds);
     pthread_mutex_unlock(&global_reds_lock);
+
+#ifdef RED_STATISTICS
+    stat_file_free(reds->stat_file);
+#endif
 }
 
 SPICE_GNUC_VISIBLE spice_compat_version_t spice_get_current_compat_version(void)

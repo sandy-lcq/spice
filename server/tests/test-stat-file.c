@@ -93,6 +93,8 @@ static void stat_file(void)
     g_assert_null(stat_file_get_shm_name(stat_file));
     g_assert_cmpint(access(filename, F_OK),==,-1);
     free(filename);
+
+    stat_file_free(stat_file);
 }
 
 int main(int argc, char *argv[])
