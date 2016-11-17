@@ -25,7 +25,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/mman.h>
+#include <spice/stats.h>
 #include <common/log.h>
 #include <common/mem.h>
 

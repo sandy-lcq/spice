@@ -18,8 +18,7 @@
 #ifndef STAT_FILE_H_
 #define STAT_FILE_H_
 
-#include <pthread.h>
-#include <spice/stats.h>
+#include <stdint.h>
 
 typedef uint32_t StatNodeRef;
 #define INVALID_STAT_REF (~(StatNodeRef)0)
