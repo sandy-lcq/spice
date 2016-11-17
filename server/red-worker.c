@@ -76,11 +76,9 @@ struct RedWorker {
     spice_wan_compression_t zlib_glz_state;
 
     uint32_t process_display_generation;
-#ifdef RED_STATISTICS
-    StatNodeRef stat;
-    uint64_t *wakeup_counter;
-    uint64_t *command_counter;
-#endif
+    RedStatNode stat;
+    RedStatCounter wakeup_counter;
+    RedStatCounter command_counter;
 
     int driver_cap_monitors_config;
 
@@ -213,7 +211,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             red_record_qxl_command(worker->record, &worker->mem_slots, ext_cmd);
         }
 
-        stat_inc_counter(reds, worker->command_counter, 1);
+        stat_inc_counter(worker->command_counter, 1);
         worker->display_poll_tries = 0;
         switch (ext_cmd.cmd.type) {
         case QXL_CMD_DRAW: {
@@ -662,7 +660,7 @@ static void handle_dev_wakeup(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
 
-    stat_inc_counter(reds, worker->wakeup_counter, 1);
+    stat_inc_counter(worker->wakeup_counter, 1);
     red_qxl_clear_pending(worker->qxl->st, RED_DISPATCHER_PENDING_WAKEUP);
 }
 
@@ -1341,13 +1339,11 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     worker->jpeg_state = reds_get_jpeg_state(reds);
     worker->zlib_glz_state = reds_get_zlib_glz_state(reds);
     worker->driver_cap_monitors_config = 0;
-#ifdef RED_STATISTICS
     char worker_str[20];
     sprintf(worker_str, "display[%d]", worker->qxl->id);
-    worker->stat = stat_add_node(reds, INVALID_STAT_REF, worker_str, TRUE);
-    worker->wakeup_counter = stat_add_counter(reds, worker->stat, "wakeups", TRUE);
-    worker->command_counter = stat_add_counter(reds, worker->stat, "commands", TRUE);
-#endif
+    stat_init_node(&worker->stat, reds, NULL, worker_str, TRUE);
+    stat_init_counter(&worker->wakeup_counter, reds, &worker->stat, "wakeups", TRUE);
+    stat_init_counter(&worker->command_counter, reds, &worker->stat, "commands", TRUE);
 
     worker->dispatch_watch =
         worker->core.watch_add(&worker->core, dispatcher_get_recv_fd(dispatcher),
@@ -1371,7 +1367,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     worker->cursor_channel = cursor_channel_new(reds, qxl,
                                                 &worker->core);
     channel = RED_CHANNEL(worker->cursor_channel);
-    red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, "cursor_channel", TRUE));
+    red_channel_init_stat_node(channel, &worker->stat, "cursor_channel");
     red_channel_register_client_cbs(channel, client_cursor_cbs, dispatcher);
     g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
     reds_register_channel(reds, channel);
@@ -1382,7 +1378,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
                                                   reds_get_video_codecs(reds),
                                                   init_info.n_surfaces);
     channel = RED_CHANNEL(worker->display_channel);
-    red_channel_set_stat_node(channel, stat_add_node(reds, worker->stat, "display_channel", TRUE));
+    red_channel_init_stat_node(channel, &worker->stat, "display_channel");
     red_channel_register_client_cbs(channel, client_display_cbs, dispatcher);
     g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
     reds_register_channel(reds, channel);

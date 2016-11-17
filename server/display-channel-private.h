@@ -77,11 +77,9 @@ struct DisplayChannelPrivate
     uint32_t add_count;
     uint32_t add_with_shadow_count;
 #endif
-#ifdef RED_STATISTICS
-    uint64_t *cache_hits_counter;
-    uint64_t *add_to_cache_counter;
-    uint64_t *non_cache_counter;
-#endif
+    RedStatCounter cache_hits_counter;
+    RedStatCounter add_to_cache_counter;
+    RedStatCounter non_cache_counter;
     ImageEncoderSharedData encoder_shared_data;
 };
 

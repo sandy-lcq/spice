@@ -98,10 +98,8 @@ struct RedChannelPrivate
     // from Channel -> need to protect!
     pthread_t thread_id;
     RedsState *reds;
-#ifdef RED_STATISTICS
-    StatNodeRef stat;
-    uint64_t *out_bytes_counter;
-#endif
+    RedStatNode stat;
+    RedStatCounter out_bytes_counter;
 };
 
 enum {
@@ -198,9 +196,7 @@ red_channel_finalize(GObject *object)
 
 void red_channel_on_output(RedChannel *self, int n)
 {
-#ifdef RED_STATISTICS
-    stat_inc_counter(self->priv->reds, self->priv->out_bytes_counter, n);
-#endif
+    stat_inc_counter(self->priv->out_bytes_counter, n);
 }
 
 static void
@@ -375,24 +371,19 @@ int red_channel_is_waiting_for_migrate_data(RedChannel *channel)
     return red_channel_client_is_waiting_for_migrate_data(rcc);
 }
 
-void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat)
+void red_channel_init_stat_node(RedChannel *channel, const RedStatNode *parent, const char *name)
 {
     spice_return_if_fail(channel != NULL);
-#ifdef RED_STATISTICS
-    spice_return_if_fail(channel->priv->stat == 0);
 
-    channel->priv->stat = stat;
-    channel->priv->out_bytes_counter =
-        stat_add_counter(channel->priv->reds, stat, "out_bytes", TRUE);
-#endif
+    // TODO check not already initialized
+    stat_init_node(&channel->priv->stat, channel->priv->reds, parent, name, TRUE);
+    stat_init_counter(&channel->priv->out_bytes_counter,
+                      channel->priv->reds, &channel->priv->stat, "out_bytes", TRUE);
 }
 
-StatNodeRef red_channel_get_stat_node(RedChannel *channel)
+const RedStatNode *red_channel_get_stat_node(RedChannel *channel)
 {
-#ifdef RED_STATISTICS
-    return channel->priv->stat;
-#endif
-    return 0;
+    return &channel->priv->stat;
 }
 
 void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs,

@@ -352,25 +352,37 @@ static void reds_link_free(RedLinkInfo *link)
 
 #ifdef RED_STATISTICS
 
-StatNodeRef stat_add_node(RedsState *reds, StatNodeRef parent, const char *name, int visible)
+void stat_init_node(RedStatNode *node, SpiceServer *reds, const RedStatNode *parent,
+                    const char *name, int visible)
 {
-    return stat_file_add_node(reds->stat_file, parent, name, visible);
+    StatNodeRef parent_ref = parent ? parent->ref : INVALID_STAT_REF;
+    node->ref = stat_file_add_node(reds->stat_file, parent_ref, name, visible);
 }
 
-void stat_remove_node(RedsState *reds, StatNodeRef ref)
+void stat_remove_node(SpiceServer *reds, RedStatNode *node)
 {
-    stat_file_remove_node(reds->stat_file, ref);
+    if (node->ref != INVALID_STAT_REF) {
+        stat_file_remove_node(reds->stat_file, node->ref);
+        node->ref = INVALID_STAT_REF;
+    }
 }
 
-uint64_t *stat_add_counter(RedsState *reds, StatNodeRef parent, const char *name, int visible)
+void stat_init_counter(RedStatCounter *counter, SpiceServer *reds,
+                       const RedStatNode *parent, const char *name, int visible)
 {
-    return stat_file_add_counter(reds->stat_file, parent, name, visible);
+    StatNodeRef parent_ref = parent ? parent->ref : INVALID_STAT_REF;
+    counter->counter =
+        stat_file_add_counter(reds->stat_file, parent_ref, name, visible);
 }
 
-void stat_remove_counter(RedsState *reds, uint64_t *counter)
+void stat_remove_counter(SpiceServer *reds, RedStatCounter *counter)
 {
-    stat_file_remove_counter(reds->stat_file, counter);
+    if (counter->counter) {
+        stat_file_remove_counter(reds->stat_file, counter->counter);
+        counter->counter = NULL;
+    }
 }
+
 #endif
 
 void reds_register_channel(RedsState *reds, RedChannel *channel)

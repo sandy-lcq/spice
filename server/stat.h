@@ -24,25 +24,60 @@
 #include "spice.h"
 #include "stat-file.h"
 
+typedef struct {
 #ifdef RED_STATISTICS
-StatNodeRef stat_add_node(SpiceServer *reds, StatNodeRef parent, const char *name, int visible);
-void stat_remove_node(SpiceServer *reds, StatNodeRef node);
-uint64_t *stat_add_counter(SpiceServer *reds, StatNodeRef parent, const char *name, int visible);
-void stat_remove_counter(SpiceServer *reds, uint64_t *counter);
+    uint64_t *counter;
+#endif
+} RedStatCounter;
 
-#define stat_inc_counter(reds, counter, value) {  \
-    if (counter) {                          \
-        *(counter) += (value);              \
-    }                                       \
-}
+typedef struct {
+#ifdef RED_STATISTICS
+    uint32_t ref;
+#endif
+} RedStatNode;
+
+#ifdef RED_STATISTICS
+void stat_init_node(RedStatNode *node, SpiceServer *reds,
+                    const RedStatNode *parent, const char *name, int visible);
+void stat_remove_node(SpiceServer *reds, RedStatNode *node);
+void stat_init_counter(RedStatCounter *counter, SpiceServer *reds,
+                       const RedStatNode *parent, const char *name, int visible);
+void stat_remove_counter(SpiceServer *reds, RedStatCounter *counter);
 
 #else
-#define stat_add_node(r, p, n, v) INVALID_STAT_REF
-#define stat_remove_node(r, n)
-#define stat_add_counter(r, p, n, v) NULL
-#define stat_remove_counter(r, c)
-#define stat_inc_counter(r, c, v)
+
+static inline void
+stat_init_node(RedStatNode *node, SpiceServer *reds,
+               const RedStatNode *parent, const char *name, int visible)
+{
+}
+
+static inline void
+stat_remove_node(SpiceServer *reds, RedStatNode *node)
+{
+}
+
+static inline void
+stat_init_counter(RedStatCounter *counter, SpiceServer *reds,
+                  const RedStatNode *parent, const char *name, int visible)
+{
+}
+
+static inline void
+stat_remove_counter(SpiceServer *reds, RedStatCounter *counter)
+{
+}
 #endif /* RED_STATISTICS */
+
+static inline void
+stat_inc_counter(RedStatCounter counter, uint64_t value)
+{
+#ifdef RED_STATISTICS
+    if (counter.counter) {
+        *(counter.counter) += value;
+    }
+#endif
+}
 
 typedef uint64_t stat_time_t;
 

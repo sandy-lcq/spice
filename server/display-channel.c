@@ -2043,18 +2043,14 @@ display_channel_constructed(GObject *object)
     stat_init(&self->priv->add_stat, "add", CLOCK_THREAD_CPUTIME_ID);
     stat_init(&self->priv->exclude_stat, "exclude", CLOCK_THREAD_CPUTIME_ID);
     stat_init(&self->priv->__exclude_stat, "__exclude", CLOCK_THREAD_CPUTIME_ID);
-#ifdef RED_STATISTICS
     RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
-    self->priv->cache_hits_counter =
-        stat_add_counter(reds, red_channel_get_stat_node(channel),
-                         "cache_hits", TRUE);
-    self->priv->add_to_cache_counter =
-        stat_add_counter(reds, red_channel_get_stat_node(channel),
-                         "add_to_cache", TRUE);
-    self->priv->non_cache_counter =
-        stat_add_counter(reds, red_channel_get_stat_node(channel),
-                         "non_cache", TRUE);
-#endif
+    const RedStatNode *stat = red_channel_get_stat_node(channel);
+    stat_init_counter(&self->priv->cache_hits_counter, reds, stat,
+                      "cache_hits", TRUE);
+    stat_init_counter(&self->priv->add_to_cache_counter, reds, stat,
+                      "add_to_cache", TRUE);
+    stat_init_counter(&self->priv->non_cache_counter, reds, stat,
+                      "non_cache", TRUE);
     image_cache_init(&self->priv->image_cache);
     self->priv->stream_video = SPICE_STREAM_VIDEO_OFF;
     display_channel_init_streams(self);

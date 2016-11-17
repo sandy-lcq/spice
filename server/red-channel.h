@@ -147,7 +147,7 @@ GType red_channel_get_type(void) G_GNUC_CONST;
 void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc);
 void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc);
 
-void red_channel_set_stat_node(RedChannel *channel, StatNodeRef stat);
+void red_channel_init_stat_node(RedChannel *channel, const RedStatNode *parent, const char *name);
 
 void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs, gpointer cbs_data);
 // caps are freed when the channel is destroyed
@@ -242,7 +242,7 @@ void red_channel_on_disconnect(RedChannel *self, RedChannelClient *rcc);
 void red_channel_on_output(RedChannel *self, int n);
 void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem *item);
 void red_channel_reset_thread_id(RedChannel *self);
-StatNodeRef red_channel_get_stat_node(RedChannel *channel);
+const RedStatNode *red_channel_get_stat_node(RedChannel *channel);
 
 const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *self);
 

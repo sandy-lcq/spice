@@ -197,13 +197,13 @@ static void red_display_add_image_to_pixmap_cache(RedChannelClient *rcc,
                 io_image->descriptor.flags |= SPICE_IMAGE_FLAGS_CACHE_ME;
                 dcc->priv->send_data.pixmap_cache_items[dcc->priv->send_data.num_pixmap_cache_items++] =
                                                                                image->descriptor.id;
-                stat_inc_counter(reds, display_channel->priv->add_to_cache_counter, 1);
+                stat_inc_counter(display_channel->priv->add_to_cache_counter, 1);
             }
         }
     }
 
     if (!(io_image->descriptor.flags & SPICE_IMAGE_FLAGS_CACHE_ME)) {
-        stat_inc_counter(reds, display_channel->priv->non_cache_counter, 1);
+        stat_inc_counter(display_channel->priv->non_cache_counter, 1);
     }
 }
 
@@ -393,7 +393,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                                      &bitmap_palette_out, &lzplt_palette_out);
                 spice_assert(bitmap_palette_out == NULL);
                 spice_assert(lzplt_palette_out == NULL);
-                stat_inc_counter(reds, display->priv->cache_hits_counter, 1);
+                stat_inc_counter(display->priv->cache_hits_counter, 1);
                 pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
                 return FILL_BITS_TYPE_CACHE;
             } else {
