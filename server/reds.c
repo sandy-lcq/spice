@@ -3358,10 +3358,6 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
         spice_error("migration timer create failed");
     }
 
-#ifdef RED_STATISTICS
-    reds->stat_file = stat_file_new(REDS_MAX_STAT_NODES);
-#endif
-
     if (reds_init_net(reds) < 0) {
         goto err;
     }
@@ -3437,6 +3433,9 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->config->agent_copypaste = TRUE;
     reds->config->agent_file_xfer = TRUE;
     reds->config->exit_on_disconnect = FALSE;
+#ifdef RED_STATISTICS
+    reds->stat_file = stat_file_new(REDS_MAX_STAT_NODES);
+#endif
     return reds;
 }
 
