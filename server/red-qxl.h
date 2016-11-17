@@ -116,6 +116,9 @@ enum {
     RED_WORKER_MESSAGE_GL_DRAW_ASYNC,
     RED_WORKER_MESSAGE_SET_VIDEO_CODECS,
 
+    /* close worker thread */
+    RED_WORKER_MESSAGE_CLOSE_WORKER,
+
     RED_WORKER_MESSAGE_COUNT // LAST
 };
 
@@ -290,6 +293,9 @@ typedef struct RedWorkerMessageDriverUnload {
 
 typedef struct RedWorkerMessageGlScanout {
 } RedWorkerMessageGlScanout;
+
+typedef struct RedWorkerMessageClose {
+} RedWorkerMessageClose;
 
 enum {
     RED_DISPATCHER_PENDING_WAKEUP,

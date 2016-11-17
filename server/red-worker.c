@@ -85,6 +85,7 @@ struct RedWorker {
     int driver_cap_monitors_config;
 
     RedRecord *record;
+    GMainLoop *loop;
 };
 
 static int display_is_connected(RedWorker *worker)
@@ -971,6 +972,12 @@ void handle_dev_gl_draw_async(void *opaque, void *payload)
     display_channel_gl_draw(worker->display_channel, draw);
 }
 
+static void handle_dev_close(void *opaque, void *payload)
+{
+    RedWorker *worker = opaque;
+    g_main_loop_quit(worker->loop);
+}
+
 static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
 {
     RedCursorCmd *cursor_cmd;
@@ -1222,6 +1229,11 @@ static void register_callbacks(Dispatcher *dispatcher)
                                 handle_dev_gl_draw_async,
                                 sizeof(SpiceMsgDisplayGlDraw),
                                 DISPATCHER_NONE);
+    dispatcher_register_handler(dispatcher,
+                                RED_WORKER_MESSAGE_CLOSE_WORKER,
+                                handle_dev_close,
+                                sizeof(RedWorkerMessageClose),
+                                DISPATCHER_NONE);
 }
 
 
@@ -1381,7 +1393,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     return worker;
 }
 
-SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
+static void *red_worker_main(void *arg)
 {
     RedWorker *worker = arg;
 
@@ -1393,11 +1405,13 @@ SPICE_GNUC_NORETURN static void *red_worker_main(void *arg)
     red_channel_reset_thread_id(RED_CHANNEL(worker->display_channel));
 
     GMainLoop *loop = g_main_loop_new(worker->core.main_context, FALSE);
+    worker->loop = loop;
     g_main_loop_run(loop);
     g_main_loop_unref(loop);
+    worker->loop = NULL;
 
     /* FIXME: free worker, and join threads */
-    exit(0);
+    return NULL;
 }
 
 bool red_worker_run(RedWorker *worker)
