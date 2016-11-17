@@ -47,7 +47,7 @@ G_DEFINE_TYPE(Dispatcher, dispatcher, G_TYPE_OBJECT)
 struct DispatcherPrivate {
     int recv_fd;
     int send_fd;
-    pthread_t self;
+    pthread_t thread_id;
     pthread_mutex_t lock;
     DispatcherMessage *messages;
     int stage;  /* message parser stage - sender has no stages */
@@ -136,7 +136,7 @@ static void dispatcher_constructed(GObject *object)
     pthread_mutex_init(&self->priv->lock, NULL);
     self->priv->recv_fd = channels[0];
     self->priv->send_fd = channels[1];
-    self->priv->self = pthread_self();
+    self->priv->thread_id = pthread_self();
 
     self->priv->messages = g_new0(DispatcherMessage,
                                   self->priv->max_message_type);
@@ -420,5 +420,5 @@ int dispatcher_get_recv_fd(Dispatcher *dispatcher)
 
 pthread_t dispatcher_get_thread_id(Dispatcher *self)
 {
-    return self->priv->self;
+    return self->priv->thread_id;
 }
