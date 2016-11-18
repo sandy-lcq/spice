@@ -306,16 +306,6 @@ MainChannelClient *main_channel_link(MainChannel *channel, RedClient *client,
     return mcc;
 }
 
-// TODO: ? shouldn't it disconnect all clients? or shutdown all main_channels?
-void main_channel_close(MainChannel *main_chan)
-{
-    int socketfd;
-
-    if (main_chan && (socketfd = red_channel_get_first_socket(RED_CHANNEL(main_chan))) != -1) {
-        close(socketfd);
-    }
-}
-
 MainChannel* main_channel_new(RedsState *reds)
 {
     // TODO: set the migration flag of the channel
