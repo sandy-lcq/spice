@@ -221,7 +221,6 @@ static void end_replay(void)
         kill(client_pid, SIGINT);
         waitpid(client_pid, &child_status, 0);
     }
-    exit(0);
 }
 
 static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_info)
@@ -440,6 +439,7 @@ int main(int argc, char **argv)
     if (print_count)
         g_print("Counted %d commands\n", ncommands);
 
+    spice_server_destroy(server);
     end_replay();
     g_async_queue_unref(display_queue);
     g_async_queue_unref(cursor_queue);
