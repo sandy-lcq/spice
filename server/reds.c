@@ -3590,7 +3590,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     g_array_unref(reds->config->video_codecs);
     free(reds->config);
     if (reds->main_channel) {
-        main_channel_close(reds->main_channel);
+        red_channel_destroy(RED_CHANNEL(reds->main_channel));
     }
     reds_cleanup(reds);
 
