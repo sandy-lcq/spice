@@ -620,6 +620,18 @@ inputs_channel_constructed(GObject *object)
 }
 
 static void
+inputs_channel_finalize(GObject *object)
+{
+    InputsChannel *self = INPUTS_CHANNEL(object);
+    RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
+
+    if (self->key_modifiers_timer) {
+        reds_core_timer_remove(reds, self->key_modifiers_timer);
+    }
+    G_OBJECT_CLASS(inputs_channel_parent_class)->finalize(object);
+}
+
+static void
 inputs_channel_init(InputsChannel *self)
 {
 }
@@ -632,6 +644,7 @@ inputs_channel_class_init(InputsChannelClass *klass)
     RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
 
     object_class->constructed = inputs_channel_constructed;
+    object_class->finalize = inputs_channel_finalize;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_INPUTS, NULL);
     channel_class->handle_parsed = inputs_channel_handle_parsed;
