@@ -184,6 +184,20 @@ static void main_channel_client_constructed(GObject *object)
 #endif
 }
 
+static void main_channel_client_finalize(GObject *object)
+{
+#ifdef RED_STATISTICS
+    MainChannelClient *self = MAIN_CHANNEL_CLIENT(object);
+    RedsState *reds =
+        red_channel_get_server(red_channel_client_get_channel(RED_CHANNEL_CLIENT(object)));
+
+    if (self->priv->ping_timer) {
+        reds_core_timer_remove(reds, self->priv->ping_timer);
+    }
+#endif
+    G_OBJECT_CLASS(main_channel_client_parent_class)->finalize(object);
+}
+
 static void main_channel_client_class_init(MainChannelClientClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
@@ -192,6 +206,7 @@ static void main_channel_client_class_init(MainChannelClientClass *klass)
 
     object_class->get_property = main_channel_client_get_property;
     object_class->set_property = main_channel_client_set_property;
+    object_class->finalize = main_channel_client_finalize;
     object_class->constructed = main_channel_client_constructed;
 
     g_object_class_install_property(object_class,
