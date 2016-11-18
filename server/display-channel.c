@@ -79,8 +79,8 @@ display_channel_finalize(GObject *object)
 
     G_OBJECT_CLASS(display_channel_parent_class)->finalize(object);
 
-    g_free(self->priv);
     g_array_unref(self->priv->video_codecs);
+    g_free(self->priv);
 }
 
 static void drawable_draw(DisplayChannel *display, Drawable *drawable);
