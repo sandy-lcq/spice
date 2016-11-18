@@ -1,3 +1,22 @@
+Major Changes in 0.13.3:
+========================
+
+*** IMPORTANT ***
+The 0.13.x release series is an unstable release series, if you are looking for
+stability for daily use, please use the latest 0.12.x release. We are trying to
+keep the code as functional as 0.12, but regressions or bugs could still happen.
+
+* Ongoing work on separating/encapsulating the existing codebase. Main
+  highlight is that RedChannel/RedChannelClient have been converted to GObjects
+* Statistics code is now disabled by default, if you need it,
+  -DREDS_STATISTICS must be added to CPPFLAGS when building
+* Improvements to replay utility
+* Limit (deprecated/unusud) QXLMessage size to 100,000 characters for improved
+  safety
+* Build fixes on older distros (el6)
+* Improve image quality in low bitrate situation when using the
+  GStreamer backend
+
 Major Changes in 0.13.2:
 ========================
 
