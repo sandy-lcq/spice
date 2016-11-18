@@ -42,7 +42,6 @@ local-checks-to-skip =			\
   sc_prohibit_stat_st_blocks		\
   sc_prohibit_magic_number_exit         \
   sc_prohibit_strcmp                    \
-  sc_prohibit_strncpy                   \
   sc_prohibit_undesirable_word_seq      \
   sc_root_tests				\
   sc_space_tab				\

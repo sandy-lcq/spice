@@ -2504,7 +2504,7 @@ static int reds_init_socket(const char *addr, int portnr, int family)
         }
 
         local.sun_family = AF_UNIX;
-        strncpy(local.sun_path, addr, sizeof(local.sun_path) -1);
+        g_strlcpy(local.sun_path, addr, sizeof(local.sun_path));
         unlink(local.sun_path);
         len = SUN_LEN(&local);
         if (bind(slisten, (struct sockaddr *)&local, len) == -1) {
