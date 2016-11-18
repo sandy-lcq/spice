@@ -47,7 +47,7 @@ int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor);
 SpiceServer* red_qxl_get_server(QXLState *qxl);
 
 /* Wrappers around QXLInterface vfuncs */
-void red_qxl_get_init_info(QXLInstance *qxl, QXLDevInitInfo *info);;
+void red_qxl_get_init_info(QXLInstance *qxl, QXLDevInitInfo *info);
 int red_qxl_get_command(QXLInstance *qxl, struct QXLCommandExt *cmd);
 int red_qxl_req_cmd_notification(QXLInstance *qxl);
 void red_qxl_release_resource(QXLInstance *qxl, struct QXLReleaseInfoExt release_info);
