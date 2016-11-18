@@ -66,8 +66,6 @@ void main_channel_push_mouse_mode(MainChannel *main_chan, int current_mode, int 
 void main_channel_push_agent_connected(MainChannel *main_chan);
 void main_channel_push_agent_disconnected(MainChannel *main_chan);
 void main_channel_push_multi_media_time(MainChannel *main_chan, int time);
-int main_channel_getsockname(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen);
-int main_channel_getpeername(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen);
 
 int main_channel_is_connected(MainChannel *main_chan);
 

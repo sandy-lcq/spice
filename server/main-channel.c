@@ -306,18 +306,6 @@ MainChannelClient *main_channel_link(MainChannel *channel, RedClient *client,
     return mcc;
 }
 
-int main_channel_getsockname(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen)
-{
-    return main_chan ?
-        getsockname(red_channel_get_first_socket(RED_CHANNEL(main_chan)), sa, salen) : -1;
-}
-
-int main_channel_getpeername(MainChannel *main_chan, struct sockaddr *sa, socklen_t *salen)
-{
-    return main_chan ?
-        getpeername(red_channel_get_first_socket(RED_CHANNEL(main_chan)), sa, salen) : -1;
-}
-
 // TODO: ? shouldn't it disconnect all clients? or shutdown all main_channels?
 void main_channel_close(MainChannel *main_chan)
 {
