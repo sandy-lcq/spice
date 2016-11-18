@@ -611,20 +611,6 @@ int red_channel_any_blocked(RedChannel *channel)
     return FALSE;
 }
 
-int red_channel_get_first_socket(RedChannel *channel)
-{
-    RedChannelClient *rcc;
-    RedsStream *stream;
-
-    if (!channel || !channel->priv->clients) {
-        return -1;
-    }
-    rcc = g_list_nth_data(channel->priv->clients, 0);
-    stream = red_channel_client_get_stream(rcc);
-
-    return stream->socket;
-}
-
 int red_channel_no_item_being_sent(RedChannel *channel)
 {
     GListIter iter;

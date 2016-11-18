@@ -262,8 +262,6 @@ void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type);
 
 void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type);
 
-int red_channel_get_first_socket(RedChannel *channel);
-
 /* return TRUE if all of the connected clients to this channel are blocked */
 int red_channel_all_blocked(RedChannel *channel);
 
