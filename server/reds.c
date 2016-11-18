@@ -3321,6 +3321,13 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
         SpiceCharDeviceInstance *char_device = SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
         reds = red_char_device_get_server(char_device->st);
         spice_server_char_device_remove_interface(reds, sin);
+    } else if (strcmp(interface->type, SPICE_INTERFACE_QXL) == 0) {
+        QXLInstance *qxl;
+
+        qxl = SPICE_CONTAINEROF(sin, QXLInstance, base);
+        reds = red_qxl_get_server(qxl->st);
+        reds->qxl_instances = g_list_remove(reds->qxl_instances, qxl);
+        red_qxl_destroy(qxl);
     } else {
         spice_warning("VD_INTERFACE_REMOVING unsupported");
         return -1;
