@@ -174,9 +174,7 @@ static void main_channel_client_constructed(GObject *object)
     RedsState *reds =
         red_channel_get_server(red_channel_client_get_channel(RED_CHANNEL_CLIENT(object)));
 
-    self->priv->ping_timer =
-        reds_get_core_interface(reds)->timer_add(reds_get_core_interface(reds),
-                                                 ping_timer_cb, self);
+    self->priv->ping_timer = reds_core_timer_add(reds, ping_timer_cb, self);
     if (!self->priv->ping_timer) {
         spice_error("ping timer create failed");
     }
