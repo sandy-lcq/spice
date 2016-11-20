@@ -48,6 +48,7 @@ struct SpiceReplay {
     GArray *id_map; // record id -> replay id
     GArray *id_map_inv; // replay id -> record id
     GArray *id_free; // free list
+    uint8_t *primary_mem;
     int nsurfaces;
     int end_pos;
 
@@ -1254,6 +1255,8 @@ static void replay_handle_create_primary(QXLWorker *worker, SpiceReplay *replay)
     }
     read_binary(replay, "data", &size, &mem, 0);
     surface.group_id = 0;
+    free(replay->primary_mem);
+    replay->primary_mem = mem;
     surface.mem = QXLPHYSICAL_FROM_PTR(mem);
     worker->create_primary_surface(worker, 0, &surface);
 }
@@ -1269,6 +1272,8 @@ static void replay_handle_dev_input(QXLWorker *worker, SpiceReplay *replay,
     case RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE:
         replay->created_primary = FALSE;
         worker->destroy_primary_surface(worker, 0);
+        free(replay->primary_mem);
+        replay->primary_mem = NULL;
         break;
     case RED_WORKER_MESSAGE_DESTROY_SURFACES:
         replay->created_primary = FALSE;
@@ -1454,6 +1459,7 @@ SPICE_GNUC_VISIBLE void spice_replay_free(SpiceReplay *replay)
     g_array_free(replay->id_map, TRUE);
     g_array_free(replay->id_map_inv, TRUE);
     g_array_free(replay->id_free, TRUE);
+    free(replay->primary_mem);
     fclose(replay->fd);
     free(replay);
 }
