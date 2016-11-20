@@ -302,6 +302,21 @@ static gboolean progress_timer(gpointer user_data)
     return TRUE;
 }
 
+static void free_queue(GAsyncQueue *queue)
+{
+    for (;;) {
+        QXLCommandExt *cmd = g_async_queue_try_pop(queue);
+        if (cmd == GINT_TO_POINTER(-1)) {
+            continue;
+        }
+        if (!cmd) {
+            break;
+        }
+        spice_replay_free_cmd(replay, cmd);
+    }
+    g_async_queue_unref(queue);
+}
+
 int main(int argc, char **argv)
 {
     GError *error = NULL;
@@ -440,9 +455,9 @@ int main(int argc, char **argv)
         g_print("Counted %d commands\n", ncommands);
 
     spice_server_destroy(server);
+    free_queue(display_queue);
+    free_queue(cursor_queue);
     end_replay();
-    g_async_queue_unref(display_queue);
-    g_async_queue_unref(cursor_queue);
 
     /* FIXME: there should be a way to join server threads before:
      * g_main_loop_unref(loop);
