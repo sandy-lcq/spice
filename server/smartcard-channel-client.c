@@ -119,7 +119,7 @@ SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
         g_array_append_vals(caps_array, caps, num_caps);
     }
 
-    rcc = g_initable_new(RED_TYPE_CHANNEL_CLIENT,
+    rcc = g_initable_new(TYPE_SMARTCARD_CHANNEL_CLIENT,
                          NULL, NULL,
                          "channel", channel,
                          "client", client,
