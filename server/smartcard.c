@@ -501,7 +501,7 @@ void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_buf)
     sin = g_smartcard_readers.sin[vheader->reader_id];
     dev = RED_CHAR_DEVICE_SMARTCARD(sin->st);
     spice_assert(!dev->priv->scc ||
-                 dev == smartcard_channel_client_get_device(dev->priv->scc));
+                 dev == smartcard_channel_client_get_char_device(dev->priv->scc));
     /* protocol requires messages to be in network endianess */
     vheader->type = htonl(vheader->type);
     vheader->length = htonl(vheader->length);

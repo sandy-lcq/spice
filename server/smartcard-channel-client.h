@@ -83,8 +83,6 @@ void smartcard_channel_client_send_error(RedChannelClient *rcc,
                                          SpiceMarshaller *m,
                                          RedPipeItem *item);
 
-RedCharDeviceSmartcard* smartcard_channel_client_get_device(SmartCardChannelClient *scc);
-
 int smartcard_channel_client_handle_message(RedChannelClient *rcc,
                                             uint16_t type,
                                             uint32_t size,

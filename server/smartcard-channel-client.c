@@ -282,11 +282,6 @@ static void smartcard_channel_client_remove_reader(SmartCardChannelClient *scc,
     }
 }
 
-RedCharDeviceSmartcard* smartcard_channel_client_get_device(SmartCardChannelClient *scc)
-{
-    return scc->priv->smartcard;
-}
-
 static void smartcard_channel_client_write_to_reader(SmartCardChannelClient *scc)
 {
     g_return_if_fail(scc);
