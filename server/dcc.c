@@ -1059,6 +1059,15 @@ static int dcc_handle_stream_report(DisplayChannelClient *dcc,
         return TRUE;
     }
 
+    if (report->num_frames == 0 && report->num_drops == UINT_MAX) {
+        spice_warning("stream_report: the client does not support stream %u",
+                      report->stream_id);
+        /* Stop streaming the video so the client can see it */
+        agent->video_encoder->destroy(agent->video_encoder);
+        agent->video_encoder = NULL;
+        return TRUE;
+    }
+
     if (report->unique_id != agent->report_id) {
         spice_warning("stream_report: unique id mismatch: local (%u) != msg (%u) "
                       "The old stream was probably replaced by a new one",
