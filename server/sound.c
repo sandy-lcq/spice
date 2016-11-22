@@ -100,10 +100,6 @@ struct SndChannel {
     int blocked;
 
     uint32_t command;
-    uint32_t ack_generation;
-    uint32_t client_ack_generation;
-    uint32_t out_messages;
-    uint32_t ack_messages;
 
     struct {
         uint64_t serial;
