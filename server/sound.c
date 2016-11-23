@@ -829,23 +829,6 @@ snd_channel_client_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
     }
 }
 
-static void snd_disconnect_channel_client(RedChannelClient *rcc)
-{
-    SndChannel *channel;
-    RedChannel *red_channel = red_channel_client_get_channel(rcc);
-    uint32_t type;
-
-    channel = SND_CHANNEL(red_channel);
-    spice_assert(channel);
-    g_object_get(red_channel, "channel-type", &type, NULL);
-
-    spice_debug("channel-type=%d", type);
-    if (channel->connection) {
-        spice_assert(RED_CHANNEL_CLIENT(channel->connection) == rcc);
-        red_channel_client_disconnect(rcc);
-    }
-}
-
 static void snd_set_command(SndChannelClient *client, uint32_t command)
 {
     if (!client) {
@@ -1481,7 +1464,6 @@ playback_channel_constructed(GObject *object)
     G_OBJECT_CLASS(playback_channel_parent_class)->constructed(object);
 
     client_cbs.connect = snd_set_playback_peer;
-    client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_playback_migrate_channel_client;
     red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, self);
 
@@ -1532,7 +1514,6 @@ record_channel_constructed(GObject *object)
     G_OBJECT_CLASS(record_channel_parent_class)->constructed(object);
 
     client_cbs.connect = snd_set_record_peer;
-    client_cbs.disconnect = snd_disconnect_channel_client;
     client_cbs.migrate = snd_record_migrate_channel_client;
     red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, self);
 
