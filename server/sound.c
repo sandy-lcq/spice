@@ -1440,9 +1440,25 @@ snd_channel_init(SndChannel *self)
 }
 
 static void
+snd_channel_finalize(GObject *object)
+{
+    SndChannel *channel = SND_CHANNEL(object);
+
+    remove_channel(channel);
+
+    free(channel->volume.volume);
+    channel->volume.volume = NULL;
+
+    G_OBJECT_CLASS(snd_channel_parent_class)->finalize(object);
+}
+
+static void
 snd_channel_class_init(SndChannelClass *klass)
 {
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
     RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+
+    object_class->finalize = snd_channel_finalize;
 
     channel_class->config_socket = snd_channel_config_socket;
     channel_class->alloc_recv_buf = snd_channel_client_alloc_recv_buf;
@@ -1559,10 +1575,7 @@ static void snd_detach_common(SndChannel *channel)
     }
     RedsState *reds = red_channel_get_server(RED_CHANNEL(channel));
 
-    remove_channel(channel);
     reds_unregister_channel(reds, RED_CHANNEL(channel));
-    free(channel->volume.volume);
-    channel->volume.volume = NULL;
     red_channel_destroy(RED_CHANNEL(channel));
 }
 
