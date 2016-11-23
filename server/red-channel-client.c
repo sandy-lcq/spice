@@ -268,8 +268,8 @@ static void red_channel_client_constructed(GObject *object)
 {
     RedChannelClient *self =  RED_CHANNEL_CLIENT(object);
 
-    self->incoming.opaque = self;
-    self->incoming.cb = red_channel_get_incoming_handler(self->priv->channel);
+    self->priv->incoming.opaque = self;
+    self->priv->incoming.cb = red_channel_get_incoming_handler(self->priv->channel);
 
     self->priv->outgoing.opaque = self;
     self->priv->outgoing.cb = red_channel_get_outgoing_handler(self->priv->channel);
@@ -277,15 +277,15 @@ static void red_channel_client_constructed(GObject *object)
     self->priv->outgoing.size = 0;
 
     if (red_channel_client_test_remote_common_cap(self, SPICE_COMMON_CAP_MINI_HEADER)) {
-        self->incoming.header = mini_header_wrapper;
+        self->priv->incoming.header = mini_header_wrapper;
         self->priv->send_data.header = mini_header_wrapper;
         self->priv->is_mini_header = TRUE;
     } else {
-        self->incoming.header = full_header_wrapper;
+        self->priv->incoming.header = full_header_wrapper;
         self->priv->send_data.header = full_header_wrapper;
         self->priv->is_mini_header = FALSE;
     }
-    self->incoming.header.data = self->incoming.header_buf;
+    self->priv->incoming.header.data = self->priv->incoming.header_buf;
 }
 
 static void red_channel_client_class_init(RedChannelClientClass *klass)
@@ -1178,7 +1178,7 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
 void red_channel_client_receive(RedChannelClient *rcc)
 {
     g_object_ref(rcc);
-    red_peer_handle_incoming(rcc->priv->stream, &rcc->incoming);
+    red_peer_handle_incoming(rcc->priv->stream, &rcc->priv->incoming);
     g_object_unref(rcc);
 }
 

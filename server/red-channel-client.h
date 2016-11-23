@@ -190,22 +190,9 @@ gboolean red_channel_client_set_migration_seamless(RedChannelClient *rcc);
 void red_channel_client_set_destroying(RedChannelClient *rcc);
 gboolean red_channel_client_is_destroying(RedChannelClient *rcc);
 
-typedef struct IncomingHandler {
-    IncomingHandlerInterface *cb;
-    void *opaque;
-    uint8_t header_buf[MAX_HEADER_SIZE];
-    SpiceDataHeaderOpaque header;
-    uint32_t header_pos;
-    uint8_t *msg; // data of the msg following the header. allocated by alloc_msg_buf.
-    uint32_t msg_pos;
-} IncomingHandler;
-
 struct RedChannelClient
 {
     GObject parent;
-
-    /* protected */
-    IncomingHandler incoming;
 
     RedChannelClientPrivate *priv;
 };

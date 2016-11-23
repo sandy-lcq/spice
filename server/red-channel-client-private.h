@@ -50,6 +50,16 @@ typedef struct OutgoingHandler {
     int size;
 } OutgoingHandler;
 
+typedef struct IncomingHandler {
+    IncomingHandlerInterface *cb;
+    void *opaque;
+    uint8_t header_buf[MAX_HEADER_SIZE];
+    SpiceDataHeaderOpaque header;
+    uint32_t header_pos;
+    uint8_t *msg; // data of the msg following the header. allocated by alloc_msg_buf.
+    uint32_t msg_pos;
+} IncomingHandler;
+
 struct RedChannelClientPrivate
 {
     RedChannel *channel;
@@ -95,6 +105,7 @@ struct RedChannelClientPrivate
     RedChannelClientLatencyMonitor latency_monitor;
     RedChannelClientConnectivityMonitor connectivity_monitor;
 
+    IncomingHandler incoming;
     OutgoingHandler outgoing;
 };
 
