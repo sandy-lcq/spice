@@ -1146,19 +1146,10 @@ static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, Re
                  TYPE_PLAYBACK_CHANNEL_CLIENT);
 }
 
-static void snd_record_migrate_channel_client(RedChannelClient *rcc)
+static void snd_migrate_channel_client(RedChannelClient *rcc)
 {
-    SndChannel *channel;
-    RedChannel *red_channel = red_channel_client_get_channel(rcc);
-
-    channel = SND_CHANNEL(red_channel);
-    spice_assert(channel);
-
-    if (channel->connection) {
-        spice_assert(RED_CHANNEL_CLIENT(channel->connection) == rcc);
-        snd_set_command(channel->connection, SND_MIGRATE_MASK);
-        snd_send(channel->connection);
-    }
+    snd_set_command(SND_CHANNEL_CLIENT(rcc), SND_MIGRATE_MASK);
+    snd_send(SND_CHANNEL_CLIENT(rcc));
 }
 
 SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
@@ -1357,22 +1348,6 @@ static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, Reds
                  TYPE_RECORD_CHANNEL_CLIENT);
 }
 
-static void snd_playback_migrate_channel_client(RedChannelClient *rcc)
-{
-    SndChannel *channel;
-    RedChannel *red_channel = red_channel_client_get_channel(rcc);
-
-    channel = SND_CHANNEL(red_channel);
-    spice_assert(channel);
-    spice_debug(NULL);
-
-    if (channel->connection) {
-        spice_assert(RED_CHANNEL_CLIENT(channel->connection) == rcc);
-        snd_set_command(channel->connection, SND_MIGRATE_MASK);
-        snd_send(channel->connection);
-    }
-}
-
 static void add_channel(SndChannel *channel)
 {
     channel->next = snd_channels;
@@ -1440,7 +1415,7 @@ playback_channel_constructed(GObject *object)
     G_OBJECT_CLASS(playback_channel_parent_class)->constructed(object);
 
     client_cbs.connect = snd_set_playback_peer;
-    client_cbs.migrate = snd_playback_migrate_channel_client;
+    client_cbs.migrate = snd_migrate_channel_client;
     red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, self);
 
     if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY)) {
@@ -1490,7 +1465,7 @@ record_channel_constructed(GObject *object)
     G_OBJECT_CLASS(record_channel_parent_class)->constructed(object);
 
     client_cbs.connect = snd_set_record_peer;
-    client_cbs.migrate = snd_record_migrate_channel_client;
+    client_cbs.migrate = snd_migrate_channel_client;
     red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, self);
 
     if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY)) {
