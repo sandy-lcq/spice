@@ -837,12 +837,11 @@ static void snd_set_command(SndChannelClient *client, uint32_t command)
     client->command |= command;
 }
 
-SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *sin,
-                                                  uint8_t nchannels,
-                                                  uint16_t *volume)
+static void snd_channel_set_volume(SndChannel *channel,
+                                   uint8_t nchannels, uint16_t *volume)
 {
-    SpiceVolumeState *st = &sin->st->channel.volume;
-    SndChannelClient *client = sin->st->channel.connection;
+    SpiceVolumeState *st = &channel->volume;
+    SndChannelClient *client = channel->connection;
 
     st->volume_nchannels = nchannels;
     free(st->volume);
@@ -855,10 +854,17 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *
     snd_send(client);
 }
 
-SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *sin, uint8_t mute)
+SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *sin,
+                                                  uint8_t nchannels,
+                                                  uint16_t *volume)
 {
-    SpiceVolumeState *st = &sin->st->channel.volume;
-    SndChannelClient *client = sin->st->channel.connection;
+    snd_channel_set_volume(&sin->st->channel, nchannels, volume);
+}
+
+static void snd_channel_set_mute(SndChannel *channel, uint8_t mute)
+{
+    SpiceVolumeState *st = &channel->volume;
+    SndChannelClient *client = channel->connection;
 
     st->mute = mute;
 
@@ -867,6 +873,11 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *si
 
     snd_set_command(client, SND_MUTE_MASK);
     snd_send(client);
+}
+
+SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *sin, uint8_t mute)
+{
+    snd_channel_set_mute(&sin->st->channel, mute);
 }
 
 static void snd_playback_start(SndChannel *channel)
@@ -1156,32 +1167,12 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
                                                 uint8_t nchannels,
                                                 uint16_t *volume)
 {
-    SpiceVolumeState *st = &sin->st->channel.volume;
-    SndChannelClient *client = sin->st->channel.connection;
-
-    st->volume_nchannels = nchannels;
-    free(st->volume);
-    st->volume = spice_memdup(volume, sizeof(uint16_t) * nchannels);
-
-    if (!client || nchannels == 0)
-        return;
-
-    snd_set_command(client, SND_VOLUME_MASK);
-    snd_send(client);
+    snd_channel_set_volume(&sin->st->channel, nchannels, volume);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, uint8_t mute)
 {
-    SpiceVolumeState *st = &sin->st->channel.volume;
-    SndChannelClient *client = sin->st->channel.connection;
-
-    st->mute = mute;
-
-    if (!client)
-        return;
-
-    snd_set_command(client, SND_MUTE_MASK);
-    snd_send(client);
+    snd_channel_set_mute(&sin->st->channel, mute);
 }
 
 static void snd_record_start(SndChannel *channel)
