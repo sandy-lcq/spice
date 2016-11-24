@@ -24,7 +24,6 @@
 
 #include "dcc-private.h"
 #include "display-channel-private.h"
-#include "red-channel-client-private.h"
 
 typedef enum {
     FILL_BITS_TYPE_INVALID,
