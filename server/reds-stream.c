@@ -380,6 +380,9 @@ void reds_stream_set_channel(RedsStream *stream, int connection_id,
     stream->priv->info->connection_id = connection_id;
     stream->priv->info->type = channel_type;
     stream->priv->info->id   = channel_id;
+    if (reds_stream_is_ssl(stream)) {
+        stream->priv->info->flags |= SPICE_CHANNEL_EVENT_FLAG_TLS;
+    }
 }
 
 RedsStream *reds_stream_new(RedsState *reds, int socket)
@@ -402,14 +405,6 @@ RedsStream *reds_stream_new(RedsState *reds, int socket)
 bool reds_stream_is_ssl(RedsStream *stream)
 {
     return (stream->priv->ssl != NULL);
-}
-
-void reds_stream_set_info_flag(RedsStream *stream, unsigned int flag)
-{
-    g_return_if_fail((flag == SPICE_CHANNEL_EVENT_FLAG_TLS)
-                     || (flag == SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT));
-
-    stream->priv->info->flags |= flag;
 }
 
 void reds_stream_disable_writev(RedsStream *stream)
