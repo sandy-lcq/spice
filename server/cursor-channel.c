@@ -438,9 +438,24 @@ void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream
 }
 
 static void
+cursor_channel_finalize(GObject *object)
+{
+    CursorChannel *self = CURSOR_CHANNEL(object);
+
+    if (self->item) {
+        cursor_item_unref(self->item);
+    }
+
+    G_OBJECT_CLASS(cursor_channel_parent_class)->finalize(object);
+}
+
+static void
 cursor_channel_class_init(CursorChannelClass *klass)
 {
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
     RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
+
+    object_class->finalize = cursor_channel_finalize;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_CURSOR, NULL);
     channel_class->handle_parsed = red_channel_client_handle_message;
