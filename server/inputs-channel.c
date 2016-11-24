@@ -625,9 +625,8 @@ inputs_channel_finalize(GObject *object)
     InputsChannel *self = INPUTS_CHANNEL(object);
     RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
 
-    if (self->key_modifiers_timer) {
-        reds_core_timer_remove(reds, self->key_modifiers_timer);
-    }
+    reds_core_timer_remove(reds, self->key_modifiers_timer);
+
     G_OBJECT_CLASS(inputs_channel_parent_class)->finalize(object);
 }
 

@@ -3594,9 +3594,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     }
     reds_cleanup(reds);
 
-    if (reds->mig_timer) {
-        reds_core_timer_remove(reds, reds->mig_timer);
-    }
+    reds_core_timer_remove(reds, reds->mig_timer);
 
     /* remove the server from the list of servers so that we don't attempt to
      * free it again at exit */
@@ -4189,10 +4187,14 @@ void reds_core_timer_cancel(RedsState *reds,
 void reds_core_timer_remove(RedsState *reds,
                             SpiceTimer *timer)
 {
-   g_return_if_fail(reds != NULL);
-   g_return_if_fail(reds->core.timer_remove != NULL);
+    if (timer == NULL) {
+        return;
+    }
 
-   return reds->core.timer_remove(&reds->core, timer);
+    g_return_if_fail(reds != NULL);
+    g_return_if_fail(reds->core.timer_remove != NULL);
+
+    reds->core.timer_remove(&reds->core, timer);
 }
 
 void reds_update_client_mouse_allowed(RedsState *reds)

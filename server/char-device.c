@@ -176,10 +176,8 @@ static void red_char_device_client_free(RedCharDevice *dev,
 {
     GList *l, *next;
 
-    if (dev_client->wait_for_tokens_timer) {
-        reds_core_timer_remove(dev->priv->reds, dev_client->wait_for_tokens_timer);
-        dev_client->wait_for_tokens_timer = NULL;
-    }
+    reds_core_timer_remove(dev->priv->reds, dev_client->wait_for_tokens_timer);
+    dev_client->wait_for_tokens_timer = NULL;
 
     g_queue_free_full(dev_client->send_queue, (GDestroyNotify)red_pipe_item_unref);
 
@@ -990,10 +988,9 @@ static void red_char_device_init_device_instance(RedCharDevice *self)
 
     g_return_if_fail(self->priv->reds);
 
-    if (self->priv->write_to_dev_timer) {
-        reds_core_timer_remove(self->priv->reds, self->priv->write_to_dev_timer);
-        self->priv->write_to_dev_timer = NULL;
-    }
+    reds_core_timer_remove(self->priv->reds, self->priv->write_to_dev_timer);
+    self->priv->write_to_dev_timer = NULL;
+
     if (self->priv->sin == NULL) {
        return;
     }
@@ -1081,10 +1078,9 @@ red_char_device_finalize(GObject *object)
 {
     RedCharDevice *self = RED_CHAR_DEVICE(object);
 
-    if (self->priv->write_to_dev_timer) {
-        reds_core_timer_remove(self->priv->reds, self->priv->write_to_dev_timer);
-        self->priv->write_to_dev_timer = NULL;
-    }
+    reds_core_timer_remove(self->priv->reds, self->priv->write_to_dev_timer);
+    self->priv->write_to_dev_timer = NULL;
+
     write_buffers_queue_free(&self->priv->write_queue);
     write_buffers_queue_free(&self->priv->write_bufs_pool);
     self->priv->cur_pool_size = 0;

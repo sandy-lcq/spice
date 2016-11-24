@@ -189,9 +189,7 @@ static void main_channel_client_finalize(GObject *object)
     RedsState *reds =
         red_channel_get_server(red_channel_client_get_channel(RED_CHANNEL_CLIENT(object)));
 
-    if (self->priv->ping_timer) {
-        reds_core_timer_remove(reds, self->priv->ping_timer);
-    }
+    reds_core_timer_remove(reds, self->priv->ping_timer);
 #endif
     G_OBJECT_CLASS(main_channel_client_parent_class)->finalize(object);
 }
