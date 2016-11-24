@@ -179,8 +179,8 @@ typedef struct RecordChannel {
 static SndWorker *workers;
 
 static void snd_receive(SndChannel *channel);
-static void snd_playback_start(SpicePlaybackState *st);
-static void snd_record_start(SpiceRecordState *st);
+static void snd_playback_start(SndWorker *worker);
+static void snd_record_start(SndWorker *worker);
 
 static SndChannel *snd_channel_ref(SndChannel *channel)
 {
@@ -1026,11 +1026,11 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *si
     snd_playback_send_mute(playback_channel);
 }
 
-static void snd_playback_start(SpicePlaybackState *st)
+static void snd_playback_start(SndWorker *worker)
 {
-    SndChannel *channel = st->worker.connection;
+    SndChannel *channel = worker->connection;
 
-    st->worker.active = 1;
+    worker->active = 1;
     if (!channel)
         return;
     spice_assert(!channel->active);
@@ -1046,7 +1046,7 @@ static void snd_playback_start(SpicePlaybackState *st)
 
 SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
 {
-    return snd_playback_start(sin->st);
+    return snd_playback_start(&sin->st->worker);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
@@ -1195,7 +1195,6 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
 {
     SndWorker *worker = g_object_get_data(G_OBJECT(channel), "sound-worker");
     PlaybackChannel *playback_channel;
-    SpicePlaybackState *st = SPICE_CONTAINEROF(worker, SpicePlaybackState, worker);
 
     snd_disconnect_channel(worker->connection);
 
@@ -1240,7 +1239,7 @@ static void snd_set_playback_peer(RedChannel *channel, RedClient *client, RedsSt
     }
 
     if (worker->active) {
-        snd_playback_start(st);
+        snd_playback_start(worker);
     }
     snd_playback_send(worker->connection);
 }
@@ -1294,12 +1293,12 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, u
     snd_record_send_mute(record_channel);
 }
 
-static void snd_record_start(SpiceRecordState *st)
+static void snd_record_start(SndWorker *worker)
 {
-    SndChannel *channel = st->worker.connection;
+    SndChannel *channel = worker->connection;
     RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
 
-    st->worker.active = 1;
+    worker->active = 1;
     if (!channel)
         return;
     spice_assert(!channel->active);
@@ -1316,7 +1315,7 @@ static void snd_record_start(SpiceRecordState *st)
 
 SPICE_GNUC_VISIBLE void spice_server_record_start(SpiceRecordInstance *sin)
 {
-    snd_record_start(sin->st);
+    snd_record_start(&sin->st->worker);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
@@ -1442,7 +1441,6 @@ static void snd_set_record_peer(RedChannel *channel, RedClient *client, RedsStre
 {
     SndWorker *worker = g_object_get_data(G_OBJECT(channel), "sound-worker");
     RecordChannel *record_channel;
-    SpiceRecordState *st = SPICE_CONTAINEROF(worker, SpiceRecordState, worker);
 
     snd_disconnect_channel(worker->connection);
 
@@ -1465,7 +1463,7 @@ static void snd_set_record_peer(RedChannel *channel, RedClient *client, RedsStre
 
     on_new_record_channel(worker, &record_channel->base);
     if (worker->active) {
-        snd_record_start(st);
+        snd_record_start(worker);
     }
     snd_record_send(worker->connection);
 }
