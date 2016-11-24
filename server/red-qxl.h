@@ -24,6 +24,7 @@
 typedef struct AsyncCommand AsyncCommand;
 
 void red_qxl_init(SpiceServer *reds, QXLInstance *qxl);
+void red_qxl_destroy(QXLInstance *qxl);
 
 void red_qxl_on_ic_change(QXLInstance *qxl, SpiceImageCompression ic);
 void red_qxl_on_sv_change(QXLInstance *qxl, int sv);

@@ -1410,7 +1410,6 @@ static void *red_worker_main(void *arg)
     g_main_loop_unref(loop);
     worker->loop = NULL;
 
-    /* FIXME: free worker, and join threads */
     return NULL;
 }
 
@@ -1434,4 +1433,43 @@ bool red_worker_run(RedWorker *worker)
     pthread_sigmask(SIG_SETMASK, &curr_sig_mask, NULL);
 
     return r == 0;
+}
+
+static void red_worker_close_channel(RedChannel *channel)
+{
+    red_channel_reset_thread_id(channel);
+    red_channel_destroy(channel);
+}
+
+/*
+ * Free the worker thread. This function should be called by RedQxl
+ * after sending a RED_WORKER_MESSAGE_CLOSE_WORKER message;
+ * failing to do so will cause a deadlock.
+ */
+void red_worker_free(RedWorker *worker)
+{
+    RedsState *reds = red_qxl_get_server(worker->qxl->st);
+
+    /* prevent any possible future attempt to connect to new clients */
+    reds_unregister_channel(reds, RED_CHANNEL(worker->cursor_channel));
+    reds_unregister_channel(reds, RED_CHANNEL(worker->display_channel));
+
+    pthread_join(worker->thread, NULL);
+
+    red_worker_close_channel(RED_CHANNEL(worker->cursor_channel));
+    worker->cursor_channel = NULL;
+    red_worker_close_channel(RED_CHANNEL(worker->display_channel));
+    worker->display_channel = NULL;
+
+    if (worker->dispatch_watch) {
+        worker->core.watch_remove(&worker->core, worker->dispatch_watch);
+    }
+
+    g_main_context_unref(worker->core.main_context);
+
+    if (worker->record) {
+        red_record_free(worker->record);
+    }
+    memslot_info_destroy(&worker->mem_slots);
+    free(worker);
 }

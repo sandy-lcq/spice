@@ -58,6 +58,7 @@ struct QXLState {
     QXLDevSurfaceCreate surface_create;
     unsigned int max_monitors;
     RedsState *reds;
+    RedWorker *worker;
 
     pthread_mutex_t scanout_mutex;
     SpiceMsgDisplayGlScanoutUnix scanout;
@@ -1006,11 +1007,29 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     client_display_cbs.disconnect = red_qxl_disconnect_display_peer;
     client_display_cbs.migrate = red_qxl_display_migrate;
 
-    // TODO: reference and free
-    RedWorker *worker = red_worker_new(qxl, &client_cursor_cbs,
+    qxl_state->worker = red_worker_new(qxl, &client_cursor_cbs,
                                        &client_display_cbs);
 
-    red_worker_run(worker);
+    red_worker_run(qxl_state->worker);
+}
+
+void red_qxl_destroy(QXLInstance *qxl)
+{
+    spice_return_if_fail(qxl->st != NULL && qxl->st->dispatcher != NULL);
+
+    QXLState *qxl_state = qxl->st;
+
+    /* send message to close thread */
+    RedWorkerMessageClose message;
+    dispatcher_send_message(qxl_state->dispatcher,
+                            RED_WORKER_MESSAGE_CLOSE_WORKER,
+                            &message);
+    red_worker_free(qxl_state->worker);
+    g_object_unref(qxl_state->dispatcher);
+    /* this must be done after calling red_worker_free */
+    qxl->st = NULL;
+    pthread_mutex_destroy(&qxl_state->scanout_mutex);
+    free(qxl_state);
 }
 
 Dispatcher *red_qxl_get_dispatcher(QXLInstance *qxl)

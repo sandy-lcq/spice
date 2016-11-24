@@ -29,5 +29,6 @@ RedWorker* red_worker_new(QXLInstance *qxl,
                           const ClientCbs *client_cursor_cbs,
                           const ClientCbs *client_display_cbs);
 bool       red_worker_run(RedWorker *worker);
+void red_worker_free(RedWorker *worker);
 
 #endif
