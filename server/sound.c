@@ -91,8 +91,8 @@ GType snd_channel_client_get_type(void) G_GNUC_CONST;
 struct SndChannelClient {
     RedChannelClient parent;
 
-    int active;
-    int client_active;
+    gboolean active;
+    gboolean client_active;
 
     uint32_t command;
 
@@ -174,7 +174,7 @@ struct SndChannel {
     SndChannelClient *connection; /* Only one client is supported */
     SndChannel *next; /* For the global SndChannel list */
 
-    int active;
+    gboolean active;
     SpiceVolumeState volume;
     uint32_t frequency;
 };
@@ -884,7 +884,7 @@ static void snd_playback_start(SndChannel *channel)
 {
     SndChannelClient *client = channel->connection;
 
-    channel->active = 1;
+    channel->active = TRUE;
     if (!client)
         return;
     spice_assert(!client->active);
@@ -907,7 +907,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
 {
     SndChannelClient *client = sin->st->channel.connection;
 
-    sin->st->channel.active = 0;
+    sin->st->channel.active = FALSE;
     if (!client)
         return;
     PlaybackChannelClient *playback_client = PLAYBACK_CHANNEL_CLIENT(client);
@@ -1179,7 +1179,7 @@ static void snd_record_start(SndChannel *channel)
 {
     SndChannelClient *client = channel->connection;
 
-    channel->active = 1;
+    channel->active = TRUE;
     if (!client) {
         return;
     }
@@ -1205,7 +1205,7 @@ SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
 {
     SndChannelClient *client = sin->st->channel.connection;
 
-    sin->st->channel.active = 0;
+    sin->st->channel.active = FALSE;
     if (!client)
         return;
     spice_assert(client->active);
