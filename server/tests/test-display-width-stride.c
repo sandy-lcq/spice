@@ -22,7 +22,7 @@
 #include <config.h>
 #include <math.h>
 #include <stdlib.h>
-#include "test_display_base.h"
+#include "test-display-base.h"
 
 SpiceTimer *ping_timer;
 

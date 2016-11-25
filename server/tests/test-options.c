@@ -19,7 +19,7 @@
 #include <glib.h>
 #include <spice.h>
 
-#include "basic_event_loop.h"
+#include "basic-event-loop.h"
 
 /* GLIB_CHECK_VERSION(2, 40, 0) */
 #ifndef g_assert_nonnull

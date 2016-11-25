@@ -26,7 +26,7 @@
 
 #include <common/log.h>
 #include "reds-stream.h"
-#include "basic_event_loop.h"
+#include "basic-event-loop.h"
 
 static SpiceServer *server = NULL;
 

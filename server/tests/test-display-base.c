@@ -30,7 +30,7 @@
 #include "spice.h"
 #include <spice/qxl_dev.h>
 
-#include "test_display_base.h"
+#include "test-display-base.h"
 #include "red-channel.h"
 
 #ifndef PATH_MAX
@@ -112,7 +112,7 @@ static void regression_test(void)
         char *envp[] = {buf, NULL};
 
         snprintf(buf, sizeof(buf), "PATH=%s", getenv("PATH"));
-        execve("regression_test.py", argv, envp);
+        execve("regression-test.py", argv, envp);
     } else if (pid > 0) {
         return;
     }

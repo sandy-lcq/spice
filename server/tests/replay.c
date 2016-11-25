@@ -36,7 +36,7 @@
 #include <pthread.h>
 
 #include <spice/macros.h>
-#include "test_display_base.h"
+#include "test-display-base.h"
 #include <common/log.h>
 
 static SpiceCoreInterface *core;

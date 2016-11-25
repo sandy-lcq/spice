@@ -32,7 +32,7 @@
 
 #include <glib.h>
 
-#include "test_display_base.h"
+#include "test-display-base.h"
 
 static int sized;
 static int render_last_frame;

@@ -22,7 +22,7 @@
 #include <math.h>
 
 #include <spice.h>
-#include "basic_event_loop.h"
+#include "basic-event-loop.h"
 
 /* test the audio playback interface. Really basic no frils test - create
  * a single tone sinus sound (easy to hear clicks if it is generated badly

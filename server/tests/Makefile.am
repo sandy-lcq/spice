@@ -21,10 +21,10 @@ endif
 noinst_LIBRARIES = libtest.a
 
 libtest_a_SOURCES =				\
-	basic_event_loop.c			\
-	basic_event_loop.h			\
-	test_display_base.c			\
-	test_display_base.h			\
+	basic-event-loop.c			\
+	basic-event-loop.h			\
+	test-display-base.c			\
+	test-display-base.h			\
 	$(NULL)
 
 LDADD =								\
@@ -37,27 +37,27 @@ LDADD =								\
 	$(NULL)
 
 check_PROGRAMS =				\
-	spice-codecs-parsing-test		\
-	spice-options-test			\
-	stat_test				\
-	stream-test				\
+	test-codecs-parsing			\
+	test-options				\
+	test-stat				\
+	test-stream				\
 	test-agent-msg-filter			\
 	test-loop				\
 	test-qxl-parsing			\
-	stat-file-test				\
+	test-stat-file				\
 	$(NULL)
 
 noinst_PROGRAMS =				\
-	test_display_no_ssl			\
-	test_display_streaming			\
-	test_empty_success			\
-	test_fail_on_null_core_interface	\
-	test_just_sockets_no_ssl		\
-	test_playback				\
-	test_display_resolution_changes		\
-	test_two_servers			\
-	test_vdagent				\
-	test_display_width_stride		\
+	test-display-no-ssl			\
+	test-display-streaming			\
+	test-empty-success			\
+	test-fail-on-null-core-interface	\
+	test-just-sockets-no-ssl		\
+	test-playback				\
+	test-display-resolution-changes		\
+	test-two-servers			\
+	test-vdagent				\
+	test-display-width-stride		\
 	spice-server-replay			\
 	$(check_PROGRAMS)			\
 	$(NULL)
@@ -66,16 +66,16 @@ TESTS = $(check_PROGRAMS)			\
 	$(NULL)
 
 noinst_LIBRARIES += \
-	libstat_test1.a \
-	libstat_test2.a \
-	libstat_test3.a \
-	libstat_test4.a \
+	libtest-stat1.a \
+	libtest-stat2.a \
+	libtest-stat3.a \
+	libtest-stat4.a \
 	$(NULL)
 
 spice_server_replay_SOURCES = replay.c		\
 	../event-loop.c				\
-	basic_event_loop.c			\
-	basic_event_loop.h
+	basic-event-loop.c			\
+	basic-event-loop.h
 
 spice_server_replay_LDADD =					\
 	$(top_builddir)/spice-common/common/libspice-common.la	\
@@ -85,25 +85,25 @@ spice_server_replay_LDADD =					\
 	$(SPICE_NONPKGCONFIG_LIBS)		                \
 	$(NULL)
 
-stat_test_SOURCES = stat-main.c
-stat_test_LDADD = \
-	libstat_test1.a \
-	libstat_test2.a \
-	libstat_test3.a \
-	libstat_test4.a \
+test_stat_SOURCES = stat-main.c
+test_stat_LDADD = \
+	libtest-stat1.a \
+	libtest-stat2.a \
+	libtest-stat3.a \
+	libtest-stat4.a \
 	$(LDADD) \
 	$(NULL)
 
-libstat_test1_a_SOURCES = stat-test.c
-libstat_test1_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=0 -DTEST_RED_WORKER_STAT=0 -DTEST_NAME=stat_test1
+libtest_stat1_a_SOURCES = stat-test.c
+libtest_stat1_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=0 -DTEST_RED_WORKER_STAT=0 -DTEST_NAME=stat_test1
 
-libstat_test2_a_SOURCES = stat-test.c
-libstat_test2_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=0 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test2
+libtest_stat2_a_SOURCES = stat-test.c
+libtest_stat2_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=0 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test2
 
-libstat_test3_a_SOURCES = stat-test.c
-libstat_test3_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=0 -DTEST_NAME=stat_test3
+libtest_stat3_a_SOURCES = stat-test.c
+libtest_stat3_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=0 -DTEST_NAME=stat_test3
 
-libstat_test4_a_SOURCES = stat-test.c
-libstat_test4_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test4
+libtest_stat4_a_SOURCES = stat-test.c
+libtest_stat4_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test4
 
 test_qxl_parsing_LDADD = ../libserver.la $(LDADD)

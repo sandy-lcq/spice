@@ -26,7 +26,7 @@
 
 #include <spice/vd_agent.h>
 
-#include "test_display_base.h"
+#include "test-display-base.h"
 
 SpiceCoreInterface *core;
 SpiceTimer *ping_timer;

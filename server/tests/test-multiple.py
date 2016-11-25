@@ -2,7 +2,7 @@
 
 """
 Example usage:
-./test_multiple.py test_display_no_ssl --log test.log
+./test-multiple.py test-display-no-ssl --log test.log
 
 Resulting test.log file (single test, stopped with Ctrl-C with 15 clients):
 

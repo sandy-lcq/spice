@@ -30,7 +30,7 @@
 
 #include <spice/macros.h>
 #include <common/log.h>
-#include "basic_event_loop.h"
+#include "basic-event-loop.h"
 
 static SpiceCoreInterface *core = NULL;
 static GMainLoop *loop = NULL;

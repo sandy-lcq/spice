@@ -15,21 +15,40 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
+/**
+ * Test two servers on one main loop.
+ */
+
 #include <config.h>
-#include <sys/select.h>
-#include <spice.h>
-#include "basic_event_loop.h"
+#include <stdlib.h>
+#include "test-display-base.h"
+
+SpiceCoreInterface *core;
+
+int simple_commands[] = {
+    //SIMPLE_CREATE_SURFACE,
+    //SIMPLE_DRAW,
+    //SIMPLE_DESTROY_SURFACE,
+    //PATH_PROGRESS,
+    SIMPLE_DRAW,
+    //SIMPLE_COPY_BITS,
+    SIMPLE_UPDATE,
+};
 
 int main(void)
 {
-    SpiceServer *server = spice_server_new();
-    SpiceCoreInterface *core = basic_event_loop_init();
+    Test *t1;
+    Test *t2;
 
-    spice_server_set_port(server, 5912);
-    spice_server_set_noauth(server);
-    spice_server_init(server, core);
+    core = basic_event_loop_init();
+    t1 = test_new(core);
+    t2 = test_new(core);
+    //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESSION_OFF);
+    test_add_display_interface(t1);
+    test_add_display_interface(t2);
+    test_set_simple_command_list(t1, simple_commands, COUNT(simple_commands));
+    test_set_simple_command_list(t2, simple_commands, COUNT(simple_commands));
 
     basic_event_loop_mainloop();
-
     return 0;
 }

@@ -19,7 +19,7 @@
 #define __TEST_DISPLAY_BASE_H__
 
 #include <spice.h>
-#include "basic_event_loop.h"
+#include "basic-event-loop.h"
 
 #define COUNT(x) ((sizeof(x)/sizeof(x[0])))
 
