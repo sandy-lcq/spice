@@ -75,9 +75,16 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
         in_buf = lines;
         in_size = stride * num_lines;
         lines += in_size;
-        compressed_lines = (uint8_t *) malloc(LZ4_compressBound(in_size) + 4);
+        int bound_size = LZ4_compressBound(in_size);
+        compressed_lines = (uint8_t *) malloc(bound_size + 4);
+#ifdef HAVE_LZ4_COMPRESS_FAST_CONTINUE
+        enc_size = LZ4_compress_fast_continue(stream, (const char *) in_buf,
+                                              (char *) compressed_lines + 4, in_size,
+                                              bound_size, 1);
+#else
         enc_size = LZ4_compress_continue(stream, (const char *) in_buf,
                                          (char *) compressed_lines + 4, in_size);
+#endif
         if (enc_size <= 0) {
             spice_error("compress failed!");
             free(compressed_lines);
