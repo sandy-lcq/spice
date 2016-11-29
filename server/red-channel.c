@@ -198,11 +198,6 @@ red_channel_finalize(GObject *object)
     G_OBJECT_CLASS(red_channel_parent_class)->finalize(object);
 }
 
-static void red_channel_client_default_peer_on_error(RedChannelClient *rcc)
-{
-    red_channel_client_disconnect(rcc);
-}
-
 void red_channel_on_output(RedChannel *self, int n)
 {
 #ifdef RED_STATISTICS
@@ -324,11 +319,6 @@ red_channel_init(RedChannel *self)
 
     red_channel_set_common_cap(self, SPICE_COMMON_CAP_MINI_HEADER);
     self->priv->thread_id = pthread_self();
-
-    // TODO: send incoming_cb as parameters instead of duplicating?
-    self->priv->incoming_cb.on_error =
-        (on_incoming_error_proc)red_channel_client_default_peer_on_error;
-    self->priv->incoming_cb.on_input = red_channel_client_on_input;
 
     self->priv->client_cbs.connect = red_channel_client_default_connect;
     self->priv->client_cbs.disconnect = red_channel_client_default_disconnect;

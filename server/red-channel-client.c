@@ -384,7 +384,7 @@ static void red_channel_client_data_sent(void *opaque, int n)
     red_channel_on_output(channel, n);
 }
 
-void red_channel_client_on_input(void *opaque, int n)
+static void red_channel_client_data_read(void *opaque, int n)
 {
     RedChannelClient *rcc = opaque;
 
@@ -1147,10 +1147,10 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
                                           handler->header.data + handler->header_pos,
                                           handler->header.header_size - handler->header_pos);
             if (bytes_read == -1) {
-                handler->cb->on_error(handler->opaque);
+                red_channel_client_disconnect(handler->opaque);
                 return;
             }
-            handler->cb->on_input(handler->opaque, bytes_read);
+            red_channel_client_data_read(handler->opaque, bytes_read);
             handler->header_pos += bytes_read;
 
             if (handler->header_pos != handler->header.header_size) {
@@ -1165,7 +1165,7 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
                 handler->msg = red_channel_client_alloc_msg_buf(handler->opaque, msg_type, msg_size);
                 if (handler->msg == NULL) {
                     spice_printerr("ERROR: channel refused to allocate buffer.");
-                    handler->cb->on_error(handler->opaque);
+                    red_channel_client_disconnect(handler->opaque);
                     return;
                 }
             }
@@ -1176,10 +1176,10 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
             if (bytes_read == -1) {
                 red_channel_client_release_msg_buf(handler->opaque, msg_type, msg_size,
                                                    handler->msg);
-                handler->cb->on_error(handler->opaque);
+                red_channel_client_disconnect(handler->opaque);
                 return;
             }
-            handler->cb->on_input(handler->opaque, bytes_read);
+            red_channel_client_data_read(handler->opaque, bytes_read);
             handler->msg_pos += bytes_read;
             if (handler->msg_pos != msg_size) {
                 return;
@@ -1195,7 +1195,7 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
             red_channel_client_release_msg_buf(handler->opaque,
                                                msg_type, msg_size,
                                                handler->msg);
-            handler->cb->on_error(handler->opaque);
+            red_channel_client_disconnect(handler->opaque);
             return;
         }
         ret_handle = handler->cb->handle_message(handler->opaque, msg_type,
@@ -1211,7 +1211,7 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
         handler->header_pos = 0;
 
         if (!ret_handle) {
-            handler->cb->on_error(handler->opaque);
+            red_channel_client_disconnect(handler->opaque);
             return;
         }
     }

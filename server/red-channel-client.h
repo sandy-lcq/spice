@@ -175,8 +175,6 @@ void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc);
 
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc);
 
-void red_channel_client_on_input(void *opaque, int n);
-
 void red_channel_client_semi_seamless_migration_complete(RedChannelClient *rcc);
 void red_channel_client_init_outgoing_messages_window(RedChannelClient *rcc);
 

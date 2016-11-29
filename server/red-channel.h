@@ -61,15 +61,11 @@ struct SpiceDataHeaderOpaque {
 
 typedef int (*handle_message_proc)(void *opaque,
                                    uint16_t type, uint32_t size, uint8_t *msg);
-typedef void (*on_incoming_error_proc)(void *opaque);
-typedef void (*on_input_proc)(void *opaque, int n);
 
 typedef struct IncomingHandlerInterface {
-    on_incoming_error_proc on_error; // recv error or handle_message error
     // 'parser' is optional and will not be used if NULL
     spice_parse_channel_func_t parser;
     handle_message_proc handle_message;
-    on_input_proc on_input;
 } IncomingHandlerInterface;
 
 typedef struct RedChannel RedChannel;
