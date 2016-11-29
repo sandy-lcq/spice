@@ -257,6 +257,12 @@ communication with the client. The Spice option `disable-ticketing` is
 specifying that ticketing (simple authentication method) is not
 used. The virtio and chardev devices are required by the guest agent.
 
+The `-soundhw hda` option provides an audio device for the guest to use for
+audio playback and recording. In order for spice audio to work properly, qemu
+must use the 'spice' audio driver. Depending on how qemu was built, however,
+this might not be the default audio driver. To ensure qemu uses the spice audio
+driver, you can set the environment variable `QEMU_AUDIO_DRV=spice`.
+
 Basic configuration
 -------------------
 
