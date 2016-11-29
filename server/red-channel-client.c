@@ -1000,6 +1000,25 @@ void red_channel_client_shutdown(RedChannelClient *rcc)
     }
 }
 
+static uint8_t *red_channel_client_alloc_msg_buf(RedChannelClient *rcc,
+                                                 uint16_t type, uint32_t size)
+{
+    RedChannel *channel = red_channel_client_get_channel(rcc);
+    RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
+
+    return klass->alloc_recv_buf(rcc, type, size);
+}
+
+static void red_channel_client_release_msg_buf(RedChannelClient *rcc,
+                                               uint16_t type, uint32_t size,
+                                               uint8_t *msg)
+{
+    RedChannel *channel = red_channel_client_get_channel(rcc);
+    RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
+
+    klass->release_recv_buf(rcc, type, size, msg);
+}
+
 static void red_peer_handle_outgoing(RedsStream *stream, OutgoingHandler *handler)
 {
     ssize_t n;
@@ -1143,7 +1162,7 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
         msg_type = handler->header.get_msg_type(&handler->header);
         if (handler->msg_pos < msg_size) {
             if (!handler->msg) {
-                handler->msg = handler->cb->alloc_msg_buf(handler->opaque, msg_type, msg_size);
+                handler->msg = red_channel_client_alloc_msg_buf(handler->opaque, msg_type, msg_size);
                 if (handler->msg == NULL) {
                     spice_printerr("ERROR: channel refused to allocate buffer.");
                     handler->cb->on_error(handler->opaque);
@@ -1155,7 +1174,8 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
                                           handler->msg + handler->msg_pos,
                                           msg_size - handler->msg_pos);
             if (bytes_read == -1) {
-                handler->cb->release_msg_buf(handler->opaque, msg_type, msg_size, handler->msg);
+                red_channel_client_release_msg_buf(handler->opaque, msg_type, msg_size,
+                                                   handler->msg);
                 handler->cb->on_error(handler->opaque);
                 return;
             }
@@ -1172,7 +1192,9 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
                                           &parsed_size, &parsed_free);
         if (parsed == NULL) {
             spice_printerr("failed to parse message type %d", msg_type);
-            handler->cb->release_msg_buf(handler->opaque, msg_type, msg_size, handler->msg);
+            red_channel_client_release_msg_buf(handler->opaque,
+                                               msg_type, msg_size,
+                                               handler->msg);
             handler->cb->on_error(handler->opaque);
             return;
         }
@@ -1182,7 +1204,9 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
             parsed_free(parsed);
         }
         handler->msg_pos = 0;
-        handler->cb->release_msg_buf(handler->opaque, msg_type, msg_size, handler->msg);
+        red_channel_client_release_msg_buf(handler->opaque,
+                                           msg_type, msg_size,
+                                           handler->msg);
         handler->msg = NULL;
         handler->header_pos = 0;
 
