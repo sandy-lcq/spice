@@ -258,6 +258,9 @@ static uint8_t *main_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
 
     if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
         return reds_get_agent_data_buffer(red_channel_get_server(channel), mcc, size);
+    } else if (size > sizeof(main_chan->recv_buf)) {
+        /* message too large, caller will log a message and close the connection */
+        return NULL;
     } else {
         return main_chan->recv_buf;
     }
