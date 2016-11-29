@@ -268,7 +268,6 @@ static void red_channel_client_constructed(GObject *object)
 {
     RedChannelClient *self =  RED_CHANNEL_CLIENT(object);
 
-    self->priv->outgoing.opaque = self;
     self->priv->outgoing.pos = 0;
     self->priv->outgoing.size = 0;
 
@@ -1016,8 +1015,10 @@ static void red_channel_client_release_msg_buf(RedChannelClient *rcc,
     klass->release_recv_buf(rcc, type, size, msg);
 }
 
-static void red_peer_handle_outgoing(RedsStream *stream, OutgoingHandler *handler)
+static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
 {
+    RedsStream *stream = rcc->priv->stream;
+    OutgoingHandler *handler = &rcc->priv->outgoing;
     ssize_t n;
 
     if (!stream) {
@@ -1026,41 +1027,41 @@ static void red_peer_handle_outgoing(RedsStream *stream, OutgoingHandler *handle
 
     if (handler->size == 0) {
         handler->vec = handler->vec_buf;
-        handler->size = red_channel_client_get_out_msg_size(handler->opaque);
+        handler->size = red_channel_client_get_out_msg_size(rcc);
         if (!handler->size) {  // nothing to be sent
             return;
         }
     }
 
     for (;;) {
-        red_channel_client_prepare_out_msg(handler->opaque, handler->vec, &handler->vec_size, handler->pos);
+        red_channel_client_prepare_out_msg(rcc, handler->vec, &handler->vec_size, handler->pos);
         n = reds_stream_writev(stream, handler->vec, handler->vec_size);
         if (n == -1) {
             switch (errno) {
             case EAGAIN:
-                red_channel_client_set_blocked(handler->opaque);
+                red_channel_client_set_blocked(rcc);
                 return;
             case EINTR:
                 continue;
             case EPIPE:
-                red_channel_client_disconnect(handler->opaque);
+                red_channel_client_disconnect(rcc);
                 return;
             default:
                 spice_printerr("%s", strerror(errno));
-                red_channel_client_disconnect(handler->opaque);
+                red_channel_client_disconnect(rcc);
                 return;
             }
         } else {
             handler->pos += n;
-            red_channel_client_data_sent(handler->opaque, n);
+            red_channel_client_data_sent(rcc, n);
             if (handler->pos == handler->size) { // finished writing data
                 /* reset handler before calling on_msg_done, since it
-                 * can trigger another call to red_peer_handle_outgoing (when
+                 * can trigger another call to red_channel_client_handle_outgoing (when
                  * switching from the urgent marshaller to the main one */
                 handler->vec = handler->vec_buf;
                 handler->pos = 0;
                 handler->size = 0;
-                red_channel_client_msg_sent(handler->opaque);
+                red_channel_client_msg_sent(rcc);
                 return;
             }
         }
@@ -1231,7 +1232,7 @@ void red_channel_client_receive(RedChannelClient *rcc)
 void red_channel_client_send(RedChannelClient *rcc)
 {
     g_object_ref(rcc);
-    red_peer_handle_outgoing(rcc->priv->stream, &rcc->priv->outgoing);
+    red_channel_client_handle_outgoing(rcc);
     g_object_unref(rcc);
 }
 
