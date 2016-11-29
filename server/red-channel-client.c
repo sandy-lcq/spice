@@ -1089,9 +1089,6 @@ static int red_peer_receive(RedsStream *stream, uint8_t *buf, uint32_t size)
 static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handler)
 {
     int bytes_read;
-    uint8_t *parsed;
-    size_t parsed_size;
-    message_destructor_t parsed_free;
     uint16_t msg_type;
     uint32_t msg_size;
 
@@ -1147,6 +1144,10 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
         }
 
         if (handler->cb->parser) {
+            uint8_t *parsed;
+            size_t parsed_size;
+            message_destructor_t parsed_free;
+
             parsed = handler->cb->parser(handler->msg,
                 handler->msg + msg_size, msg_type,
                 SPICE_VERSION_MINOR, &parsed_size, &parsed_free);
