@@ -73,16 +73,16 @@ enum PlaybackCommand {
 #define SND_PLAYBACK_PCM_MASK (1 << SND_PLAYBACK_PCM)
 #define SND_PLAYBACK_LATENCY_MASK ( 1 << SND_PLAYBACK_LATENCY)
 
-typedef struct SndChannel SndChannel;
+typedef struct SndChannelClient SndChannelClient;
 typedef void (*snd_channel_send_messages_proc)(void *in_channel);
-typedef int (*snd_channel_handle_message_proc)(SndChannel *channel, size_t size, uint32_t type, void *message);
-typedef void (*snd_channel_on_message_done_proc)(SndChannel *channel);
-typedef void (*snd_channel_cleanup_channel_proc)(SndChannel *channel);
+typedef int (*snd_channel_handle_message_proc)(SndChannelClient *client, size_t size, uint32_t type, void *message);
+typedef void (*snd_channel_on_message_done_proc)(SndChannelClient *client);
+typedef void (*snd_channel_cleanup_channel_proc)(SndChannelClient *client);
 
 typedef struct SndWorker SndWorker;
 
-/* Connects an audio channel to a Spice client */
-struct SndChannel {
+/* Connects an audio client to a Spice client */
+struct SndChannelClient {
     RedsStream *stream;
     SndWorker *worker;
     spice_parse_channel_func_t parser;
@@ -127,7 +127,7 @@ struct AudioFrame {
 };
 
 struct PlaybackChannel {
-    SndChannel base;
+    SndChannelClient base;
     AudioFrame frames[3];
     AudioFrame *free_frames;
     AudioFrame *in_progress;   /* Frame being sent to the client */
@@ -147,7 +147,7 @@ typedef struct SpiceVolumeState {
 /* Base class for SpicePlaybackState and SpiceRecordState */
 struct SndWorker {
     RedChannel *base_channel;
-    SndChannel *connection; /* Only one client is supported */
+    SndChannelClient *connection; /* Only one client is supported */
     SndWorker *next; /* For the global SndWorker list */
 
     int active;
@@ -164,7 +164,7 @@ struct SpiceRecordState {
 };
 
 typedef struct RecordChannel {
-    SndChannel base;
+    SndChannelClient base;
     uint32_t samples[RECORD_SAMPLES_SIZE];
     uint32_t write_pos;
     uint32_t read_pos;
@@ -178,58 +178,58 @@ typedef struct RecordChannel {
 /* A list of all Spice{Playback,Record}State objects */
 static SndWorker *workers;
 
-static void snd_receive(SndChannel *channel);
+static void snd_receive(SndChannelClient *client);
 static void snd_playback_start(SndWorker *worker);
 static void snd_record_start(SndWorker *worker);
 
-static SndChannel *snd_channel_ref(SndChannel *channel)
+static SndChannelClient *snd_channel_ref(SndChannelClient *client)
 {
-    channel->refs++;
-    return channel;
+    client->refs++;
+    return client;
 }
 
-static SndChannel *snd_channel_unref(SndChannel *channel)
+static SndChannelClient *snd_channel_unref(SndChannelClient *client)
 {
-    if (!--channel->refs) {
-        spice_printerr("SndChannel=%p freed", channel);
-        free(channel);
+    if (!--client->refs) {
+        spice_printerr("SndChannelClient=%p freed", client);
+        free(client);
         return NULL;
     }
-    return channel;
+    return client;
 }
 
-static RedsState* snd_channel_get_server(SndChannel *channel)
+static RedsState* snd_channel_get_server(SndChannelClient *client)
 {
-    g_return_val_if_fail(channel != NULL, NULL);
-    return red_channel_get_server(channel->worker->base_channel);
+    g_return_val_if_fail(client != NULL, NULL);
+    return red_channel_get_server(client->worker->base_channel);
 }
 
-static void snd_disconnect_channel(SndChannel *channel)
+static void snd_disconnect_channel(SndChannelClient *client)
 {
     SndWorker *worker;
     RedsState *reds;
     RedChannel *red_channel;
     uint32_t type;
 
-    if (!channel || !channel->stream) {
+    if (!client || !client->stream) {
         spice_debug("not connected");
         return;
     }
-    red_channel = red_channel_client_get_channel(channel->channel_client);
-    reds = snd_channel_get_server(channel);
+    red_channel = red_channel_client_get_channel(client->channel_client);
+    reds = snd_channel_get_server(client);
     g_object_get(red_channel, "channel-type", &type, NULL);
-    spice_debug("SndChannel=%p rcc=%p type=%d",
-                 channel, channel->channel_client, type);
-    worker = channel->worker;
-    channel->cleanup(channel);
+    spice_debug("SndChannelClient=%p rcc=%p type=%d",
+                 client, client->channel_client, type);
+    worker = client->worker;
+    client->cleanup(client);
     red_channel_client_disconnect(worker->connection->channel_client);
     worker->connection->channel_client = NULL;
-    reds_core_watch_remove(reds, channel->stream->watch);
-    channel->stream->watch = NULL;
-    reds_stream_free(channel->stream);
-    channel->stream = NULL;
-    spice_marshaller_destroy(channel->send_data.marshaller);
-    snd_channel_unref(channel);
+    reds_core_watch_remove(reds, client->stream->watch);
+    client->stream->watch = NULL;
+    reds_stream_free(client->stream);
+    client->stream = NULL;
+    spice_marshaller_destroy(client->send_data.marshaller);
+    snd_channel_unref(client);
     worker->connection = NULL;
 }
 
@@ -240,73 +240,73 @@ static void snd_playback_free_frame(PlaybackChannel *playback_channel, AudioFram
     playback_channel->free_frames = frame;
 }
 
-static void snd_playback_on_message_done(SndChannel *channel)
+static void snd_playback_on_message_done(SndChannelClient *client)
 {
-    PlaybackChannel *playback_channel = (PlaybackChannel *)channel;
+    PlaybackChannel *playback_channel = (PlaybackChannel *)client;
     if (playback_channel->in_progress) {
         snd_playback_free_frame(playback_channel, playback_channel->in_progress);
         playback_channel->in_progress = NULL;
         if (playback_channel->pending_frame) {
-            channel->command |= SND_PLAYBACK_PCM_MASK;
+            client->command |= SND_PLAYBACK_PCM_MASK;
         }
     }
 }
 
-static void snd_record_on_message_done(SndChannel *channel)
+static void snd_record_on_message_done(SndChannelClient *client)
 {
 }
 
-static int snd_send_data(SndChannel *channel)
+static int snd_send_data(SndChannelClient *client)
 {
     uint32_t n;
 
-    if (!channel) {
+    if (!client) {
         return FALSE;
     }
 
-    if (!(n = channel->send_data.size - channel->send_data.pos)) {
+    if (!(n = client->send_data.size - client->send_data.pos)) {
         return TRUE;
     }
 
-    RedsState *reds = snd_channel_get_server(channel);
+    RedsState *reds = snd_channel_get_server(client);
     for (;;) {
         struct iovec vec[IOV_MAX];
         int vec_size;
 
         if (!n) {
-            channel->on_message_done(channel);
+            client->on_message_done(client);
 
-            if (channel->blocked) {
-                channel->blocked = FALSE;
-                reds_core_watch_update_mask(reds, channel->stream->watch, SPICE_WATCH_EVENT_READ);
+            if (client->blocked) {
+                client->blocked = FALSE;
+                reds_core_watch_update_mask(reds, client->stream->watch, SPICE_WATCH_EVENT_READ);
             }
             break;
         }
 
-        vec_size = spice_marshaller_fill_iovec(channel->send_data.marshaller,
-                                               vec, IOV_MAX, channel->send_data.pos);
-        n = reds_stream_writev(channel->stream, vec, vec_size);
+        vec_size = spice_marshaller_fill_iovec(client->send_data.marshaller,
+                                               vec, IOV_MAX, client->send_data.pos);
+        n = reds_stream_writev(client->stream, vec, vec_size);
         if (n == -1) {
             switch (errno) {
             case EAGAIN:
-                channel->blocked = TRUE;
-                reds_core_watch_update_mask(reds, channel->stream->watch, SPICE_WATCH_EVENT_READ |
+                client->blocked = TRUE;
+                reds_core_watch_update_mask(reds, client->stream->watch, SPICE_WATCH_EVENT_READ |
                                                                  SPICE_WATCH_EVENT_WRITE);
                 return FALSE;
             case EINTR:
                 break;
             case EPIPE:
-                snd_disconnect_channel(channel);
+                snd_disconnect_channel(client);
                 return FALSE;
             default:
                 spice_printerr("%s", strerror(errno));
-                snd_disconnect_channel(channel);
+                snd_disconnect_channel(client);
                 return FALSE;
             }
         } else {
-            channel->send_data.pos += n;
+            client->send_data.pos += n;
         }
-        n = channel->send_data.size - channel->send_data.pos;
+        n = client->send_data.size - client->send_data.pos;
     }
     return TRUE;
 }
@@ -356,9 +356,9 @@ static int snd_record_handle_write(RecordChannel *record_channel, size_t size, v
     return TRUE;
 }
 
-static int snd_playback_handle_message(SndChannel *channel, size_t size, uint32_t type, void *message)
+static int snd_playback_handle_message(SndChannelClient *client, size_t size, uint32_t type, void *message)
 {
-    if (!channel) {
+    if (!client) {
         return FALSE;
     }
 
@@ -372,19 +372,19 @@ static int snd_playback_handle_message(SndChannel *channel, size_t size, uint32_
     return TRUE;
 }
 
-static int snd_record_handle_message(SndChannel *channel, size_t size, uint32_t type, void *message)
+static int snd_record_handle_message(SndChannelClient *client, size_t size, uint32_t type, void *message)
 {
-    RecordChannel *record_channel = (RecordChannel *)channel;
+    RecordChannel *record_channel = (RecordChannel *)client;
 
-    if (!channel) {
+    if (!client) {
         return FALSE;
     }
     switch (type) {
     case SPICE_MSGC_RECORD_DATA:
-        return snd_record_handle_write((RecordChannel *)channel, size, message);
+        return snd_record_handle_write((RecordChannel *)client, size, message);
     case SPICE_MSGC_RECORD_MODE: {
         SpiceMsgcRecordMode *mode = (SpiceMsgcRecordMode *)message;
-        SndWorker *worker = channel->worker;
+        SndWorker *worker = client->worker;
         record_channel->mode_time = mode->time;
         if (mode->mode != SPICE_AUDIO_DATA_MODE_RAW) {
             if (snd_codec_is_capable(mode->mode, worker->frequency)) {
@@ -420,24 +420,24 @@ static int snd_record_handle_message(SndChannel *channel, size_t size, uint32_t 
     return TRUE;
 }
 
-static void snd_receive(SndChannel *channel)
+static void snd_receive(SndChannelClient *client)
 {
     SpiceDataHeaderOpaque *header;
 
-    if (!channel) {
+    if (!client) {
         return;
     }
 
-    header = &channel->channel_client->incoming.header;
+    header = &client->channel_client->incoming.header;
 
     for (;;) {
         ssize_t n;
-        n = channel->receive_data.end - channel->receive_data.now;
+        n = client->receive_data.end - client->receive_data.now;
         spice_warn_if_fail(n > 0);
-        n = reds_stream_read(channel->stream, channel->receive_data.now, n);
+        n = reds_stream_read(client->stream, client->receive_data.now, n);
         if (n <= 0) {
             if (n == 0) {
-                snd_disconnect_channel(channel);
+                snd_disconnect_channel(client);
                 return;
             }
             spice_assert(n == -1);
@@ -447,54 +447,54 @@ static void snd_receive(SndChannel *channel)
             case EINTR:
                 break;
             case EPIPE:
-                snd_disconnect_channel(channel);
+                snd_disconnect_channel(client);
                 return;
             default:
                 spice_printerr("%s", strerror(errno));
-                snd_disconnect_channel(channel);
+                snd_disconnect_channel(client);
                 return;
             }
         } else {
-            channel->receive_data.now += n;
+            client->receive_data.now += n;
             for (;;) {
-                uint8_t *msg_start = channel->receive_data.message_start;
+                uint8_t *msg_start = client->receive_data.message_start;
                 uint8_t *data = msg_start + header->header_size;
                 size_t parsed_size;
                 uint8_t *parsed;
                 message_destructor_t parsed_free;
 
                 header->data = msg_start;
-                n = channel->receive_data.now - msg_start;
+                n = client->receive_data.now - msg_start;
 
                 if (n < header->header_size ||
                     n < header->header_size + header->get_msg_size(header)) {
                     break;
                 }
-                parsed = channel->parser((void *)data, data + header->get_msg_size(header),
+                parsed = client->parser((void *)data, data + header->get_msg_size(header),
                                          header->get_msg_type(header),
                                          SPICE_VERSION_MINOR, &parsed_size, &parsed_free);
                 if (parsed == NULL) {
                     spice_printerr("failed to parse message type %d", header->get_msg_type(header));
-                    snd_disconnect_channel(channel);
+                    snd_disconnect_channel(client);
                     return;
                 }
-                if (!channel->handle_message(channel, parsed_size,
+                if (!client->handle_message(client, parsed_size,
                                              header->get_msg_type(header), parsed)) {
                     free(parsed);
-                    snd_disconnect_channel(channel);
+                    snd_disconnect_channel(client);
                     return;
                 }
                 parsed_free(parsed);
-                channel->receive_data.message_start = msg_start + header->header_size +
+                client->receive_data.message_start = msg_start + header->header_size +
                                                      header->get_msg_size(header);
             }
-            if (channel->receive_data.now == channel->receive_data.message_start) {
-                channel->receive_data.now = channel->receive_data.buf;
-                channel->receive_data.message_start = channel->receive_data.buf;
-            } else if (channel->receive_data.now == channel->receive_data.end) {
-                memcpy(channel->receive_data.buf, channel->receive_data.message_start, n);
-                channel->receive_data.now = channel->receive_data.buf + n;
-                channel->receive_data.message_start = channel->receive_data.buf;
+            if (client->receive_data.now == client->receive_data.message_start) {
+                client->receive_data.now = client->receive_data.buf;
+                client->receive_data.message_start = client->receive_data.buf;
+            } else if (client->receive_data.now == client->receive_data.end) {
+                memcpy(client->receive_data.buf, client->receive_data.message_start, n);
+                client->receive_data.now = client->receive_data.buf + n;
+                client->receive_data.message_start = client->receive_data.buf;
             }
         }
     }
@@ -502,64 +502,64 @@ static void snd_receive(SndChannel *channel)
 
 static void snd_event(int fd, int event, void *data)
 {
-    SndChannel *channel = data;
+    SndChannelClient *client = data;
 
     if (event & SPICE_WATCH_EVENT_READ) {
-        snd_receive(channel);
+        snd_receive(client);
     }
     if (event & SPICE_WATCH_EVENT_WRITE) {
-        channel->send_messages(channel);
+        client->send_messages(client);
     }
 }
 
-static inline int snd_reset_send_data(SndChannel *channel, uint16_t verb)
+static inline int snd_reset_send_data(SndChannelClient *client, uint16_t verb)
 {
     SpiceDataHeaderOpaque *header;
 
-    if (!channel) {
+    if (!client) {
         return FALSE;
     }
 
-    header = &channel->channel_client->priv->send_data.header;
-    spice_marshaller_reset(channel->send_data.marshaller);
-    header->data = spice_marshaller_reserve_space(channel->send_data.marshaller,
+    header = &client->channel_client->priv->send_data.header;
+    spice_marshaller_reset(client->send_data.marshaller);
+    header->data = spice_marshaller_reserve_space(client->send_data.marshaller,
                                                   header->header_size);
-    spice_marshaller_set_base(channel->send_data.marshaller,
+    spice_marshaller_set_base(client->send_data.marshaller,
                               header->header_size);
-    channel->send_data.pos = 0;
+    client->send_data.pos = 0;
     header->set_msg_size(header, 0);
     header->set_msg_type(header, verb);
-    channel->send_data.serial++;
-    if (!channel->channel_client->priv->is_mini_header) {
-        header->set_msg_serial(header, channel->send_data.serial);
+    client->send_data.serial++;
+    if (!client->channel_client->priv->is_mini_header) {
+        header->set_msg_serial(header, client->send_data.serial);
         header->set_msg_sub_list(header, 0);
     }
 
     return TRUE;
 }
 
-static int snd_begin_send_message(SndChannel *channel)
+static int snd_begin_send_message(SndChannelClient *client)
 {
-    SpiceDataHeaderOpaque *header = &channel->channel_client->priv->send_data.header;
+    SpiceDataHeaderOpaque *header = &client->channel_client->priv->send_data.header;
 
-    spice_marshaller_flush(channel->send_data.marshaller);
-    channel->send_data.size = spice_marshaller_get_total_size(channel->send_data.marshaller);
-    header->set_msg_size(header, channel->send_data.size - header->header_size);
-    return snd_send_data(channel);
+    spice_marshaller_flush(client->send_data.marshaller);
+    client->send_data.size = spice_marshaller_get_total_size(client->send_data.marshaller);
+    header->set_msg_size(header, client->send_data.size - header->header_size);
+    return snd_send_data(client);
 }
 
-static int snd_channel_send_migrate(SndChannel *channel)
+static int snd_channel_send_migrate(SndChannelClient *client)
 {
     SpiceMsgMigrate migrate;
 
-    if (!snd_reset_send_data(channel, SPICE_MSG_MIGRATE)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_MIGRATE)) {
         return FALSE;
     }
     spice_debug(NULL);
     migrate.flags = 0;
-    spice_marshall_msg_migrate(channel->send_data.marshaller, &migrate);
+    spice_marshall_msg_migrate(client->send_data.marshaller, &migrate);
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int snd_playback_send_migrate(PlaybackChannel *channel)
@@ -567,28 +567,28 @@ static int snd_playback_send_migrate(PlaybackChannel *channel)
     return snd_channel_send_migrate(&channel->base);
 }
 
-static int snd_send_volume(SndChannel *channel, uint32_t cap, int msg)
+static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
 {
     SpiceMsgAudioVolume *vol;
     uint8_t c;
-    SpiceVolumeState *st = &channel->worker->volume;
+    SpiceVolumeState *st = &client->worker->volume;
 
-    if (!red_channel_client_test_remote_cap(channel->channel_client, cap)) {
+    if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
     }
 
     vol = alloca(sizeof (SpiceMsgAudioVolume) +
                  st->volume_nchannels * sizeof (uint16_t));
-    if (!snd_reset_send_data(channel, msg)) {
+    if (!snd_reset_send_data(client, msg)) {
         return FALSE;
     }
     vol->nchannels = st->volume_nchannels;
     for (c = 0; c < st->volume_nchannels; ++c) {
         vol->volume[c] = st->volume[c];
     }
-    spice_marshall_SpiceMsgAudioVolume(channel->send_data.marshaller, vol);
+    spice_marshall_SpiceMsgAudioVolume(client->send_data.marshaller, vol);
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int snd_playback_send_volume(PlaybackChannel *playback_channel)
@@ -597,22 +597,22 @@ static int snd_playback_send_volume(PlaybackChannel *playback_channel)
                            SPICE_MSG_PLAYBACK_VOLUME);
 }
 
-static int snd_send_mute(SndChannel *channel, uint32_t cap, int msg)
+static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
 {
     SpiceMsgAudioMute mute;
-    SpiceVolumeState *st = &channel->worker->volume;
+    SpiceVolumeState *st = &client->worker->volume;
 
-    if (!red_channel_client_test_remote_cap(channel->channel_client, cap)) {
+    if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
     }
 
-    if (!snd_reset_send_data(channel, msg)) {
+    if (!snd_reset_send_data(client, msg)) {
         return FALSE;
     }
     mute.mute = st->mute;
-    spice_marshall_SpiceMsgAudioMute(channel->send_data.marshaller, &mute);
+    spice_marshall_SpiceMsgAudioMute(client->send_data.marshaller, &mute);
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int snd_playback_send_mute(PlaybackChannel *playback_channel)
@@ -623,53 +623,53 @@ static int snd_playback_send_mute(PlaybackChannel *playback_channel)
 
 static int snd_playback_send_latency(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = &playback_channel->base;
+    SndChannelClient *client = &playback_channel->base;
     SpiceMsgPlaybackLatency latency_msg;
 
     spice_debug("latency %u", playback_channel->latency);
-    if (!snd_reset_send_data(channel, SPICE_MSG_PLAYBACK_LATENCY)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_LATENCY)) {
         return FALSE;
     }
     latency_msg.latency_ms = playback_channel->latency;
-    spice_marshall_msg_playback_latency(channel->send_data.marshaller, &latency_msg);
+    spice_marshall_msg_playback_latency(client->send_data.marshaller, &latency_msg);
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 static int snd_playback_send_start(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = (SndChannel *)playback_channel;
+    SndChannelClient *client = (SndChannelClient *)playback_channel;
     SpiceMsgPlaybackStart start;
 
-    if (!snd_reset_send_data(channel, SPICE_MSG_PLAYBACK_START)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_START)) {
         return FALSE;
     }
 
     start.channels = SPICE_INTERFACE_PLAYBACK_CHAN;
-    start.frequency = channel->worker->frequency;
+    start.frequency = client->worker->frequency;
     spice_assert(SPICE_INTERFACE_PLAYBACK_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
     start.time = reds_get_mm_time();
-    spice_marshall_msg_playback_start(channel->send_data.marshaller, &start);
+    spice_marshall_msg_playback_start(client->send_data.marshaller, &start);
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int snd_playback_send_stop(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = (SndChannel *)playback_channel;
+    SndChannelClient *client = (SndChannelClient *)playback_channel;
 
-    if (!snd_reset_send_data(channel, SPICE_MSG_PLAYBACK_STOP)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_STOP)) {
         return FALSE;
     }
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int snd_playback_send_ctl(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = (SndChannel *)playback_channel;
+    SndChannelClient *client = (SndChannelClient *)playback_channel;
 
-    if ((channel->client_active = channel->active)) {
+    if ((client->client_active = client->active)) {
         return snd_playback_send_start(playback_channel);
     } else {
         return snd_playback_send_stop(playback_channel);
@@ -678,38 +678,38 @@ static int snd_playback_send_ctl(PlaybackChannel *playback_channel)
 
 static int snd_record_send_start(RecordChannel *record_channel)
 {
-    SndChannel *channel = (SndChannel *)record_channel;
+    SndChannelClient *client = (SndChannelClient *)record_channel;
     SpiceMsgRecordStart start;
 
-    if (!snd_reset_send_data(channel, SPICE_MSG_RECORD_START)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_RECORD_START)) {
         return FALSE;
     }
 
     start.channels = SPICE_INTERFACE_RECORD_CHAN;
-    start.frequency = channel->worker->frequency;
+    start.frequency = client->worker->frequency;
     spice_assert(SPICE_INTERFACE_RECORD_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
-    spice_marshall_msg_record_start(channel->send_data.marshaller, &start);
+    spice_marshall_msg_record_start(client->send_data.marshaller, &start);
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int snd_record_send_stop(RecordChannel *record_channel)
 {
-    SndChannel *channel = (SndChannel *)record_channel;
+    SndChannelClient *client = (SndChannelClient *)record_channel;
 
-    if (!snd_reset_send_data(channel, SPICE_MSG_RECORD_STOP)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_RECORD_STOP)) {
         return FALSE;
     }
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int snd_record_send_ctl(RecordChannel *record_channel)
 {
-    SndChannel *channel = (SndChannel *)record_channel;
+    SndChannelClient *client = (SndChannelClient *)record_channel;
 
-    if ((channel->client_active = channel->active)) {
+    if ((client->client_active = client->active)) {
         return snd_record_send_start(record_channel);
     } else {
         return snd_record_send_stop(record_channel);
@@ -739,21 +739,21 @@ static int snd_record_send_migrate(RecordChannel *record_channel)
 
 static int snd_playback_send_write(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = (SndChannel *)playback_channel;
+    SndChannelClient *client = (SndChannelClient *)playback_channel;
     AudioFrame *frame;
     SpiceMsgPlaybackPacket msg;
 
-    if (!snd_reset_send_data(channel, SPICE_MSG_PLAYBACK_DATA)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_DATA)) {
         return FALSE;
     }
 
     frame = playback_channel->in_progress;
     msg.time = frame->time;
 
-    spice_marshall_msg_playback_data(channel->send_data.marshaller, &msg);
+    spice_marshall_msg_playback_data(client->send_data.marshaller, &msg);
 
     if (playback_channel->mode == SPICE_AUDIO_DATA_MODE_RAW) {
-        spice_marshaller_add_ref(channel->send_data.marshaller,
+        spice_marshaller_add_ref(client->send_data.marshaller,
                                  (uint8_t *)frame->samples,
                                  snd_codec_frame_size(playback_channel->codec) * sizeof(frame->samples[0]));
     }
@@ -763,80 +763,80 @@ static int snd_playback_send_write(PlaybackChannel *playback_channel)
                                     snd_codec_frame_size(playback_channel->codec) * sizeof(frame->samples[0]),
                                     playback_channel->encode_buf, &n) != SND_CODEC_OK) {
             spice_printerr("encode failed");
-            snd_disconnect_channel(channel);
+            snd_disconnect_channel(client);
             return FALSE;
         }
-        spice_marshaller_add_ref(channel->send_data.marshaller, playback_channel->encode_buf, n);
+        spice_marshaller_add_ref(client->send_data.marshaller, playback_channel->encode_buf, n);
     }
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static int playback_send_mode(PlaybackChannel *playback_channel)
 {
-    SndChannel *channel = (SndChannel *)playback_channel;
+    SndChannelClient *client = (SndChannelClient *)playback_channel;
     SpiceMsgPlaybackMode mode;
 
-    if (!snd_reset_send_data(channel, SPICE_MSG_PLAYBACK_MODE)) {
+    if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_MODE)) {
         return FALSE;
     }
     mode.time = reds_get_mm_time();
     mode.mode = playback_channel->mode;
-    spice_marshall_msg_playback_mode(channel->send_data.marshaller, &mode);
+    spice_marshall_msg_playback_mode(client->send_data.marshaller, &mode);
 
-    return snd_begin_send_message(channel);
+    return snd_begin_send_message(client);
 }
 
 static void snd_playback_send(void* data)
 {
     PlaybackChannel *playback_channel = (PlaybackChannel*)data;
-    SndChannel *channel = (SndChannel*)playback_channel;
+    SndChannelClient *client = (SndChannelClient*)playback_channel;
 
     if (!playback_channel || !snd_send_data(data)) {
         return;
     }
 
-    while (channel->command) {
-        if (channel->command & SND_PLAYBACK_MODE_MASK) {
+    while (client->command) {
+        if (client->command & SND_PLAYBACK_MODE_MASK) {
             if (!playback_send_mode(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_PLAYBACK_MODE_MASK;
+            client->command &= ~SND_PLAYBACK_MODE_MASK;
         }
-        if (channel->command & SND_PLAYBACK_PCM_MASK) {
+        if (client->command & SND_PLAYBACK_PCM_MASK) {
             spice_assert(!playback_channel->in_progress && playback_channel->pending_frame);
             playback_channel->in_progress = playback_channel->pending_frame;
             playback_channel->pending_frame = NULL;
-            channel->command &= ~SND_PLAYBACK_PCM_MASK;
+            client->command &= ~SND_PLAYBACK_PCM_MASK;
             if (!snd_playback_send_write(playback_channel)) {
                 spice_printerr("snd_send_playback_write failed");
                 return;
             }
         }
-        if (channel->command & SND_CTRL_MASK) {
+        if (client->command & SND_CTRL_MASK) {
             if (!snd_playback_send_ctl(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_CTRL_MASK;
+            client->command &= ~SND_CTRL_MASK;
         }
-        if (channel->command & SND_VOLUME_MASK) {
+        if (client->command & SND_VOLUME_MASK) {
             if (!snd_playback_send_volume(playback_channel) ||
                 !snd_playback_send_mute(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_VOLUME_MASK;
+            client->command &= ~SND_VOLUME_MASK;
         }
-        if (channel->command & SND_MIGRATE_MASK) {
+        if (client->command & SND_MIGRATE_MASK) {
             if (!snd_playback_send_migrate(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_MIGRATE_MASK;
+            client->command &= ~SND_MIGRATE_MASK;
         }
-        if (channel->command & SND_PLAYBACK_LATENCY_MASK) {
+        if (client->command & SND_PLAYBACK_LATENCY_MASK) {
             if (!snd_playback_send_latency(playback_channel)) {
                 return;
             }
-            channel->command &= ~SND_PLAYBACK_LATENCY_MASK;
+            client->command &= ~SND_PLAYBACK_LATENCY_MASK;
         }
     }
 }
@@ -844,54 +844,54 @@ static void snd_playback_send(void* data)
 static void snd_record_send(void* data)
 {
     RecordChannel *record_channel = (RecordChannel*)data;
-    SndChannel *channel = (SndChannel*)record_channel;
+    SndChannelClient *client = (SndChannelClient*)record_channel;
 
     if (!record_channel || !snd_send_data(data)) {
         return;
     }
 
-    while (channel->command) {
-        if (channel->command & SND_CTRL_MASK) {
+    while (client->command) {
+        if (client->command & SND_CTRL_MASK) {
             if (!snd_record_send_ctl(record_channel)) {
                 return;
             }
-            channel->command &= ~SND_CTRL_MASK;
+            client->command &= ~SND_CTRL_MASK;
         }
-        if (channel->command & SND_VOLUME_MASK) {
+        if (client->command & SND_VOLUME_MASK) {
             if (!snd_record_send_volume(record_channel) ||
                 !snd_record_send_mute(record_channel)) {
                 return;
             }
-            channel->command &= ~SND_VOLUME_MASK;
+            client->command &= ~SND_VOLUME_MASK;
         }
-        if (channel->command & SND_MIGRATE_MASK) {
+        if (client->command & SND_MIGRATE_MASK) {
             if (!snd_record_send_migrate(record_channel)) {
                 return;
             }
-            channel->command &= ~SND_MIGRATE_MASK;
+            client->command &= ~SND_MIGRATE_MASK;
         }
     }
 }
 
-static SndChannel *__new_channel(SndWorker *worker, int size, uint32_t channel_id,
-                                 RedClient *client,
-                                 RedsStream *stream,
-                                 int migrate,
-                                 snd_channel_send_messages_proc send_messages,
-                                 snd_channel_handle_message_proc handle_message,
-                                 snd_channel_on_message_done_proc on_message_done,
-                                 snd_channel_cleanup_channel_proc cleanup,
-                                 uint32_t *common_caps, int num_common_caps,
-                                 uint32_t *caps, int num_caps)
+static SndChannelClient *__new_channel(SndWorker *worker, int size, uint32_t channel_id,
+                                       RedClient *red_client,
+                                       RedsStream *stream,
+                                       int migrate,
+                                       snd_channel_send_messages_proc send_messages,
+                                       snd_channel_handle_message_proc handle_message,
+                                       snd_channel_on_message_done_proc on_message_done,
+                                       snd_channel_cleanup_channel_proc cleanup,
+                                       uint32_t *common_caps, int num_common_caps,
+                                       uint32_t *caps, int num_caps)
 {
-    SndChannel *channel;
+    SndChannelClient *client;
     int delay_val;
     int flags;
 #ifdef SO_PRIORITY
     int priority;
 #endif
     int tos;
-    MainChannelClient *mcc = red_client_get_main(client);
+    MainChannelClient *mcc = red_client_get_main(red_client);
     RedsState *reds = red_channel_get_server(worker->base_channel);
 
     spice_assert(stream);
@@ -929,39 +929,39 @@ static SndChannel *__new_channel(SndWorker *worker, int size, uint32_t channel_i
         goto error1;
     }
 
-    spice_assert(size >= sizeof(*channel));
-    channel = spice_malloc0(size);
-    channel->refs = 1;
-    channel->parser = spice_get_client_channel_parser(channel_id, NULL);
-    channel->stream = stream;
-    channel->worker = worker;
-    channel->receive_data.message_start = channel->receive_data.buf;
-    channel->receive_data.now = channel->receive_data.buf;
-    channel->receive_data.end = channel->receive_data.buf + sizeof(channel->receive_data.buf);
-    channel->send_data.marshaller = spice_marshaller_new();
+    spice_assert(size >= sizeof(*client));
+    client = spice_malloc0(size);
+    client->refs = 1;
+    client->parser = spice_get_client_channel_parser(channel_id, NULL);
+    client->stream = stream;
+    client->worker = worker;
+    client->receive_data.message_start = client->receive_data.buf;
+    client->receive_data.now = client->receive_data.buf;
+    client->receive_data.end = client->receive_data.buf + sizeof(client->receive_data.buf);
+    client->send_data.marshaller = spice_marshaller_new();
 
     stream->watch = reds_core_watch_add(reds, stream->socket, SPICE_WATCH_EVENT_READ,
-                                        snd_event, channel);
+                                        snd_event, client);
     if (stream->watch == NULL) {
         spice_printerr("watch_add failed, %s", strerror(errno));
         goto error2;
     }
 
-    channel->send_messages = send_messages;
-    channel->handle_message = handle_message;
-    channel->on_message_done = on_message_done;
-    channel->cleanup = cleanup;
+    client->send_messages = send_messages;
+    client->handle_message = handle_message;
+    client->on_message_done = on_message_done;
+    client->cleanup = cleanup;
 
-    channel->channel_client =
-        dummy_channel_client_create(worker->base_channel, client,
+    client->channel_client =
+        dummy_channel_client_create(worker->base_channel, red_client,
                                     num_common_caps, common_caps, num_caps, caps);
-    if (!channel->channel_client) {
+    if (!client->channel_client) {
         goto error2;
     }
-    return channel;
+    return client;
 
 error2:
-    free(channel);
+    free(client);
 
 error1:
     reds_stream_free(stream);
@@ -986,12 +986,12 @@ static void snd_disconnect_channel_client(RedChannelClient *rcc)
     }
 }
 
-static void snd_set_command(SndChannel *channel, uint32_t command)
+static void snd_set_command(SndChannelClient *client, uint32_t command)
 {
-    if (!channel) {
+    if (!client) {
         return;
     }
-    channel->command |= command;
+    client->command |= command;
 }
 
 SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *sin,
@@ -999,14 +999,14 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *
                                                   uint16_t *volume)
 {
     SpiceVolumeState *st = &sin->st->worker.volume;
-    SndChannel *channel = sin->st->worker.connection;
-    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(client, PlaybackChannel, base);
 
     st->volume_nchannels = nchannels;
     free(st->volume);
     st->volume = spice_memdup(volume, sizeof(uint16_t) * nchannels);
 
-    if (!channel || nchannels == 0)
+    if (!client || nchannels == 0)
         return;
 
     snd_playback_send_volume(playback_channel);
@@ -1015,12 +1015,12 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *
 SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *sin, uint8_t mute)
 {
     SpiceVolumeState *st = &sin->st->worker.volume;
-    SndChannel *channel = sin->st->worker.connection;
-    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(client, PlaybackChannel, base);
 
     st->mute = mute;
 
-    if (!channel)
+    if (!client)
         return;
 
     snd_playback_send_mute(playback_channel);
@@ -1028,19 +1028,19 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *si
 
 static void snd_playback_start(SndWorker *worker)
 {
-    SndChannel *channel = worker->connection;
+    SndChannelClient *client = worker->connection;
 
     worker->active = 1;
-    if (!channel)
+    if (!client)
         return;
-    spice_assert(!channel->active);
-    reds_disable_mm_time(snd_channel_get_server(channel));
-    channel->active = TRUE;
-    if (!channel->client_active) {
-        snd_set_command(channel, SND_CTRL_MASK);
-        snd_playback_send(channel);
+    spice_assert(!client->active);
+    reds_disable_mm_time(snd_channel_get_server(client));
+    client->active = TRUE;
+    if (!client->client_active) {
+        snd_set_command(client, SND_CTRL_MASK);
+        snd_playback_send(client);
     } else {
-        channel->command &= ~SND_CTRL_MASK;
+        client->command &= ~SND_CTRL_MASK;
     }
 }
 
@@ -1051,14 +1051,14 @@ SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
 
 SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
 {
-    SndChannel *channel = sin->st->worker.connection;
-    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(client, PlaybackChannel, base);
 
     sin->st->worker.active = 0;
-    if (!channel)
+    if (!client)
         return;
     spice_assert(playback_channel->base.active);
-    reds_enable_mm_time(snd_channel_get_server(channel));
+    reds_enable_mm_time(snd_channel_get_server(client));
     playback_channel->base.active = FALSE;
     if (playback_channel->base.client_active) {
         snd_set_command(&playback_channel->base, SND_CTRL_MASK);
@@ -1079,16 +1079,16 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
 SPICE_GNUC_VISIBLE void spice_server_playback_get_buffer(SpicePlaybackInstance *sin,
                                                          uint32_t **frame, uint32_t *num_samples)
 {
-    SndChannel *channel = sin->st->worker.connection;
-    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(client, PlaybackChannel, base);
 
-    if (!channel || !playback_channel->free_frames) {
+    if (!client || !playback_channel->free_frames) {
         *frame = NULL;
         *num_samples = 0;
         return;
     }
     spice_assert(playback_channel->base.active);
-    snd_channel_ref(channel);
+    snd_channel_ref(client);
 
     *frame = playback_channel->free_frames->samples;
     playback_channel->free_frames = playback_channel->free_frames->next;
@@ -1105,8 +1105,8 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
     spice_assert(playback_channel);
     if (!snd_channel_unref(&playback_channel->base) ||
         sin->st->worker.connection != &playback_channel->base) {
-        /* lost last reference, channel has been destroyed previously */
-        spice_info("audio samples belong to a disconnected channel");
+        /* lost last reference, client has been destroyed previously */
+        spice_info("audio samples belong to a disconnected client");
         return;
     }
     spice_assert(playback_channel->base.active);
@@ -1159,7 +1159,7 @@ static int snd_desired_audio_mode(int playback_compression, int frequency,
     return SPICE_AUDIO_DATA_MODE_RAW;
 }
 
-static void on_new_playback_channel(SndWorker *worker, SndChannel *snd_channel)
+static void on_new_playback_channel(SndWorker *worker, SndChannelClient *snd_channel)
 {
     RedsState *reds = red_channel_get_server(worker->base_channel);
 
@@ -1178,12 +1178,12 @@ static void on_new_playback_channel(SndWorker *worker, SndChannel *snd_channel)
     }
 }
 
-static void snd_playback_cleanup(SndChannel *channel)
+static void snd_playback_cleanup(SndChannelClient *client)
 {
-    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(channel, PlaybackChannel, base);
+    PlaybackChannel *playback_channel = SPICE_CONTAINEROF(client, PlaybackChannel, base);
 
     if (playback_channel->base.active) {
-        reds_enable_mm_time(snd_channel_get_server(channel));
+        reds_enable_mm_time(snd_channel_get_server(client));
     }
 
     snd_codec_destroy(&playback_channel->codec);
@@ -1266,14 +1266,14 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
                                                 uint16_t *volume)
 {
     SpiceVolumeState *st = &sin->st->worker.volume;
-    SndChannel *channel = sin->st->worker.connection;
-    RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    RecordChannel *record_channel = SPICE_CONTAINEROF(client, RecordChannel, base);
 
     st->volume_nchannels = nchannels;
     free(st->volume);
     st->volume = spice_memdup(volume, sizeof(uint16_t) * nchannels);
 
-    if (!channel || nchannels == 0)
+    if (!client || nchannels == 0)
         return;
 
     snd_record_send_volume(record_channel);
@@ -1282,12 +1282,12 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
 SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, uint8_t mute)
 {
     SpiceVolumeState *st = &sin->st->worker.volume;
-    SndChannel *channel = sin->st->worker.connection;
-    RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    RecordChannel *record_channel = SPICE_CONTAINEROF(client, RecordChannel, base);
 
     st->mute = mute;
 
-    if (!channel)
+    if (!client)
         return;
 
     snd_record_send_mute(record_channel);
@@ -1295,21 +1295,21 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, u
 
 static void snd_record_start(SndWorker *worker)
 {
-    SndChannel *channel = worker->connection;
-    RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
+    SndChannelClient *client = worker->connection;
+    RecordChannel *record_channel = SPICE_CONTAINEROF(client, RecordChannel, base);
 
     worker->active = 1;
-    if (!channel)
+    if (!client)
         return;
-    spice_assert(!channel->active);
+    spice_assert(!client->active);
     record_channel->read_pos = record_channel->write_pos = 0;   //todo: improve by
                                                                 //stream generation
-    channel->active = TRUE;
-    if (!channel->client_active) {
-        snd_set_command(channel, SND_CTRL_MASK);
-        snd_record_send(channel);
+    client->active = TRUE;
+    if (!client->client_active) {
+        snd_set_command(client, SND_CTRL_MASK);
+        snd_record_send(client);
     } else {
-        channel->command &= ~SND_CTRL_MASK;
+        client->command &= ~SND_CTRL_MASK;
     }
 }
 
@@ -1320,11 +1320,11 @@ SPICE_GNUC_VISIBLE void spice_server_record_start(SpiceRecordInstance *sin)
 
 SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
 {
-    SndChannel *channel = sin->st->worker.connection;
-    RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    RecordChannel *record_channel = SPICE_CONTAINEROF(client, RecordChannel, base);
 
     sin->st->worker.active = 0;
-    if (!channel)
+    if (!client)
         return;
     spice_assert(record_channel->base.active);
     record_channel->base.active = FALSE;
@@ -1339,13 +1339,13 @@ SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
 SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance *sin,
                                                             uint32_t *samples, uint32_t bufsize)
 {
-    SndChannel *channel = sin->st->worker.connection;
-    RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
+    SndChannelClient *client = sin->st->worker.connection;
+    RecordChannel *record_channel = SPICE_CONTAINEROF(client, RecordChannel, base);
     uint32_t read_pos;
     uint32_t now;
     uint32_t len;
 
-    if (!channel)
+    if (!client)
         return 0;
     spice_assert(record_channel->base.active);
 
@@ -1374,11 +1374,11 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
     return len;
 }
 
-static uint32_t snd_get_best_rate(SndChannel *channel, uint32_t cap_opus)
+static uint32_t snd_get_best_rate(SndChannelClient *client, uint32_t cap_opus)
 {
     int client_can_opus = TRUE;
-    if (channel) {
-        client_can_opus = red_channel_client_test_remote_cap(channel->channel_client, cap_opus);
+    if (client) {
+        client_can_opus = red_channel_client_test_remote_cap(client->channel_client, cap_opus);
     }
 
     if (client_can_opus && snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, SND_CODEC_ANY_FREQUENCY))
@@ -1416,7 +1416,7 @@ SPICE_GNUC_VISIBLE void spice_server_set_record_rate(SpiceRecordInstance *sin, u
     snd_set_rate(&sin->st->worker, frequency, SPICE_RECORD_CAP_OPUS);
 }
 
-static void on_new_record_channel(SndWorker *worker, SndChannel *snd_channel)
+static void on_new_record_channel(SndWorker *worker, SndChannelClient *snd_channel)
 {
     spice_assert(snd_channel);
 
@@ -1429,9 +1429,9 @@ static void on_new_record_channel(SndWorker *worker, SndChannel *snd_channel)
     }
 }
 
-static void snd_record_cleanup(SndChannel *channel)
+static void snd_record_cleanup(SndChannelClient *client)
 {
-    RecordChannel *record_channel = SPICE_CONTAINEROF(channel, RecordChannel, base);
+    RecordChannel *record_channel = SPICE_CONTAINEROF(client, RecordChannel, base);
     snd_codec_destroy(&record_channel->codec);
 }
 
