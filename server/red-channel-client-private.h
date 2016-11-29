@@ -50,7 +50,6 @@ typedef struct OutgoingHandler {
 } OutgoingHandler;
 
 typedef struct IncomingHandler {
-    IncomingHandlerInterface *cb;
     void *opaque;
     uint8_t header_buf[MAX_HEADER_SIZE];
     SpiceDataHeaderOpaque header;

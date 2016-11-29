@@ -59,15 +59,6 @@ struct SpiceDataHeaderOpaque {
     get_msg_size_proc get_msg_size;
 };
 
-typedef int (*handle_message_proc)(void *opaque,
-                                   uint16_t type, uint32_t size, uint8_t *msg);
-
-typedef struct IncomingHandlerInterface {
-    // 'parser' is optional and will not be used if NULL
-    spice_parse_channel_func_t parser;
-    handle_message_proc handle_message;
-} IncomingHandlerInterface;
-
 typedef struct RedChannel RedChannel;
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;
@@ -274,10 +265,6 @@ void red_channel_on_output(RedChannel *self, int n);
 void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem *item);
 void red_channel_reset_thread_id(RedChannel *self);
 StatNodeRef red_channel_get_stat_node(RedChannel *channel);
-
-/* FIXME: does this even need to be in RedChannel? It's really only used in
- * RedChannelClient. Needs refactoring */
-IncomingHandlerInterface* red_channel_get_incoming_handler(RedChannel *self);
 
 const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *self);
 

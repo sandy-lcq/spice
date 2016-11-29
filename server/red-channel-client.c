@@ -269,8 +269,6 @@ static void red_channel_client_constructed(GObject *object)
     RedChannelClient *self =  RED_CHANNEL_CLIENT(object);
 
     self->priv->incoming.opaque = self;
-    self->priv->incoming.cb = red_channel_get_incoming_handler(self->priv->channel);
-
     self->priv->outgoing.opaque = self;
     self->priv->outgoing.pos = 0;
     self->priv->outgoing.size = 0;
@@ -1103,15 +1101,17 @@ static int red_peer_receive(RedsStream *stream, uint8_t *buf, uint32_t size)
     return pos - buf;
 }
 
-static uint8_t *red_channel_client_parse(IncomingHandler *handler, uint8_t *message, size_t message_size,
+static uint8_t *red_channel_client_parse(RedChannelClient *rcc, uint8_t *message, size_t message_size,
                                          uint16_t message_type,
                                          size_t *size_out, message_destructor_t *free_message)
 {
+    RedChannel *channel = red_channel_client_get_channel(rcc);
+    RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
     uint8_t *parsed_message;
 
-    if (handler->cb->parser) {
-        parsed_message = handler->cb->parser(message, message + message_size, message_type,
-                                             SPICE_VERSION_MINOR, size_out, free_message);
+    if (klass->parser) {
+        parsed_message = klass->parser(message, message + message_size, message_type,
+                                       SPICE_VERSION_MINOR, size_out, free_message);
     } else {
         parsed_message = message;
         *size_out = message_size;
@@ -1142,6 +1142,9 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
         uint8_t *parsed;
         size_t parsed_size;
         message_destructor_t parsed_free = NULL;
+        RedChannel *channel = red_channel_client_get_channel(handler->opaque);
+        RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
+
         if (handler->header_pos < handler->header.header_size) {
             bytes_read = red_peer_receive(stream,
                                           handler->header.data + handler->header_pos,
@@ -1186,7 +1189,7 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
             }
         }
 
-        parsed = red_channel_client_parse(handler,
+        parsed = red_channel_client_parse(handler->opaque,
                                           handler->msg, msg_size,
                                           msg_type,
                                           &parsed_size, &parsed_free);
@@ -1198,8 +1201,8 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
             red_channel_client_disconnect(handler->opaque);
             return;
         }
-        ret_handle = handler->cb->handle_message(handler->opaque, msg_type,
-                                                 parsed_size, parsed);
+        ret_handle = klass->handle_message(handler->opaque, msg_type,
+                                           parsed_size, parsed);
         if (parsed_free != NULL) {
             parsed_free(parsed);
         }

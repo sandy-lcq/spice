@@ -93,8 +93,6 @@ struct RedChannelPrivate
 
     void *data;
 
-    IncomingHandlerInterface incoming_cb;
-
     ClientCbs client_cbs;
     // TODO: when different channel_clients are in different threads
     // from Channel -> need to protect!
@@ -220,9 +218,6 @@ red_channel_constructed(GObject *object)
                  klass->alloc_recv_buf && klass->release_recv_buf);
     spice_assert(klass->handle_migrate_data ||
                  !(self->priv->migration_flags & SPICE_MIGRATE_NEED_DATA_TRANSFER));
-
-    self->priv->incoming_cb.handle_message = (handle_message_proc)klass->handle_message;
-    self->priv->incoming_cb.parser = klass->parser;
 }
 
 static void red_channel_client_default_connect(RedChannel *channel, RedClient *client,
@@ -762,11 +757,6 @@ void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem 
     g_return_if_fail(klass->send_item);
 
     klass->send_item(rcc, item);
-}
-
-IncomingHandlerInterface* red_channel_get_incoming_handler(RedChannel *self)
-{
-    return &self->priv->incoming_cb;
 }
 
 void red_channel_reset_thread_id(RedChannel *self)
