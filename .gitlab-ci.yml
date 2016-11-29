@@ -13,7 +13,7 @@ makecheck:
 
 statistics:
   script:
-  - CFLAGS="$CFLAGS -DRED_STATISTICS " ./autogen.sh
+  - ./autogen.sh --enable-statistics
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
 

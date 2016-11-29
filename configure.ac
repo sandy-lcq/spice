@@ -218,6 +218,11 @@ AM_CONDITIONAL([BUILD_MANUAL], [test -n "$ASCIIDOC" || test -n "$A2X"])
 AM_CONDITIONAL([BUILD_HTML_MANUAL], [test -n "$ASCIIDOC"])
 AM_CONDITIONAL([BUILD_CHUNKED_MANUAL], [test -n "$A2X"])
 
+AC_ARG_ENABLE([statistics],
+               AS_HELP_STRING([--enable-statistics=@<:@yes/no@:>@],
+                              [Build SPICE with statistic code enabled @<:@default=no@:>@]))
+AS_IF([test "$enable_statistics" = "yes"],
+      [AC_DEFINE([RED_STATISTICS], [1], [Enable SPICE statistics])])
 
 dnl ===========================================================================
 dnl check compiler flags
