@@ -153,6 +153,11 @@ static SpiceRect clipping_rect;
 static pthread_mutex_t frame_queue_mtx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t frame_queue_cond = PTHREAD_COND_INITIALIZER;
 static GQueue frame_queue = G_QUEUE_INIT;
+// input frames are counted
+static unsigned input_frame_index = 0;
+// file output for report informations like
+// frame output size
+static FILE *file_report;
 static TestPipeline *input_pipeline, *output_pipeline;
 static pthread_mutex_t eos_mtx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t eos_cond = PTHREAD_COND_INITIALIZER;
@@ -184,6 +189,8 @@ static double compute_psnr(SpiceBitmap *bitmap1, int32_t x1, int32_t y1,
 static void
 input_frames(GstSample *sample, void *param)
 {
+    unsigned curr_frame_index = input_frame_index++;
+
     spice_assert(video_encoder && sample);
 
     if (SPICE_UNLIKELY(!clipping_type_computed)) {
@@ -213,6 +220,13 @@ input_frames(GstSample *sample, void *param)
         pthread_mutex_unlock(&frame_queue_mtx);
         spice_assert(p_outbuf);
         pipeline_send_raw_data(output_pipeline, p_outbuf);
+        if (file_report) {
+            fprintf(file_report,
+                    "Frame: %u\n"
+                    "Output size: %u\n",
+                    curr_frame_index,
+                    (unsigned) p_outbuf->size);
+        }
         break;
     case VIDEO_ENCODER_FRAME_UNSUPPORTED:
         // ?? what to do ??
@@ -221,6 +235,12 @@ input_frames(GstSample *sample, void *param)
         spice_assert(0);
         break;
     case VIDEO_ENCODER_FRAME_DROP:
+        if (file_report) {
+            fprintf(file_report,
+                    "Frame: %u\n"
+                    "Output size: 0\n",
+                    curr_frame_index);
+        }
         break;
     default:
         // invalid value returned
@@ -294,6 +314,7 @@ int main(int argc, char *argv[])
     gchar *input_pipeline_desc = NULL;
     const gchar *image_format = "32BIT";
     const gchar *encoder_name = "mjpeg";
+    gchar *file_report_name = NULL;
     gboolean use_hw_encoder = FALSE; // TODO use
     const gchar *clipping = "(0,0)x(100%,100%)";
 
@@ -325,6 +346,8 @@ int main(int argc, char *argv[])
           "Minimum PSNR accepted", "PSNR" },
         { "split-lines", 0, 0, G_OPTION_ARG_INT, &image_split_lines,
           "Split image into different chunks every LINES lines", "LINES" },
+        { "report", 0, 0, G_OPTION_ARG_FILENAME, &file_report_name,
+          "Report statistics to file", "FILENAME" },
         { NULL }
     };
 
@@ -370,6 +393,14 @@ int main(int argc, char *argv[])
     if (image_split_lines < 1) {
         g_printerr("Invalid --split-lines option: %d\n", image_split_lines);
         exit(1);
+    }
+
+    if (file_report_name) {
+        file_report = fopen(file_report_name, "w");
+        if (!file_report) {
+            g_printerr("Error opening file %s for report\n", file_report_name);
+            exit(1);
+        }
     }
 
     gst_init(&argc, &argv);
