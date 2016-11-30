@@ -296,6 +296,7 @@ SpiceCoreInterfaceInternal* red_channel_get_core_interface(RedChannel *channel);
 /* channel callback function */
 int red_channel_config_socket(RedChannel *self, RedChannelClient *rcc);
 void red_channel_on_disconnect(RedChannel *self, RedChannelClient *rcc);
+void red_channel_on_output(RedChannel *self, int n);
 void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem *item);
 void red_channel_reset_thread_id(RedChannel *self);
 StatNodeRef red_channel_get_stat_node(RedChannel *channel);

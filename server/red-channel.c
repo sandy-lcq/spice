@@ -204,14 +204,9 @@ static void red_channel_client_default_peer_on_error(RedChannelClient *rcc)
     red_channel_client_disconnect(rcc);
 }
 
-static void red_channel_on_output(void *opaque, int n)
+void red_channel_on_output(RedChannel *self, int n)
 {
-    RedChannelClient *rcc G_GNUC_UNUSED;
-    RedChannel *self G_GNUC_UNUSED;
-
-    red_channel_client_on_output(opaque, n);
 #ifdef RED_STATISTICS
-    self = red_channel_client_get_channel((RedChannelClient *)opaque);
     stat_inc_counter(self->priv->reds, self->priv->out_bytes_counter, n);
 #endif
 }
@@ -345,7 +340,7 @@ red_channel_init(RedChannel *self)
     self->priv->outgoing_cb.on_error =
         (on_outgoing_error_proc)red_channel_client_default_peer_on_error;
     self->priv->outgoing_cb.on_msg_done = red_channel_client_on_out_msg_done;
-    self->priv->outgoing_cb.on_output = red_channel_on_output;
+    self->priv->outgoing_cb.on_output = red_channel_client_on_output;
 
     self->priv->client_cbs.connect = red_channel_client_default_connect;
     self->priv->client_cbs.disconnect = red_channel_client_default_disconnect;

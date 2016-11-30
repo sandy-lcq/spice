@@ -376,10 +376,13 @@ RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
 void red_channel_client_on_output(void *opaque, int n)
 {
     RedChannelClient *rcc = opaque;
+    RedChannel *channel = red_channel_client_get_channel(rcc);
 
     if (rcc->priv->connectivity_monitor.timer) {
         rcc->priv->connectivity_monitor.out_bytes += n;
     }
+    /* TODO: use a signal rather than a hardcoded call to a RedChannel callback? */
+    red_channel_on_output(channel, n);
 }
 
 void red_channel_client_on_input(void *opaque, int n)
