@@ -241,7 +241,7 @@ favourite operating system so you can use it for installation.
 
 [source,sh]
 host$ qemu-kvm -boot order=dc -vga qxl \
-        -spice port=3001,disable-ticketing -soundhw ac97 \
+        -spice port=3001,disable-ticketing -soundhw hda \
         -device virtio-serial -chardev spicevmc,id=vdagent,debug=0,name=vdagent \
         -device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
         -cdrom /path/to/your.iso /path/to/your.img
