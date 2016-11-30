@@ -368,9 +368,8 @@ RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
     return rcc->priv->channel;
 }
 
-static void red_channel_client_data_sent(void *opaque, int n)
+static void red_channel_client_data_sent(RedChannelClient *rcc, int n)
 {
-    RedChannelClient *rcc = opaque;
     RedChannel *channel = red_channel_client_get_channel(rcc);
 
     if (rcc->priv->connectivity_monitor.timer) {
@@ -380,35 +379,29 @@ static void red_channel_client_data_sent(void *opaque, int n)
     red_channel_on_output(channel, n);
 }
 
-static void red_channel_client_data_read(void *opaque, int n)
+static void red_channel_client_data_read(RedChannelClient *rcc, int n)
 {
-    RedChannelClient *rcc = opaque;
-
     if (rcc->priv->connectivity_monitor.timer) {
         rcc->priv->connectivity_monitor.in_bytes += n;
     }
 }
 
-static int red_channel_client_get_out_msg_size(void *opaque)
+static int red_channel_client_get_out_msg_size(RedChannelClient *rcc)
 {
-    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
-
     return rcc->priv->send_data.size;
 }
 
-static void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
-                                               int *vec_size, int pos)
+static void red_channel_client_prepare_out_msg(RedChannelClient *rcc,
+                                               struct iovec *vec, int *vec_size,
+                                               int pos)
 {
-    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
-
     *vec_size = spice_marshaller_fill_iovec(rcc->priv->send_data.marshaller,
                                             vec, IOV_MAX, pos);
 }
 
-static void red_channel_client_set_blocked(void *opaque)
+static void red_channel_client_set_blocked(RedChannelClient *rcc)
 {
     SpiceCoreInterfaceInternal *core;
-    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
 
     rcc->priv->send_data.blocked = TRUE;
     core = red_channel_get_core_interface(rcc->priv->channel);
@@ -545,9 +538,8 @@ static void red_channel_client_restore_main_sender(RedChannelClient *rcc)
     rcc->priv->send_data.header.data = rcc->priv->send_data.main.header_data;
 }
 
-static void red_channel_client_msg_sent(void *opaque)
+static void red_channel_client_msg_sent(RedChannelClient *rcc)
 {
-    RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
     int fd;
 
     if (spice_marshaller_get_fd(rcc->priv->send_data.marshaller, &fd)) {
