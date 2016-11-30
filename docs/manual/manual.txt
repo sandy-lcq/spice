@@ -576,7 +576,7 @@ With the qemu command line, you must add a USB CCID device, and a
 name "smartcard":
 
 [source,sh]
--device usb-ccid -chardev spicevmc,name=smartcard -device ccid-card-passthru,chardev=ccid
+-device usb-ccid -chardev spicevmc,name=smartcard,id=ccid -device ccid-card-passthru,chardev=ccid
 
 Client
 ------
