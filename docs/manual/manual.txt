@@ -535,10 +535,6 @@ which are described when running remote-viewer with `--help-spice`.
 To get USB redirection working on Windows clients, you need to install
 http://www.spice-space.org/download/windows/usbdk/[UsbDk]
 
-[NOTE]
-You may need additional services running in the client, such as the
-Spice USB Clerk service on Windows.
-
 CAC smartcard redirection
 =========================
 
