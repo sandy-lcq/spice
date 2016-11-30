@@ -21,6 +21,28 @@
 #include "red-channel.h"
 #include "red-channel-client.h"
 
+typedef struct SpiceDataHeaderOpaque SpiceDataHeaderOpaque;
+
+typedef uint16_t (*get_msg_type_proc)(SpiceDataHeaderOpaque *header);
+typedef uint32_t (*get_msg_size_proc)(SpiceDataHeaderOpaque *header);
+typedef void (*set_msg_type_proc)(SpiceDataHeaderOpaque *header, uint16_t type);
+typedef void (*set_msg_size_proc)(SpiceDataHeaderOpaque *header, uint32_t size);
+typedef void (*set_msg_serial_proc)(SpiceDataHeaderOpaque *header, uint64_t serial);
+typedef void (*set_msg_sub_list_proc)(SpiceDataHeaderOpaque *header, uint32_t sub_list);
+
+struct SpiceDataHeaderOpaque {
+    uint8_t *data;
+    uint16_t header_size;
+
+    set_msg_type_proc set_msg_type;
+    set_msg_size_proc set_msg_size;
+    set_msg_serial_proc set_msg_serial;
+    set_msg_sub_list_proc set_msg_sub_list;
+
+    get_msg_type_proc get_msg_type;
+    get_msg_size_proc get_msg_size;
+};
+
 typedef struct RedChannelClientLatencyMonitor {
     int state;
     uint64_t last_pong_time;
