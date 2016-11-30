@@ -532,6 +532,9 @@ remote-viewer, you can select which USB devices to redirect in
 established. There are also various command line redirection options
 which are described when running remote-viewer with `--help-spice`.
 
+To get USB redirection working on Windows clients, you need to install
+http://www.spice-space.org/download/windows/usbdk/[UsbDk]
+
 [NOTE]
 You may need additional services running in the client, such as the
 Spice USB Clerk service on Windows.
@@ -1022,9 +1025,6 @@ Windows guest
 The recommended way of getting all the needed drivers installed is to
 use the all-in-one Spice guest tools installer which can be found on
 http://spice-space.org/download/windows/spice-guest-tools/[spice-space.org].
-
-To get USB redirection working on Windows, you need to install
-http://www.spice-space.org/download/windows/usbdk/[UsbDk]
 
 If you want to manually install them, the QXL driver can be downloaded
 from http://spice-space.org/download/windows/qxl/[this location] ,
