@@ -595,7 +595,7 @@ static void set_bit_rate(SpiceGstEncoder *encoder, uint64_t bit_rate)
     }
     if (bit_rate < SPICE_GST_MIN_BITRATE) {
         /* Don't let the bit rate go too low... */
-        encoder->bit_rate = SPICE_GST_MIN_BITRATE;
+        bit_rate = SPICE_GST_MIN_BITRATE;
     } else if (bit_rate > encoder->bit_rate) {
         /* or too high */
         bit_rate = MIN(bit_rate, get_bit_rate_cap(encoder));
