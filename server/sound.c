@@ -596,6 +596,7 @@ static int snd_begin_send_message(SndChannelClient *client)
 
 static int snd_channel_send_migrate(SndChannelClient *client)
 {
+    SpiceMarshaller *m = client->send_data.marshaller;
     SpiceMsgMigrate migrate;
 
     if (!snd_reset_send_data(client, SPICE_MSG_MIGRATE)) {
@@ -603,7 +604,7 @@ static int snd_channel_send_migrate(SndChannelClient *client)
     }
     spice_debug(NULL);
     migrate.flags = 0;
-    spice_marshall_msg_migrate(client->send_data.marshaller, &migrate);
+    spice_marshall_msg_migrate(m, &migrate);
 
     return snd_begin_send_message(client);
 }
@@ -618,6 +619,7 @@ static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
     SpiceMsgAudioVolume *vol;
     uint8_t c;
     SpiceVolumeState *st = &client->channel->volume;
+    SpiceMarshaller *m = client->send_data.marshaller;
 
     if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
@@ -632,7 +634,7 @@ static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
     for (c = 0; c < st->volume_nchannels; ++c) {
         vol->volume[c] = st->volume[c];
     }
-    spice_marshall_SpiceMsgAudioVolume(client->send_data.marshaller, vol);
+    spice_marshall_SpiceMsgAudioVolume(m, vol);
 
     return snd_begin_send_message(client);
 }
@@ -647,6 +649,7 @@ static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
 {
     SpiceMsgAudioMute mute;
     SpiceVolumeState *st = &client->channel->volume;
+    SpiceMarshaller *m = client->send_data.marshaller;
 
     if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
@@ -656,7 +659,7 @@ static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
         return FALSE;
     }
     mute.mute = st->mute;
-    spice_marshall_SpiceMsgAudioMute(client->send_data.marshaller, &mute);
+    spice_marshall_SpiceMsgAudioMute(m, &mute);
 
     return snd_begin_send_message(client);
 }
@@ -670,6 +673,7 @@ static int snd_playback_send_mute(PlaybackChannelClient *playback_client)
 static int snd_playback_send_latency(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = SND_CHANNEL_CLIENT(playback_client);
+    SpiceMarshaller *m = client->send_data.marshaller;
     SpiceMsgPlaybackLatency latency_msg;
 
     spice_debug("latency %u", playback_client->latency);
@@ -677,13 +681,14 @@ static int snd_playback_send_latency(PlaybackChannelClient *playback_client)
         return FALSE;
     }
     latency_msg.latency_ms = playback_client->latency;
-    spice_marshall_msg_playback_latency(client->send_data.marshaller, &latency_msg);
+    spice_marshall_msg_playback_latency(m, &latency_msg);
 
     return snd_begin_send_message(client);
 }
 static int snd_playback_send_start(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = (SndChannelClient *)playback_client;
+    SpiceMarshaller *m = client->send_data.marshaller;
     SpiceMsgPlaybackStart start;
 
     if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_START)) {
@@ -695,7 +700,7 @@ static int snd_playback_send_start(PlaybackChannelClient *playback_client)
     spice_assert(SPICE_INTERFACE_PLAYBACK_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
     start.time = reds_get_mm_time();
-    spice_marshall_msg_playback_start(client->send_data.marshaller, &start);
+    spice_marshall_msg_playback_start(m, &start);
 
     return snd_begin_send_message(client);
 }
@@ -725,6 +730,7 @@ static int snd_playback_send_ctl(PlaybackChannelClient *playback_client)
 static int snd_record_send_start(RecordChannelClient *record_client)
 {
     SndChannelClient *client = (SndChannelClient *)record_client;
+    SpiceMarshaller *m = client->send_data.marshaller;
     SpiceMsgRecordStart start;
 
     if (!snd_reset_send_data(client, SPICE_MSG_RECORD_START)) {
@@ -735,7 +741,7 @@ static int snd_record_send_start(RecordChannelClient *record_client)
     start.frequency = client->channel->frequency;
     spice_assert(SPICE_INTERFACE_RECORD_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
-    spice_marshall_msg_record_start(client->send_data.marshaller, &start);
+    spice_marshall_msg_record_start(m, &start);
 
     return snd_begin_send_message(client);
 }
@@ -786,6 +792,7 @@ static int snd_record_send_migrate(RecordChannelClient *record_client)
 static int snd_playback_send_write(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = (SndChannelClient *)playback_client;
+    SpiceMarshaller *m = client->send_data.marshaller;
     AudioFrame *frame;
     SpiceMsgPlaybackPacket msg;
 
@@ -796,11 +803,10 @@ static int snd_playback_send_write(PlaybackChannelClient *playback_client)
     frame = playback_client->in_progress;
     msg.time = frame->time;
 
-    spice_marshall_msg_playback_data(client->send_data.marshaller, &msg);
+    spice_marshall_msg_playback_data(m, &msg);
 
     if (playback_client->mode == SPICE_AUDIO_DATA_MODE_RAW) {
-        spice_marshaller_add_ref(client->send_data.marshaller,
-                                 (uint8_t *)frame->samples,
+        spice_marshaller_add_ref(m, (uint8_t *)frame->samples,
                                  snd_codec_frame_size(playback_client->codec) * sizeof(frame->samples[0]));
     }
     else {
@@ -812,7 +818,7 @@ static int snd_playback_send_write(PlaybackChannelClient *playback_client)
             snd_disconnect_channel(client);
             return FALSE;
         }
-        spice_marshaller_add_ref(client->send_data.marshaller, playback_client->encode_buf, n);
+        spice_marshaller_add_ref(m, playback_client->encode_buf, n);
     }
 
     return snd_begin_send_message(client);
@@ -821,6 +827,7 @@ static int snd_playback_send_write(PlaybackChannelClient *playback_client)
 static int playback_send_mode(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = (SndChannelClient *)playback_client;
+    SpiceMarshaller *m = client->send_data.marshaller;
     SpiceMsgPlaybackMode mode;
 
     if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_MODE)) {
@@ -828,7 +835,7 @@ static int playback_send_mode(PlaybackChannelClient *playback_client)
     }
     mode.time = reds_get_mm_time();
     mode.mode = playback_client->mode;
-    spice_marshall_msg_playback_mode(client->send_data.marshaller, &mode);
+    spice_marshall_msg_playback_mode(m, &mode);
 
     return snd_begin_send_message(client);
 }
