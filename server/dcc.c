@@ -22,7 +22,6 @@
 #include "dcc-private.h"
 #include "display-channel.h"
 #include "display-channel-private.h"
-#include "red-channel-client-private.h"
 #include "red-client.h"
 #include "main-channel-client.h"
 #include "spice-server-enums.h"
@@ -222,7 +221,7 @@ int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface
        no other drawable depends on them */
 
     rcc = RED_CHANNEL_CLIENT(dcc);
-    for (l = rcc->priv->pipe.head; l != NULL; ) {
+    for (l = red_channel_client_get_pipe(rcc)->head; l != NULL; ) {
         Drawable *drawable;
         RedDrawablePipeItem *dpi = NULL;
         int depend_found = FALSE;
