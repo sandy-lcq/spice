@@ -21,6 +21,7 @@
 #include <common/sw_canvas.h>
 
 #include "display-channel-private.h"
+#include "glib-compat.h"
 
 G_DEFINE_TYPE(DisplayChannel, display_channel, TYPE_COMMON_GRAPHICS_CHANNEL)
 
@@ -62,10 +63,7 @@ display_channel_set_property(GObject *object,
             self->priv->n_surfaces = g_value_get_uint(value);
             break;
         case PROP_VIDEO_CODECS:
-            if (self->priv->video_codecs) {
-                g_array_unref(self->priv->video_codecs);
-            }
-            self->priv->video_codecs = g_array_ref(g_value_get_boxed(value));
+            display_channel_set_video_codecs(self, g_value_get_boxed(value));
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -211,7 +209,7 @@ void display_channel_set_video_codecs(DisplayChannel *display, GArray *video_cod
 {
     spice_return_if_fail(display);
 
-    g_array_unref(display->priv->video_codecs);
+    g_clear_pointer(&display->priv->video_codecs, g_array_unref);
     display->priv->video_codecs = g_array_ref(video_codecs);
 }
 
