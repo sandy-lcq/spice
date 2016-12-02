@@ -418,7 +418,7 @@ static int snd_record_handle_message(SndChannelClient *client, size_t size, uint
     }
     switch (type) {
     case SPICE_MSGC_RECORD_DATA:
-        return snd_record_handle_write((RecordChannelClient *)client, size, message);
+        return snd_record_handle_write(record_client, size, message);
     case SPICE_MSGC_RECORD_MODE: {
         SpiceMsgcRecordMode *mode = (SpiceMsgcRecordMode *)message;
         SndChannel *channel = client->channel;
