@@ -77,6 +77,8 @@ typedef struct SndChannelClient SndChannelClient;
 typedef struct SndChannel SndChannel;
 typedef struct PlaybackChannelClient PlaybackChannelClient;
 typedef struct RecordChannelClient RecordChannelClient;
+typedef struct AudioFrame AudioFrame;
+typedef struct AudioFrameContainer AudioFrameContainer;
 typedef struct SpicePlaybackState PlaybackChannel;
 typedef struct SpiceRecordState RecordChannel;
 
@@ -126,11 +128,21 @@ struct AudioFrame {
     uint32_t samples[SND_CODEC_MAX_FRAME_SIZE];
     PlaybackChannelClient *client;
     AudioFrame *next;
+    AudioFrameContainer *container;
+    gboolean allocated;
+};
+
+#define NUM_AUDIO_FRAMES 3
+struct AudioFrameContainer
+{
+    int refs;
+    AudioFrame items[NUM_AUDIO_FRAMES];
 };
 
 struct PlaybackChannelClient {
     SndChannelClient base;
-    AudioFrame frames[3];
+
+    AudioFrameContainer *frames;
     AudioFrame *free_frames;
     AudioFrame *in_progress;   /* Frame being sent to the client */
     AudioFrame *pending_frame; /* Next frame to send to the client */
@@ -218,12 +230,7 @@ static SndChannel *snd_channels;
 static void snd_receive(SndChannelClient *client);
 static void snd_playback_start(SndChannel *channel);
 static void snd_record_start(SndChannel *channel);
-
-static SndChannelClient *snd_channel_ref(SndChannelClient *client)
-{
-    client->refs++;
-    return client;
-}
+static void snd_playback_alloc_frames(PlaybackChannelClient *playback);
 
 static SndChannelClient *snd_channel_unref(SndChannelClient *client)
 {
@@ -1147,7 +1154,10 @@ SPICE_GNUC_VISIBLE void spice_server_playback_get_buffer(SpicePlaybackInstance *
         return;
     }
     spice_assert(playback_client->base.active);
-    snd_channel_ref(client);
+    if (!playback_client->free_frames->allocated) {
+        playback_client->free_frames->allocated = TRUE;
+        ++playback_client->frames->refs;
+    }
 
     *frame = playback_client->free_frames->samples;
     playback_client->free_frames = playback_client->free_frames->next;
@@ -1160,9 +1170,15 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
     AudioFrame *frame;
 
     frame = SPICE_CONTAINEROF(samples, AudioFrame, samples[0]);
+    if (frame->allocated) {
+        frame->allocated = FALSE;
+        if (--frame->container->refs == 0) {
+            free(frame->container);
+            return;
+        }
+    }
     playback_client = frame->client;
-    spice_assert(playback_client);
-    if (!snd_channel_unref(&playback_client->base) ||
+    if (!playback_client ||
         sin->st->channel.connection != &playback_client->base) {
         /* lost last reference, client has been destroyed previously */
         spice_info("audio samples belong to a disconnected client");
@@ -1240,6 +1256,15 @@ static void on_new_playback_channel(SndChannel *channel, SndChannelClient *snd_c
 static void snd_playback_cleanup(SndChannelClient *client)
 {
     PlaybackChannelClient *playback_client = SPICE_CONTAINEROF(client, PlaybackChannelClient, base);
+    int i;
+
+    // free frames, unref them
+    for (i = 0; i < NUM_AUDIO_FRAMES; ++i) {
+        playback_client->frames->items[i].client = NULL;
+    }
+    if (--playback_client->frames->refs == 0) {
+        free(playback_client->frames);
+    }
 
     if (playback_client->base.active) {
         reds_enable_mm_time(snd_channel_get_server(client));
@@ -1271,9 +1296,8 @@ static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, Re
                                                                    caps, num_caps))) {
         return;
     }
-    snd_playback_free_frame(playback_client, &playback_client->frames[0]);
-    snd_playback_free_frame(playback_client, &playback_client->frames[1]);
-    snd_playback_free_frame(playback_client, &playback_client->frames[2]);
+
+    snd_playback_alloc_frames(playback_client);
 
     int client_can_celt = red_channel_client_test_remote_cap(playback_client->base.channel_client,
                                           SPICE_PLAYBACK_CAP_CELT_0_5_1);
@@ -1714,5 +1738,17 @@ void snd_set_playback_compression(int on)
                 snd_set_command(now->connection, SND_PLAYBACK_MODE_MASK);
             }
         }
+    }
+}
+
+static void snd_playback_alloc_frames(PlaybackChannelClient *playback)
+{
+    int i;
+
+    playback->frames = spice_new0(AudioFrameContainer, 1);
+    playback->frames->refs = 1;
+    for (i = 0; i < NUM_AUDIO_FRAMES; ++i) {
+        playback->frames->items[i].container = playback->frames;
+        snd_playback_free_frame(playback, &playback->frames->items[i]);
     }
 }
