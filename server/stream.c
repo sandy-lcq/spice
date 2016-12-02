@@ -691,9 +691,11 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
     int client_has_multi_codec = red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MULTI_CODEC);
     int i;
+    GArray *video_codecs;
 
-    for (i = 0; i < display->priv->video_codecs->len; i++) {
-        RedVideoCodec* video_codec = &g_array_index (display->priv->video_codecs, RedVideoCodec, i);
+    video_codecs = display_channel_get_video_codecs(display);
+    for (i = 0; i < video_codecs->len; i++) {
+        RedVideoCodec* video_codec = &g_array_index (video_codecs, RedVideoCodec, i);
 
         if (!client_has_multi_codec &&
             video_codec->type != SPICE_VIDEO_CODEC_TYPE_MJPEG) {

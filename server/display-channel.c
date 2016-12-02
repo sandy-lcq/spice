@@ -44,6 +44,9 @@ display_channel_get_property(GObject *object,
         case PROP_N_SURFACES:
             g_value_set_uint(value, self->priv->n_surfaces);
             break;
+        case PROP_VIDEO_CODECS:
+            g_value_set_static_boxed(value, self->priv->video_codecs);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -211,6 +214,13 @@ void display_channel_set_video_codecs(DisplayChannel *display, GArray *video_cod
 
     g_clear_pointer(&display->priv->video_codecs, g_array_unref);
     display->priv->video_codecs = g_array_ref(video_codecs);
+}
+
+GArray *display_channel_get_video_codecs(DisplayChannel *display)
+{
+    spice_return_val_if_fail(display, NULL);
+
+    return display->priv->video_codecs;
 }
 
 int display_channel_get_stream_video(DisplayChannel *display)
@@ -2247,7 +2257,7 @@ display_channel_class_init(DisplayChannelClass *klass)
                                                        "Video Codecs",
                                                        G_TYPE_ARRAY,
                                                        G_PARAM_CONSTRUCT_ONLY |
-                                                       G_PARAM_WRITABLE |
+                                                       G_PARAM_READWRITE |
                                                        G_PARAM_STATIC_STRINGS));
 }
 

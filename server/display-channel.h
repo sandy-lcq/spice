@@ -229,6 +229,7 @@ void                       display_channel_set_stream_video          (DisplayCha
                                                                       int stream_video);
 void                       display_channel_set_video_codecs          (DisplayChannel *display,
                                                                       GArray *video_codecs);
+GArray*                    display_channel_get_video_codecs          (DisplayChannel *display);
 int                        display_channel_get_stream_video          (DisplayChannel *display);
 int                        display_channel_get_streams_timeout       (DisplayChannel *display);
 void                       display_channel_compress_stats_print      (DisplayChannel *display);
