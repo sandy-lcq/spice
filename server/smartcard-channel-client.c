@@ -212,10 +212,7 @@ void smartcard_channel_client_send_data(RedChannelClient *rcc,
     spice_assert(rcc);
     spice_assert(vheader);
     red_channel_client_init_send_data(rcc, SPICE_MSG_SMARTCARD_DATA, item);
-    spice_marshaller_add_ref(m, (uint8_t*)vheader, sizeof(VSCMsgHeader));
-    if (vheader->length > 0) {
-        spice_marshaller_add_ref(m, (uint8_t*)(vheader+1), vheader->length);
-    }
+    spice_marshaller_add_ref(m, (uint8_t*)vheader, sizeof(VSCMsgHeader) + vheader->length);
 }
 
 void smartcard_channel_client_send_error(RedChannelClient *rcc, SpiceMarshaller *m, RedPipeItem *item)
