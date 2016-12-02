@@ -3586,25 +3586,25 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *reds, SpiceCoreInterface *
 
 SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
 {
-    g_array_unref(reds->config->renderers);
-    g_array_unref(reds->config->video_codecs);
-    free(reds->config);
-    if (reds->main_channel) {
-        red_channel_destroy(RED_CHANNEL(reds->main_channel));
-    }
-    reds_cleanup(reds);
-
-    reds_core_timer_remove(reds, reds->mig_timer);
-
     /* remove the server from the list of servers so that we don't attempt to
      * free it again at exit */
     pthread_mutex_lock(&global_reds_lock);
     servers = g_list_remove(servers, reds);
     pthread_mutex_unlock(&global_reds_lock);
 
+    if (reds->main_channel) {
+        red_channel_destroy(RED_CHANNEL(reds->main_channel));
+    }
+    reds_core_timer_remove(reds, reds->mig_timer);
+    reds_cleanup(reds);
 #ifdef RED_STATISTICS
     stat_file_free(reds->stat_file);
 #endif
+
+    g_array_unref(reds->config->renderers);
+    g_array_unref(reds->config->video_codecs);
+    free(reds->config);
+
     free(reds);
 }
 
