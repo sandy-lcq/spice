@@ -93,7 +93,6 @@ struct RedChannelPrivate
 
     void *data;
 
-    OutgoingHandlerInterface outgoing_cb;
     IncomingHandlerInterface incoming_cb;
 
     ClientCbs client_cbs;
@@ -334,13 +333,6 @@ red_channel_init(RedChannel *self)
     self->priv->incoming_cb.on_error =
         (on_incoming_error_proc)red_channel_client_default_peer_on_error;
     self->priv->incoming_cb.on_input = red_channel_client_on_input;
-    self->priv->outgoing_cb.get_msg_size = red_channel_client_get_out_msg_size;
-    self->priv->outgoing_cb.prepare = red_channel_client_prepare_out_msg;
-    self->priv->outgoing_cb.on_block = red_channel_client_on_out_block;
-    self->priv->outgoing_cb.on_error =
-        (on_outgoing_error_proc)red_channel_client_default_peer_on_error;
-    self->priv->outgoing_cb.on_msg_done = red_channel_client_on_out_msg_done;
-    self->priv->outgoing_cb.on_output = red_channel_client_on_output;
 
     self->priv->client_cbs.connect = red_channel_client_default_connect;
     self->priv->client_cbs.disconnect = red_channel_client_default_disconnect;
@@ -789,11 +781,6 @@ void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem 
 IncomingHandlerInterface* red_channel_get_incoming_handler(RedChannel *self)
 {
     return &self->priv->incoming_cb;
-}
-
-OutgoingHandlerInterface* red_channel_get_outgoing_handler(RedChannel *self)
-{
-    return &self->priv->outgoing_cb;
 }
 
 void red_channel_reset_thread_id(RedChannel *self)

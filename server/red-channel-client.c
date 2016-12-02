@@ -272,7 +272,6 @@ static void red_channel_client_constructed(GObject *object)
     self->priv->incoming.cb = red_channel_get_incoming_handler(self->priv->channel);
 
     self->priv->outgoing.opaque = self;
-    self->priv->outgoing.cb = red_channel_get_outgoing_handler(self->priv->channel);
     self->priv->outgoing.pos = 0;
     self->priv->outgoing.size = 0;
 
@@ -373,7 +372,7 @@ RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
     return rcc->priv->channel;
 }
 
-void red_channel_client_on_output(void *opaque, int n)
+static void red_channel_client_data_sent(void *opaque, int n)
 {
     RedChannelClient *rcc = opaque;
     RedChannel *channel = red_channel_client_get_channel(rcc);
@@ -394,15 +393,15 @@ void red_channel_client_on_input(void *opaque, int n)
     }
 }
 
-int red_channel_client_get_out_msg_size(void *opaque)
+static int red_channel_client_get_out_msg_size(void *opaque)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
 
     return rcc->priv->send_data.size;
 }
 
-void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
-                                        int *vec_size, int pos)
+static void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
+                                               int *vec_size, int pos)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
 
@@ -410,7 +409,7 @@ void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
                                             vec, IOV_MAX, pos);
 }
 
-void red_channel_client_on_out_block(void *opaque)
+static void red_channel_client_set_blocked(void *opaque)
 {
     SpiceCoreInterfaceInternal *core;
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
@@ -550,7 +549,7 @@ static void red_channel_client_restore_main_sender(RedChannelClient *rcc)
     rcc->priv->send_data.header.data = rcc->priv->send_data.main.header_data;
 }
 
-void red_channel_client_on_out_msg_done(void *opaque)
+static void red_channel_client_msg_sent(void *opaque)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
     int fd;
@@ -1011,33 +1010,33 @@ static void red_peer_handle_outgoing(RedsStream *stream, OutgoingHandler *handle
 
     if (handler->size == 0) {
         handler->vec = handler->vec_buf;
-        handler->size = handler->cb->get_msg_size(handler->opaque);
+        handler->size = red_channel_client_get_out_msg_size(handler->opaque);
         if (!handler->size) {  // nothing to be sent
             return;
         }
     }
 
     for (;;) {
-        handler->cb->prepare(handler->opaque, handler->vec, &handler->vec_size, handler->pos);
+        red_channel_client_prepare_out_msg(handler->opaque, handler->vec, &handler->vec_size, handler->pos);
         n = reds_stream_writev(stream, handler->vec, handler->vec_size);
         if (n == -1) {
             switch (errno) {
             case EAGAIN:
-                handler->cb->on_block(handler->opaque);
+                red_channel_client_set_blocked(handler->opaque);
                 return;
             case EINTR:
                 continue;
             case EPIPE:
-                handler->cb->on_error(handler->opaque);
+                red_channel_client_disconnect(handler->opaque);
                 return;
             default:
                 spice_printerr("%s", strerror(errno));
-                handler->cb->on_error(handler->opaque);
+                red_channel_client_disconnect(handler->opaque);
                 return;
             }
         } else {
             handler->pos += n;
-            handler->cb->on_output(handler->opaque, n);
+            red_channel_client_data_sent(handler->opaque, n);
             if (handler->pos == handler->size) { // finished writing data
                 /* reset handler before calling on_msg_done, since it
                  * can trigger another call to red_peer_handle_outgoing (when
@@ -1045,7 +1044,7 @@ static void red_peer_handle_outgoing(RedsStream *stream, OutgoingHandler *handle
                 handler->vec = handler->vec_buf;
                 handler->pos = 0;
                 handler->size = 0;
-                handler->cb->on_msg_done(handler->opaque);
+                red_channel_client_msg_sent(handler->opaque);
                 return;
             }
         }

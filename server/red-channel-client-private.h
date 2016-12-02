@@ -41,7 +41,6 @@ typedef struct RedChannelClientConnectivityMonitor {
 } RedChannelClientConnectivityMonitor;
 
 typedef struct OutgoingHandler {
-    OutgoingHandlerInterface *cb;
     void *opaque;
     struct iovec vec_buf[IOV_MAX];
     int vec_size;

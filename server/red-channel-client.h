@@ -175,13 +175,7 @@ void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc);
 
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc);
 
-void red_channel_client_on_output(void *opaque, int n);
 void red_channel_client_on_input(void *opaque, int n);
-int red_channel_client_get_out_msg_size(void *opaque);
-void red_channel_client_prepare_out_msg(void *opaque, struct iovec *vec,
-                                             int *vec_size, int pos);
-void red_channel_client_on_out_block(void *opaque);
-void red_channel_client_on_out_msg_done(void *opaque);
 
 void red_channel_client_semi_seamless_migration_complete(RedChannelClient *rcc);
 void red_channel_client_init_outgoing_messages_window(RedChannelClient *rcc);

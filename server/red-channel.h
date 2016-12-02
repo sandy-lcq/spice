@@ -77,23 +77,6 @@ typedef struct IncomingHandlerInterface {
     on_input_proc on_input;
 } IncomingHandlerInterface;
 
-typedef int (*get_outgoing_msg_size_proc)(void *opaque);
-typedef void (*prepare_outgoing_proc)(void *opaque, struct iovec *vec, int *vec_size, int pos);
-typedef void (*on_outgoing_error_proc)(void *opaque);
-typedef void (*on_outgoing_block_proc)(void *opaque);
-typedef void (*on_outgoing_msg_done_proc)(void *opaque);
-typedef void (*on_output_proc)(void *opaque, int n);
-
-typedef struct OutgoingHandlerInterface {
-    get_outgoing_msg_size_proc get_msg_size;
-    prepare_outgoing_proc prepare;
-    on_outgoing_error_proc on_error;
-    on_outgoing_block_proc on_block;
-    on_outgoing_msg_done_proc on_msg_done;
-    on_output_proc on_output;
-} OutgoingHandlerInterface;
-/* Red Channel interface */
-
 typedef struct RedChannel RedChannel;
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;
@@ -301,10 +284,9 @@ void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem 
 void red_channel_reset_thread_id(RedChannel *self);
 StatNodeRef red_channel_get_stat_node(RedChannel *channel);
 
-/* FIXME: do these even need to be in RedChannel? It's really only used in
+/* FIXME: does this even need to be in RedChannel? It's really only used in
  * RedChannelClient. Needs refactoring */
 IncomingHandlerInterface* red_channel_get_incoming_handler(RedChannel *self);
-OutgoingHandlerInterface* red_channel_get_outgoing_handler(RedChannel *self);
 
 const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *self);
 
