@@ -1125,15 +1125,15 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
     sin->st->channel.active = 0;
     if (!client)
         return;
-    spice_assert(playback_client->base.active);
+    spice_assert(client->active);
     reds_enable_mm_time(snd_channel_get_server(client));
-    playback_client->base.active = FALSE;
-    if (playback_client->base.client_active) {
-        snd_set_command(&playback_client->base, SND_CTRL_MASK);
-        snd_playback_send(&playback_client->base);
+    client->active = FALSE;
+    if (client->client_active) {
+        snd_set_command(client, SND_CTRL_MASK);
+        snd_playback_send(client);
     } else {
-        playback_client->base.command &= ~SND_CTRL_MASK;
-        playback_client->base.command &= ~SND_PLAYBACK_PCM_MASK;
+        client->command &= ~SND_CTRL_MASK;
+        client->command &= ~SND_PLAYBACK_PCM_MASK;
 
         if (playback_client->pending_frame) {
             spice_assert(!playback_client->in_progress);
@@ -1155,7 +1155,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_get_buffer(SpicePlaybackInstance *
         *num_samples = 0;
         return;
     }
-    spice_assert(playback_client->base.active);
+    spice_assert(client->active);
     if (!playback_client->free_frames->allocated) {
         playback_client->free_frames->allocated = TRUE;
         ++playback_client->frames->refs;
@@ -1267,7 +1267,7 @@ static void snd_playback_cleanup(SndChannelClient *client)
         free(playback_client->frames);
     }
 
-    if (playback_client->base.active) {
+    if (client->active) {
         reds_enable_mm_time(snd_channel_get_server(client));
     }
 
@@ -1403,18 +1403,17 @@ SPICE_GNUC_VISIBLE void spice_server_record_start(SpiceRecordInstance *sin)
 SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
 {
     SndChannelClient *client = sin->st->channel.connection;
-    RecordChannelClient *record_client = SPICE_CONTAINEROF(client, RecordChannelClient, base);
 
     sin->st->channel.active = 0;
     if (!client)
         return;
-    spice_assert(record_client->base.active);
-    record_client->base.active = FALSE;
-    if (record_client->base.client_active) {
-        snd_set_command(&record_client->base, SND_CTRL_MASK);
-        snd_record_send(&record_client->base);
+    spice_assert(client->active);
+    client->active = FALSE;
+    if (client->client_active) {
+        snd_set_command(client, SND_CTRL_MASK);
+        snd_record_send(client);
     } else {
-        record_client->base.command &= ~SND_CTRL_MASK;
+        client->command &= ~SND_CTRL_MASK;
     }
 }
 
@@ -1429,7 +1428,7 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
 
     if (!client)
         return 0;
-    spice_assert(record_client->base.active);
+    spice_assert(client->active);
 
     if (record_client->write_pos < RECORD_SAMPLES_SIZE / 2) {
         return 0;
@@ -1438,8 +1437,8 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
     len = MIN(record_client->write_pos - record_client->read_pos, bufsize);
 
     if (len < bufsize) {
-        SndChannel *channel = record_client->base.channel;
-        snd_receive(&record_client->base);
+        SndChannel *channel = client->channel;
+        snd_receive(client);
         if (!channel->connection) {
             return 0;
         }
