@@ -87,6 +87,8 @@ typedef int (*snd_channel_handle_message_proc)(SndChannelClient *client, size_t 
 typedef void (*snd_channel_on_message_done_proc)(SndChannelClient *client);
 typedef void (*snd_channel_cleanup_channel_proc)(SndChannelClient *client);
 
+#define SND_CHANNEL_CLIENT(obj) (&(obj)->base)
+
 /* Connects an audio client to a Spice client */
 struct SndChannelClient {
     RedsStream *stream;
@@ -608,7 +610,7 @@ static int snd_channel_send_migrate(SndChannelClient *client)
 
 static int snd_playback_send_migrate(PlaybackChannelClient *client)
 {
-    return snd_channel_send_migrate(&client->base);
+    return snd_channel_send_migrate(SND_CHANNEL_CLIENT(client));
 }
 
 static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
@@ -637,7 +639,7 @@ static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
 
 static int snd_playback_send_volume(PlaybackChannelClient *playback_client)
 {
-    return snd_send_volume(&playback_client->base, SPICE_PLAYBACK_CAP_VOLUME,
+    return snd_send_volume(SND_CHANNEL_CLIENT(playback_client), SPICE_PLAYBACK_CAP_VOLUME,
                            SPICE_MSG_PLAYBACK_VOLUME);
 }
 
@@ -661,13 +663,13 @@ static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
 
 static int snd_playback_send_mute(PlaybackChannelClient *playback_client)
 {
-    return snd_send_mute(&playback_client->base, SPICE_PLAYBACK_CAP_VOLUME,
+    return snd_send_mute(SND_CHANNEL_CLIENT(playback_client), SPICE_PLAYBACK_CAP_VOLUME,
                          SPICE_MSG_PLAYBACK_MUTE);
 }
 
 static int snd_playback_send_latency(PlaybackChannelClient *playback_client)
 {
-    SndChannelClient *client = &playback_client->base;
+    SndChannelClient *client = SND_CHANNEL_CLIENT(playback_client);
     SpiceMsgPlaybackLatency latency_msg;
 
     spice_debug("latency %u", playback_client->latency);
@@ -711,7 +713,7 @@ static int snd_playback_send_stop(PlaybackChannelClient *playback_client)
 
 static int snd_playback_send_ctl(PlaybackChannelClient *playback_client)
 {
-    SndChannelClient *client = (SndChannelClient *)playback_client;
+    SndChannelClient *client = SND_CHANNEL_CLIENT(playback_client);
 
     if ((client->client_active = client->active)) {
         return snd_playback_send_start(playback_client);
@@ -751,7 +753,7 @@ static int snd_record_send_stop(RecordChannelClient *record_client)
 
 static int snd_record_send_ctl(RecordChannelClient *record_client)
 {
-    SndChannelClient *client = (SndChannelClient *)record_client;
+    SndChannelClient *client = SND_CHANNEL_CLIENT(record_client);
 
     if ((client->client_active = client->active)) {
         return snd_record_send_start(record_client);
@@ -762,13 +764,13 @@ static int snd_record_send_ctl(RecordChannelClient *record_client)
 
 static int snd_record_send_volume(RecordChannelClient *record_client)
 {
-    return snd_send_volume(&record_client->base, SPICE_RECORD_CAP_VOLUME,
+    return snd_send_volume(SND_CHANNEL_CLIENT(record_client), SPICE_RECORD_CAP_VOLUME,
                            SPICE_MSG_RECORD_VOLUME);
 }
 
 static int snd_record_send_mute(RecordChannelClient *record_client)
 {
-    return snd_send_mute(&record_client->base, SPICE_RECORD_CAP_VOLUME,
+    return snd_send_mute(SND_CHANNEL_CLIENT(record_client), SPICE_RECORD_CAP_VOLUME,
                          SPICE_MSG_RECORD_MUTE);
 }
 
@@ -778,7 +780,7 @@ static int snd_record_send_migrate(RecordChannelClient *record_client)
      * the client receives RECORD_STOP from the src before the migration completion
      * notification (when the vm is stopped).
      * Afterwards, when the vm starts on the dest, the client receives RECORD_START. */
-    return snd_channel_send_migrate(&record_client->base);
+    return snd_channel_send_migrate(SND_CHANNEL_CLIENT(record_client));
 }
 
 static int snd_playback_send_write(PlaybackChannelClient *playback_client)
@@ -834,7 +836,7 @@ static int playback_send_mode(PlaybackChannelClient *playback_client)
 static void snd_playback_send(void* data)
 {
     PlaybackChannelClient *playback_client = (PlaybackChannelClient*)data;
-    SndChannelClient *client = (SndChannelClient*)playback_client;
+    SndChannelClient *client = SND_CHANNEL_CLIENT(playback_client);
 
     if (!playback_client || !snd_send_data(data)) {
         return;
@@ -888,7 +890,7 @@ static void snd_playback_send(void* data)
 static void snd_record_send(void* data)
 {
     RecordChannelClient *record_client = (RecordChannelClient*)data;
-    SndChannelClient *client = (SndChannelClient*)record_client;
+    SndChannelClient *client = SND_CHANNEL_CLIENT(record_client);
 
     if (!record_client || !snd_send_data(data)) {
         return;
@@ -1178,21 +1180,20 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
         }
     }
     playback_client = frame->client;
-    if (!playback_client ||
-        sin->st->channel.connection != &playback_client->base) {
+    if (!playback_client || sin->st->channel.connection != SND_CHANNEL_CLIENT(playback_client)) {
         /* lost last reference, client has been destroyed previously */
         spice_info("audio samples belong to a disconnected client");
         return;
     }
-    spice_assert(playback_client->base.active);
+    spice_assert(SND_CHANNEL_CLIENT(playback_client)->active);
 
     if (playback_client->pending_frame) {
         snd_playback_free_frame(playback_client, playback_client->pending_frame);
     }
     frame->time = reds_get_mm_time();
     playback_client->pending_frame = frame;
-    snd_set_command(&playback_client->base, SND_PLAYBACK_PCM_MASK);
-    snd_playback_send(&playback_client->base);
+    snd_set_command(SND_CHANNEL_CLIENT(playback_client), SND_PLAYBACK_PCM_MASK);
+    snd_playback_send(SND_CHANNEL_CLIENT(playback_client));
 }
 
 void snd_set_playback_latency(RedClient *client, uint32_t latency)
@@ -1318,7 +1319,7 @@ static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, Re
     }
 
     if (!red_client_during_migrate_at_target(client)) {
-        on_new_playback_channel(channel, &playback_client->base);
+        on_new_playback_channel(channel, SND_CHANNEL_CLIENT(playback_client));
     }
 
     if (channel->active) {
@@ -1542,7 +1543,7 @@ static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, Reds
 
     record_client->mode = SPICE_AUDIO_DATA_MODE_RAW;
 
-    on_new_record_channel(channel, &record_client->base);
+    on_new_record_channel(channel, SND_CHANNEL_CLIENT(record_client));
     if (channel->active) {
         snd_record_start(channel);
     }
