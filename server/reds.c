@@ -3592,6 +3592,10 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     servers = g_list_remove(servers, reds);
     pthread_mutex_unlock(&global_reds_lock);
 
+    if (reds->inputs_channel) {
+        reds_unregister_channel(reds, RED_CHANNEL(reds->inputs_channel));
+        red_channel_destroy(RED_CHANNEL(reds->inputs_channel));
+    }
     if (reds->main_channel) {
         red_channel_destroy(RED_CHANNEL(reds->main_channel));
     }
