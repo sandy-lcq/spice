@@ -3602,6 +3602,11 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
         red_channel_destroy(RED_CHANNEL(reds->main_channel));
     }
     reds_core_timer_remove(reds, reds->mig_timer);
+
+    if (reds->main_dispatcher) {
+        g_object_unref(reds->main_dispatcher);
+    }
+
     reds_cleanup(reds);
 #ifdef RED_STATISTICS
     stat_file_free(reds->stat_file);
