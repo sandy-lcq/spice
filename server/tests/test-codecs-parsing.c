@@ -54,6 +54,7 @@ static void codecs_good(void)
 
 /* g_test_expect_message is available since Glib 2.34 */
 #if GLIB_CHECK_VERSION(2, 34, 0)
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 static void codecs_bad(void)
 {
     guint i;
@@ -116,6 +117,7 @@ static void codecs_bad(void)
 
     spice_server_destroy(server);
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 #endif
 
 int main(int argc, char *argv[])
