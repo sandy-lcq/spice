@@ -21,7 +21,6 @@
 
 #include <stdbool.h>
 #include <inttypes.h>
-#include <fcntl.h>
 #include <glib.h>
 #include "red-common.h"
 #include "memslot.h"
@@ -851,9 +850,6 @@ static void child_output_setup(gpointer user_data)
         continue;
     }
     close(fd);
-
-    // make sure file is not closed calling exec()
-    fcntl(STDOUT_FILENO, F_SETFD, 0);
 }
 
 RedRecord *red_record_new(const char *filename)
