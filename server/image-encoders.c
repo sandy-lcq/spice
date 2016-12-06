@@ -746,7 +746,9 @@ gboolean image_encoders_get_glz_dictionary(ImageEncoders *enc,
         shared_dict->refs++;
     } else {
         shared_dict = create_glz_dictionary(enc, client, id, window_size);
-        glz_dictionary_list = g_list_prepend(glz_dictionary_list, shared_dict);
+        if (shared_dict != NULL) {
+            glz_dictionary_list = g_list_prepend(glz_dictionary_list, shared_dict);
+        }
     }
 
     pthread_mutex_unlock(&glz_dictionary_list_lock);
@@ -782,7 +784,9 @@ gboolean image_encoders_restore_glz_dictionary(ImageEncoders *enc,
         shared_dict->refs++;
     } else {
         shared_dict = restore_glz_dictionary(enc, client, id, restore_data);
-        glz_dictionary_list = g_list_prepend(glz_dictionary_list, shared_dict);
+        if(shared_dict != NULL) {
+            glz_dictionary_list = g_list_prepend(glz_dictionary_list, shared_dict);
+        }
     }
 
     pthread_mutex_unlock(&glz_dictionary_list_lock);
