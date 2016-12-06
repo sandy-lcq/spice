@@ -254,9 +254,9 @@ static int write_safe(int fd, uint8_t *buf, size_t size)
         ret = write(fd, buf + written_size, size - written_size);
         if (ret == -1) {
             if (errno != EINTR) {
-                spice_debug("EINTR in write");
                 return -1;
             }
+            spice_debug("EINTR in write");
             continue;
         }
         written_size += ret;
