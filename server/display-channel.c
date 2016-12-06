@@ -428,7 +428,7 @@ static void current_remove(DisplayChannel *display, TreeItem *item)
 
     /* depth-first tree traversal, TODO: do a to tree_foreach()? */
     for (;;) {
-        Container *container = now->container;
+        Container *container_of_now = now->container;
         RingItem *ring_item;
 
         if (now->type == TREE_ITEM_TYPE_DRAWABLE) {
@@ -437,25 +437,25 @@ static void current_remove(DisplayChannel *display, TreeItem *item)
             drawable_remove_from_pipes(drawable);
             current_remove_drawable(display, drawable);
         } else {
-            Container *container = CONTAINER(now);
+            Container *now_as_container = CONTAINER(now);
 
             spice_assert(now->type == TREE_ITEM_TYPE_CONTAINER);
 
-            if ((ring_item = ring_get_head(&container->items))) {
+            if ((ring_item = ring_get_head(&now_as_container->items))) {
                 now = SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link);
                 continue;
             }
             ring_item = now->siblings_link.prev;
-            container_free(container);
+            container_free(now_as_container);
         }
         if (now == item) {
             return;
         }
 
-        if ((ring_item = ring_next(&container->items, ring_item))) {
+        if ((ring_item = ring_next(&container_of_now->items, ring_item))) {
             now = SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link);
         } else {
-            now = &container->base;
+            now = &container_of_now->base;
         }
     }
 }
