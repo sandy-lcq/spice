@@ -168,7 +168,7 @@ static void create_frame1(Test *test, Command *command)
     create_clipped_frame(test, command, 0);
 }
 
-void create_frame2(Test *test, Command *command)
+static void create_frame2(Test *test, Command *command)
 {
     create_clipped_frame(test, command, 200);
 }

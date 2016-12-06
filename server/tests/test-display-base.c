@@ -165,11 +165,12 @@ static void draw_pos(Test *test, int t, int *x, int *y)
 }
 
 /* bitmap and rects are freed, so they must be allocated with malloc */
-SimpleSpiceUpdate *test_spice_create_update_from_bitmap(uint32_t surface_id,
-                                                        QXLRect bbox,
-                                                        uint8_t *bitmap,
-                                                        uint32_t num_clip_rects,
-                                                        QXLRect *clip_rects)
+static SimpleSpiceUpdate *
+test_spice_create_update_from_bitmap(uint32_t surface_id,
+                                     QXLRect bbox,
+                                     uint8_t *bitmap,
+                                     uint32_t num_clip_rects,
+                                     QXLRect *clip_rects)
 {
     SimpleSpiceUpdate *update;
     QXLDrawable *drawable;
@@ -677,7 +678,7 @@ static struct {
     uint8_t data[CURSOR_WIDTH * CURSOR_HEIGHT * 4]; // 32bit per pixel
 } cursor;
 
-static void cursor_init()
+static void cursor_init(void)
 {
     cursor.cursor.header.unique = 0;
     cursor.cursor.header.type = SPICE_CURSOR_TYPE_COLOR32;
@@ -878,7 +879,7 @@ Test *test_new(SpiceCoreInterface *core)
     return test;
 }
 
-void init_automated()
+static void init_automated(void)
 {
     struct sigaction sa;
 
@@ -887,7 +888,7 @@ void init_automated()
     sigaction(SIGCHLD, &sa, NULL);
 }
 
-__attribute__((noreturn))
+static __attribute__((noreturn))
 void usage(const char *argv0, const int exitcode)
 {
 #ifdef AUTOMATED_TESTS

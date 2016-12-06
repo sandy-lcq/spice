@@ -30,7 +30,7 @@ void show_channels(SpiceServer *server);
 
 int ping_ms = 100;
 
-void pinger(void *opaque)
+static void pinger(void *opaque)
 {
     Test *test = opaque;
     // show_channels is not thread safe - fails if disconnections / connections occur
@@ -42,8 +42,8 @@ void pinger(void *opaque)
 static int g_surface_id = 1;
 static uint8_t *g_surface_data;
 
-void set_draw_parameters(SPICE_GNUC_UNUSED Test *test,
-                         Command *command)
+static void
+set_draw_parameters(SPICE_GNUC_UNUSED Test *test, Command *command)
 {
     static int count = 17;
     CommandDrawSolid *solid = &command->solid;
@@ -56,8 +56,8 @@ void set_draw_parameters(SPICE_GNUC_UNUSED Test *test,
     count++;
 }
 
-void set_surface_params(SPICE_GNUC_UNUSED Test *test,
-                        Command *command)
+static void
+set_surface_params(SPICE_GNUC_UNUSED Test *test, Command *command)
 {
     CommandCreateSurface *create = &command->create_surface;
 
@@ -73,8 +73,8 @@ void set_surface_params(SPICE_GNUC_UNUSED Test *test,
     create->data = g_surface_data;
 }
 
-void set_destroy_parameters(SPICE_GNUC_UNUSED Test *test,
-                            SPICE_GNUC_UNUSED Command *command)
+static void
+set_destroy_parameters(SPICE_GNUC_UNUSED Test *test, SPICE_GNUC_UNUSED Command *command)
 {
     if (g_surface_data) {
         free(g_surface_data);
@@ -96,7 +96,7 @@ static Command commands[] = {
     {SIMPLE_DESTROY_SURFACE, set_destroy_parameters, .cb_opaque = NULL},
 };
 
-void on_client_connected(Test *test)
+static void on_client_connected(Test *test)
 {
     test_set_command_list(test, commands, COUNT(commands));
 }

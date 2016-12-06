@@ -30,7 +30,7 @@ void show_channels(SpiceServer *server);
 
 int ping_ms = 100;
 
-void pinger(void *opaque)
+static void pinger(void *opaque)
 {
     Test *test = opaque;
     // show_channels is not thread safe - fails if disconnections / connections occur
@@ -39,8 +39,8 @@ void pinger(void *opaque)
     test->core->timer_start(ping_timer, ping_ms);
 }
 
-void set_primary_params(SPICE_GNUC_UNUSED Test *test,
-                        Command *command)
+static void
+set_primary_params(SPICE_GNUC_UNUSED Test *test, Command *command)
 {
 #if 0
     static int toggle = 0;

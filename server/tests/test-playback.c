@@ -60,7 +60,7 @@ static void get_frame(void)
                         : 100;
 }
 
-void playback_timer_cb(SPICE_GNUC_UNUSED void *opaque)
+static void playback_timer_cb(SPICE_GNUC_UNUSED void *opaque)
 {
     static int t = 0;
     static uint64_t last_sent_usec = 0;

@@ -34,7 +34,7 @@ void show_channels(SpiceServer *server);
 
 int ping_ms = 100;
 
-void pinger(SPICE_GNUC_UNUSED void *opaque)
+static void pinger(SPICE_GNUC_UNUSED void *opaque)
 {
     // show_channels is not thread safe - fails if disconnections / connections occur
     //show_channels(server);

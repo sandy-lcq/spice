@@ -40,6 +40,9 @@
 #error TEST_NAME must be defined!
 #endif
 
+// avoid warning, the function is called by stat-main.c
+void TEST_NAME(void);
+
 void TEST_NAME(void)
 {
     stat_info_t info;

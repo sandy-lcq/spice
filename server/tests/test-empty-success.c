@@ -25,46 +25,54 @@ struct SpiceTimer {
     int a,b;
 };
 
-SpiceTimer* timer_add(SPICE_GNUC_UNUSED SpiceTimerFunc func,
-                      SPICE_GNUC_UNUSED void *opaque)
+static SpiceTimer*
+timer_add(SPICE_GNUC_UNUSED SpiceTimerFunc func,
+          SPICE_GNUC_UNUSED void *opaque)
 {
     static struct SpiceTimer t = {0,};
 
     return &t;
 }
 
-void timer_start(SPICE_GNUC_UNUSED SpiceTimer *timer,
-                 SPICE_GNUC_UNUSED uint32_t ms)
+static void
+timer_start(SPICE_GNUC_UNUSED SpiceTimer *timer,
+            SPICE_GNUC_UNUSED uint32_t ms)
 {
 }
 
-void timer_cancel(SPICE_GNUC_UNUSED SpiceTimer *timer)
+static void
+timer_cancel(SPICE_GNUC_UNUSED SpiceTimer *timer)
 {
 }
 
-void timer_remove(SPICE_GNUC_UNUSED SpiceTimer *timer)
+static void
+timer_remove(SPICE_GNUC_UNUSED SpiceTimer *timer)
 {
 }
 
-SpiceWatch *watch_add(SPICE_GNUC_UNUSED int fd,
-                      SPICE_GNUC_UNUSED int event_mask,
-                      SPICE_GNUC_UNUSED SpiceWatchFunc func,
-                      SPICE_GNUC_UNUSED void *opaque)
+static SpiceWatch *
+watch_add(SPICE_GNUC_UNUSED int fd,
+          SPICE_GNUC_UNUSED int event_mask,
+          SPICE_GNUC_UNUSED SpiceWatchFunc func,
+          SPICE_GNUC_UNUSED void *opaque)
 {
     return NULL;
 }
 
-void watch_update_mask(SPICE_GNUC_UNUSED SpiceWatch *watch,
-                       SPICE_GNUC_UNUSED int event_mask)
+static void
+watch_update_mask(SPICE_GNUC_UNUSED SpiceWatch *watch,
+                  SPICE_GNUC_UNUSED int event_mask)
 {
 }
 
-void watch_remove(SPICE_GNUC_UNUSED SpiceWatch *watch)
+static void
+watch_remove(SPICE_GNUC_UNUSED SpiceWatch *watch)
 {
 }
 
-void channel_event(SPICE_GNUC_UNUSED int event,
-                   SPICE_GNUC_UNUSED SpiceChannelEventInfo *info)
+static void
+channel_event(SPICE_GNUC_UNUSED int event,
+              SPICE_GNUC_UNUSED SpiceChannelEventInfo *info)
 {
 }
 
