@@ -847,8 +847,9 @@ static void child_output_setup(gpointer user_data)
 {
     int fd = GPOINTER_TO_INT(user_data);
 
-    while (dup2(fd, STDOUT_FILENO) < 0 && errno == EINTR)
+    while (dup2(fd, STDOUT_FILENO) < 0 && errno == EINTR) {
         continue;
+    }
     close(fd);
 
     // make sure file is not closed calling exec()
@@ -890,8 +891,9 @@ RedRecord *red_record_new(const char *filename)
             fclose(f);
             spice_error("failed to setup filter for replay");
         }
-        while (dup2(fd_in, fileno(f)) < 0 && errno == EINTR)
+        while (dup2(fd_in, fileno(f)) < 0 && errno == EINTR) {
             continue;
+        }
         close(fd_in);
     }
 
