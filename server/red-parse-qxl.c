@@ -371,13 +371,16 @@ static SpiceChunks *red_get_image_data_flat(RedMemSlotInfo *slots, int group_id,
 {
     SpiceChunks *data;
     int error;
+    unsigned long bitmap_virt;
 
-    data = spice_chunks_new(1);
-    data->data_size      = size;
-    data->chunk[0].data  = (void*)memslot_get_virt(slots, addr, size, group_id, &error);
+    bitmap_virt = memslot_get_virt(slots, addr, size, group_id, &error);
     if (error) {
         return 0;
     }
+
+    data = spice_chunks_new(1);
+    data->data_size      = size;
+    data->chunk[0].data  = (void*)bitmap_virt;
     data->chunk[0].len   = size;
     return data;
 }
