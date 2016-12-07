@@ -1,8 +1,10 @@
 *~
+*.o
 .*.sw?
 *.tar.bz2
 *.tar.gz
 *.pyc
+*.html
 aclocal.m4
 autom4te.cache
 compile
@@ -35,3 +37,5 @@ docs/manual/manual.chunked/
 docs/manual/manual.html
 spice-server-enums.h
 spice-server-enums.c
+.dirstamp
+.deps
