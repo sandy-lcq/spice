@@ -27,6 +27,9 @@
 #include <string.h>
 #include <netinet/in.h> // IPPROTO_TCP
 #include <netinet/tcp.h> // TCP_NODELAY
+#ifdef USE_LZ4
+#include <lz4.h>
+#endif
 
 #include <common/generated_server_marshallers.h>
 
@@ -35,9 +38,6 @@
 #include "red-channel-client.h"
 #include "reds.h"
 #include "migration-protocol.h"
-#ifdef USE_LZ4
-#include <lz4.h>
-#endif
 
 /* todo: add flow control. i.e.,
  * (a) limit the tokens available for the client

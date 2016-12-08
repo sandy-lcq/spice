@@ -19,12 +19,14 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
+#include <inttypes.h>
+#include <jerror.h>
+#include <jpeglib.h>
+
 #include "red-common.h"
 #include "video-encoder.h"
 #include "utils.h"
-#include <jerror.h>
-#include <jpeglib.h>
-#include <inttypes.h>
 
 #define MJPEG_MAX_FPS 25
 #define MJPEG_MIN_FPS 1

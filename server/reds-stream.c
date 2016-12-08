@@ -19,12 +19,6 @@
 #include <config.h>
 #endif
 
-#include "main-dispatcher.h"
-#include "red-common.h"
-#include <common/log.h>
-#include "reds-stream.h"
-#include "reds.h"
-
 #include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -34,6 +28,13 @@
 #include <glib.h>
 
 #include <openssl/err.h>
+
+#include <common/log.h>
+
+#include "main-dispatcher.h"
+#include "red-common.h"
+#include "reds-stream.h"
+#include "reds.h"
 
 struct AsyncRead {
     RedsStream *stream;

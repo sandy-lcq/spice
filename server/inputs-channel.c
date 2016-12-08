@@ -24,10 +24,10 @@
 #include <fcntl.h>
 #include <stddef.h> // NULL
 #include <errno.h>
+#include <stdbool.h>
 #include <spice/macros.h>
 #include <spice/vd_agent.h>
 #include <spice/protocol.h>
-#include <stdbool.h>
 
 #include <common/marshaller.h>
 #include <common/messages.h>

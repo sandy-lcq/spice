@@ -19,9 +19,9 @@
 #endif
 
 #include <spice/qxl_dev.h>
+
 #include "red-parse-qxl.h"
 #include "display-channel.h"
-
 #include "tree.h"
 
 static const char *draw_type_to_str(uint8_t type)

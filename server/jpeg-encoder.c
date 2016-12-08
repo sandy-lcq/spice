@@ -18,9 +18,11 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
+#include <jpeglib.h>
+
 #include "red-common.h"
 #include "jpeg-encoder.h"
-#include <jpeglib.h>
 
 typedef struct JpegEncoder {
     JpegEncoderUsrContext *usr;

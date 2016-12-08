@@ -19,9 +19,10 @@
 #include <config.h>
 #endif
 
+#include <zlib.h>
+
 #include "red-common.h"
 #include "zlib-encoder.h"
-#include <zlib.h>
 
 struct ZlibEncoder {
     ZlibEncoderUsrContext *usr;
