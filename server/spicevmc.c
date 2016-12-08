@@ -645,7 +645,7 @@ static void spicevmc_red_channel_send_data(RedChannelClient *rcc,
         };
         spice_marshall_SpiceMsgCompressedData(m, &compressed_msg);
     }
-    spice_marshaller_add_ref(m, i->buf, i->buf_used);
+    spice_marshaller_add_by_ref(m, i->buf, i->buf_used);
 }
 
 static void spicevmc_red_channel_send_migrate_data(RedChannelClient *rcc,

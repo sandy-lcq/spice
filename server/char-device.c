@@ -893,10 +893,10 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
     if (dev->priv->cur_write_buf) {
         uint32_t buf_remaining = dev->priv->cur_write_buf->buf + dev->priv->cur_write_buf->buf_used -
                                  dev->priv->cur_write_buf_pos;
-        spice_marshaller_add_ref_full(m2, dev->priv->cur_write_buf_pos, buf_remaining,
-                                      migrate_data_marshaller_write_buffer_free,
-                                      red_char_device_write_buffer_ref(dev->priv->cur_write_buf)
-                                      );
+        spice_marshaller_add_by_ref_full(m2, dev->priv->cur_write_buf_pos, buf_remaining,
+                                         migrate_data_marshaller_write_buffer_free,
+                                         red_char_device_write_buffer_ref(dev->priv->cur_write_buf)
+                                         );
         *write_to_dev_size_ptr += buf_remaining;
         if (dev->priv->cur_write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(dev->priv->cur_write_buf->client == dev_client->client);
@@ -907,10 +907,10 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
     for (item = g_queue_peek_tail_link(&dev->priv->write_queue); item != NULL; item = item->prev) {
         RedCharDeviceWriteBuffer *write_buf = item->data;
 
-        spice_marshaller_add_ref_full(m2, write_buf->buf, write_buf->buf_used,
-                                      migrate_data_marshaller_write_buffer_free,
-                                      red_char_device_write_buffer_ref(write_buf)
-                                      );
+        spice_marshaller_add_by_ref_full(m2, write_buf->buf, write_buf->buf_used,
+                                         migrate_data_marshaller_write_buffer_free,
+                                         red_char_device_write_buffer_ref(write_buf)
+                                         );
         *write_to_dev_size_ptr += write_buf->buf_used;
         if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(write_buf->client == dev_client->client);

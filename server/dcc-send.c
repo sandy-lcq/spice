@@ -337,8 +337,8 @@ static void marshaller_add_compressed(SpiceMarshaller *m,
         spice_return_if_fail(comp_buf);
         now = MIN(sizeof(comp_buf->buf), max);
         max -= now;
-        spice_marshaller_add_ref_full(m, comp_buf->buf.bytes, now,
-                                      marshaller_compress_buf_free, comp_buf);
+        spice_marshaller_add_by_ref_full(m, comp_buf->buf.bytes, now,
+                                         marshaller_compress_buf_free, comp_buf);
         comp_buf = comp_buf->send_next;
     } while (max);
 }
@@ -449,7 +449,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                 spice_marshall_Palette(bitmap_palette_out, palette);
             }
 
-            spice_marshaller_add_ref_chunks(m, bitmap->data);
+            spice_marshaller_add_chunks_by_ref(m, bitmap->data);
             pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
             return FILL_BITS_TYPE_BITMAP;
         } else {
@@ -481,7 +481,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                              &bitmap_palette_out, &lzplt_palette_out);
         spice_assert(bitmap_palette_out == NULL);
         spice_assert(lzplt_palette_out == NULL);
-        spice_marshaller_add_ref_chunks(m, image.u.quic.data);
+        spice_marshaller_add_chunks_by_ref(m, image.u.quic.data);
         pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
         return FILL_BITS_TYPE_COMPRESS_LOSSLESS;
     default:
@@ -1741,8 +1741,8 @@ static int red_marshall_stream_data(RedChannelClient *rcc,
         rect_debug(&stream_data.dest);
         spice_marshall_msg_display_stream_data_sized(base_marshaller, &stream_data);
     }
-    spice_marshaller_add_ref_full(base_marshaller, outbuf->data, outbuf->size,
-                                  &red_release_video_encoder_buffer, outbuf);
+    spice_marshaller_add_by_ref_full(base_marshaller, outbuf->data, outbuf->size,
+                                     &red_release_video_encoder_buffer, outbuf);
 #ifdef STREAM_STATS
     agent->stats.num_frames_sent++;
     agent->stats.size_sent += outbuf->size;
@@ -1984,8 +1984,8 @@ static void red_marshall_image(RedChannelClient *rcc,
 
         spice_marshall_Image(src_bitmap_out, &red_image,
                              &bitmap_palette_out, &lzplt_palette_out);
-        spice_marshaller_add_ref(src_bitmap_out, item->data,
-                                 bitmap.y * bitmap.stride);
+        spice_marshaller_add_by_ref(src_bitmap_out, item->data,
+                                    bitmap.y * bitmap.stride);
         region_remove(surface_lossy_region, &copy.base.box);
     }
     spice_chunks_destroy(chunks);

@@ -806,8 +806,9 @@ static int snd_playback_send_write(PlaybackChannelClient *playback_client)
     spice_marshall_msg_playback_data(m, &msg);
 
     if (playback_client->mode == SPICE_AUDIO_DATA_MODE_RAW) {
-        spice_marshaller_add_ref(m, (uint8_t *)frame->samples,
-                                 snd_codec_frame_size(playback_client->codec) * sizeof(frame->samples[0]));
+        spice_marshaller_add_by_ref(m, (uint8_t *)frame->samples,
+                                    snd_codec_frame_size(playback_client->codec) *
+                                    sizeof(frame->samples[0]));
     }
     else {
         int n = sizeof(playback_client->encode_buf);
@@ -818,7 +819,7 @@ static int snd_playback_send_write(PlaybackChannelClient *playback_client)
             snd_disconnect_channel(client);
             return FALSE;
         }
-        spice_marshaller_add_ref(m, playback_client->encode_buf, n);
+        spice_marshaller_add_by_ref(m, playback_client->encode_buf, n);
     }
 
     return snd_begin_send_message(client);

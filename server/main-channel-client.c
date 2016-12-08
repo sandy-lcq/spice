@@ -793,7 +793,7 @@ static void main_channel_marshall_ping(RedChannelClient *rcc,
     while (size_left > 0) {
         int now = MIN(ZERO_BUF_SIZE, size_left);
         size_left -= now;
-        spice_marshaller_add_ref(m, zero_page, now);
+        spice_marshaller_add_by_ref(m, zero_page, now);
     }
 }
 
@@ -838,7 +838,7 @@ static void main_channel_marshall_agent_data(RedChannelClient *rcc,
                                              RedAgentDataPipeItem *item)
 {
     red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_DATA, &item->base);
-    spice_marshaller_add_ref(m, item->data, item->len);
+    spice_marshaller_add_by_ref(m, item->data, item->len);
 }
 
 static void main_channel_marshall_migrate_data_item(RedChannelClient *rcc,

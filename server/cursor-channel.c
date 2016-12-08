@@ -131,7 +131,7 @@ typedef struct {
 static void add_buf_from_info(SpiceMarshaller *m, AddBufInfo *info)
 {
     if (info->data) {
-        spice_marshaller_add_ref(m, info->data, info->size);
+        spice_marshaller_add_by_ref(m, info->data, info->size);
     }
 }
 
