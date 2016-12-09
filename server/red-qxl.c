@@ -907,11 +907,13 @@ void spice_qxl_gl_draw_async(QXLInstance *qxl,
 {
     QXLState *qxl_state;
     RedWorkerMessage message = RED_WORKER_MESSAGE_GL_DRAW_ASYNC;
-    SpiceMsgDisplayGlDraw draw = {
-        .x = x,
-        .y = y,
-        .w = w,
-        .h = h
+    RedWorkerMessageGlDraw draw = {
+        {
+            .x = x,
+            .y = y,
+            .w = w,
+            .h = h
+        },
     };
 
     spice_return_if_fail(qxl != NULL);

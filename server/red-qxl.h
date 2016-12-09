@@ -298,6 +298,10 @@ typedef struct RedWorkerMessageGlScanout {
 typedef struct RedWorkerMessageClose {
 } RedWorkerMessageClose;
 
+typedef struct RedWorkerMessageGlDraw {
+    SpiceMsgDisplayGlDraw draw;
+} RedWorkerMessageGlDraw;
+
 enum {
     RED_DISPATCHER_PENDING_WAKEUP,
     RED_DISPATCHER_PENDING_OOM,

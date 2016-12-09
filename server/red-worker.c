@@ -967,9 +967,9 @@ static
 void handle_dev_gl_draw_async(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
-    SpiceMsgDisplayGlDraw *draw = payload;
+    RedWorkerMessageGlDraw *draw = payload;
 
-    display_channel_gl_draw(worker->display_channel, draw);
+    display_channel_gl_draw(worker->display_channel, &draw->draw);
 }
 
 static void handle_dev_close(void *opaque, void *payload)
@@ -1227,7 +1227,7 @@ static void register_callbacks(Dispatcher *dispatcher)
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_GL_DRAW_ASYNC,
                                 handle_dev_gl_draw_async,
-                                sizeof(SpiceMsgDisplayGlDraw),
+                                sizeof(RedWorkerMessageGlDraw),
                                 DISPATCHER_NONE);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_CLOSE_WORKER,
