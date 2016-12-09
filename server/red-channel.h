@@ -256,7 +256,6 @@ void red_channel_init_outgoing_messages_window(RedChannel *channel);
 typedef RedPipeItem *(*new_pipe_item_t)(RedChannelClient *rcc, void *data, int num);
 int red_channel_pipes_new_add_push(RedChannel *channel, new_pipe_item_t creator, void *data);
 void red_channel_pipes_new_add(RedChannel *channel, new_pipe_item_t creator, void *data);
-void red_channel_pipes_new_add_tail(RedChannel *channel, new_pipe_item_t creator, void *data);
 
 void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type);
 
