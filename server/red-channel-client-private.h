@@ -57,8 +57,6 @@ struct RedChannelClientPrivate
     RedsStream *stream;
     gboolean monitor_latency;
 
-    uint32_t refs;
-
     struct {
         uint32_t generation;
         uint32_t client_generation;
