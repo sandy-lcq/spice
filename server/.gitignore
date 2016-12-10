@@ -1,11 +1,6 @@
 *.la
 *.lo
 *.loT
-*.o
-.deps
-.libs
-Makefile
-Makefile.in
 /spice-version.h
 /spice-server-enums.h
 /spice-server-enums.c

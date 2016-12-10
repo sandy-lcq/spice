@@ -37,3 +37,4 @@ docs/manual/manual.chunked/
 docs/manual/manual.html
 .dirstamp
 .deps
+.libs
