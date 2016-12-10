@@ -1398,7 +1398,7 @@ static void *red_worker_main(void *arg)
     RedWorker *worker = arg;
 
     spice_info("begin");
-    spice_assert(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
+    SPICE_VERIFY(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
            MAX_PIPE_SIZE > NARROW_CLIENT_ACK_WINDOW); //ensure wakeup by ack message
 
     red_channel_reset_thread_id(RED_CHANNEL(worker->cursor_channel));
