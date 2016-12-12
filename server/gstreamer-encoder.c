@@ -1338,8 +1338,8 @@ static int push_raw_frame(SpiceGstEncoder *encoder,
                           gpointer bitmap_opaque)
 {
     uint32_t height = src->bottom - src->top;
-    uint32_t stream_stride = (src->right - src->left) * encoder->format->bpp / 8;
-    uint32_t len = stream_stride * height;
+    uint32_t len;
+    uint32_t chunk_index = 0;
     GstBuffer *buffer = gst_buffer_new();
     /* TODO Use GST_MAP_INFO_INIT once GStreamer 1.4.5 is no longer relevant */
     GstMapInfo map = { .memory = NULL };
@@ -1350,6 +1350,10 @@ static int push_raw_frame(SpiceGstEncoder *encoder,
     uint32_t skip_lines = top_down ? src->top : bitmap->y - (src->bottom - 0);
     uint32_t chunk_offset = bitmap->stride * skip_lines;
 
+#ifndef DO_ZERO_COPY
+    uint32_t stream_stride = (src->right - src->left) * encoder->format->bpp / 8;
+
+    len = stream_stride * height;
     if (stream_stride != bitmap->stride) {
         /* We have to do a line-by-line copy because for each we have to
          * leave out pixels on the left or right.
@@ -1365,9 +1369,19 @@ static int push_raw_frame(SpiceGstEncoder *encoder,
             return VIDEO_ENCODER_FRAME_UNSUPPORTED;
         }
     } else {
+#else
+    {
+        /* using GStreamer 1.0, we can avoid cropping the image by simply passing
+         * the appropriate offset and stride as metadata */
+        gsize offset[] = { src->left * encoder->format->bpp / 8 };
+        gint stride[] = { bitmap->stride };
+        gst_buffer_add_video_meta_full(buffer, GST_VIDEO_FRAME_FLAG_NONE,
+                                       encoder->format->gst_format, bitmap->x, bitmap->y,
+                                       1, offset, stride);
+
+        len = bitmap->stride * height;
+
         /* We can copy the bitmap chunk by chunk */
-        uint32_t chunk_index = 0;
-#ifdef DO_ZERO_COPY
         if (!zero_copy(encoder, bitmap, bitmap_opaque, buffer, &chunk_index,
                        &chunk_offset, &len)) {
             gst_buffer_unref(buffer);
