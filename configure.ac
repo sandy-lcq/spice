@@ -49,9 +49,7 @@ AM_PROG_CC_C_O
 AC_C_BIGENDIAN
 PKG_PROG_PKG_CONFIG
 
-AC_CHECK_HEADERS([sys/time.h])
-AC_CHECK_HEADERS([execinfo.h])
-AC_CHECK_HEADERS([linux/sockios.h])
+AC_CHECK_HEADERS([sys/time.h execinfo.h linux/sockios.h])
 AC_FUNC_ALLOCA
 
 SPICE_LT_VERSION=m4_format("%d:%d:%d", SPICE_CURRENT, SPICE_REVISION, SPICE_AGE)
