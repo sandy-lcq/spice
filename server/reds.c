@@ -2186,6 +2186,14 @@ static void reds_handle_read_link_done(void *opaque)
     link_mess->num_channel_caps = GUINT32_FROM_LE(link_mess->num_channel_caps);
     link_mess->num_common_caps = GUINT32_FROM_LE(link_mess->num_common_caps);
 
+    /* Prevent DoS. Currently we defined only 13 capabilities,
+     * I expect 1024 to be valid for quite a lot time */
+    if (link_mess->num_channel_caps > 1024 || link_mess->num_common_caps > 1024) {
+        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
+        reds_link_free(link);
+        return;
+    }
+
     num_caps = link_mess->num_common_caps + link_mess->num_channel_caps;
     caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
 
