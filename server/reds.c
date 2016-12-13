@@ -2270,7 +2270,8 @@ static void reds_handle_read_header_done(void *opaque)
         return;
     }
 
-    if (header->size < sizeof(SpiceLinkMess)) {
+    /* the check for 4096 is to avoid clients to cause arbitrary big memory allocations */
+    if (header->size < sizeof(SpiceLinkMess) || header->size > 4096) {
         reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
         spice_warning("bad size %u", header->size);
         reds_link_free(link);
