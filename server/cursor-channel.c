@@ -104,7 +104,7 @@ static void cursor_item_unref(CursorItem *item)
 
 }
 
-static void cursor_set_item(CursorChannel *cursor, CursorItem *item)
+static void cursor_channel_set_item(CursorChannel *cursor, CursorItem *item)
 {
     if (cursor->item)
         cursor_item_unref(cursor->item);
@@ -331,7 +331,7 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
         cursor->cursor_visible = cursor_cmd->u.set.visible;
-        cursor_set_item(cursor, cursor_item);
+        cursor_channel_set_item(cursor, cursor_item);
         break;
     case QXL_CURSOR_MOVE:
         cursor_show = !cursor->cursor_visible;
@@ -367,7 +367,7 @@ void cursor_channel_reset(CursorChannel *cursor)
 
     spice_return_if_fail(cursor);
 
-    cursor_set_item(cursor, NULL);
+    cursor_channel_set_item(cursor, NULL);
     cursor->cursor_visible = TRUE;
     cursor->cursor_position.x = cursor->cursor_position.y = 0;
     cursor->cursor_trail_length = cursor->cursor_trail_frequency = 0;
