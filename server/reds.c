@@ -3538,6 +3538,7 @@ static const char* parse_video_codecs(const char *codecs, char **encoder,
 static void reds_set_video_codecs(RedsState *reds, const char *codecs)
 {
     char *encoder_name, *codec_name;
+    GArray *video_codecs;
 
     g_return_if_fail(codecs != NULL);
 
@@ -3545,9 +3546,7 @@ static void reds_set_video_codecs(RedsState *reds, const char *codecs)
         codecs = default_video_codecs;
     }
 
-    /* The video_codecs array is immutable */
-    g_array_unref(reds->config->video_codecs);
-    reds->config->video_codecs = g_array_new(FALSE, FALSE, sizeof(RedVideoCodec));
+    video_codecs = g_array_new(FALSE, FALSE, sizeof(RedVideoCodec));
     const char *c = codecs;
     while ( (c = parse_video_codecs(c, &encoder_name, &codec_name)) ) {
         uint32_t encoder_index, codec_index;
@@ -3568,13 +3567,23 @@ static void reds_set_video_codecs(RedsState *reds, const char *codecs)
             new_codec.create = video_encoder_procs[encoder_index];
             new_codec.type = video_codec_names[codec_index].id;
             new_codec.cap = video_codec_caps[codec_index];
-            g_array_append_val(reds->config->video_codecs, new_codec);
+            g_array_append_val(video_codecs, new_codec);
         }
 
         free(encoder_name);
         free(codec_name);
         codecs = c;
     }
+
+    if (video_codecs->len == 0) {
+        spice_warning("Failed to set video codecs, input string: '%s'", codecs);
+        g_array_unref(video_codecs);
+        return;
+    }
+
+    /* The video_codecs array is immutable */
+    g_array_unref(reds->config->video_codecs);
+    reds->config->video_codecs = video_codecs;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *reds, SpiceCoreInterface *core)

@@ -28,9 +28,6 @@ static void codecs_good(void)
 {
     guint i;
     const gchar *codecs[] = {
-        "",
-        ";",
-        ";;;;",
         "spice:mjpeg",
         "spice:mjpeg;;;",
         "spice:mjpeg;;spice:mjpeg;;;",
@@ -62,45 +59,70 @@ static void codecs_bad(void)
         const gchar *codecs;
         const GLogLevelFlags log_level;
         const gchar *error_message;
+        gboolean default_err_message;
     } test_cases[] = {
         {
+            "",
+            G_LOG_LEVEL_WARNING,
+            "*Failed to set video codecs*",
+            FALSE,
+        },{
+            ";",
+            G_LOG_LEVEL_WARNING,
+            "*Failed to set video codecs*",
+            FALSE,
+        },{
+            ";;;;",
+            G_LOG_LEVEL_WARNING,
+            "*Failed to set video codecs*",
+            FALSE,
+        },{
             NULL,
             G_LOG_LEVEL_CRITICAL,
-            "*assertion 'codecs != NULL' failed"
+            "*assertion 'codecs != NULL' failed",
+            FALSE,
         },{
             ";:;",
             G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
+            TRUE,
         },{
             "::::",
             G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
+            TRUE,
         },{
             "missingcolon",
             G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
+            TRUE,
         },{
             ":missing_encoder",
             G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
+            TRUE,
         },{
             "missing_value:;",
             G_LOG_LEVEL_WARNING,
             "*spice: invalid encoder:codec value*",
+            TRUE,
         },{
             "unknown_encoder:mjpeg",
             G_LOG_LEVEL_WARNING,
             "*spice: unknown video encoder unknown_encoder",
+            TRUE,
         },{
             "spice:unknown_codec",
             G_LOG_LEVEL_WARNING,
             "*spice: unknown video codec unknown_codec",
+            TRUE,
         },
 #if !defined(HAVE_GSTREAMER_1_0) && !defined(HAVE_GSTREAMER_0_10)
         {
             "gstreamer:mjpeg",
             G_LOG_LEVEL_WARNING,
             "*spice: unsupported video encoder gstreamer",
+            TRUE,
         }
 #endif
     };
@@ -111,6 +133,8 @@ static void codecs_bad(void)
 
     for (i = 0; i < G_N_ELEMENTS(test_cases); ++i) {
         g_test_expect_message(G_LOG_DOMAIN, test_cases[i].log_level, test_cases[i].error_message);
+        if (test_cases[i].default_err_message)
+            g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*Failed to set video codecs*");
         g_assert_cmpint(spice_server_set_video_codecs(server, test_cases[i].codecs), ==, 0);
         g_test_assert_expected_messages();
     }
