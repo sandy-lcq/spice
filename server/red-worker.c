@@ -984,19 +984,19 @@ static void handle_dev_close(void *opaque, void *payload)
 
 static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
 {
-    RedSurfaceCmd *surface_cmd;
+    RedSurfaceCmd surface_cmd;
 
     switch (ext->cmd.type) {
     case QXL_CMD_CURSOR:
         return red_process_cursor_cmd(worker, ext);
 
     case QXL_CMD_SURFACE:
-        surface_cmd = spice_new0(RedSurfaceCmd, 1);
-        if (red_get_surface_cmd(&worker->mem_slots, ext->group_id, surface_cmd, ext->cmd.data)) {
-            free(surface_cmd);
+        if (red_get_surface_cmd(&worker->mem_slots, ext->group_id, &surface_cmd, ext->cmd.data)) {
             return FALSE;
         }
-        display_channel_process_surface_cmd(worker->display_channel, surface_cmd, TRUE);
+        display_channel_process_surface_cmd(worker->display_channel, &surface_cmd, TRUE);
+        // do not release resource as is released inside display_channel_process_surface_cmd
+        red_put_surface_cmd(&surface_cmd);
         break;
     default:
         spice_warning("unhandled loadvm command type (%d)", ext->cmd.type);
