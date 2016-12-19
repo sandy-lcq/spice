@@ -40,6 +40,7 @@
 
 static const SpiceDataHeaderOpaque full_header_wrapper;
 static const SpiceDataHeaderOpaque mini_header_wrapper;
+static void red_channel_client_clear_sent_item(RedChannelClient *rcc);
 static void red_channel_client_destroy_remote_caps(RedChannelClient* rcc);
 static void red_channel_client_initable_interface_init(GInitableIface *iface);
 
@@ -550,7 +551,6 @@ static inline void red_channel_client_release_sent_item(RedChannelClient *rcc)
 
 static void red_channel_client_restore_main_sender(RedChannelClient *rcc)
 {
-    spice_marshaller_reset(rcc->priv->send_data.urgent.marshaller);
     rcc->priv->send_data.marshaller = rcc->priv->send_data.main.marshaller;
     rcc->priv->send_data.header.data = rcc->priv->send_data.main.header_data;
     rcc->priv->send_data.item = rcc->priv->send_data.main.item;
@@ -560,8 +560,6 @@ void red_channel_client_on_out_msg_done(void *opaque)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(opaque);
     int fd;
-
-    rcc->priv->send_data.size = 0;
 
     if (spice_marshaller_get_fd(rcc->priv->send_data.marshaller, &fd)) {
         if (reds_stream_send_msgfd(rcc->priv->stream, fd) < 0) {
@@ -575,7 +573,7 @@ void red_channel_client_on_out_msg_done(void *opaque)
             close(fd);
     }
 
-    red_channel_client_release_sent_item(rcc);
+    red_channel_client_clear_sent_item(rcc);
     if (rcc->priv->send_data.blocked) {
         SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
         rcc->priv->send_data.blocked = FALSE;
@@ -1592,6 +1590,7 @@ static void red_channel_client_clear_sent_item(RedChannelClient *rcc)
     red_channel_client_release_sent_item(rcc);
     rcc->priv->send_data.blocked = FALSE;
     rcc->priv->send_data.size = 0;
+    spice_marshaller_reset(rcc->priv->send_data.marshaller);
 }
 
 // TODO: again - what is the context exactly? this happens in channel disconnect. but our
