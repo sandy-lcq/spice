@@ -104,6 +104,19 @@ void red_drawable_unref(RedDrawable *red_drawable)
     free(red_drawable);
 }
 
+static gboolean red_process_cursor_cmd(RedWorker *worker, const QXLCommandExt *ext)
+{
+    RedCursorCmd *cursor_cmd;
+
+    cursor_cmd = spice_new0(RedCursorCmd, 1);
+    if (red_get_cursor_cmd(&worker->mem_slots, ext->group_id, cursor_cmd, ext->cmd.data)) {
+        free(cursor_cmd);
+        return FALSE;
+    }
+    cursor_channel_process_cmd(worker->cursor_channel, cursor_cmd);
+    return TRUE;
+}
+
 static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
 {
     QXLCommandExt ext_cmd;
@@ -134,18 +147,9 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
 
         worker->cursor_poll_tries = 0;
         switch (ext_cmd.cmd.type) {
-        case QXL_CMD_CURSOR: {
-            RedCursorCmd *cursor = spice_new0(RedCursorCmd, 1);
-
-            if (red_get_cursor_cmd(&worker->mem_slots, ext_cmd.group_id,
-                                    cursor, ext_cmd.cmd.data)) {
-                free(cursor);
-                break;
-            }
-
-            cursor_channel_process_cmd(worker->cursor_channel, cursor);
+        case QXL_CMD_CURSOR:
+            red_process_cursor_cmd(worker, &ext_cmd);
             break;
-        }
         default:
             spice_warning("bad command type");
         }
@@ -980,18 +984,12 @@ static void handle_dev_close(void *opaque, void *payload)
 
 static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
 {
-    RedCursorCmd *cursor_cmd;
     RedSurfaceCmd *surface_cmd;
 
     switch (ext->cmd.type) {
     case QXL_CMD_CURSOR:
-        cursor_cmd = spice_new0(RedCursorCmd, 1);
-        if (red_get_cursor_cmd(&worker->mem_slots, ext->group_id, cursor_cmd, ext->cmd.data)) {
-            free(cursor_cmd);
-            return FALSE;
-        }
-        cursor_channel_process_cmd(worker->cursor_channel, cursor_cmd);
-        break;
+        return red_process_cursor_cmd(worker, ext);
+
     case QXL_CMD_SURFACE:
         surface_cmd = spice_new0(RedSurfaceCmd, 1);
         if (red_get_surface_cmd(&worker->mem_slots, ext->group_id, surface_cmd, ext->cmd.data)) {
