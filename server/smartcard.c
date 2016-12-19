@@ -419,7 +419,7 @@ static void smartcard_channel_send_migrate_data(RedChannelClient *rcc,
 
     scc = SMARTCARD_CHANNEL_CLIENT(rcc);
     dev = smartcard_channel_client_get_char_device(scc);
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, NULL);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SMARTCARD_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SMARTCARD_VERSION);
 

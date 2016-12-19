@@ -771,7 +771,7 @@ static void main_channel_marshall_channels(RedChannelClient *rcc,
     SpiceMsgChannels* channels_info;
     RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_CHANNELS_LIST, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_CHANNELS_LIST, NULL);
     channels_info = reds_msg_channels_new(red_channel_get_server(channel));
     spice_marshall_msg_main_channels_list(m, channels_info);
     free(channels_info);
@@ -785,7 +785,7 @@ static void main_channel_marshall_ping(RedChannelClient *rcc,
     SpiceMsgPing ping;
     int size_left = item->size;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_PING, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_PING, NULL);
     ping.id = main_channel_client_next_ping_id(mcc);
     ping.timestamp = g_get_monotonic_time();
     spice_marshall_msg_ping(m, &ping);
@@ -803,7 +803,7 @@ static void main_channel_marshall_mouse_mode(RedChannelClient *rcc,
 {
     SpiceMsgMainMouseMode mouse_mode;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MOUSE_MODE, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MOUSE_MODE, NULL);
     mouse_mode.supported_modes = SPICE_MOUSE_MODE_SERVER;
     if (item->is_client_mouse_allowed) {
         mouse_mode.supported_modes |= SPICE_MOUSE_MODE_CLIENT;
@@ -818,7 +818,7 @@ static void main_channel_marshall_agent_disconnected(RedChannelClient *rcc,
 {
     SpiceMsgMainAgentDisconnect disconnect;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_DISCONNECTED, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_DISCONNECTED, NULL);
     disconnect.error_code = SPICE_LINK_ERR_OK;
     spice_marshall_msg_main_agent_disconnected(m, &disconnect);
 }
@@ -828,7 +828,7 @@ static void main_channel_marshall_tokens(RedChannelClient *rcc,
 {
     SpiceMsgMainAgentTokens tokens;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_TOKEN, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_TOKEN, NULL);
     tokens.num_tokens = item->tokens;
     spice_marshall_msg_main_agent_token(m, &tokens);
 }
@@ -858,7 +858,7 @@ static void main_channel_marshall_init(RedChannelClient *rcc,
     SpiceMsgMainInit init; // TODO - remove this copy, make RedInitPipeItem reuse SpiceMsgMainInit
     RedChannel *channel = red_channel_client_get_channel(rcc);
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_INIT, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_INIT, NULL);
     init.session_id = item->connection_id;
     init.display_channels_hint = item->display_channels_hint;
     init.current_mouse_mode = item->current_mouse_mode;
@@ -878,7 +878,7 @@ static void main_channel_marshall_notify(RedChannelClient *rcc,
 {
     SpiceMsgNotify notify;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_NOTIFY, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_NOTIFY, NULL);
     notify.time_stamp = spice_get_monotonic_time_ns(); // TODO - move to main_new_notify_item
     notify.severity = SPICE_NOTIFY_SEVERITY_WARN;
     notify.visibilty = SPICE_NOTIFY_VISIBILITY_HIGH;
@@ -911,7 +911,7 @@ static void main_channel_marshall_migrate_begin(SpiceMarshaller *m, RedChannelCl
     RedChannel *channel = red_channel_client_get_channel(rcc);
     SpiceMsgMainMigrationBegin migrate;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_BEGIN, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_BEGIN, NULL);
     main_channel_fill_migrate_dst_info(MAIN_CHANNEL(channel), &migrate.dst_info);
     spice_marshall_msg_main_migrate_begin(m, &migrate);
 }
@@ -923,7 +923,7 @@ static void main_channel_marshall_migrate_begin_seamless(SpiceMarshaller *m,
     RedChannel *channel = red_channel_client_get_channel(rcc);
     SpiceMsgMainMigrateBeginSeamless migrate_seamless;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_BEGIN_SEAMLESS, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_BEGIN_SEAMLESS, NULL);
     main_channel_fill_migrate_dst_info(MAIN_CHANNEL(channel), &migrate_seamless.dst_info);
     migrate_seamless.src_mig_version = SPICE_MIGRATION_PROTOCOL_VERSION;
     spice_marshall_msg_main_migrate_begin_seamless(m, &migrate_seamless);
@@ -935,7 +935,7 @@ static void main_channel_marshall_multi_media_time(RedChannelClient *rcc,
 {
     SpiceMsgMainMultiMediaTime time_mes;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MULTI_MEDIA_TIME, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MULTI_MEDIA_TIME, NULL);
     time_mes.time = item->time;
     spice_marshall_msg_main_multi_media_time(m, &time_mes);
 }
@@ -949,7 +949,7 @@ static void main_channel_marshall_migrate_switch(SpiceMarshaller *m, RedChannelC
     const RedsMigSpice *mig_target;
 
     spice_printerr("");
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_SWITCH_HOST, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_SWITCH_HOST, NULL);
     main_ch = MAIN_CHANNEL(channel);
     mig_target = main_channel_get_migration_target(main_ch);
     migrate.port = mig_target->port;
@@ -972,7 +972,7 @@ static void main_channel_marshall_agent_connected(SpiceMarshaller *m,
 {
     SpiceMsgMainAgentConnectedTokens connected;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_CONNECTED_TOKENS, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_CONNECTED_TOKENS, NULL);
     connected.num_tokens = REDS_AGENT_WINDOW_SIZE;
     spice_marshall_msg_main_agent_connected_tokens(m, &connected);
 }
@@ -1043,11 +1043,11 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
             main_channel_marshall_migrate_switch(m, rcc, base);
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_NAME:
-            red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_NAME, base);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_NAME, NULL);
             spice_marshall_msg_main_name(m, &SPICE_UPCAST(RedNamePipeItem, base)->msg);
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_UUID:
-            red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_UUID, base);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_UUID, NULL);
             spice_marshall_msg_main_uuid(m, &SPICE_UPCAST(RedUuidPipeItem, base)->msg);
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS:

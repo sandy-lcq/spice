@@ -655,7 +655,7 @@ static void spicevmc_red_channel_send_migrate_data(RedChannelClient *rcc,
     RedVmcChannel *channel;
 
     channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, NULL);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SPICEVMC_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_SPICEVMC_VERSION);
 
@@ -669,7 +669,7 @@ static void spicevmc_red_channel_send_port_init(RedChannelClient *rcc,
     RedPortInitPipeItem *i = SPICE_UPCAST(RedPortInitPipeItem, item);
     SpiceMsgPortInit init;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_PORT_INIT, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_PORT_INIT, NULL);
     init.name = (uint8_t *)i->name;
     init.name_size = strlen(i->name) + 1;
     init.opened = i->opened;
@@ -683,7 +683,7 @@ static void spicevmc_red_channel_send_port_event(RedChannelClient *rcc,
     RedPortEventPipeItem *i = SPICE_UPCAST(RedPortEventPipeItem, item);
     SpiceMsgPortEvent event;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_PORT_EVENT, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_PORT_EVENT, NULL);
     event.event = i->event;
     spice_marshall_msg_port_event(m, &event);
 }

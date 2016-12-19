@@ -89,7 +89,7 @@ void inputs_channel_client_send_migrate_data(RedChannelClient *rcc,
 {
     InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, NULL);
 
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_INPUTS_MAGIC);
     spice_marshaller_add_uint32(m, SPICE_MIGRATE_DATA_INPUTS_VERSION);

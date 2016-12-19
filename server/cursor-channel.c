@@ -225,7 +225,7 @@ static void cursor_marshall(CursorChannelClient *ccc,
     case QXL_CURSOR_MOVE:
         {
             SpiceMsgCursorMove cursor_move;
-            red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_MOVE, pipe_item);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_MOVE, NULL);
             cursor_move.position = cmd->u.position;
             spice_marshall_msg_cursor_move(m, &cursor_move);
             break;
@@ -245,13 +245,13 @@ static void cursor_marshall(CursorChannelClient *ccc,
             break;
         }
     case QXL_CURSOR_HIDE:
-        red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_HIDE, pipe_item);
+        red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_HIDE, NULL);
         break;
     case QXL_CURSOR_TRAIL:
         {
             SpiceMsgCursorTrail cursor_trail;
 
-            red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_TRAIL, pipe_item);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_TRAIL, NULL);
             cursor_trail.length = cmd->u.trail.length;
             cursor_trail.frequency = cmd->u.trail.frequency;
             spice_marshall_msg_cursor_trail(m, &cursor_trail);
