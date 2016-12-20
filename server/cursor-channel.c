@@ -123,23 +123,16 @@ static RedPipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int 
     return &item->base;
 }
 
-typedef struct {
-    void *data;
-    uint32_t size;
-} AddBufInfo;
-
-static void add_buf_from_info(SpiceMarshaller *m, AddBufInfo *info)
+static void marshaller_unref_cursor_item(uint8_t *data, void *opaque)
 {
-    if (info->data) {
-        spice_marshaller_add_by_ref(m, info->data, info->size);
-    }
+    CursorItem *item = opaque;
+    cursor_item_unref(item);
 }
 
 static void cursor_fill(CursorChannelClient *ccc, CursorItem *cursor,
-                        SpiceCursor *red_cursor, AddBufInfo *addbuf)
+                        SpiceCursor *red_cursor, SpiceMarshaller *m)
 {
     RedCursorCmd *cursor_cmd;
-    addbuf->data = NULL;
 
     if (!cursor) {
         red_cursor->flags = SPICE_CURSOR_FLAGS_NONE;
@@ -160,8 +153,10 @@ static void cursor_fill(CursorChannelClient *ccc, CursorItem *cursor,
     }
 
     if (red_cursor->data_size) {
-        addbuf->data = red_cursor->data;
-        addbuf->size = red_cursor->data_size;
+        SpiceMarshaller *m2 = spice_marshaller_get_submarshaller(m);
+        cursor_item_ref(cursor);
+        spice_marshaller_add_by_ref_full(m2, red_cursor->data, red_cursor->data_size,
+                                         marshaller_unref_cursor_item, cursor);
     }
 }
 
@@ -192,7 +187,6 @@ static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *
     CursorChannel *cursor_channel;
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
     SpiceMsgCursorInit msg;
-    AddBufInfo info;
 
     spice_assert(rcc);
     cursor_channel = CURSOR_CHANNEL(red_channel_client_get_channel(rcc));
@@ -203,9 +197,8 @@ static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *
     msg.trail_length = cursor_channel->cursor_trail_length;
     msg.trail_frequency = cursor_channel->cursor_trail_frequency;
 
-    cursor_fill(ccc, cursor_channel->item, &msg.cursor, &info);
+    cursor_fill(ccc, cursor_channel->item, &msg.cursor, base_marshaller);
     spice_marshall_msg_cursor_init(base_marshaller, &msg);
-    add_buf_from_info(base_marshaller, &info);
 }
 
 static void cursor_marshall(CursorChannelClient *ccc,
@@ -215,7 +208,6 @@ static void cursor_marshall(CursorChannelClient *ccc,
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
     CursorChannel *cursor_channel = CURSOR_CHANNEL(red_channel_client_get_channel(rcc));
     CursorItem *item = cursor_pipe_item->cursor_item;
-    RedPipeItem *pipe_item = &cursor_pipe_item->base;
     RedCursorCmd *cmd;
 
     spice_return_if_fail(cursor_channel);
@@ -233,15 +225,13 @@ static void cursor_marshall(CursorChannelClient *ccc,
     case QXL_CURSOR_SET:
         {
             SpiceMsgCursorSet cursor_set;
-            AddBufInfo info;
 
-            red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_SET, pipe_item);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_CURSOR_SET, NULL);
             cursor_set.position = cmd->u.set.position;
             cursor_set.visible = cursor_channel->cursor_visible;
 
-            cursor_fill(ccc, item, &cursor_set.cursor, &info);
+            cursor_fill(ccc, item, &cursor_set.cursor, m);
             spice_marshall_msg_cursor_set(m, &cursor_set);
-            add_buf_from_info(m, &info);
             break;
         }
     case QXL_CURSOR_HIDE:
