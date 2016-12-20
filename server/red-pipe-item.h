@@ -42,4 +42,8 @@ static inline void red_pipe_item_init(RedPipeItem *item, int type)
 {
     red_pipe_item_init_full(item, type, NULL);
 }
+
+/* a convenience function for unreffing a pipe item after it has been sent */
+void marshaller_unref_pipe_item(uint8_t *data, void *opaque);
+
 #endif

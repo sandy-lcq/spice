@@ -837,8 +837,10 @@ static void main_channel_marshall_agent_data(RedChannelClient *rcc,
                                              SpiceMarshaller *m,
                                              RedAgentDataPipeItem *item)
 {
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_DATA, &item->base);
-    spice_marshaller_add_by_ref(m, item->data, item->len);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_AGENT_DATA, NULL);
+    /* since pipe item owns the data, keep it alive until it's sent */
+    red_pipe_item_ref(&item->base);
+    spice_marshaller_add_by_ref_full(m, item->data, item->len, marshaller_unref_pipe_item, item);
 }
 
 static void main_channel_marshall_migrate_data_item(RedChannelClient *rcc,
@@ -846,7 +848,7 @@ static void main_channel_marshall_migrate_data_item(RedChannelClient *rcc,
                                                     RedPipeItem *item)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE_DATA, NULL);
     // TODO: from reds split. ugly separation.
     reds_marshall_migrate_data(red_channel_get_server(channel), m);
 }
