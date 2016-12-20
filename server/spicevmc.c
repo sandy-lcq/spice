@@ -635,17 +635,19 @@ static void spicevmc_red_channel_send_data(RedChannelClient *rcc,
 
     /* for compatibility send using not compressed data message */
     if (i->type == SPICE_DATA_COMPRESSION_TYPE_NONE) {
-        red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_DATA, item);
+        red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_DATA, NULL);
     } else {
         /* send as compressed */
-        red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_COMPRESSED_DATA, item);
+        red_channel_client_init_send_data(rcc, SPICE_MSG_SPICEVMC_COMPRESSED_DATA, NULL);
         SpiceMsgCompressedData compressed_msg = {
             .type = i->type,
             .uncompressed_size = i->uncompressed_data_size
         };
         spice_marshall_SpiceMsgCompressedData(m, &compressed_msg);
     }
-    spice_marshaller_add_by_ref(m, i->buf, i->buf_used);
+    red_pipe_item_ref(item);
+    spice_marshaller_add_by_ref_full(m, i->buf, i->buf_used,
+                                     marshaller_unref_pipe_item, item);
 }
 
 static void spicevmc_red_channel_send_migrate_data(RedChannelClient *rcc,
