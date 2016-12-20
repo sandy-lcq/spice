@@ -343,8 +343,17 @@ static void marshaller_add_compressed(SpiceMarshaller *m,
     } while (max);
 }
 
+static void marshaller_unref_drawable(uint8_t *data, void *opaque)
+{
+    Drawable *drawable = opaque;
+    drawable_unref(drawable);
+}
+
 /* if the number of times fill_bits can be called per one qxl_drawable increases -
    MAX_LZ_DRAWABLE_INSTANCES must be increased as well */
+/* NOTE: 'simage' should be owned by the drawable. The drawable will be kept
+ * alive until the marshalled message has been sent. See comments below for
+ * more information */
 static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                               SpiceImage *simage, Drawable *drawable, int can_lossy)
 {
@@ -449,7 +458,14 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                 spice_marshall_Palette(bitmap_palette_out, palette);
             }
 
-            spice_marshaller_add_chunks_by_ref(m, bitmap->data);
+            /* 'drawable' owns this bitmap data, so it must be kept
+             * alive until the message is sent. */
+            for (unsigned int i = 0; i < bitmap->data->num_chunks; i++) {
+                drawable->refs++;
+                spice_marshaller_add_by_ref_full(m, bitmap->data->chunk[i].data,
+                                                 bitmap->data->chunk[i].len,
+                                                 marshaller_unref_drawable, drawable);
+            }
             pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
             return FILL_BITS_TYPE_BITMAP;
         } else {
@@ -481,7 +497,14 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
                              &bitmap_palette_out, &lzplt_palette_out);
         spice_assert(bitmap_palette_out == NULL);
         spice_assert(lzplt_palette_out == NULL);
-        spice_marshaller_add_chunks_by_ref(m, image.u.quic.data);
+        /* 'drawable' owns this image data, so it must be kept
+         * alive until the message is sent. */
+        for (unsigned int i = 0; i < image.u.quic.data->num_chunks; i++) {
+            drawable->refs++;
+            spice_marshaller_add_by_ref_full(m, image.u.quic.data->chunk[i].data,
+                                             image.u.quic.data->chunk[i].len,
+                                             marshaller_unref_drawable, drawable);
+        }
         pthread_mutex_unlock(&dcc->priv->pixmap_cache->lock);
         return FILL_BITS_TYPE_COMPRESS_LOSSLESS;
     default:
@@ -531,7 +554,7 @@ static void marshall_qxl_draw_fill(RedChannelClient *rcc,
     SpiceMarshaller *mask_bitmap_out;
     SpiceFill fill;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_FILL, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_FILL, NULL);
     fill_base(base_marshaller, item);
     fill = drawable->u.fill;
     spice_marshall_Fill(base_marshaller,
@@ -875,7 +898,7 @@ static FillBitsType red_marshall_qxl_draw_opaque(RedChannelClient *rcc,
     SpiceOpaque opaque;
     FillBitsType src_send_type;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_OPAQUE, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_OPAQUE, NULL);
     fill_base(base_marshaller, item);
     opaque = drawable->u.opaque;
     spice_marshall_Opaque(base_marshaller,
@@ -972,7 +995,7 @@ static FillBitsType red_marshall_qxl_draw_copy(RedChannelClient *rcc,
     SpiceCopy copy;
     FillBitsType src_send_type;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, NULL);
     fill_base(base_marshaller, item);
     copy = drawable->u.copy;
     spice_marshall_Copy(base_marshaller,
@@ -1021,8 +1044,7 @@ static void red_marshall_qxl_draw_transparent(RedChannelClient *rcc,
     SpiceMarshaller *src_bitmap_out;
     SpiceTransparent transparent;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_TRANSPARENT,
-                                      &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_TRANSPARENT, NULL);
     fill_base(base_marshaller, item);
     transparent = drawable->u.transparent;
     spice_marshall_Transparent(base_marshaller,
@@ -1070,8 +1092,7 @@ static FillBitsType red_marshall_qxl_draw_alpha_blend(RedChannelClient *rcc,
     SpiceAlphaBlend alpha_blend;
     FillBitsType src_send_type;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_ALPHA_BLEND,
-                                      &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_ALPHA_BLEND, NULL);
     fill_base(base_marshaller, item);
     alpha_blend = drawable->u.alpha_blend;
     spice_marshall_AlphaBlend(base_marshaller,
@@ -1165,7 +1186,7 @@ static void red_marshall_qxl_draw_blend(RedChannelClient *rcc,
     SpiceMarshaller *mask_bitmap_out;
     SpiceBlend blend;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_BLEND, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_BLEND, NULL);
     fill_base(base_marshaller, item);
     blend = drawable->u.blend;
     spice_marshall_Blend(base_marshaller,
@@ -1229,7 +1250,7 @@ static void red_marshall_qxl_draw_blackness(RedChannelClient *rcc,
     SpiceMarshaller *mask_bitmap_out;
     SpiceBlackness blackness;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_BLACKNESS, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_BLACKNESS, NULL);
     fill_base(base_marshaller, item);
     blackness = drawable->u.blackness;
 
@@ -1263,7 +1284,7 @@ static void red_marshall_qxl_draw_whiteness(RedChannelClient *rcc,
     SpiceMarshaller *mask_bitmap_out;
     SpiceWhiteness whiteness;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_WHITENESS, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_WHITENESS, NULL);
     fill_base(base_marshaller, item);
     whiteness = drawable->u.whiteness;
 
@@ -1326,7 +1347,7 @@ static void red_marshall_qxl_draw_rop3(RedChannelClient *rcc,
     SpiceMarshaller *brush_pat_out;
     SpiceMarshaller *mask_bitmap_out;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_ROP3, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_ROP3, NULL);
     fill_base(base_marshaller, item);
     rop3 = drawable->u.rop3;
     spice_marshall_Rop3(base_marshaller,
@@ -1409,7 +1430,7 @@ static void red_marshall_qxl_draw_composite(RedChannelClient *rcc,
     SpiceMarshaller *mask_bitmap_out;
     SpiceComposite composite;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COMPOSITE, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COMPOSITE, NULL);
     fill_base(base_marshaller, item);
     composite = drawable->u.composite;
     spice_marshall_Composite(base_marshaller,
@@ -1490,7 +1511,7 @@ static void red_marshall_qxl_draw_stroke(RedChannelClient *rcc,
     SpiceMarshaller *brush_pat_out;
     SpiceMarshaller *style_out;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_STROKE, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_STROKE, NULL);
     fill_base(base_marshaller, item);
     stroke = drawable->u.stroke;
     spice_marshall_Stroke(base_marshaller,
@@ -1570,7 +1591,7 @@ static void red_marshall_qxl_draw_text(RedChannelClient *rcc,
     SpiceMarshaller *brush_pat_out;
     SpiceMarshaller *back_brush_pat_out;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_TEXT, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_TEXT, NULL);
     fill_base(base_marshaller, item);
     text = drawable->u.text;
     spice_marshall_Text(base_marshaller,
@@ -2203,7 +2224,7 @@ static void marshall_upgrade(RedChannelClient *rcc, SpiceMarshaller *m,
     SpiceMarshaller *src_bitmap_out, *mask_bitmap_out;
 
     spice_assert(channel && item && item->drawable);
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, NULL);
 
     red_drawable = item->drawable->red_drawable;
     spice_assert(red_drawable->type == QXL_DRAW_COPY);
