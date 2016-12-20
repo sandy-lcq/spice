@@ -1118,7 +1118,7 @@ static void red_marshall_qxl_copy_bits(RedChannelClient *rcc,
     RedDrawable *drawable = item->red_drawable;
     SpicePoint copy_bits;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_COPY_BITS, &dpi->dpi_pipe_item);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_COPY_BITS, NULL);
     fill_base(base_marshaller, item);
     copy_bits = drawable->u.copy_bits.src_pos;
     spice_marshall_Point(base_marshaller,
@@ -1933,7 +1933,7 @@ static void red_marshall_image(RedChannelClient *rcc,
     chunks = spice_chunks_new_linear(item->data, bitmap.stride * bitmap.y);
     bitmap.data = chunks;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_COPY, NULL);
 
     copy.base.surface_id = item->surface_id;
     copy.base.box.left = item->pos.x;
@@ -1984,8 +1984,9 @@ static void red_marshall_image(RedChannelClient *rcc,
 
         spice_marshall_Image(src_bitmap_out, &red_image,
                              &bitmap_palette_out, &lzplt_palette_out);
-        spice_marshaller_add_by_ref(src_bitmap_out, item->data,
-                                    bitmap.y * bitmap.stride);
+        spice_marshaller_add_by_ref_full(src_bitmap_out, item->data,
+                                         bitmap.y * bitmap.stride,
+                                         marshaller_unref_pipe_item, item);
         region_remove(surface_lossy_region, &copy.base.box);
     }
     spice_chunks_destroy(chunks);
@@ -2170,7 +2171,7 @@ static void marshall_stream_clip(RedChannelClient *rcc,
 
     spice_return_if_fail(agent->stream);
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_CLIP, &item->base);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_CLIP, NULL);
     SpiceMsgDisplayStreamClip stream_clip;
 
     stream_clip.id = display_channel_get_stream_id(DCC_TO_DC(dcc), agent->stream);
