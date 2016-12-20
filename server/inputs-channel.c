@@ -249,7 +249,7 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
         {
             SpiceMsgInputsKeyModifiers key_modifiers;
 
-            red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_KEY_MODIFIERS, NULL);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_KEY_MODIFIERS);
             key_modifiers.modifiers =
                 SPICE_UPCAST(RedKeyModifiersPipeItem, base)->modifiers;
             spice_marshall_msg_inputs_key_modifiers(m, &key_modifiers);
@@ -259,14 +259,14 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
         {
             SpiceMsgInputsInit inputs_init;
 
-            red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_INIT, NULL);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_INIT);
             inputs_init.keyboard_modifiers =
                 SPICE_UPCAST(RedInputsInitPipeItem, base)->modifiers;
             spice_marshall_msg_inputs_init(m, &inputs_init);
             break;
         }
         case RED_PIPE_ITEM_MOUSE_MOTION_ACK:
-            red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_MOUSE_MOTION_ACK, NULL);
+            red_channel_client_init_send_data(rcc, SPICE_MSG_INPUTS_MOUSE_MOTION_ACK);
             break;
         case RED_PIPE_ITEM_MIGRATE_DATA:
             INPUTS_CHANNEL(red_channel_client_get_channel(rcc))->src_during_migrate = FALSE;

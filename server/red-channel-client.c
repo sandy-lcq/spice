@@ -444,7 +444,7 @@ static void red_channel_client_send_set_ack(RedChannelClient *rcc)
     SpiceMsgSetAck ack;
 
     spice_assert(rcc);
-    red_channel_client_init_send_data(rcc, SPICE_MSG_SET_ACK, NULL);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_SET_ACK);
     ack.generation = ++rcc->priv->ack_data.generation;
     ack.window = rcc->priv->ack_data.client_window;
     rcc->priv->ack_data.messages_window = 0;
@@ -458,7 +458,7 @@ static void red_channel_client_send_migrate(RedChannelClient *rcc)
 {
     SpiceMsgMigrate migrate;
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE, NULL);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MIGRATE);
     g_object_get(rcc->priv->channel, "migration-flags", &migrate.flags, NULL);
     spice_marshall_msg_migrate(rcc->priv->send_data.marshaller, &migrate);
     if (migrate.flags & SPICE_MIGRATE_NEED_FLUSH) {
@@ -500,7 +500,7 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
         }
     }
 
-    red_channel_client_init_send_data(rcc, SPICE_MSG_PING, NULL);
+    red_channel_client_init_send_data(rcc, SPICE_MSG_PING);
     ping.id = rcc->priv->latency_monitor.id;
     ping.timestamp = spice_get_monotonic_time_ns();
     spice_marshall_msg_ping(rcc->priv->send_data.marshaller, &ping);
@@ -511,7 +511,7 @@ static void red_channel_client_send_empty_msg(RedChannelClient *rcc, RedPipeItem
 {
     RedEmptyMsgPipeItem *msg_pipe_item = SPICE_UPCAST(RedEmptyMsgPipeItem, base);
 
-    red_channel_client_init_send_data(rcc, msg_pipe_item->msg, NULL);
+    red_channel_client_init_send_data(rcc, msg_pipe_item->msg);
     red_channel_client_begin_send_message(rcc);
 }
 
@@ -541,19 +541,10 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
     red_pipe_item_unref(item);
 }
 
-static inline void red_channel_client_release_sent_item(RedChannelClient *rcc)
-{
-    if (rcc->priv->send_data.item) {
-        red_pipe_item_unref(rcc->priv->send_data.item);
-        rcc->priv->send_data.item = NULL;
-    }
-}
-
 static void red_channel_client_restore_main_sender(RedChannelClient *rcc)
 {
     rcc->priv->send_data.marshaller = rcc->priv->send_data.main.marshaller;
     rcc->priv->send_data.header.data = rcc->priv->send_data.main.header_data;
-    rcc->priv->send_data.item = rcc->priv->send_data.main.item;
 }
 
 void red_channel_client_on_out_msg_done(void *opaque)
@@ -1391,15 +1382,11 @@ int red_channel_client_handle_message(RedChannelClient *rcc, uint32_t size,
     return TRUE;
 }
 
-void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type, RedPipeItem *item)
+void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type)
 {
     spice_assert(red_channel_client_no_item_being_sent(rcc));
     spice_assert(msg_type != 0);
     rcc->priv->send_data.header.set_msg_type(&rcc->priv->send_data.header, msg_type);
-    rcc->priv->send_data.item = item;
-    if (item) {
-        red_pipe_item_ref(item);
-    }
 }
 
 void red_channel_client_begin_send_message(RedChannelClient *rcc)
@@ -1432,10 +1419,8 @@ SpiceMarshaller *red_channel_client_switch_to_urgent_sender(RedChannelClient *rc
     spice_assert(red_channel_client_no_item_being_sent(rcc));
     spice_assert(rcc->priv->send_data.header.data != NULL);
     rcc->priv->send_data.main.header_data = rcc->priv->send_data.header.data;
-    rcc->priv->send_data.main.item = rcc->priv->send_data.item;
 
     rcc->priv->send_data.marshaller = rcc->priv->send_data.urgent.marshaller;
-    rcc->priv->send_data.item = NULL;
     red_channel_client_reset_send_data(rcc);
     return rcc->priv->send_data.marshaller;
 }
@@ -1587,7 +1572,6 @@ gboolean red_channel_client_is_connected(RedChannelClient *rcc)
 
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc)
 {
-    red_channel_client_release_sent_item(rcc);
     rcc->priv->send_data.blocked = FALSE;
     rcc->priv->send_data.size = 0;
     spice_marshaller_reset(rcc->priv->send_data.marshaller);

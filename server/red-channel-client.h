@@ -89,7 +89,7 @@ void red_channel_client_shutdown(RedChannelClient *rcc);
 int red_channel_client_handle_message(RedChannelClient *rcc, uint32_t size,
                                       uint16_t type, void *message);
 /* when preparing send_data: should call init and then use marshaller */
-void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type, RedPipeItem *item);
+void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type);
 
 uint64_t red_channel_client_get_message_serial(RedChannelClient *channel);
 void red_channel_client_set_message_serial(RedChannelClient *channel, uint64_t);

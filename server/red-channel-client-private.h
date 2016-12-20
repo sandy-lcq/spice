@@ -69,14 +69,12 @@ struct RedChannelClientPrivate
         SpiceMarshaller *marshaller;
         SpiceDataHeaderOpaque header;
         uint32_t size;
-        RedPipeItem *item;
         int blocked;
         uint64_t last_sent_serial;
 
         struct {
             SpiceMarshaller *marshaller;
             uint8_t *header_data;
-            RedPipeItem *item;
         } main;
 
         struct {
