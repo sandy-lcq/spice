@@ -81,7 +81,7 @@ typedef struct DependItem {
 } DependItem;
 
 struct Drawable {
-    uint8_t refs;
+    uint32_t refs;
     RingItem surface_list_link;
     RingItem list_link;
     DrawItem tree_item;
