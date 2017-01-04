@@ -573,7 +573,9 @@ static void produce_command(Test *test)
                 update = test_spice_create_update_solid(command->solid.surface_id,
                         command->solid.bbox, command->solid.color);
                 break;
-            default: /* Just to shut up GCC warning (-Wswitch) */
+            default:
+                /* Terminate on unhandled cases - never actually reached */
+                g_assert_not_reached();
                 break;
             }
             push_command(&update->ext);
