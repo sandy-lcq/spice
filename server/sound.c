@@ -1243,21 +1243,21 @@ static int snd_desired_audio_mode(int playback_compression, int frequency,
     return SPICE_AUDIO_DATA_MODE_RAW;
 }
 
-static void on_new_playback_channel(SndChannel *channel, SndChannelClient *snd_channel)
+static void on_new_playback_channel_client(SndChannel *channel, SndChannelClient *client)
 {
     RedsState *reds = red_channel_get_server(RED_CHANNEL(channel));
 
-    spice_assert(snd_channel);
+    spice_assert(client);
 
-    channel->connection = snd_channel;
-    snd_set_command(snd_channel, SND_PLAYBACK_MODE_MASK);
-    if (snd_channel->active) {
-        snd_set_command(snd_channel, SND_CTRL_MASK);
+    channel->connection = client;
+    snd_set_command(client, SND_PLAYBACK_MODE_MASK);
+    if (client->active) {
+        snd_set_command(client, SND_CTRL_MASK);
     }
     if (channel->volume.volume_nchannels) {
-        snd_set_command(snd_channel, SND_VOLUME_MASK);
+        snd_set_command(client, SND_VOLUME_MASK);
     }
-    if (snd_channel->active) {
+    if (client->active) {
         reds_disable_mm_time(reds);
     }
 }
@@ -1327,7 +1327,7 @@ static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, Re
     }
 
     if (!red_client_during_migrate_at_target(client)) {
-        on_new_playback_channel(channel, SND_CHANNEL_CLIENT(playback_client));
+        on_new_playback_channel_client(channel, SND_CHANNEL_CLIENT(playback_client));
     }
 
     if (channel->active) {
@@ -1505,16 +1505,16 @@ SPICE_GNUC_VISIBLE void spice_server_set_record_rate(SpiceRecordInstance *sin, u
     snd_set_rate(&sin->st->channel, frequency, SPICE_RECORD_CAP_OPUS);
 }
 
-static void on_new_record_channel(SndChannel *channel, SndChannelClient *snd_channel)
+static void on_new_record_channel_client(SndChannel *channel, SndChannelClient *client)
 {
-    spice_assert(snd_channel);
+    spice_assert(client);
 
-    channel->connection = snd_channel ;
+    channel->connection = client ;
     if (channel->volume.volume_nchannels) {
-        snd_set_command(snd_channel, SND_VOLUME_MASK);
+        snd_set_command(client, SND_VOLUME_MASK);
     }
-    if (snd_channel->active) {
-        snd_set_command(snd_channel, SND_CTRL_MASK);
+    if (client->active) {
+        snd_set_command(client, SND_CTRL_MASK);
     }
 }
 
@@ -1550,7 +1550,7 @@ static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, Reds
 
     record_client->mode = SPICE_AUDIO_DATA_MODE_RAW;
 
-    on_new_record_channel(channel, SND_CHANNEL_CLIENT(record_client));
+    on_new_record_channel_client(channel, SND_CHANNEL_CLIENT(record_client));
     if (channel->active) {
         snd_record_start(channel);
     }
