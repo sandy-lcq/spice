@@ -26,7 +26,6 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
-#include <common/marshaller.h>
 #include <common/generated_server_marshallers.h>
 #include <common/snd_codec.h>
 
@@ -41,7 +40,6 @@
 #include "red-channel-client-private.h"
 #include "red-client.h"
 #include "sound.h"
-#include "demarshallers.h"
 #include "main-channel-client.h"
 
 #ifndef IOV_MAX
@@ -108,7 +106,6 @@ struct SndChannelClient {
 
     struct {
         uint64_t serial;
-        SpiceMarshaller *marshaller;
         uint32_t size;
         uint32_t pos;
     } send_data;
@@ -275,7 +272,6 @@ static void snd_disconnect_channel(SndChannelClient *client)
     client->stream->watch = NULL;
     reds_stream_free(client->stream);
     client->stream = NULL;
-    spice_marshaller_destroy(client->send_data.marshaller);
     snd_channel_unref(client);
     channel->connection = NULL;
 }
@@ -306,6 +302,8 @@ static void snd_record_on_message_done(SndChannelClient *client)
 static int snd_send_data(SndChannelClient *client)
 {
     uint32_t n;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
     if (!client) {
         return FALSE;
@@ -330,7 +328,7 @@ static int snd_send_data(SndChannelClient *client)
             break;
         }
 
-        vec_size = spice_marshaller_fill_iovec(client->send_data.marshaller,
+        vec_size = spice_marshaller_fill_iovec(m,
                                                vec, IOV_MAX, client->send_data.pos);
         n = reds_stream_writev(client->stream, vec, vec_size);
         if (n == -1) {
@@ -562,17 +560,17 @@ static void snd_event(int fd, int event, void *data)
 static inline int snd_reset_send_data(SndChannelClient *client, uint16_t verb)
 {
     SpiceDataHeaderOpaque *header;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
     if (!client) {
         return FALSE;
     }
 
     header = &client->channel_client->priv->send_data.header;
-    spice_marshaller_reset(client->send_data.marshaller);
-    header->data = spice_marshaller_reserve_space(client->send_data.marshaller,
-                                                  header->header_size);
-    spice_marshaller_set_base(client->send_data.marshaller,
-                              header->header_size);
+    spice_marshaller_reset(m);
+    header->data = spice_marshaller_reserve_space(m, header->header_size);
+    spice_marshaller_set_base(m, header->header_size);
     client->send_data.pos = 0;
     header->set_msg_size(header, 0);
     header->set_msg_type(header, verb);
@@ -588,16 +586,19 @@ static inline int snd_reset_send_data(SndChannelClient *client, uint16_t verb)
 static int snd_begin_send_message(SndChannelClient *client)
 {
     SpiceDataHeaderOpaque *header = &client->channel_client->priv->send_data.header;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
 
-    spice_marshaller_flush(client->send_data.marshaller);
-    client->send_data.size = spice_marshaller_get_total_size(client->send_data.marshaller);
+    spice_marshaller_flush(m);
+    client->send_data.size = spice_marshaller_get_total_size(m);
     header->set_msg_size(header, client->send_data.size - header->header_size);
     return snd_send_data(client);
 }
 
 static int snd_channel_send_migrate(SndChannelClient *client)
 {
-    SpiceMarshaller *m = client->send_data.marshaller;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     SpiceMsgMigrate migrate;
 
     if (!snd_reset_send_data(client, SPICE_MSG_MIGRATE)) {
@@ -619,8 +620,9 @@ static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
 {
     SpiceMsgAudioVolume *vol;
     uint8_t c;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     SpiceVolumeState *st = &client->channel->volume;
-    SpiceMarshaller *m = client->send_data.marshaller;
 
     if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
@@ -649,8 +651,9 @@ static int snd_playback_send_volume(PlaybackChannelClient *playback_client)
 static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
 {
     SpiceMsgAudioMute mute;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     SpiceVolumeState *st = &client->channel->volume;
-    SpiceMarshaller *m = client->send_data.marshaller;
 
     if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
@@ -674,7 +677,8 @@ static int snd_playback_send_mute(PlaybackChannelClient *playback_client)
 static int snd_playback_send_latency(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = SND_CHANNEL_CLIENT(playback_client);
-    SpiceMarshaller *m = client->send_data.marshaller;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     SpiceMsgPlaybackLatency latency_msg;
 
     spice_debug("latency %u", playback_client->latency);
@@ -689,7 +693,8 @@ static int snd_playback_send_latency(PlaybackChannelClient *playback_client)
 static int snd_playback_send_start(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = (SndChannelClient *)playback_client;
-    SpiceMarshaller *m = client->send_data.marshaller;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     SpiceMsgPlaybackStart start;
 
     if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_START)) {
@@ -731,7 +736,8 @@ static int snd_playback_send_ctl(PlaybackChannelClient *playback_client)
 static int snd_record_send_start(RecordChannelClient *record_client)
 {
     SndChannelClient *client = (SndChannelClient *)record_client;
-    SpiceMarshaller *m = client->send_data.marshaller;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     SpiceMsgRecordStart start;
 
     if (!snd_reset_send_data(client, SPICE_MSG_RECORD_START)) {
@@ -793,7 +799,8 @@ static int snd_record_send_migrate(RecordChannelClient *record_client)
 static int snd_playback_send_write(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = (SndChannelClient *)playback_client;
-    SpiceMarshaller *m = client->send_data.marshaller;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     AudioFrame *frame;
     SpiceMsgPlaybackPacket msg;
 
@@ -829,7 +836,8 @@ static int snd_playback_send_write(PlaybackChannelClient *playback_client)
 static int playback_send_mode(PlaybackChannelClient *playback_client)
 {
     SndChannelClient *client = (SndChannelClient *)playback_client;
-    SpiceMarshaller *m = client->send_data.marshaller;
+    RedChannelClient *rcc = client->channel_client;
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     SpiceMsgPlaybackMode mode;
 
     if (!snd_reset_send_data(client, SPICE_MSG_PLAYBACK_MODE)) {
@@ -966,7 +974,6 @@ static SndChannelClient *__new_channel(SndChannel *channel, int size, uint32_t c
     client->receive_data.message_start = client->receive_data.buf;
     client->receive_data.now = client->receive_data.buf;
     client->receive_data.end = client->receive_data.buf + sizeof(client->receive_data.buf);
-    client->send_data.marshaller = spice_marshaller_new();
 
     stream->watch = reds_core_watch_add(reds, stream->socket, SPICE_WATCH_EVENT_READ,
                                         snd_event, client);
