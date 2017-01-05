@@ -3419,7 +3419,7 @@ err:
 
 static const char default_renderer[] = "sw";
 #if defined(HAVE_GSTREAMER_1_0) || defined(HAVE_GSTREAMER_0_10)
-#define GSTREAMER_CODECS "gstreamer:mjpeg;gstreamer:h264;gstreamer:vp8;"
+#define GSTREAMER_CODECS "gstreamer:mjpeg;gstreamer:h264;gstreamer:vp8;gstreamer:vp9;"
 #else
 #define GSTREAMER_CODECS ""
 #endif
@@ -3515,6 +3515,7 @@ static const EnumNames video_codec_names[] = {
     {SPICE_VIDEO_CODEC_TYPE_MJPEG, "mjpeg"},
     {SPICE_VIDEO_CODEC_TYPE_VP8, "vp8"},
     {SPICE_VIDEO_CODEC_TYPE_H264, "h264"},
+    {SPICE_VIDEO_CODEC_TYPE_VP9, "vp9"},
     {0, NULL},
 };
 
@@ -3522,6 +3523,7 @@ static const int video_codec_caps[] = {
     SPICE_DISPLAY_CAP_CODEC_MJPEG,
     SPICE_DISPLAY_CAP_CODEC_VP8,
     SPICE_DISPLAY_CAP_CODEC_H264,
+    SPICE_DISPLAY_CAP_CODEC_VP9,
 };
 
 

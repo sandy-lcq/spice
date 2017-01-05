@@ -882,6 +882,8 @@ static const gchar* get_gst_codec_name(SpiceGstEncoder *encoder)
         return "vp8enc";
     case SPICE_VIDEO_CODEC_TYPE_H264:
         return "x264enc";
+    case SPICE_VIDEO_CODEC_TYPE_VP9:
+        return "vp9enc";
     default:
         /* gstreamer_encoder_new() should have rejected this codec type */
         spice_warning("unsupported codec type %d", encoder->base.codec_type);
@@ -911,6 +913,7 @@ static gboolean create_pipeline(SpiceGstEncoder *encoder)
         gstenc_opts = g_strdup("max-threads=1");
 #endif
         break;
+    case SPICE_VIDEO_CODEC_TYPE_VP9:
     case SPICE_VIDEO_CODEC_TYPE_VP8: {
         /* See http://www.webmproject.org/docs/encoder-parameters/
          * - Set mode/end-usage to get a constant bitrate to help with
@@ -1712,6 +1715,7 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
     SPICE_VERIFY(SPICE_GST_FRAME_STATISTICS_COUNT <= SPICE_GST_HISTORY_SIZE);
     spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG ||
                              codec_type == SPICE_VIDEO_CODEC_TYPE_VP8 ||
+                             codec_type == SPICE_VIDEO_CODEC_TYPE_VP9 ||
                              codec_type == SPICE_VIDEO_CODEC_TYPE_H264, NULL);
 
     GError *err = NULL;
