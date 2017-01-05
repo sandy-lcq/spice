@@ -1166,11 +1166,14 @@ SPICE_GNUC_VISIBLE void spice_server_playback_get_buffer(SpicePlaybackInstance *
                                                          uint32_t **frame, uint32_t *num_samples)
 {
     SndChannelClient *client = sin->st->channel.connection;
-    PlaybackChannelClient *playback_client = SPICE_CONTAINEROF(client, PlaybackChannelClient, base);
 
-    if (!client || !playback_client->free_frames) {
-        *frame = NULL;
-        *num_samples = 0;
+    *frame = NULL;
+    *num_samples = 0;
+    if (!client) {
+        return;
+    }
+    PlaybackChannelClient *playback_client = SPICE_CONTAINEROF(client, PlaybackChannelClient, base);
+    if (!playback_client->free_frames) {
         return;
     }
     spice_assert(client->active);
