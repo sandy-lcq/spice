@@ -80,6 +80,7 @@
 
 static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config);
 static gboolean reds_use_client_monitors_config(RedsState *reds);
+static void reds_set_video_codecs(RedsState *reds, GArray *video_codecs);
 
 static SpiceTimer *adapter_timer_add(const SpiceCoreInterfaceInternal *iface, SpiceTimerFunc func, void *opaque)
 {
@@ -3535,7 +3536,7 @@ static const char* parse_video_codecs(const char *codecs, char **encoder,
     return codecs + n;
 }
 
-static void reds_set_video_codecs(RedsState *reds, const char *codecs)
+static void reds_set_video_codecs_from_string(RedsState *reds, const char *codecs)
 {
     char *encoder_name, *codec_name;
     GArray *video_codecs;
@@ -3581,9 +3582,7 @@ static void reds_set_video_codecs(RedsState *reds, const char *codecs)
         return;
     }
 
-    /* The video_codecs array is immutable */
-    g_array_unref(reds->config->video_codecs);
-    reds->config->video_codecs = video_codecs;
+    reds_set_video_codecs(reds, video_codecs);
 }
 
 SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *reds, SpiceCoreInterface *core)
@@ -3595,7 +3594,7 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *reds, SpiceCoreInterface *
         reds_add_renderer(reds, default_renderer);
     }
     if (reds->config->video_codecs->len == 0) {
-        reds_set_video_codecs(reds, default_video_codecs);
+        reds_set_video_codecs_from_string(reds, default_video_codecs);
     }
     return ret;
 }
@@ -3923,7 +3922,7 @@ uint32_t reds_get_streaming_video(const RedsState *reds)
 
 SPICE_GNUC_VISIBLE int spice_server_set_video_codecs(SpiceServer *reds, const char *video_codecs)
 {
-    reds_set_video_codecs(reds, video_codecs);
+    reds_set_video_codecs_from_string(reds, video_codecs);
     reds_on_vc_change(reds);
     return 0;
 }
@@ -3931,6 +3930,16 @@ SPICE_GNUC_VISIBLE int spice_server_set_video_codecs(SpiceServer *reds, const ch
 GArray* reds_get_video_codecs(const RedsState *reds)
 {
     return reds->config->video_codecs;
+}
+
+static void reds_set_video_codecs(RedsState *reds, GArray *video_codecs)
+{
+    /* The video_codecs array is immutable */
+    g_clear_pointer(&reds->config->video_codecs, g_array_unref);
+
+    spice_return_if_fail(video_codecs != NULL);
+
+    reds->config->video_codecs = video_codecs;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_set_playback_compression(SpiceServer *reds, int enable)
