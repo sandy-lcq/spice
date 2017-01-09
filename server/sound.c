@@ -1474,15 +1474,6 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
 
     len = MIN(record_client->write_pos - record_client->read_pos, bufsize);
 
-    if (len < bufsize) {
-        SndChannel *channel = SND_CHANNEL(red_channel_client_get_channel(client->channel_client));
-        snd_receive(client);
-        if (!channel->connection) {
-            return 0;
-        }
-        len = MIN(record_client->write_pos - record_client->read_pos, bufsize);
-    }
-
     read_pos = record_client->read_pos % RECORD_SAMPLES_SIZE;
     record_client->read_pos += len;
     now = MIN(len, RECORD_SAMPLES_SIZE - read_pos);
