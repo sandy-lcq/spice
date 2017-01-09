@@ -92,7 +92,6 @@ typedef void (*snd_channel_cleanup_channel_proc)(SndChannelClient *client);
 /* Connects an audio client to a Spice client */
 struct SndChannelClient {
     RedsStream *stream;
-    SndChannel *channel;
     spice_parse_channel_func_t parser;
     int refs;
 
@@ -245,7 +244,7 @@ static SndChannelClient *snd_channel_unref(SndChannelClient *client)
 static RedsState* snd_channel_get_server(SndChannelClient *client)
 {
     g_return_val_if_fail(client != NULL, NULL);
-    return red_channel_get_server(RED_CHANNEL(client->channel));
+    return red_channel_get_server(red_channel_client_get_channel(client->channel_client));
 }
 
 static void snd_disconnect_channel(SndChannelClient *client)
@@ -264,7 +263,7 @@ static void snd_disconnect_channel(SndChannelClient *client)
     g_object_get(red_channel, "channel-type", &type, NULL);
     spice_debug("SndChannelClient=%p rcc=%p type=%d",
                  client, client->channel_client, type);
-    channel = client->channel;
+    channel = SND_CHANNEL(red_channel);
     client->cleanup(client);
     red_channel_client_disconnect(channel->connection->channel_client);
     channel->connection->channel_client = NULL;
@@ -420,6 +419,7 @@ static int snd_playback_handle_message(SndChannelClient *client, size_t size, ui
 static int snd_record_handle_message(SndChannelClient *client, size_t size, uint32_t type, void *message)
 {
     RecordChannelClient *record_client = (RecordChannelClient *)client;
+    RedChannelClient *rcc = client->channel_client;
 
     if (!client) {
         return FALSE;
@@ -429,7 +429,7 @@ static int snd_record_handle_message(SndChannelClient *client, size_t size, uint
         return snd_record_handle_write(record_client, size, message);
     case SPICE_MSGC_RECORD_MODE: {
         SpiceMsgcRecordMode *mode = (SpiceMsgcRecordMode *)message;
-        SndChannel *channel = client->channel;
+        SndChannel *channel = SND_CHANNEL(red_channel_client_get_channel(rcc));
         record_client->mode_time = mode->time;
         if (mode->mode != SPICE_AUDIO_DATA_MODE_RAW) {
             if (snd_codec_is_capable(mode->mode, channel->frequency)) {
@@ -622,7 +622,8 @@ static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
     uint8_t c;
     RedChannelClient *rcc = client->channel_client;
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
-    SpiceVolumeState *st = &client->channel->volume;
+    SndChannel *channel = SND_CHANNEL(red_channel_client_get_channel(rcc));
+    SpiceVolumeState *st = &channel->volume;
 
     if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
@@ -653,7 +654,8 @@ static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
     SpiceMsgAudioMute mute;
     RedChannelClient *rcc = client->channel_client;
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
-    SpiceVolumeState *st = &client->channel->volume;
+    SndChannel *channel = SND_CHANNEL(red_channel_client_get_channel(rcc));
+    SpiceVolumeState *st = &channel->volume;
 
     if (!red_channel_client_test_remote_cap(client->channel_client, cap)) {
         return TRUE;
@@ -702,7 +704,7 @@ static int snd_playback_send_start(PlaybackChannelClient *playback_client)
     }
 
     start.channels = SPICE_INTERFACE_PLAYBACK_CHAN;
-    start.frequency = client->channel->frequency;
+    start.frequency = SND_CHANNEL(red_channel_client_get_channel(rcc))->frequency;
     spice_assert(SPICE_INTERFACE_PLAYBACK_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
     start.time = reds_get_mm_time();
@@ -745,7 +747,7 @@ static int snd_record_send_start(RecordChannelClient *record_client)
     }
 
     start.channels = SPICE_INTERFACE_RECORD_CHAN;
-    start.frequency = client->channel->frequency;
+    start.frequency = SND_CHANNEL(red_channel_client_get_channel(rcc))->frequency;
     spice_assert(SPICE_INTERFACE_RECORD_FMT == SPICE_INTERFACE_AUDIO_FMT_S16);
     start.format = SPICE_AUDIO_FMT_S16;
     spice_marshall_msg_record_start(m, &start);
@@ -970,7 +972,6 @@ static SndChannelClient *__new_channel(SndChannel *channel, int size, uint32_t c
     client->refs = 1;
     client->parser = spice_get_client_channel_parser(channel_id, NULL);
     client->stream = stream;
-    client->channel = channel;
     client->receive_data.message_start = client->receive_data.buf;
     client->receive_data.now = client->receive_data.buf;
     client->receive_data.end = client->receive_data.buf + sizeof(client->receive_data.buf);
@@ -1474,7 +1475,7 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
     len = MIN(record_client->write_pos - record_client->read_pos, bufsize);
 
     if (len < bufsize) {
-        SndChannel *channel = client->channel;
+        SndChannel *channel = SND_CHANNEL(red_channel_client_get_channel(client->channel_client));
         snd_receive(client);
         if (!channel->connection) {
             return 0;
