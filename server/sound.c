@@ -851,6 +851,9 @@ static void snd_playback_send(void* data)
         return;
     }
 
+    client->command &= SND_PLAYBACK_MODE_MASK|SND_PLAYBACK_PCM_MASK|
+                       SND_CTRL_MASK|SND_VOLUME_MUTE_MASK|
+                       SND_MIGRATE_MASK|SND_PLAYBACK_LATENCY_MASK;
     while (client->command) {
         if (client->command & SND_PLAYBACK_MODE_MASK) {
             if (!playback_send_mode(playback_client)) {
@@ -910,6 +913,7 @@ static void snd_record_send(void* data)
         return;
     }
 
+    client->command &= SND_CTRL_MASK|SND_VOLUME_MUTE_MASK|SND_MIGRATE_MASK;
     while (client->command) {
         if (client->command & SND_CTRL_MASK) {
             if (!snd_record_send_ctl(record_client)) {
