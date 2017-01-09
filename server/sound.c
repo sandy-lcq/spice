@@ -930,7 +930,6 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *
 {
     SpiceVolumeState *st = &sin->st->channel.volume;
     SndChannelClient *client = sin->st->channel.connection;
-    PlaybackChannelClient *playback_client = SPICE_CONTAINEROF(client, PlaybackChannelClient, base);
 
     st->volume_nchannels = nchannels;
     free(st->volume);
@@ -939,21 +938,22 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_volume(SpicePlaybackInstance *
     if (!client || nchannels == 0)
         return;
 
-    snd_playback_send_volume(playback_client);
+    snd_set_command(client, SND_VOLUME_MASK);
+    snd_send(client);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *sin, uint8_t mute)
 {
     SpiceVolumeState *st = &sin->st->channel.volume;
     SndChannelClient *client = sin->st->channel.connection;
-    PlaybackChannelClient *playback_client = SPICE_CONTAINEROF(client, PlaybackChannelClient, base);
 
     st->mute = mute;
 
     if (!client)
         return;
 
-    snd_playback_send_mute(playback_client);
+    snd_set_command(client, SND_MUTE_MASK);
+    snd_send(client);
 }
 
 static void snd_playback_start(SndChannel *channel)
@@ -1212,7 +1212,6 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
 {
     SpiceVolumeState *st = &sin->st->channel.volume;
     SndChannelClient *client = sin->st->channel.connection;
-    RecordChannelClient *record_client = SPICE_CONTAINEROF(client, RecordChannelClient, base);
 
     st->volume_nchannels = nchannels;
     free(st->volume);
@@ -1221,21 +1220,22 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_volume(SpiceRecordInstance *sin,
     if (!client || nchannels == 0)
         return;
 
-    snd_record_send_volume(record_client);
+    snd_set_command(client, SND_VOLUME_MASK);
+    snd_send(client);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, uint8_t mute)
 {
     SpiceVolumeState *st = &sin->st->channel.volume;
     SndChannelClient *client = sin->st->channel.connection;
-    RecordChannelClient *record_client = SPICE_CONTAINEROF(client, RecordChannelClient, base);
 
     st->mute = mute;
 
     if (!client)
         return;
 
-    snd_record_send_mute(record_client);
+    snd_set_command(client, SND_MUTE_MASK);
+    snd_send(client);
 }
 
 static void snd_record_start(SndChannel *channel)
