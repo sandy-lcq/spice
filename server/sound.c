@@ -938,6 +938,8 @@ static void snd_record_send(void* data)
     }
 }
 
+static int snd_channel_config_socket(RedChannelClient *rcc);
+
 static SndChannelClient *__new_channel(SndChannel *channel, int size, uint32_t channel_id,
                                        RedClient *red_client,
                                        RedsStream *stream,
@@ -949,19 +951,63 @@ static SndChannelClient *__new_channel(SndChannel *channel, int size, uint32_t c
                                        uint32_t *caps, int num_caps)
 {
     SndChannelClient *client;
+    RedsState *reds = red_channel_get_server(RED_CHANNEL(channel));
+
+    spice_assert(size >= sizeof(*client));
+    client = spice_malloc0(size);
+    client->refs = 1;
+    client->parser = spice_get_client_channel_parser(channel_id, NULL);
+    client->stream = stream;
+    client->channel = channel;
+    client->receive_data.message_start = client->receive_data.buf;
+    client->receive_data.now = client->receive_data.buf;
+    client->receive_data.end = client->receive_data.buf + sizeof(client->receive_data.buf);
+    client->send_data.marshaller = spice_marshaller_new();
+
+    stream->watch = reds_core_watch_add(reds, stream->socket, SPICE_WATCH_EVENT_READ,
+                                        snd_event, client);
+    if (stream->watch == NULL) {
+        spice_printerr("watch_add failed, %s", strerror(errno));
+        goto error2;
+    }
+
+    client->send_messages = send_messages;
+    client->handle_message = handle_message;
+    client->on_message_done = on_message_done;
+    client->cleanup = cleanup;
+
+    client->channel_client =
+        dummy_channel_client_create(RED_CHANNEL(channel), red_client, stream,
+                                    num_common_caps, common_caps, num_caps, caps);
+    if (!client->channel_client) {
+        goto error2;
+    }
+    if (!snd_channel_config_socket(RED_CHANNEL_CLIENT(client->channel_client))) {
+        goto error2;
+    }
+
+    return client;
+
+error2:
+    free(client);
+    return NULL;
+}
+
+static int snd_channel_config_socket(RedChannelClient *rcc)
+{
     int delay_val;
     int flags;
 #ifdef SO_PRIORITY
     int priority;
 #endif
     int tos;
+    RedsStream *stream = red_channel_client_get_stream(rcc);
+    RedClient *red_client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(red_client);
-    RedsState *reds = red_channel_get_server(RED_CHANNEL(channel));
 
-    spice_assert(stream);
     if ((flags = fcntl(stream->socket, F_GETFL)) == -1) {
         spice_printerr("accept failed, %s", strerror(errno));
-        goto error1;
+        return FALSE;
     }
 
 #ifdef SO_PRIORITY
@@ -990,51 +1036,10 @@ static SndChannelClient *__new_channel(SndChannel *channel, int size, uint32_t c
 
     if (fcntl(stream->socket, F_SETFL, flags | O_NONBLOCK) == -1) {
         spice_printerr("accept failed, %s", strerror(errno));
-        goto error1;
+        return FALSE;
     }
 
-    spice_assert(size >= sizeof(*client));
-    client = spice_malloc0(size);
-    client->refs = 1;
-    client->parser = spice_get_client_channel_parser(channel_id, NULL);
-    client->stream = stream;
-    client->channel = channel;
-    client->receive_data.message_start = client->receive_data.buf;
-    client->receive_data.now = client->receive_data.buf;
-    client->receive_data.end = client->receive_data.buf + sizeof(client->receive_data.buf);
-    client->send_data.marshaller = spice_marshaller_new();
-
-    stream->watch = reds_core_watch_add(reds, stream->socket, SPICE_WATCH_EVENT_READ,
-                                        snd_event, client);
-    if (stream->watch == NULL) {
-        spice_printerr("watch_add failed, %s", strerror(errno));
-        goto error2;
-    }
-
-    client->send_messages = send_messages;
-    client->handle_message = handle_message;
-    client->on_message_done = on_message_done;
-    client->cleanup = cleanup;
-
-    client->channel_client =
-        dummy_channel_client_create(RED_CHANNEL(channel), red_client,
-                                    num_common_caps, common_caps, num_caps, caps);
-    if (!client->channel_client) {
-        goto error2;
-    }
-    return client;
-
-error2:
-    free(client);
-
-error1:
-    reds_stream_free(stream);
-    return NULL;
-}
-
-static int snd_channel_config_socket(RedChannelClient *rcc)
-{
-    g_assert_not_reached();
+    return TRUE;
 }
 
 static void snd_channel_on_disconnect(RedChannelClient *rcc)

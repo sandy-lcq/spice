@@ -56,6 +56,7 @@ GType dummy_channel_client_get_type(void) G_GNUC_CONST;
 
 RedChannelClient *dummy_channel_client_create(RedChannel *channel,
                                               RedClient  *client,
+                                              RedsStream *stream,
                                               int num_common_caps, uint32_t *common_caps,
                                               int num_caps, uint32_t *caps);
 
