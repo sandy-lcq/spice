@@ -124,7 +124,6 @@ struct SndChannelClient {
     snd_channel_cleanup_channel_proc cleanup;
 };
 
-typedef struct AudioFrame AudioFrame;
 struct AudioFrame {
     uint32_t time;
     uint32_t samples[SND_CODEC_MAX_FRAME_SIZE];
