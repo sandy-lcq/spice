@@ -32,7 +32,6 @@
 
 #include "spice.h"
 #include "red-common.h"
-#include "dummy-channel.h"
 #include "dummy-channel-client.h"
 #include "main-channel.h"
 #include "reds.h"
