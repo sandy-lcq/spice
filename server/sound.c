@@ -930,7 +930,6 @@ static void snd_record_send(void* data)
 static SndChannelClient *__new_channel(SndChannel *channel, int size, uint32_t channel_id,
                                        RedClient *red_client,
                                        RedsStream *stream,
-                                       int migrate,
                                        snd_channel_send_messages_proc send_messages,
                                        snd_channel_handle_message_proc handle_message,
                                        snd_channel_on_message_done_proc on_message_done,
@@ -1283,7 +1282,8 @@ static void snd_playback_cleanup(SndChannelClient *client)
 }
 
 static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
-                                  int migration, int num_common_caps, uint32_t *common_caps,
+                                  G_GNUC_UNUSED int migration,
+                                  int num_common_caps, uint32_t *common_caps,
                                   int num_caps, uint32_t *caps)
 {
     SndChannel *channel = SND_CHANNEL(red_channel);
@@ -1296,7 +1296,6 @@ static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, Re
                                                                    SPICE_CHANNEL_PLAYBACK,
                                                                    client,
                                                                    stream,
-                                                                   migration,
                                                                    snd_playback_send,
                                                                    snd_playback_handle_message,
                                                                    snd_playback_on_message_done,
@@ -1525,7 +1524,8 @@ static void snd_record_cleanup(SndChannelClient *client)
 }
 
 static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
-                                int migration, int num_common_caps, uint32_t *common_caps,
+                                G_GNUC_UNUSED int migration,
+                                int num_common_caps, uint32_t *common_caps,
                                 int num_caps, uint32_t *caps)
 {
     SndChannel *channel = SND_CHANNEL(red_channel);
@@ -1538,7 +1538,6 @@ static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, Reds
                                                                SPICE_CHANNEL_RECORD,
                                                                client,
                                                                stream,
-                                                               migration,
                                                                snd_record_send,
                                                                snd_record_handle_message,
                                                                snd_record_on_message_done,
