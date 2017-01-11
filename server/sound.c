@@ -55,6 +55,7 @@ enum SndCommand {
     SND_MIGRATE,
     SND_CTRL,
     SND_VOLUME,
+    SND_MUTE,
     SND_END_COMMAND,
 };
 
@@ -67,6 +68,8 @@ enum PlaybackCommand {
 #define SND_MIGRATE_MASK (1 << SND_MIGRATE)
 #define SND_CTRL_MASK (1 << SND_CTRL)
 #define SND_VOLUME_MASK (1 << SND_VOLUME)
+#define SND_MUTE_MASK (1 << SND_MUTE)
+#define SND_VOLUME_MUTE_MASK (SND_VOLUME_MASK|SND_MUTE_MASK)
 
 #define SND_PLAYBACK_MODE_MASK (1 << SND_PLAYBACK_MODE)
 #define SND_PLAYBACK_PCM_MASK (1 << SND_PLAYBACK_PCM)
@@ -872,11 +875,16 @@ static void snd_playback_send(void* data)
             client->command &= ~SND_CTRL_MASK;
         }
         if (client->command & SND_VOLUME_MASK) {
-            if (!snd_playback_send_volume(playback_client) ||
-                !snd_playback_send_mute(playback_client)) {
+            if (!snd_playback_send_volume(playback_client)) {
                 return;
             }
             client->command &= ~SND_VOLUME_MASK;
+        }
+        if (client->command & SND_MUTE_MASK) {
+            if (!snd_playback_send_mute(playback_client)) {
+                return;
+            }
+            client->command &= ~SND_MUTE_MASK;
         }
         if (client->command & SND_MIGRATE_MASK) {
             if (!snd_playback_send_migrate(playback_client)) {
@@ -910,11 +918,16 @@ static void snd_record_send(void* data)
             client->command &= ~SND_CTRL_MASK;
         }
         if (client->command & SND_VOLUME_MASK) {
-            if (!snd_record_send_volume(record_client) ||
-                !snd_record_send_mute(record_client)) {
+            if (!snd_record_send_volume(record_client)) {
                 return;
             }
             client->command &= ~SND_VOLUME_MASK;
+        }
+        if (client->command & SND_MUTE_MASK) {
+            if (!snd_record_send_mute(record_client)) {
+                return;
+            }
+            client->command &= ~SND_MUTE_MASK;
         }
         if (client->command & SND_MIGRATE_MASK) {
             if (!snd_record_send_migrate(record_client)) {
@@ -1252,7 +1265,7 @@ static void on_new_playback_channel_client(SndChannel *channel, SndChannelClient
         snd_set_command(client, SND_CTRL_MASK);
     }
     if (channel->volume.volume_nchannels) {
-        snd_set_command(client, SND_VOLUME_MASK);
+        snd_set_command(client, SND_VOLUME_MUTE_MASK);
     }
     if (client->active) {
         reds_disable_mm_time(reds);
@@ -1508,7 +1521,7 @@ static void on_new_record_channel_client(SndChannel *channel, SndChannelClient *
 
     channel->connection = client;
     if (channel->volume.volume_nchannels) {
-        snd_set_command(client, SND_VOLUME_MASK);
+        snd_set_command(client, SND_VOLUME_MUTE_MASK);
     }
     if (client->active) {
         snd_set_command(client, SND_CTRL_MASK);
