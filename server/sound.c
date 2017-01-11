@@ -1127,11 +1127,11 @@ SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
 SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
 {
     SndChannelClient *client = sin->st->channel.connection;
-    PlaybackChannelClient *playback_client = SPICE_CONTAINEROF(client, PlaybackChannelClient, base);
 
     sin->st->channel.active = 0;
     if (!client)
         return;
+    PlaybackChannelClient *playback_client = SPICE_CONTAINEROF(client, PlaybackChannelClient, base);
     spice_assert(client->active);
     reds_enable_mm_time(snd_channel_get_server(client));
     client->active = FALSE;
@@ -1385,11 +1385,11 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, u
 static void snd_record_start(SndChannel *channel)
 {
     SndChannelClient *client = channel->connection;
-    RecordChannelClient *record_client = SPICE_CONTAINEROF(client, RecordChannelClient, base);
 
     channel->active = 1;
     if (!client)
         return;
+    RecordChannelClient *record_client = SPICE_CONTAINEROF(client, RecordChannelClient, base);
     spice_assert(!client->active);
     record_client->read_pos = record_client->write_pos = 0;   //todo: improve by
                                                               //stream generation
@@ -1428,13 +1428,13 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
                                                             uint32_t *samples, uint32_t bufsize)
 {
     SndChannelClient *client = sin->st->channel.connection;
-    RecordChannelClient *record_client = SPICE_CONTAINEROF(client, RecordChannelClient, base);
     uint32_t read_pos;
     uint32_t now;
     uint32_t len;
 
     if (!client)
         return 0;
+    RecordChannelClient *record_client = SPICE_CONTAINEROF(client, RecordChannelClient, base);
     spice_assert(client->active);
 
     if (record_client->write_pos < RECORD_SAMPLES_SIZE / 2) {
