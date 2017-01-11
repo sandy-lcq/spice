@@ -1509,7 +1509,7 @@ static void on_new_record_channel_client(SndChannel *channel, SndChannelClient *
 {
     spice_assert(client);
 
-    channel->connection = client ;
+    channel->connection = client;
     if (channel->volume.volume_nchannels) {
         snd_set_command(client, SND_VOLUME_MASK);
     }
