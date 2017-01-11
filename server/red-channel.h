@@ -204,18 +204,6 @@ typedef struct RedChannelCapabilities {
 
 GType red_channel_get_type(void) G_GNUC_CONST;
 
-/* alternative constructor, meant for marshaller based (inputs,main) channels,
- * will become default eventually */
-/*
-RedChannel *red_channel_create_parser(int size,
-                                      RedsState *reds,
-                                      const SpiceCoreInterfaceInternal *core,
-                                      uint32_t type, uint32_t id,
-                                      gboolean handle_acks,
-                                      spice_parse_channel_func_t parser,
-                                      channel_handle_parsed_proc handle_parsed,
-                                      uint32_t migration_flags);
-                                      */
 void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc);
 void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc);
 
