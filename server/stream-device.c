@@ -19,6 +19,8 @@
 #include <config.h>
 #endif
 
+#include <spice/stream-device.h>
+
 #include "char-device.h"
 
 #define TYPE_STREAM_DEVICE stream_device_get_type()
@@ -35,6 +37,9 @@ typedef struct StreamDeviceClass StreamDeviceClass;
 
 struct StreamDevice {
     RedCharDevice parent;
+    StreamDevHeader hdr;
+    uint8_t hdr_pos;
+    bool has_error;
 };
 
 struct StreamDeviceClass {
@@ -46,21 +51,136 @@ static StreamDevice *stream_device_new(SpiceCharDeviceInstance *sin, RedsState *
 
 G_DEFINE_TYPE(StreamDevice, stream_device, RED_TYPE_CHAR_DEVICE)
 
+typedef bool StreamMsgHandler(StreamDevice *dev, SpiceCharDeviceInstance *sin)
+    SPICE_GNUC_WARN_UNUSED_RESULT;
+
+static StreamMsgHandler handle_msg_format, handle_msg_data;
+
+static bool handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin,
+                               const char *error_msg) SPICE_GNUC_WARN_UNUSED_RESULT;
+
 static RedPipeItem *
 stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *sin)
 {
+    StreamDevice *dev = STREAM_DEVICE(self);
     SpiceCharDeviceInterface *sif;
     int n;
+    bool handled = false;
+
+    if (dev->has_error) {
+        return NULL;
+    }
 
     sif = spice_char_device_get_interface(sin);
 
-    do {
-        uint8_t buf[256];
-        n = sif->read(sin, buf, sizeof(buf));
-        spice_debug("read %d bytes from device", n);
-    } while (n > 0);
+    /* read header */
+    while (dev->hdr_pos < sizeof(dev->hdr)) {
+        n = sif->read(sin, (uint8_t *) &dev->hdr, sizeof(dev->hdr) - dev->hdr_pos);
+        if (n <= 0) {
+            return NULL;
+        }
+        dev->hdr_pos += n;
+        if (dev->hdr_pos >= sizeof(dev->hdr)) {
+            dev->hdr.type = GUINT16_FROM_LE(dev->hdr.type);
+            dev->hdr.size = GUINT32_FROM_LE(dev->hdr.size);
+        }
+    }
+
+    switch ((StreamMsgType) dev->hdr.type) {
+    case STREAM_TYPE_FORMAT:
+        if (dev->hdr.size != sizeof(StreamMsgFormat)) {
+            handled = handle_msg_invalid(dev, sin, "Wrong size for StreamMsgFormat");
+        } else {
+            handled = handle_msg_format(dev, sin);
+        }
+        break;
+    case STREAM_TYPE_DATA:
+        handled = handle_msg_data(dev, sin);
+        break;
+    case STREAM_TYPE_CAPABILITIES:
+        /* FIXME */
+    default:
+        handled = handle_msg_invalid(dev, sin, "Invalid message type");
+        break;
+    }
+
+    /* current message has been handled, so reset state and get ready to parse
+     * the next message */
+    if (handled) {
+        dev->hdr_pos = 0;
+    }
 
     return NULL;
+}
+
+static bool
+handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin, const char *error_msg)
+{
+    static const char default_error_msg[] = "Protocol error";
+
+    if (!error_msg) {
+        error_msg = default_error_msg;
+    }
+
+    int msg_size = sizeof(StreamMsgNotifyError) + strlen(error_msg) + 1;
+    int total_size = sizeof(StreamDevHeader) + msg_size;
+
+    RedCharDevice *char_dev = RED_CHAR_DEVICE(dev);
+    RedCharDeviceWriteBuffer *buf =
+        red_char_device_write_buffer_get_server_no_token(char_dev, total_size);
+    buf->buf_used = total_size;
+
+    StreamDevHeader *const hdr = (StreamDevHeader *)buf->buf;
+    hdr->protocol_version = STREAM_DEVICE_PROTOCOL;
+    hdr->padding = 0;
+    hdr->type = GUINT16_TO_LE(STREAM_TYPE_NOTIFY_ERROR);
+    hdr->size = GUINT32_TO_LE(msg_size);
+
+    StreamMsgNotifyError *const error = (StreamMsgNotifyError *)(hdr+1);
+    error->error_code = GUINT32_TO_LE(0);
+    strcpy((char *) error->msg, error_msg);
+
+    red_char_device_write_buffer_add(char_dev, buf);
+
+    dev->has_error = true;
+    return false;
+}
+
+static bool
+handle_msg_format(StreamDevice *dev, SpiceCharDeviceInstance *sin)
+{
+    StreamMsgFormat fmt;
+    SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
+    int n = sif->read(sin, (uint8_t *) &fmt, sizeof(fmt));
+    if (n == 0) {
+        return false;
+    }
+    if (n != sizeof(fmt)) {
+        return handle_msg_invalid(dev, sin, NULL);
+    }
+    fmt.width = GUINT32_FROM_LE(fmt.width);
+    fmt.height = GUINT32_FROM_LE(fmt.height);
+
+    return true;
+}
+
+static bool
+handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
+{
+    SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
+    int n;
+    while (1) {
+        uint8_t buf[16 * 1024];
+        n = sif->read(sin, buf, sizeof(buf));
+        /* TODO */
+        spice_debug("read %d bytes from device", n);
+        if (n <= 0) {
+            break;
+        }
+        dev->hdr.size -= n;
+    }
+
+    return dev->hdr.size == 0;
 }
 
 static void
