@@ -162,7 +162,14 @@ typedef struct DrawContext {
 
 typedef struct RedSurface {
     uint32_t refs;
+    /* A Ring representing a hierarchical tree structure. This tree includes
+     * DrawItems, Containers, and Shadows. It is used to efficiently determine
+     * which drawables overlap, and to exclude regions of drawables that are
+     * obscured by other drawables */
     Ring current;
+    /* A ring of pending Drawables associated with this surface. This ring is
+     * actually used for drawing. The ring is maintained in order of age, the
+     * tail being the oldest drawable. */
     Ring current_list;
     DrawContext context;
 

@@ -41,7 +41,11 @@ struct DisplayChannelPrivate
     int enable_jpeg;
     int enable_zlib_glz_wrap;
 
-    Ring current_list; // of TreeItem
+    /* A ring of pending drawables for this DisplayChannel, regardless of which
+     * surface they're associated with. This list is mainly used to flush older
+     * drawables when we need to make room for new drawables.  The ring is
+     * maintained in order of age, the tail being the oldest drawable */
+    Ring current_list;
 
     uint32_t drawable_count;
     _Drawable drawables[NUM_DRAWABLES];
