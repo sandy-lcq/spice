@@ -75,6 +75,7 @@
 #include "red-channel-client.h"
 #include "main-channel-client.h"
 #include "red-client.h"
+#include "glib-compat.h"
 
 #define REDS_MAX_STAT_NODES 100
 
