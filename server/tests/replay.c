@@ -44,7 +44,7 @@ static SpiceServer *server;
 static SpiceReplay *replay;
 static QXLWorker *qxl_worker = NULL;
 static gboolean started = FALSE;
-static QXLInstance display_sin = { 0, };
+static QXLInstance display_sin;
 static gint slow = 0;
 static gint skip = 0;
 static gboolean print_count = FALSE;
