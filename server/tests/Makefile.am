@@ -59,9 +59,12 @@ noinst_PROGRAMS =				\
 	test-vdagent				\
 	test-display-width-stride		\
 	spice-server-replay			\
-	test-gst				\
 	$(check_PROGRAMS)			\
 	$(NULL)
+
+if HAVE_GSTREAMER
+noinst_PROGRAMS += test-gst
+endif
 
 TESTS = $(check_PROGRAMS)			\
 	$(NULL)
@@ -109,6 +112,7 @@ libtest_stat4_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORK
 
 test_qxl_parsing_LDADD = ../libserver.la $(LDADD)
 
+if HAVE_GSTREAMER
 test_gst_SOURCES = test-gst.c \
 	$(NULL)
 test_gst_CPPFLAGS = \
@@ -116,3 +120,4 @@ test_gst_CPPFLAGS = \
 	$(GSTREAMER_0_10_CFLAGS)		\
 	$(GSTREAMER_1_0_CFLAGS)			\
 	$(NULL)
+endif
