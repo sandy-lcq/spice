@@ -184,13 +184,7 @@ libserver_la_SOURCES +=	\
 	$(NULL)
 endif
 
-if HAVE_GSTREAMER_0_10
-libserver_la_SOURCES +=	\
-	gstreamer-encoder.c			\
-	$(NULL)
-endif
-
-if HAVE_GSTREAMER_1_0
+if HAVE_GSTREAMER
 libserver_la_SOURCES +=	\
 	gstreamer-encoder.c			\
 	$(NULL)

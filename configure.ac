@@ -85,7 +85,6 @@ if test "x$enable_gstreamer" != "xno" && test "x$enable_gstreamer" != "x0.10"; t
           fi
     ])
 fi
-AM_CONDITIONAL(HAVE_GSTREAMER_1_0, test "x$have_gstreamer_1_0" = "xyes")
 
 if test "x$enable_gstreamer" != "xno" && test "x$enable_gstreamer" != "x1.0"; then
     SPICE_CHECK_GSTREAMER(GSTREAMER_0_10, 0.10, [gstreamer-0.10 gstreamer-base-0.10 gstreamer-app-0.10 gstreamer-video-0.10],
@@ -100,7 +99,7 @@ if test "x$enable_gstreamer" != "xno" && test "x$enable_gstreamer" != "x1.0"; th
          fi
     ])
 fi
-AM_CONDITIONAL(HAVE_GSTREAMER_0_10, test "x$have_gstreamer_0_10" = "xyes")
+AM_CONDITIONAL(HAVE_GSTREAMER, test "x$have_gstreamer_0_10" = "xyes" || test "x$have_gstreamer_1_0" = "xyes")
 
 AS_IF([test "x$enable_gstreamer" = "xyes"],
       [AC_MSG_ERROR("GStreamer support requested but not found")],
