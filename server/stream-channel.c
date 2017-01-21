@@ -121,8 +121,32 @@ stream_channel_client_init(StreamChannelClient *client)
 }
 
 static void
+request_new_stream(StreamChannel *channel, StreamMsgStartStop *start)
+{
+    if (channel->start_cb) {
+        channel->start_cb(channel->start_opaque, start, channel);
+    }
+}
+
+static void
 stream_channel_client_on_disconnect(RedChannelClient *rcc)
 {
+    RedChannel *red_channel = red_channel_client_get_channel(rcc);
+
+    // if there are still some client connected keep streaming
+    // TODO, maybe would be worth sending new codecs if they are better
+    if (red_channel_is_connected(red_channel)) {
+        return;
+    }
+
+    StreamChannel *channel = STREAM_CHANNEL(red_channel);
+    channel->stream_id = -1;
+    channel->width = 0;
+    channel->height = 0;
+
+    // send stream stop to device
+    StreamMsgStartStop stop = { 0, };
+    request_new_stream(channel, &stop);
 }
 
 static StreamChannelClient*
@@ -258,17 +282,74 @@ stream_channel_new(RedsState *server, uint32_t id)
                         NULL);
 }
 
+#define MAX_SUPPORTED_CODECS SPICE_VIDEO_CODEC_TYPE_ENUM_END
+
+// find common codecs supported by all clients
+static uint8_t
+stream_channel_get_supported_codecs(StreamChannel *channel, uint8_t *out_codecs)
+{
+    RedChannelClient *rcc;
+    int codec;
+
+    static const uint16_t codec2cap[] = {
+        0, // invalid
+        SPICE_DISPLAY_CAP_CODEC_MJPEG,
+        SPICE_DISPLAY_CAP_CODEC_VP8,
+        SPICE_DISPLAY_CAP_CODEC_H264,
+        SPICE_DISPLAY_CAP_CODEC_VP9,
+    };
+
+    bool supported[SPICE_N_ELEMENTS(codec2cap)];
+
+    for (codec = 0; codec < SPICE_N_ELEMENTS(codec2cap); ++codec) {
+        supported[codec] = true;
+    }
+
+    FOREACH_CLIENT(channel, rcc) {
+        for (codec = 1; codec < SPICE_N_ELEMENTS(codec2cap); ++codec) {
+            // if do not support codec delete from list
+            if (!red_channel_client_test_remote_cap(rcc, codec2cap[codec])) {
+                supported[codec] = false;
+            }
+        }
+    }
+
+    // surely mjpeg is supported
+    supported[SPICE_VIDEO_CODEC_TYPE_MJPEG] = true;
+
+    int num = 0;
+    for (codec = 1; codec < SPICE_N_ELEMENTS(codec2cap); ++codec) {
+        if (supported[codec]) {
+            out_codecs[num++] = codec;
+        }
+    }
+
+    return num;
+}
+
 static void
 stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedsStream *stream,
                        int migration, RedChannelCapabilities *caps)
 {
     StreamChannel *channel = STREAM_CHANNEL(red_channel);
     StreamChannelClient *client;
+    struct {
+        StreamMsgStartStop base;
+        uint8_t codecs_buffer[MAX_SUPPORTED_CODECS];
+    } start_msg;
+    StreamMsgStartStop *const start = &start_msg.base;
 
     spice_return_if_fail(stream != NULL);
 
     client = stream_channel_client_new(channel, red_client, stream, migration, caps);
     spice_return_if_fail(client != NULL);
+
+    // request new stream
+    start->num_codecs = stream_channel_get_supported_codecs(channel, start->codecs);
+    // send in any case, even if list is not changed
+    // notify device about changes
+    request_new_stream(channel, start);
+
 
     // TODO set capabilities like  SPICE_DISPLAY_CAP_MONITORS_CONFIG
     // see guest_set_client_capabilities
