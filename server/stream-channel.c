@@ -70,6 +70,10 @@ struct StreamChannel {
     int stream_id;
     /* size of the current video stream */
     unsigned width, height;
+
+    /* callback to notify when a stream should be started or stopped */
+    stream_channel_start_proc start_cb;
+    void *start_opaque;
 };
 
 struct StreamChannelClass {
@@ -381,4 +385,12 @@ stream_channel_send_data(StreamChannel *channel, const void *data, size_t size, 
     // TODO try to optimize avoiding the copy
     memcpy(item->data.data, data, size);
     red_channel_pipes_add(red_channel, &item->base);
+}
+
+void
+stream_channel_register_start_cb(StreamChannel *channel,
+                                 stream_channel_start_proc cb, void *opaque)
+{
+    channel->start_cb = cb;
+    channel->start_opaque = opaque;
 }

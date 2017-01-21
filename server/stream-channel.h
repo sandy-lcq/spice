@@ -49,12 +49,18 @@ GType stream_channel_get_type(void) G_GNUC_CONST;
 StreamChannel* stream_channel_new(RedsState *server, uint32_t id);
 
 struct StreamMsgFormat;
+struct StreamMsgStartStop;
 
 void stream_channel_change_format(StreamChannel *channel,
                                   const struct StreamMsgFormat *fmt);
 void stream_channel_send_data(StreamChannel *channel,
                               const void *data, size_t size,
                               uint32_t mm_time);
+
+typedef void (*stream_channel_start_proc)(void *opaque, struct StreamMsgStartStop *start,
+                                          StreamChannel *channel);
+void stream_channel_register_start_cb(StreamChannel *channel,
+                                      stream_channel_start_proc cb, void *opaque);
 
 G_END_DECLS
 
