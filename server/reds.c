@@ -3223,6 +3223,8 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
     else if (strcmp(char_device->subtype, SUBTYPE_PORT) == 0) {
         if (strcmp(char_device->portname, "org.spice-space.webdav.0") == 0) {
             dev_state = spicevmc_device_connect(reds, char_device, SPICE_CHANNEL_WEBDAV);
+        } else if (strcmp(char_device->portname, "com.redhat.stream.0") == 0) {
+            dev_state = stream_device_connect(reds, char_device);
         } else {
             dev_state = spicevmc_device_connect(reds, char_device, SPICE_CHANNEL_PORT);
         }

@@ -166,6 +166,7 @@ libserver_la_SOURCES =				\
 	stat.h					\
 	stream.c				\
 	stream.h				\
+	stream-device.c				\
 	sw-canvas.c				\
 	tree.c					\
 	tree.h					\
