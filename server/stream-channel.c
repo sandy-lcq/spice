@@ -360,8 +360,13 @@ stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedsStrea
     red_channel_client_ack_zero_messages_window(rcc);
 
     // "emulate" dcc_start
-    // TODO only if "surface"
     red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES);
+
+    // only if "surface"
+    if (channel->width == 0 || channel->height == 0) {
+        return;
+    }
+
     // pass proper data
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SURFACE_CREATE);
     // surface data
@@ -407,8 +412,8 @@ static void
 stream_channel_init(StreamChannel *channel)
 {
     channel->stream_id = -1;
-    channel->width = 1024;
-    channel->height = 768;
+    channel->width = 0;
+    channel->height = 0;
 }
 
 void
@@ -421,11 +426,14 @@ stream_channel_change_format(StreamChannel *channel, const StreamMsgFormat *fmt)
 
     // send new create surface if required
     if (channel->width != fmt->width || channel->height != fmt->height) {
+        if (channel->width != 0 && channel->height != 0) {
+            red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_SURFACE_DESTROY);
+        }
         channel->width = fmt->width;
         channel->height = fmt->height;
-        red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_SURFACE_DESTROY);
         red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_SURFACE_CREATE);
         // TODO monitors config ??
+        red_channel_pipes_add_empty_msg(red_channel, SPICE_MSG_DISPLAY_MARK);
     }
 
     // allocate a new stream id
