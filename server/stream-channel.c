@@ -68,6 +68,8 @@ struct StreamChannel {
     /* current video stream id, <0 if not initialized or
      * we are not sending a stream */
     int stream_id;
+    /* size of the current video stream */
+    unsigned width, height;
 };
 
 struct StreamChannelClass {
@@ -78,6 +80,7 @@ G_DEFINE_TYPE(StreamChannel, stream_channel, RED_TYPE_CHANNEL)
 
 enum {
     RED_PIPE_ITEM_TYPE_SURFACE_CREATE = RED_PIPE_ITEM_TYPE_COMMON_LAST,
+    RED_PIPE_ITEM_TYPE_SURFACE_DESTROY,
     RED_PIPE_ITEM_TYPE_FILL_SURFACE,
     RED_PIPE_ITEM_TYPE_STREAM_CREATE,
     RED_PIPE_ITEM_TYPE_STREAM_DATA,
@@ -137,12 +140,12 @@ stream_channel_client_new(StreamChannel *channel, RedClient *client, RedsStream 
 }
 
 static void
-fill_base(SpiceMarshaller *m)
+fill_base(SpiceMarshaller *m, const StreamChannel *channel)
 {
     SpiceMsgDisplayBase base;
 
     base.surface_id = PRIMARY_SURFACE_ID;
-    base.box = (SpiceRect) { 0, 0, 1024, 768 };
+    base.box = (SpiceRect) { 0, 0, channel->width, channel->height };
     base.clip = (SpiceClip) { SPICE_CLIP_TYPE_NONE, NULL };
 
     spice_marshall_DisplayBase(m, &base);
@@ -153,22 +156,29 @@ stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
     StreamChannelClient *client = STREAM_CHANNEL_CLIENT(rcc);
+    StreamChannel *channel = STREAM_CHANNEL(red_channel_client_get_channel(rcc));
 
     switch (pipe_item->type) {
     case RED_PIPE_ITEM_TYPE_SURFACE_CREATE: {
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_SURFACE_CREATE);
         SpiceMsgSurfaceCreate surface_create = {
             PRIMARY_SURFACE_ID,
-            1024, 768,
+            channel->width, channel->height,
             SPICE_SURFACE_FMT_32_xRGB, SPICE_SURFACE_FLAGS_PRIMARY
         };
         spice_marshall_msg_display_surface_create(m, &surface_create);
         break;
     }
+    case RED_PIPE_ITEM_TYPE_SURFACE_DESTROY: {
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_SURFACE_DESTROY);
+        SpiceMsgSurfaceDestroy surface_destroy = { PRIMARY_SURFACE_ID };
+        spice_marshall_msg_display_surface_destroy(m, &surface_destroy);
+        break;
+    }
     case RED_PIPE_ITEM_TYPE_FILL_SURFACE: {
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_FILL);
 
-        fill_base(m);
+        fill_base(m, channel);
 
         SpiceFill fill;
         fill.brush = (SpiceBrush) { SPICE_BRUSH_TYPE_SOLID, { .color = 0 } };
@@ -267,7 +277,7 @@ stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedsStrea
     // "emulate" dcc_start
     // TODO only if "surface"
     red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES);
-    // TODO pass proper data
+    // pass proper data
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SURFACE_CREATE);
     // surface data
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_FILL_SURFACE);
@@ -312,6 +322,8 @@ static void
 stream_channel_init(StreamChannel *channel)
 {
     channel->stream_id = -1;
+    channel->width = 1024;
+    channel->height = 768;
 }
 
 void
@@ -322,7 +334,14 @@ stream_channel_change_format(StreamChannel *channel, const StreamMsgFormat *fmt)
     // send destroy old stream
     red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_STREAM_DESTROY);
 
-    // TODO send new create surface if required
+    // send new create surface if required
+    if (channel->width != fmt->width || channel->height != fmt->height) {
+        channel->width = fmt->width;
+        channel->height = fmt->height;
+        red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_SURFACE_DESTROY);
+        red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_SURFACE_CREATE);
+        // TODO monitors config ??
+    }
 
     // allocate a new stream id
     channel->stream_id = (channel->stream_id + 1) % NUM_STREAMS;
