@@ -164,6 +164,7 @@ handle_msg_format(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     }
     fmt.width = GUINT32_FROM_LE(fmt.width);
     fmt.height = GUINT32_FROM_LE(fmt.height);
+    stream_channel_change_format(dev->stream_channel, &fmt);
 
     return true;
 }
@@ -176,11 +177,10 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     while (1) {
         uint8_t buf[16 * 1024];
         n = sif->read(sin, buf, sizeof(buf));
-        /* TODO */
-        spice_debug("read %d bytes from device", n);
         if (n <= 0) {
             break;
         }
+        stream_channel_send_data(dev->stream_channel, buf, n, reds_get_mm_time());
         dev->hdr.size -= n;
     }
 

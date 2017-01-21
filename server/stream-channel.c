@@ -20,11 +20,13 @@
 #endif
 
 #include <common/generated_server_marshallers.h>
+#include <spice/stream-device.h>
 
 #include "red-channel-client.h"
 #include "stream-channel.h"
 #include "reds.h"
 #include "common-graphics-channel.h"
+#include "display-limits.h"
 
 #define TYPE_STREAM_CHANNEL_CLIENT stream_channel_client_get_type()
 
@@ -46,6 +48,10 @@ typedef struct StreamChannelClientClass StreamChannelClientClass;
  * to get buffer handling */
 struct StreamChannelClient {
     CommonGraphicsChannelClient parent;
+
+    /* current video stream id, <0 if not initialized or
+     * we are not sending a stream */
+    int stream_id;
 };
 
 struct StreamChannelClientClass {
@@ -58,6 +64,10 @@ G_DEFINE_TYPE(StreamChannelClient, stream_channel_client, TYPE_COMMON_GRAPHICS_C
 
 struct StreamChannel {
     RedChannel parent;
+
+    /* current video stream id, <0 if not initialized or
+     * we are not sending a stream */
+    int stream_id;
 };
 
 struct StreamChannelClass {
@@ -69,7 +79,21 @@ G_DEFINE_TYPE(StreamChannel, stream_channel, RED_TYPE_CHANNEL)
 enum {
     RED_PIPE_ITEM_TYPE_SURFACE_CREATE = RED_PIPE_ITEM_TYPE_COMMON_LAST,
     RED_PIPE_ITEM_TYPE_FILL_SURFACE,
+    RED_PIPE_ITEM_TYPE_STREAM_CREATE,
+    RED_PIPE_ITEM_TYPE_STREAM_DATA,
+    RED_PIPE_ITEM_TYPE_STREAM_DESTROY,
 };
+
+typedef struct StreamCreateItem {
+    RedPipeItem base;
+    SpiceMsgDisplayStreamCreate stream_create;
+} StreamCreateItem;
+
+typedef struct StreamDataItem {
+    RedPipeItem base;
+    // NOTE: this must be the last field in the structure
+    SpiceMsgDisplayStreamData data;
+} StreamDataItem;
 
 #define PRIMARY_SURFACE_ID 0
 
@@ -86,6 +110,7 @@ stream_channel_client_class_init(StreamChannelClientClass *klass)
 static void
 stream_channel_client_init(StreamChannelClient *client)
 {
+    client->stream_id = -1;
 }
 
 static void
@@ -127,6 +152,7 @@ static void
 stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
+    StreamChannelClient *client = STREAM_CHANNEL_CLIENT(rcc);
 
     switch (pipe_item->type) {
     case RED_PIPE_ITEM_TYPE_SURFACE_CREATE: {
@@ -150,6 +176,32 @@ stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         fill.mask = (SpiceQMask) { 0, { 0, 0 }, NULL };
         SpiceMarshaller *brush_pat_out, *mask_bitmap_out;
         spice_marshall_Fill(m, &fill, &brush_pat_out, &mask_bitmap_out);
+        break;
+    }
+    case RED_PIPE_ITEM_TYPE_STREAM_CREATE: {
+        StreamCreateItem *item = SPICE_UPCAST(StreamCreateItem, pipe_item);
+        client->stream_id = item->stream_create.id;
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_CREATE);
+        spice_marshall_msg_display_stream_create(m, &item->stream_create);
+        break;
+    }
+    case RED_PIPE_ITEM_TYPE_STREAM_DATA: {
+        StreamDataItem *item = SPICE_UPCAST(StreamDataItem, pipe_item);
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA);
+        spice_marshall_msg_display_stream_data(m, &item->data);
+        red_pipe_item_ref(pipe_item);
+        spice_marshaller_add_by_ref_full(m, item->data.data, item->data.data_size,
+                                         marshaller_unref_pipe_item, pipe_item);
+        break;
+    }
+    case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
+        if (client->stream_id < 0) {
+            return;
+        }
+        SpiceMsgDisplayStreamDestroy stream_destroy = { client->stream_id };
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DESTROY);
+        spice_marshall_msg_display_stream_destroy(m, &stream_destroy);
+        client->stream_id = -1;
         break;
     }
     default:
@@ -259,4 +311,55 @@ stream_channel_class_init(StreamChannelClass *klass)
 static void
 stream_channel_init(StreamChannel *channel)
 {
+    channel->stream_id = -1;
+}
+
+void
+stream_channel_change_format(StreamChannel *channel, const StreamMsgFormat *fmt)
+{
+    RedChannel *red_channel = RED_CHANNEL(channel);
+
+    // send destroy old stream
+    red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_STREAM_DESTROY);
+
+    // TODO send new create surface if required
+
+    // allocate a new stream id
+    channel->stream_id = (channel->stream_id + 1) % NUM_STREAMS;
+
+    // send create stream
+    StreamCreateItem *item = g_new0(StreamCreateItem, 1);
+    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_STREAM_CREATE);
+    item->stream_create.id = channel->stream_id;
+    item->stream_create.flags = SPICE_STREAM_FLAGS_TOP_DOWN;
+    item->stream_create.codec_type = fmt->codec;
+    item->stream_create.stream_width = fmt->width;
+    item->stream_create.stream_height = fmt->height;
+    item->stream_create.src_width = fmt->width;
+    item->stream_create.src_height = fmt->height;
+    item->stream_create.dest = (SpiceRect) { 0, 0, fmt->width, fmt->height };
+    item->stream_create.clip = (SpiceClip) { SPICE_CLIP_TYPE_NONE, NULL };
+    red_channel_pipes_add(red_channel, &item->base);
+}
+
+void
+stream_channel_send_data(StreamChannel *channel, const void *data, size_t size, uint32_t mm_time)
+{
+    if (channel->stream_id < 0) {
+        // this condition can happen if the guest didn't handle
+        // the format stop that we send so think the stream is still
+        // started
+        return;
+    }
+
+    RedChannel *red_channel = RED_CHANNEL(channel);
+
+    StreamDataItem *item = g_malloc(sizeof(*item) + size);
+    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_STREAM_DATA);
+    item->data.base.id = channel->stream_id;
+    item->data.base.multi_media_time = mm_time;
+    item->data.data_size = size;
+    // TODO try to optimize avoiding the copy
+    memcpy(item->data.data, data, size);
+    red_channel_pipes_add(red_channel, &item->base);
 }
