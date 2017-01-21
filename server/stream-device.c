@@ -22,6 +22,8 @@
 #include <spice/stream-device.h>
 
 #include "char-device.h"
+#include "stream-channel.h"
+#include "reds.h"
 
 #define TYPE_STREAM_DEVICE stream_device_get_type()
 
@@ -37,9 +39,11 @@ typedef struct StreamDeviceClass StreamDeviceClass;
 
 struct StreamDevice {
     RedCharDevice parent;
+
     StreamDevHeader hdr;
     uint8_t hdr_pos;
     bool has_error;
+    StreamChannel *stream_channel;
 };
 
 struct StreamDeviceClass {
@@ -204,7 +208,10 @@ stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     SpiceCharDeviceInterface *sif;
 
+    StreamChannel *stream_channel = stream_channel_new(reds, 1); // TODO id
+
     StreamDevice *dev = stream_device_new(sin, reds);
+    dev->stream_channel = stream_channel;
 
     sif = spice_char_device_get_interface(sin);
     if (sif->state) {
@@ -217,6 +224,13 @@ stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
 static void
 stream_device_dispose(GObject *object)
 {
+    StreamDevice *dev = STREAM_DEVICE(object);
+
+    if (dev->stream_channel) {
+        // close all current connections and drop the reference
+        red_channel_destroy(RED_CHANNEL(dev->stream_channel));
+        dev->stream_channel = NULL;
+    }
 }
 
 static void

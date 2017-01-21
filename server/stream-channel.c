@@ -19,6 +19,8 @@
 #include <config.h>
 #endif
 
+#include <common/generated_server_marshallers.h>
+
 #include "red-channel-client.h"
 #include "stream-channel.h"
 #include "reds.h"
@@ -64,6 +66,13 @@ struct StreamChannelClass {
 
 G_DEFINE_TYPE(StreamChannel, stream_channel, RED_TYPE_CHANNEL)
 
+enum {
+    RED_PIPE_ITEM_TYPE_SURFACE_CREATE = RED_PIPE_ITEM_TYPE_COMMON_LAST,
+    RED_PIPE_ITEM_TYPE_FILL_SURFACE,
+};
+
+#define PRIMARY_SURFACE_ID 0
+
 static void stream_channel_client_on_disconnect(RedChannelClient *rcc);
 
 static void
@@ -103,9 +112,46 @@ stream_channel_client_new(StreamChannel *channel, RedClient *client, RedsStream 
 }
 
 static void
+fill_base(SpiceMarshaller *m)
+{
+    SpiceMsgDisplayBase base;
+
+    base.surface_id = PRIMARY_SURFACE_ID;
+    base.box = (SpiceRect) { 0, 0, 1024, 768 };
+    base.clip = (SpiceClip) { SPICE_CLIP_TYPE_NONE, NULL };
+
+    spice_marshall_DisplayBase(m, &base);
+}
+
+static void
 stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
+    SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
+
     switch (pipe_item->type) {
+    case RED_PIPE_ITEM_TYPE_SURFACE_CREATE: {
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_SURFACE_CREATE);
+        SpiceMsgSurfaceCreate surface_create = {
+            PRIMARY_SURFACE_ID,
+            1024, 768,
+            SPICE_SURFACE_FMT_32_xRGB, SPICE_SURFACE_FLAGS_PRIMARY
+        };
+        spice_marshall_msg_display_surface_create(m, &surface_create);
+        break;
+    }
+    case RED_PIPE_ITEM_TYPE_FILL_SURFACE: {
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_DRAW_FILL);
+
+        fill_base(m);
+
+        SpiceFill fill;
+        fill.brush = (SpiceBrush) { SPICE_BRUSH_TYPE_SOLID, { .color = 0 } };
+        fill.rop_descriptor = SPICE_ROPD_OP_PUT;
+        fill.mask = (SpiceQMask) { 0, { 0, 0 }, NULL };
+        SpiceMarshaller *brush_pat_out, *mask_bitmap_out;
+        spice_marshall_Fill(m, &fill, &brush_pat_out, &mask_bitmap_out);
+        break;
+    }
     default:
         spice_error("invalid pipe item type");
     }
@@ -169,8 +215,10 @@ stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedsStrea
     // "emulate" dcc_start
     // TODO only if "surface"
     red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES);
-    // TODO red_surface_create_item_new
-    // TODO surface data ??
+    // TODO pass proper data
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SURFACE_CREATE);
+    // surface data
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_FILL_SURFACE);
     // TODO monitor configs ??
     red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_DISPLAY_MARK);
 }
