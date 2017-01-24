@@ -169,6 +169,20 @@ static RedDrawable *red_drawable_new(QXLInstance *qxl)
     return red;
 }
 
+static gboolean red_process_surface_cmd(RedWorker *worker, QXLCommandExt *ext, gboolean loadvm)
+{
+    RedSurfaceCmd surface_cmd;
+
+    if (red_get_surface_cmd(&worker->mem_slots, ext->group_id, &surface_cmd, ext->cmd.data)) {
+        return FALSE;
+    }
+    display_channel_process_surface_cmd(worker->display_channel, &surface_cmd, loadvm);
+    // display_channel_process_surface_cmd() takes ownership of 'release_info_ext',
+    // we don't need to release it ourselves
+    red_put_surface_cmd(&surface_cmd);
+    return TRUE;
+}
+
 static int red_process_display(RedWorker *worker, int *ring_is_empty)
 {
     QXLCommandExt ext_cmd;
@@ -245,18 +259,10 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
             red_put_message(&message);
             break;
         }
-        case QXL_CMD_SURFACE: {
-            RedSurfaceCmd surface;
-
-            if (red_get_surface_cmd(&worker->mem_slots, ext_cmd.group_id,
-                                    &surface, ext_cmd.cmd.data)) {
-                break;
-            }
-            display_channel_process_surface_cmd(worker->display_channel, &surface, FALSE);
-            // do not release resource as is released inside display_channel_process_surface_cmd
-            red_put_surface_cmd(&surface);
+        case QXL_CMD_SURFACE:
+            red_process_surface_cmd(worker, &ext_cmd, FALSE);
             break;
-        }
+
         default:
             spice_error("bad command type");
         }
@@ -984,20 +990,13 @@ static void handle_dev_close(void *opaque, void *payload)
 
 static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
 {
-    RedSurfaceCmd surface_cmd;
-
     switch (ext->cmd.type) {
     case QXL_CMD_CURSOR:
         return red_process_cursor_cmd(worker, ext);
 
     case QXL_CMD_SURFACE:
-        if (red_get_surface_cmd(&worker->mem_slots, ext->group_id, &surface_cmd, ext->cmd.data)) {
-            return FALSE;
-        }
-        display_channel_process_surface_cmd(worker->display_channel, &surface_cmd, TRUE);
-        // do not release resource as is released inside display_channel_process_surface_cmd
-        red_put_surface_cmd(&surface_cmd);
-        break;
+        return red_process_surface_cmd(worker, ext, TRUE);
+
     default:
         spice_warning("unhandled loadvm command type (%d)", ext->cmd.type);
     }
