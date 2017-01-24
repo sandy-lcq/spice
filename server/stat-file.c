@@ -162,25 +162,23 @@ stat_file_add_node(RedStatFile *stat_file, StatNodeRef parent, const char *name,
             return ref;
         }
     }
-    if (stat_file->stat->num_of_nodes >= stat_file->max_nodes || stat_file->stat == NULL) {
-        pthread_mutex_unlock(&stat_file->lock);
-        return INVALID_STAT_REF;
-    }
-    stat_file->stat->generation++;
-    stat_file->stat->num_of_nodes++;
     for (ref = 0; ref < stat_file->max_nodes; ref++) {
         node = &stat_file->stat->nodes[ref];
-        if (!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED)) {
-            break;
+        if (!!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED)) {
+            continue;
         }
+        stat_file->stat->generation++;
+        stat_file->stat->num_of_nodes++;
+        node->value = 0;
+        node->flags = SPICE_STAT_NODE_FLAG_ENABLED |
+                      (visible ? SPICE_STAT_NODE_FLAG_VISIBLE : 0);
+        g_strlcpy(node->name, name, sizeof(node->name));
+        reds_insert_stat_node(stat_file, parent, ref);
+        pthread_mutex_unlock(&stat_file->lock);
+        return ref;
     }
-    spice_assert(!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED));
-    node->value = 0;
-    node->flags = SPICE_STAT_NODE_FLAG_ENABLED | (visible ? SPICE_STAT_NODE_FLAG_VISIBLE : 0);
-    g_strlcpy(node->name, name, sizeof(node->name));
-    reds_insert_stat_node(stat_file, parent, ref);
     pthread_mutex_unlock(&stat_file->lock);
-    return ref;
+    return INVALID_STAT_REF;
 }
 
 uint64_t *
