@@ -470,6 +470,7 @@ static void reds_reset_vdp(RedsState *reds)
 {
     RedCharDeviceVDIPort *dev = reds->agent_dev;
     SpiceCharDeviceInterface *sif;
+    RedCharDevice *char_dev;
 
     dev->priv->read_state = VDI_PORT_READ_STATE_READ_HEADER;
     dev->priv->receive_pos = (uint8_t *)&dev->priv->vdi_chunk_header;
@@ -502,7 +503,10 @@ static void reds_reset_vdp(RedsState *reds)
      *  The tokens are also reset to avoid mismatch in upon agent reconnection.
      */
     dev->priv->agent_attached = FALSE;
-    red_char_device_reset(RED_CHAR_DEVICE(dev));
+    char_dev = RED_CHAR_DEVICE(dev);
+    red_char_device_stop(char_dev);
+    red_char_device_reset(char_dev);
+    red_char_device_reset_dev_instance(char_dev, NULL);
 
     sif = spice_char_device_get_interface(reds->vdagent);
     if (sif->state) {

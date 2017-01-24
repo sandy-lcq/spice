@@ -823,7 +823,6 @@ void red_char_device_reset(RedCharDevice *dev)
     GList *client_item;
     RedCharDeviceWriteBuffer *buf;
 
-    red_char_device_stop(dev);
     dev->priv->wait_for_migrate_data = FALSE;
     spice_debug("char device %p", dev);
     while ((buf = g_queue_pop_tail(&dev->priv->write_queue))) {
@@ -845,7 +844,6 @@ void red_char_device_reset(RedCharDevice *dev)
         dev_client->num_client_tokens += dev_client->num_client_tokens_free;
         dev_client->num_client_tokens_free = 0;
     }
-    red_char_device_reset_dev_instance(dev, NULL);
 }
 
 void red_char_device_wakeup(RedCharDevice *dev)
