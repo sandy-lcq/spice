@@ -483,3 +483,37 @@ stream_channel_register_start_cb(StreamChannel *channel,
     channel->start_cb = cb;
     channel->start_opaque = opaque;
 }
+
+void
+stream_channel_reset(StreamChannel *channel)
+{
+    struct {
+        StreamMsgStartStop base;
+        uint8_t codecs_buffer[MAX_SUPPORTED_CODECS];
+    } start_msg;
+    StreamMsgStartStop *const start = &start_msg.base;
+    RedChannel *red_channel = RED_CHANNEL(channel);
+
+    // send destroy old stream
+    red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_STREAM_DESTROY);
+
+    // destroy display surface
+    if (channel->width != 0 && channel->height != 0) {
+        red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_SURFACE_DESTROY);
+    }
+
+    channel->stream_id = -1;
+    channel->width = 0;
+    channel->height = 0;
+
+    if (!red_channel_is_connected(red_channel)) {
+        return;
+    }
+
+    // try to request a new stream, this should start a new stream
+    // if the guest is connected to the device and a client is already connected
+    start->num_codecs = stream_channel_get_supported_codecs(channel, start->codecs);
+    // send in any case, even if list is not changed
+    // notify device about changes
+    request_new_stream(channel, start);
+}

@@ -48,7 +48,12 @@ GType stream_channel_get_type(void) G_GNUC_CONST;
  */
 StreamChannel* stream_channel_new(RedsState *server, uint32_t id);
 
-struct StreamMsgFormat;
+/**
+ * Reset channel at initial state
+ */
+void stream_channel_reset(StreamChannel *channel);
+
+struct StreamMsgStreamFormat;
 struct StreamMsgStartStop;
 
 void stream_channel_change_format(StreamChannel *channel,

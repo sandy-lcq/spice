@@ -43,6 +43,7 @@ struct StreamDevice {
     StreamDevHeader hdr;
     uint8_t hdr_pos;
     bool has_error;
+    bool opened;
     StreamChannel *stream_channel;
 };
 
@@ -203,6 +204,35 @@ stream_device_remove_client(RedCharDevice *self, RedClient *client)
 {
 }
 
+static void
+stream_device_stream_start(void *opaque, StreamMsgStartStop *start,
+                           StreamChannel *stream_channel G_GNUC_UNUSED)
+{
+    StreamDevice *dev = (StreamDevice *) opaque;
+
+    if (!dev->opened) {
+        return;
+    }
+
+    int msg_size = sizeof(*start) + sizeof(start->codecs[0]) * start->num_codecs;
+    int total_size = sizeof(StreamDevHeader) + msg_size;
+
+    RedCharDevice *char_dev = RED_CHAR_DEVICE(dev);
+    RedCharDeviceWriteBuffer *buf =
+        red_char_device_write_buffer_get_server_no_token(char_dev, total_size);
+    buf->buf_used = total_size;
+
+    StreamDevHeader *hdr = (StreamDevHeader *)buf->buf;
+    hdr->protocol_version = STREAM_DEVICE_PROTOCOL;
+    hdr->padding = 0;
+    hdr->type = GUINT16_TO_LE(STREAM_TYPE_START_STOP);
+    hdr->size = GUINT32_TO_LE(msg_size);
+
+    memcpy(&hdr[1], start, msg_size);
+
+    red_char_device_write_buffer_add(char_dev, buf);
+}
+
 RedCharDevice *
 stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
@@ -212,6 +242,7 @@ stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
 
     StreamDevice *dev = stream_device_new(sin, reds);
     dev->stream_channel = stream_channel;
+    stream_channel_register_start_cb(stream_channel, stream_device_stream_start, dev);
 
     sif = spice_char_device_get_interface(sin);
     if (sif->state) {
@@ -234,6 +265,23 @@ stream_device_dispose(GObject *object)
 }
 
 static void
+stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
+{
+    if (event != SPICE_PORT_EVENT_OPENED && event != SPICE_PORT_EVENT_CLOSED) {
+        return;
+    }
+
+    StreamDevice *dev = STREAM_DEVICE(char_dev);
+
+    // reset device and channel on close/open
+    dev->opened = (event == SPICE_PORT_EVENT_OPENED);
+    dev->hdr_pos = 0;
+    dev->has_error = false;
+    red_char_device_reset(char_dev);
+    stream_channel_reset(dev->stream_channel);
+}
+
+static void
 stream_device_class_init(StreamDeviceClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
@@ -245,6 +293,7 @@ stream_device_class_init(StreamDeviceClass *klass)
     char_dev_class->send_msg_to_client = stream_device_send_msg_to_client;
     char_dev_class->send_tokens_to_client = stream_device_send_tokens_to_client;
     char_dev_class->remove_client = stream_device_remove_client;
+    char_dev_class->port_event = stream_device_port_event;
 }
 
 static void
