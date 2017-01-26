@@ -746,7 +746,7 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(RedCharDevice *self,
     RedVDIReadBuf *dispatch_buf;
     int n;
 
-    g_object_get(dev, "spice-server", &reds, NULL);
+    reds = red_char_device_get_server(self);
     g_assert(RED_CHAR_DEVICE(reds->agent_dev) == sin->st);
     if (!reds->vdagent) {
         return NULL;
@@ -4397,7 +4397,7 @@ static void red_char_device_vdi_port_constructed(GObject *object)
 
     G_OBJECT_CLASS(red_char_device_vdi_port_parent_class)->constructed(object);
 
-    g_object_get(dev, "spice-server", &reds, NULL);
+    reds = red_char_device_get_server(RED_CHAR_DEVICE(object));
 
     agent_msg_filter_init(&dev->priv->write_filter, reds->config->agent_copypaste,
                           reds->config->agent_file_xfer,
