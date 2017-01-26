@@ -499,28 +499,21 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
         spice_assert(n > 0);
         n = reds_stream_read(stream, async->now, n);
         if (n <= 0) {
-            if (n < 0) {
-                switch (errno) {
-                case EAGAIN:
-                    if (!stream->watch) {
-                        stream->watch = reds_core_watch_add(reds, stream->socket,
-                                                            SPICE_WATCH_EVENT_READ,
-                                                            async_read_handler, async);
-                    }
-                    return;
-                case EINTR:
-                    break;
-                default:
-                    async_read_clear_handlers(async);
-                    if (async->error) {
-                        async->error(async->opaque, errno);
-                    }
-                    return;
+            int err = n < 0 ? errno: 0;
+            switch (err) {
+            case EAGAIN:
+                if (!stream->watch) {
+                    stream->watch = reds_core_watch_add(reds, stream->socket,
+                                                        SPICE_WATCH_EVENT_READ,
+                                                        async_read_handler, async);
                 }
-            } else {
+                return;
+            case EINTR:
+                break;
+            default:
                 async_read_clear_handlers(async);
                 if (async->error) {
-                    async->error(async->opaque, 0);
+                    async->error(async->opaque, err);
                 }
                 return;
             }
