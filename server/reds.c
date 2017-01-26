@@ -408,6 +408,38 @@ RedChannel *reds_find_channel(RedsState *reds, uint32_t type, uint32_t id)
     return NULL;
 }
 
+/* Search for first free channel id for a specific channel type.
+ * Return first id free or <0 if not found. */
+int reds_get_free_channel_id(RedsState *reds, uint32_t type)
+{
+    RedChannel *channel;
+
+    // this mark if some IDs are used.
+    // The size of the array limits the possible id returned but
+    // usually the IDs used for a channel type are not much.
+    bool used_ids[256];
+
+    unsigned n;
+
+    // mark id used for the specific channel type
+    memset(used_ids, 0, sizeof(used_ids));
+    GLIST_FOREACH(reds->channels, RedChannel, channel) {
+        uint32_t this_type, this_id;
+        g_object_get(channel, "channel-type", &this_type, "id", &this_id, NULL);
+        if (this_type == type && this_id < SPICE_N_ELEMENTS(used_ids)) {
+            used_ids[this_id] = true;
+        }
+    }
+
+    // find first ID not marked as used
+    for (n = 0; n < SPICE_N_ELEMENTS(used_ids); ++n) {
+        if (!used_ids[n]) {
+            return n;
+        }
+    }
+    return -1;
+}
+
 static void reds_mig_cleanup(RedsState *reds)
 {
     if (reds->mig_inprogress) {

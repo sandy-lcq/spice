@@ -272,7 +272,6 @@ red_vmc_channel_finalize(GObject *object)
 static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type)
 {
     GType gtype = G_TYPE_NONE;
-    static uint8_t id[SPICE_END_CHANNEL] = { 0, };
 
     switch (channel_type) {
         case SPICE_CHANNEL_USBREDIR:
@@ -288,11 +287,18 @@ static RedVmcChannel *red_vmc_channel_new(RedsState *reds, uint8_t channel_type)
             g_error("Unsupported channel_type for red_vmc_channel_new(): %u", channel_type);
             return NULL;
     }
+
+    int id = reds_get_free_channel_id(reds, channel_type);
+    if (id < 0) {
+        g_warning("Free ID not found creating new VMC channel");
+        return NULL;
+    }
+
     return g_object_new(gtype,
                         "spice-server", reds,
                         "core-interface", reds_get_core_interface(reds),
                         "channel-type", channel_type,
-                        "id", id[channel_type]++,
+                        "id", id,
                         "handle-acks", FALSE,
                         "migration-flags",
                         (SPICE_MIGRATE_NEED_FLUSH | SPICE_MIGRATE_NEED_DATA_TRANSFER),
