@@ -42,15 +42,28 @@
 
 typedef struct {
     SpiceBitmapFmt spice_format;
+    uint32_t bpp;
+#ifndef HAVE_GSTREAMER_0_10
     char format[8];
     GstVideoFormat gst_format;
-    uint32_t bpp;
+#else
     uint32_t depth;
     uint32_t endianness;
     uint32_t blue_mask;
     uint32_t green_mask;
     uint32_t red_mask;
+#endif
 } SpiceFormatForGStreamer;
+
+#ifndef HAVE_GSTREAMER_0_10
+#define FMT_DESC(spice_format, bpp, format, gst_format, depth, endianness, \
+                 blue_mask, green_mask, red_mask) \
+    { spice_format, bpp, format, gst_format }
+#else
+#define FMT_DESC(spice_format, bpp, format, gst_format, depth, endianness, \
+                 blue_mask, green_mask, red_mask) \
+    { spice_format, bpp, depth, endianness, blue_mask, green_mask, red_mask }
+#endif
 
 typedef struct SpiceGstVideoBuffer {
     VideoBuffer base;
@@ -758,12 +771,12 @@ static const SpiceFormatForGStreamer format_map[] =  {
     /* First item is invalid.
      * It's located first so the loop catch invalid values.
      */
-    {SPICE_BITMAP_FMT_INVALID, "", GST_VIDEO_FORMAT_UNKNOWN, 0, 0, 0, 0, 0, 0},
-    {SPICE_BITMAP_FMT_RGBA, "BGRA", GST_VIDEO_FORMAT_BGRA, 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
-    {SPICE_BITMAP_FMT_16BIT, "RGB15", GST_VIDEO_FORMAT_RGB15, 16, 15, 4321, 0x001f, 0x03E0, 0x7C00},
+    FMT_DESC(SPICE_BITMAP_FMT_INVALID, 0, "", GST_VIDEO_FORMAT_UNKNOWN, 0, 0, 0, 0, 0),
+    FMT_DESC(SPICE_BITMAP_FMT_RGBA, 32, "BGRA", GST_VIDEO_FORMAT_BGRA, 24, 4321, 0xff000000, 0xff0000, 0xff00),
+    FMT_DESC(SPICE_BITMAP_FMT_16BIT, 16, "RGB15", GST_VIDEO_FORMAT_RGB15, 15, 4321, 0x001f, 0x03E0, 0x7C00),
     /* TODO: Test the other formats under GStreamer 0.10*/
-    {SPICE_BITMAP_FMT_32BIT, "BGRx", GST_VIDEO_FORMAT_BGRx, 32, 24, 4321, 0xff000000, 0xff0000, 0xff00},
-    {SPICE_BITMAP_FMT_24BIT, "BGR", GST_VIDEO_FORMAT_BGR, 24, 24, 4321, 0xff0000, 0xff00, 0xff},
+    FMT_DESC(SPICE_BITMAP_FMT_32BIT, 32, "BGRx", GST_VIDEO_FORMAT_BGRx, 24, 4321, 0xff000000, 0xff0000, 0xff00),
+    FMT_DESC(SPICE_BITMAP_FMT_24BIT, 24, "BGR", GST_VIDEO_FORMAT_BGR, 24, 4321, 0xff0000, 0xff00, 0xff),
 };
 #define GSTREAMER_FORMAT_INVALID (&format_map[0])
 
