@@ -2192,12 +2192,6 @@ static void reds_handle_read_header_done(void *opaque)
     header->minor_version = GUINT32_FROM_LE(header->minor_version);
     header->size = GUINT32_FROM_LE(header->size);
 
-    if (header->magic != SPICE_MAGIC) {
-        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_MAGIC);
-        reds_link_free(link);
-        return;
-    }
-
     if (header->major_version != SPICE_VERSION_MAJOR) {
         if (header->major_version > 0) {
             reds_send_link_error(link, SPICE_LINK_ERR_VERSION_MISMATCH);
@@ -2227,13 +2221,31 @@ static void reds_handle_read_header_done(void *opaque)
                            link);
 }
 
+static void reds_handle_read_magic_done(void *opaque)
+{
+    RedLinkInfo *link = (RedLinkInfo *)opaque;
+    const SpiceLinkHeader *header = &link->link_header;
+
+    if (header->magic != SPICE_MAGIC) {
+        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_MAGIC);
+        reds_link_free(link);
+        return;
+    }
+
+    reds_stream_async_read(link->stream,
+                           ((uint8_t *)&link->link_header) + sizeof(header->magic),
+                           sizeof(SpiceLinkHeader) - sizeof(header->magic),
+                           reds_handle_read_header_done,
+                           link);
+}
+
 static void reds_handle_new_link(RedLinkInfo *link)
 {
     reds_stream_set_async_error_handler(link->stream, reds_handle_link_error);
     reds_stream_async_read(link->stream,
                            (uint8_t *)&link->link_header,
-                           sizeof(SpiceLinkHeader),
-                           reds_handle_read_header_done,
+                           sizeof(link->link_header.magic),
+                           reds_handle_read_magic_done,
                            link);
 }
 
