@@ -33,7 +33,6 @@ struct DisplayChannelPrivate
     int enable_zlib_glz_wrap;
 
     Ring current_list; // of TreeItem
-    uint32_t current_size;
 
     uint32_t drawable_count;
     _Drawable drawables[NUM_DRAWABLES];

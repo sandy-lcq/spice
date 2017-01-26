@@ -389,7 +389,6 @@ static void current_add_drawable(DisplayChannel *display,
     ring_add_after(&drawable->tree_item.base.siblings_link, pos);
     ring_add(&display->priv->current_list, &drawable->list_link);
     ring_add(&surface->current_list, &drawable->surface_list_link);
-    display->priv->current_size++;
     drawable->refs++;
 }
 
@@ -402,7 +401,6 @@ static void current_remove_drawable(DisplayChannel *display, Drawable *item)
     ring_remove(&item->list_link);
     ring_remove(&item->surface_list_link);
     drawable_unref(item);
-    display->priv->current_size--;
 }
 
 static void drawable_remove_from_pipes(Drawable *drawable)
@@ -2269,6 +2267,6 @@ void display_channel_debug_oom(DisplayChannel *display, const char *msg)
                 msg,
                 display->priv->drawable_count,
                 display->priv->encoder_shared_data.glz_drawable_count,
-                display->priv->current_size,
+                ring_get_length(&display->priv->current_list),
                 red_channel_sum_pipes_size(channel));
 }
