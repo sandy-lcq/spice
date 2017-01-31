@@ -3198,13 +3198,14 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
     return 0;
 }
 
-static void spice_server_char_device_remove_interface(RedsState *reds, SpiceBaseInstance *sin)
+static int spice_server_char_device_remove_interface(RedsState *reds, SpiceBaseInstance *sin)
 {
     SpiceCharDeviceInstance* char_device =
             SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
 
     spice_info("remove CHAR_DEVICE %s", char_device->subtype);
     if (strcmp(char_device->subtype, SUBTYPE_VDAGENT) == 0) {
+        g_return_val_if_fail(char_device == reds->vdagent, -1);
         if (reds->vdagent) {
             reds_agent_remove(reds);
             red_char_device_reset_dev_instance(RED_CHAR_DEVICE(reds->agent_dev), NULL);
@@ -3223,6 +3224,7 @@ static void spice_server_char_device_remove_interface(RedsState *reds, SpiceBase
     }
 
     char_device->st = NULL;
+    return 0;
 }
 
 SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *reds,
@@ -3357,7 +3359,7 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
         SpiceCharDeviceInstance *char_device = SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
         g_return_val_if_fail(char_device->st != NULL, -1);
         reds = red_char_device_get_server(char_device->st);
-        spice_server_char_device_remove_interface(reds, sin);
+        return spice_server_char_device_remove_interface(reds, sin);
     } else if (strcmp(interface->type, SPICE_INTERFACE_QXL) == 0) {
         QXLInstance *qxl;
 
