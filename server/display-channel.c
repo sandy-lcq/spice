@@ -2447,15 +2447,18 @@ void display_channel_set_monitors_config_to_primary(DisplayChannel *display)
 {
     DrawContext *context = &display->priv->surfaces[0].context;
     QXLHead head = { 0, };
+    uint16_t old_max = 1;
 
     spice_return_if_fail(display->priv->surfaces[0].context.canvas);
 
-    if (display->priv->monitors_config)
+    if (display->priv->monitors_config) {
+        old_max = display->priv->monitors_config->max_allowed;
         monitors_config_unref(display->priv->monitors_config);
+    }
 
     head.width = context->width;
     head.height = context->height;
-    display->priv->monitors_config = monitors_config_new(&head, 1, 1);
+    display->priv->monitors_config = monitors_config_new(&head, 1, old_max);
 }
 
 void display_channel_reset_image_cache(DisplayChannel *self)
