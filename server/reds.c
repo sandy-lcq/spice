@@ -3317,10 +3317,14 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *reds,
 SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
 {
     RedsState *reds;
-    const SpiceBaseInterface *interface = sin->sif;
+    const SpiceBaseInterface *interface;
 
+    g_return_val_if_fail(sin != NULL, -1);
+
+    interface = sin->sif;
     if (strcmp(interface->type, SPICE_INTERFACE_TABLET) == 0) {
         SpiceTabletInstance *tablet = SPICE_CONTAINEROF(sin, SpiceTabletInstance, base);
+        g_return_val_if_fail(tablet->st != NULL, -1);
         reds = spice_tablet_state_get_server(tablet->st);
         spice_info("remove SPICE_INTERFACE_TABLET");
         inputs_channel_detach_tablet(reds->inputs_channel, tablet);
@@ -3333,12 +3337,14 @@ SPICE_GNUC_VISIBLE int spice_server_remove_interface(SpiceBaseInstance *sin)
         snd_detach_record(SPICE_CONTAINEROF(sin, SpiceRecordInstance, base));
     } else if (strcmp(interface->type, SPICE_INTERFACE_CHAR_DEVICE) == 0) {
         SpiceCharDeviceInstance *char_device = SPICE_CONTAINEROF(sin, SpiceCharDeviceInstance, base);
+        g_return_val_if_fail(char_device->st != NULL, -1);
         reds = red_char_device_get_server(char_device->st);
         spice_server_char_device_remove_interface(reds, sin);
     } else if (strcmp(interface->type, SPICE_INTERFACE_QXL) == 0) {
         QXLInstance *qxl;
 
         qxl = SPICE_CONTAINEROF(sin, QXLInstance, base);
+        g_return_val_if_fail(qxl->st != NULL, -1);
         reds = red_qxl_get_server(qxl->st);
         reds->qxl_instances = g_list_remove(reds->qxl_instances, qxl);
         red_qxl_destroy(qxl);
