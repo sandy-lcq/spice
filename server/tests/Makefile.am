@@ -46,6 +46,7 @@ check_PROGRAMS =				\
 	test-qxl-parsing			\
 	test-stat-file				\
 	test-leaks				\
+	test-vdagent				\
 	$(NULL)
 
 noinst_PROGRAMS =				\
@@ -57,7 +58,6 @@ noinst_PROGRAMS =				\
 	test-playback				\
 	test-display-resolution-changes		\
 	test-two-servers			\
-	test-vdagent				\
 	test-display-width-stride		\
 	spice-server-replay			\
 	$(check_PROGRAMS)			\
@@ -112,6 +112,14 @@ libtest_stat4_a_SOURCES = stat-test.c
 libtest_stat4_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORKER_STAT=1 -DTEST_NAME=stat_test4
 
 test_qxl_parsing_LDADD = ../libserver.la $(LDADD)
+
+# Fallback implementations are provided for older glibs for the recent glib
+# methods this test is using, so no need to warn about them
+test_vdagent_CPPFLAGS =			\
+	$(AM_CPPFLAGS)			\
+	-UGLIB_VERSION_MIN_REQUIRED	\
+	-UGLIB_VERSION_MAX_ALLOWED	\
+	$(NULL)
 
 if HAVE_GSTREAMER
 test_gst_SOURCES = test-gst.c \
