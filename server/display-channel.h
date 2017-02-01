@@ -173,15 +173,6 @@ typedef struct RedSurface {
     QXLReleaseInfoExt create, destroy;
 } RedSurface;
 
-#define NUM_DRAWABLES 1000
-typedef struct _Drawable _Drawable;
-struct _Drawable {
-    union {
-        Drawable drawable;
-        _Drawable *next;
-    } u;
-};
-
 #define FOREACH_DCC(_channel, _iter, _data) \
     GLIST_FOREACH((_channel ? red_channel_get_clients(RED_CHANNEL(_channel)) : NULL), \
                   _iter, DisplayChannelClient, _data)

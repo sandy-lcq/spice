@@ -20,6 +20,15 @@
 
 #include "display-channel.h"
 
+#define NUM_DRAWABLES 1000
+typedef struct _Drawable _Drawable;
+struct _Drawable {
+    union {
+        Drawable drawable;
+        _Drawable *next;
+    } u;
+};
+
 struct DisplayChannelPrivate
 {
     DisplayChannel *pub;
