@@ -168,7 +168,7 @@ stat_file_add_node(RedStatFile *stat_file, StatNodeRef parent, const char *name,
     }
     stat_file->stat->generation++;
     stat_file->stat->num_of_nodes++;
-    for (ref = 0; ref <= stat_file->max_nodes; ref++) {
+    for (ref = 0; ref < stat_file->max_nodes; ref++) {
         node = &stat_file->stat->nodes[ref];
         if (!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED)) {
             break;
@@ -211,7 +211,7 @@ static void stat_file_remove(RedStatFile *stat_file, SpiceStatNode *node)
     /* children will be orphans */
     if (stat_file->stat->root_index == node_ref) {
         stat_file->stat->root_index = node_next;
-    } else for (ref = 0; ref <= stat_file->max_nodes; ref++) {
+    } else for (ref = 0; ref < stat_file->max_nodes; ref++) {
         node = &stat_file->stat->nodes[ref];
         if (!(node->flags & SPICE_STAT_NODE_FLAG_ENABLED)) {
             continue;
