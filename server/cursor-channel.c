@@ -294,7 +294,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
 CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
                                   const SpiceCoreInterfaceInternal *core)
 {
-    spice_info("create cursor channel");
+    spice_debug("create cursor channel");
     return g_object_new(TYPE_CURSOR_CHANNEL,
                         "spice-server", server,
                         "core-interface", core,
@@ -413,7 +413,7 @@ void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream
 
     spice_return_if_fail(cursor != NULL);
 
-    spice_info("add cursor channel client");
+    spice_debug("add cursor channel client");
     ccc = cursor_channel_client_new(cursor, client, stream,
                                     migrate,
                                     common_caps, num_common_caps,

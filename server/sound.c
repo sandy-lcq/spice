@@ -942,7 +942,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
     playback_client = frame->client;
     if (!playback_client || sin->st->channel.connection != SND_CHANNEL_CLIENT(playback_client)) {
         /* lost last reference, client has been destroyed previously */
-        spice_info("audio samples belong to a disconnected client");
+        spice_debug("audio samples belong to a disconnected client");
         return;
     }
     spice_assert(SND_CHANNEL_CLIENT(playback_client)->active);

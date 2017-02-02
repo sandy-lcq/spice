@@ -723,7 +723,7 @@ static GlzSharedDictionary *create_glz_dictionary(ImageEncoders *enc,
                                                   RedClient *client,
                                                   uint8_t id, int window_size)
 {
-    spice_info("Lz Window %d Size=%d", id, window_size);
+    spice_debug("Lz Window %d Size=%d", id, window_size);
 
     GlzEncDictContext *glz_dict =
         glz_enc_dictionary_create(window_size, MAX_LZ_ENCODERS, &enc->glz_data.usr);
@@ -838,7 +838,7 @@ int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
     stat_start_time_init(&start_time, &enc->shared_data->quic_stat);
 
 #ifdef COMPRESS_DEBUG
-    spice_info("QUIC compress");
+    spice_debug("QUIC compress");
 #endif
 
     switch (src->format) {
@@ -927,7 +927,7 @@ int image_encoders_compress_lz(ImageEncoders *enc,
     stat_start_time_init(&start_time, &enc->shared_data->lz_stat);
 
 #ifdef COMPRESS_DEBUG
-    spice_info("LZ LOCAL compress");
+    spice_debug("LZ LOCAL compress");
 #endif
 
     encoder_data_init(&lz_data->data);
@@ -998,7 +998,7 @@ int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
     stat_start_time_init(&start_time, &enc->shared_data->jpeg_alpha_stat);
 
 #ifdef COMPRESS_DEBUG
-    spice_info("JPEG compress");
+    spice_debug("JPEG compress");
 #endif
 
     switch (src->format) {
@@ -1115,7 +1115,7 @@ int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
     stat_start_time_init(&start_time, &enc->shared_data->lz4_stat);
 
 #ifdef COMPRESS_DEBUG
-    spice_info("LZ4 compress");
+    spice_debug("LZ4 compress");
 #endif
 
     encoder_data_init(&lz4_data->data);
@@ -1227,7 +1227,7 @@ int image_encoders_compress_glz(ImageEncoders *enc,
     int zlib_size;
 
 #ifdef COMPRESS_DEBUG
-    spice_info("LZ global compress fmt=%d", src->format);
+    spice_debug("LZ global compress fmt=%d", src->format);
 #endif
 
     if ((src->x * src->y) >= glz_enc_dictionary_get_size(enc->glz_dict->dict)) {

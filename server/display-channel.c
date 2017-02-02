@@ -195,13 +195,13 @@ void display_channel_set_stream_video(DisplayChannel *display, int stream_video)
 
     switch (stream_video) {
     case SPICE_STREAM_VIDEO_ALL:
-        spice_info("sv all");
+        spice_debug("sv all");
         break;
     case SPICE_STREAM_VIDEO_FILTER:
-        spice_info("sv filter");
+        spice_debug("sv filter");
         break;
     case SPICE_STREAM_VIDEO_OFF:
-        spice_info("sv off");
+        spice_debug("sv off");
         break;
     default:
         spice_warn_if_reached();
@@ -242,7 +242,7 @@ static void stop_streams(DisplayChannel *display)
         if (!stream->current) {
             stream_stop(display, stream);
         } else {
-            spice_info("attached stream");
+            spice_debug("attached stream");
         }
     }
 
@@ -886,17 +886,17 @@ static bool drawable_can_stream(DisplayChannel *display, Drawable *drawable)
 static void display_channel_print_stats(DisplayChannel *display)
 {
     stat_time_t total = display->priv->add_stat.total;
-    spice_info("add with shadow count %u",
+    spice_debug("add with shadow count %u",
                display->priv->add_with_shadow_count);
     display->priv->add_with_shadow_count = 0;
-    spice_info("add[%u] %f exclude[%u] %f __exclude[%u] %f",
+    spice_debug("add[%u] %f exclude[%u] %f __exclude[%u] %f",
                display->priv->add_stat.count,
                stat_cpu_time_to_sec(total),
                display->priv->exclude_stat.count,
                stat_cpu_time_to_sec(display->priv->exclude_stat.total),
                display->priv->__exclude_stat.count,
                stat_cpu_time_to_sec(display->priv->__exclude_stat.total));
-    spice_info("add %f%% exclude %f%% exclude2 %f%% __exclude %f%%",
+    spice_debug("add %f%% exclude %f%% exclude2 %f%% __exclude %f%%",
                (double)(total - display->priv->exclude_stat.total) / total * 100,
                (double)(display->priv->exclude_stat.total) / total * 100,
                (double)(display->priv->exclude_stat.total -
@@ -1934,7 +1934,7 @@ static void on_disconnect(RedChannelClient *rcc)
     DisplayChannel *display;
     DisplayChannelClient *dcc;
 
-    spice_info(NULL);
+    spice_debug(NULL);
     spice_return_if_fail(rcc != NULL);
 
     dcc = DISPLAY_CHANNEL_CLIENT(rcc);
@@ -1991,7 +1991,7 @@ DisplayChannel* display_channel_new(RedsState *reds,
     DisplayChannel *display;
 
     /* FIXME: migrate is not used...? */
-    spice_info("create display channel");
+    spice_debug("create display channel");
     display = g_object_new(TYPE_DISPLAY_CHANNEL,
                            "spice-server", reds,
                            "core-interface", core,
@@ -2129,8 +2129,8 @@ void display_channel_update_compression(DisplayChannel *display, DisplayChannelC
     } else {
         display->priv->enable_zlib_glz_wrap = (dcc_get_zlib_glz_state(dcc) == SPICE_WAN_COMPRESSION_ALWAYS);
     }
-    spice_info("jpeg %s", display->priv->enable_jpeg ? "enabled" : "disabled");
-    spice_info("zlib-over-glz %s", display->priv->enable_zlib_glz_wrap ? "enabled" : "disabled");
+    spice_debug("jpeg %s", display->priv->enable_jpeg ? "enabled" : "disabled");
+    spice_debug("zlib-over-glz %s", display->priv->enable_zlib_glz_wrap ? "enabled" : "disabled");
 }
 
 void display_channel_gl_scanout(DisplayChannel *display)

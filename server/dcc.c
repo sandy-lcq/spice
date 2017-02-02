@@ -514,7 +514,7 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
                          "jpeg-state", jpeg_state,
                          "zlib-glz-state", zlib_glz_state,
                          NULL);
-    spice_info("New display (client %p) dcc %p stream %p", client, dcc, stream);
+    spice_debug("New display (client %p) dcc %p stream %p", client, dcc, stream);
     common_graphics_channel_set_during_target_migrate(COMMON_GRAPHICS_CHANNEL(display), mig_target);
     dcc->priv->id = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display))->id;
 
@@ -550,7 +550,7 @@ static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
         if (dcc->priv->pixmap_cache && dcc->priv->encoders.glz_dict) {
             dcc->priv->pixmap_cache_generation = dcc->priv->pixmap_cache->generation;
             /* TODO: move common.id? if it's used for a per client structure.. */
-            spice_info("creating encoder with id == %d", dcc->priv->id);
+            spice_debug("creating encoder with id == %d", dcc->priv->id);
             if (!image_encoders_glz_create(&dcc->priv->encoders, dcc->priv->id)) {
                 spice_critical("create global lz failed");
             }
@@ -1052,7 +1052,7 @@ static int dcc_handle_stream_report(DisplayChannelClient *dcc,
 
     agent = &dcc->priv->stream_agents[report->stream_id];
     if (!agent->video_encoder) {
-        spice_info("stream_report: no encoder for stream id %u. "
+        spice_debug("stream_report: no encoder for stream id %u. "
                    "The stream has probably been destroyed",
                    report->stream_id);
         return TRUE;

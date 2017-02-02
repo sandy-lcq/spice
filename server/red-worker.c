@@ -613,7 +613,7 @@ static void handle_dev_stop(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
 
-    spice_info("stop");
+    spice_debug("stop");
     spice_assert(worker->running);
 
     worker->running = FALSE;
@@ -732,7 +732,7 @@ static void handle_dev_display_connect(void *opaque, void *payload)
     DisplayChannel *display = worker->display_channel;
     DisplayChannelClient *dcc;
 
-    spice_info("connect new client");
+    spice_debug("connect new client");
     spice_return_if_fail(display);
 
     dcc = dcc_new(display, msg->client, msg->stream, msg->migration,
@@ -755,7 +755,7 @@ static void handle_dev_display_disconnect(void *opaque, void *payload)
     RedChannelClient *rcc = msg->rcc;
     RedWorker *worker = opaque;
 
-    spice_info("disconnect display client");
+    spice_debug("disconnect display client");
     spice_assert(rcc);
 
     guest_set_client_capabilities(worker);
@@ -769,7 +769,7 @@ static void handle_dev_display_migrate(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     RedChannelClient *rcc = msg->rcc;
-    spice_info("migrate display client");
+    spice_debug("migrate display client");
     spice_assert(rcc);
     red_migrate_display(worker->display_channel, rcc);
 }
@@ -829,7 +829,7 @@ static void handle_dev_cursor_connect(void *opaque, void *payload)
     RedWorkerMessageCursorConnect *msg = payload;
     RedWorker *worker = opaque;
 
-    spice_info("cursor connect");
+    spice_debug("cursor connect");
     cursor_channel_connect(worker->cursor_channel,
                            msg->client, msg->stream, msg->migration,
                            msg->common_caps, msg->num_common_caps,
@@ -843,7 +843,7 @@ static void handle_dev_cursor_disconnect(void *opaque, void *payload)
     RedWorkerMessageCursorDisconnect *msg = payload;
     RedChannelClient *rcc = msg->rcc;
 
-    spice_info("disconnect cursor client");
+    spice_debug("disconnect cursor client");
     spice_return_if_fail(rcc);
     red_channel_client_disconnect(rcc);
 }
@@ -853,7 +853,7 @@ static void handle_dev_cursor_migrate(void *opaque, void *payload)
     RedWorkerMessageCursorMigrate *msg = payload;
     RedChannelClient *rcc = msg->rcc;
 
-    spice_info("migrate cursor client");
+    spice_debug("migrate cursor client");
     cursor_channel_client_migrate(rcc);
 }
 
@@ -865,27 +865,27 @@ static void handle_dev_set_compression(void *opaque, void *payload)
 
     switch (image_compression) {
     case SPICE_IMAGE_COMPRESSION_AUTO_LZ:
-        spice_info("ic auto_lz");
+        spice_debug("ic auto_lz");
         break;
     case SPICE_IMAGE_COMPRESSION_AUTO_GLZ:
-        spice_info("ic auto_glz");
+        spice_debug("ic auto_glz");
         break;
     case SPICE_IMAGE_COMPRESSION_QUIC:
-        spice_info("ic quic");
+        spice_debug("ic quic");
         break;
 #ifdef USE_LZ4
     case SPICE_IMAGE_COMPRESSION_LZ4:
-        spice_info("ic lz4");
+        spice_debug("ic lz4");
         break;
 #endif
     case SPICE_IMAGE_COMPRESSION_LZ:
-        spice_info("ic lz");
+        spice_debug("ic lz");
         break;
     case SPICE_IMAGE_COMPRESSION_GLZ:
-        spice_info("ic glz");
+        spice_debug("ic glz");
         break;
     case SPICE_IMAGE_COMPRESSION_OFF:
-        spice_info("ic off");
+        spice_debug("ic off");
         break;
     default:
         spice_warning("ic invalid");
@@ -919,7 +919,7 @@ static void handle_dev_set_mouse_mode(void *opaque, void *payload)
     RedWorkerMessageSetMouseMode *msg = payload;
     RedWorker *worker = opaque;
 
-    spice_info("mouse mode %u", msg->mode);
+    spice_debug("mouse mode %u", msg->mode);
     cursor_channel_set_mouse_mode(worker->cursor_channel, msg->mode);
 }
 
@@ -1010,7 +1010,7 @@ static void handle_dev_loadvm_commands(void *opaque, void *payload)
     uint32_t count = msg->count;
     QXLCommandExt *ext = msg->ext;
 
-    spice_info("loadvm_commands");
+    spice_debug("loadvm_commands");
     for (i = 0 ; i < count ; ++i) {
         if (!loadvm_command(worker, &ext[i])) {
             /* XXX allow failure in loadvm? */
@@ -1390,7 +1390,7 @@ static void *red_worker_main(void *arg)
 {
     RedWorker *worker = arg;
 
-    spice_info("begin");
+    spice_debug("begin");
     SPICE_VERIFY(MAX_PIPE_SIZE > WIDE_CLIENT_ACK_WINDOW &&
            MAX_PIPE_SIZE > NARROW_CLIENT_ACK_WINDOW); //ensure wakeup by ack message
 

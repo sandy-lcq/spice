@@ -1837,7 +1837,7 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     uint64_t end_time;
     gboolean item_in_pipe;
 
-    spice_info(NULL);
+    spice_debug(NULL);
 
     if (timeout != -1) {
         end_time = spice_get_monotonic_time_ns() + timeout;
@@ -1892,7 +1892,7 @@ int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
     } else {
         end_time = UINT64_MAX;
     }
-    spice_info("blocked");
+    spice_debug("blocked");
 
     do {
         usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
