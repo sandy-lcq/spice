@@ -137,6 +137,7 @@ void test_set_command_list(Test *test, Command *command, int num_commands);
 void test_add_display_interface(Test *test);
 void test_add_agent_interface(SpiceServer *server); // TODO - Test *test
 Test* test_new(SpiceCoreInterface* core);
+void test_destroy(Test *test);
 
 uint32_t test_get_width(void);
 uint32_t test_get_height(void);

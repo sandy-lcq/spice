@@ -908,6 +908,13 @@ Test *test_new(SpiceCoreInterface *core)
     return test;
 }
 
+void test_destroy(Test *test)
+{
+    test->core->timer_remove(test->wakeup_timer);
+    spice_server_destroy(test->server);
+    free(test);
+}
+
 static void init_automated(void)
 {
     struct sigaction sa;
