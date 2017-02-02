@@ -3389,8 +3389,6 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
     }
     reds->core = core_interface_adapter;
     reds->core.public_interface = core_interface;
-    reds->listen_socket = -1;
-    reds->secure_listen_socket = -1;
     reds->agent_dev = red_char_device_vdi_port_new(reds);
     reds_update_agent_properties(reds);
     reds->clients = NULL;
@@ -3483,6 +3481,9 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 #ifdef RED_STATISTICS
     reds->stat_file = stat_file_new(REDS_MAX_STAT_NODES);
 #endif
+    reds->listen_socket = -1;
+    reds->secure_listen_socket = -1;
+
     return reds;
 }
 
@@ -3679,6 +3680,16 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
 
     if (reds->main_dispatcher) {
         g_object_unref(reds->main_dispatcher);
+    }
+    if (reds->listen_socket != -1) {
+       reds_core_watch_remove(reds, reds->listen_watch);
+       if (reds->config->spice_listen_socket_fd != reds->listen_socket) {
+          close(reds->listen_socket);
+       }
+    }
+    if (reds->secure_listen_socket != -1) {
+       reds_core_watch_remove(reds, reds->secure_listen_watch);
+       close(reds->secure_listen_socket);
     }
 
     reds_cleanup(reds);
