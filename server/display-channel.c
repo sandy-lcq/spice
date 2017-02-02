@@ -396,6 +396,8 @@ static void current_add_drawable(DisplayChannel *display,
     drawable->refs++;
 }
 
+/* Unrefs the drawable and removes it from any rings that it's in, as well as
+ * removing any associated shadow item */
 static void current_remove_drawable(DisplayChannel *display, Drawable *item)
 {
     /* todo: move all to unref? */
@@ -424,6 +426,7 @@ static void drawable_remove_from_pipes(Drawable *drawable)
     }
 }
 
+/* This function should never be called for Shadow TreeItems */
 static void current_remove(DisplayChannel *display, TreeItem *item)
 {
     TreeItem *now = item;
@@ -444,19 +447,32 @@ static void current_remove(DisplayChannel *display, TreeItem *item)
             spice_assert(now->type == TREE_ITEM_TYPE_CONTAINER);
 
             if ((ring_item = ring_get_head(&now_as_container->items))) {
+                /* descend into the container's child ring and continue
+                 * iterating and removing those children */
                 now = SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link);
                 continue;
             }
+            /* This item is a container but it has no children, so reset our
+             * iterator to the item's previous sibling and free this empty
+             * container */
             ring_item = now->siblings_link.prev;
             container_free(now_as_container);
         }
         if (now == item) {
+            /* This is true if the initial @item was a DRAWABLE, or if @item
+             * was a container and we've finished iterating over all of that
+             * container's children and returned back up to the parent and
+             * freed it (see below) */
             return;
         }
 
+        /* Increment the iterator to the next sibling. Note that if an item was
+         * removed above, ring_item will have been reset to the item before the
+         * item that was removed */
         if ((ring_item = ring_next(&container_of_now->items, ring_item))) {
             now = SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link);
         } else {
+            /* there is no next sibling, so move one level up the tree */
             now = &container_of_now->base;
         }
     }
@@ -469,10 +485,23 @@ static void current_remove_all(DisplayChannel *display, int surface_id)
 
     while ((ring_item = ring_get_head(ring))) {
         TreeItem *now = SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link);
+        /* NOTE: current_remove() should never be called on Shadow type items
+         * or we will hit an assert. Fortunately, the 'current' ring is ordered
+         * in such a way that a DrawItem will always be placed before its
+         * associated Shadow in the tree. Since removing a DrawItem will also
+         * result in the associated Shadow item being removed from the tree,
+         * this loop will never call current_remove() on a Shadow item unless
+         * we change the order that items are inserted into the tree */
         current_remove(display, now);
     }
 }
 
+/* Replace an existing Drawable in the tree with a new drawable that is
+ * equivalent. The new drawable is also added to the pipe.
+ *
+ * This function can fail if the items aren't actually equivalent (e.g. either
+ * item has a shadow, they have different effects, etc)
+ */
 static bool current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *other)
 {
     DrawItem *other_draw_item;
@@ -492,6 +521,9 @@ static bool current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem 
     other_drawable = SPICE_CONTAINEROF(other_draw_item, Drawable, tree_item);
 
     if (item->effect == QXL_EFFECT_OPAQUE) {
+        /* check whether the new item can safely replace the other drawable at
+         * the same position in the pipe, or whether it should be added to the
+         * end of the queue */
         int add_after = !!other_drawable->stream &&
                         is_drawable_independent_from_surfaces(drawable);
         stream_maintenance(display, drawable, other_drawable);
@@ -683,6 +715,8 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
     }
 }
 
+/* Add a drawable @item (with a shadow) to the current ring.  The return value
+ * indicates whether the new item should be added to the pipe */
 static bool current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawable *item)
 {
     stat_start(&display->priv->add_stat, start_time);
@@ -709,7 +743,11 @@ static bool current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawabl
         stream_detach_behind(display, &shadow->base.rgn, NULL);
     }
 
+    /* Prepend the shadow to the beginning of the current ring */
     ring_add(ring, &shadow->base.siblings_link);
+    /* Prepend the draw item to the beginning of the current ring. NOTE: this
+     * means that the drawable is placed *before* its associated shadow in the
+     * tree. Changing this order will violate several unstated assumptions */
     current_add_drawable(display, item, ring);
     if (item->tree_item.effect == QXL_EFFECT_OPAQUE) {
         QRegion exclude_rgn;
@@ -726,6 +764,8 @@ static bool current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawabl
     return TRUE;
 }
 
+/* Add a @drawable (without a shadow) to the current ring.
+ * The return value indicates whether the new item should be added to the pipe */
 static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
 {
     DrawItem *item = &drawable->tree_item;
@@ -738,31 +778,49 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
     region_init(&exclude_rgn);
     now = ring_next(ring, ring);
 
+    /* check whether the new drawable region intersects any of the items
+     * already in the 'current' ring */
     while (now) {
         TreeItem *sibling = SPICE_CONTAINEROF(now, TreeItem, siblings_link);
         int test_res;
 
         if (!region_bounds_intersects(&item->base.rgn, &sibling->rgn)) {
+            /* the bounds of the two items are totally disjoint, so no need to
+             * check further. check the next item */
             now = ring_next(ring, now);
             continue;
         }
+        /* bounds overlap, but check whether the regions actually overlap */
         test_res = region_test(&item->base.rgn, &sibling->rgn, REGION_TEST_ALL);
         if (!(test_res & REGION_TEST_SHARED)) {
+            /* there's no overlap of the regions between these two items. Move
+             * on to the next one. */
             now = ring_next(ring, now);
             continue;
         } else if (sibling->type != TREE_ITEM_TYPE_SHADOW) {
+            /* there is an overlap between the two regions */
+            /* NOTE: Shadow types represent a source region for a COPY_BITS
+             * operation, they don't represent a region that will be drawn.
+             * Therefore, we don't check for overlap between the new
+             * DrawItem and any shadow items */
             if (!(test_res & REGION_TEST_RIGHT_EXCLUSIVE) &&
                                                    !(test_res & REGION_TEST_LEFT_EXCLUSIVE) &&
                                                    current_add_equal(display, item, sibling)) {
+                /* the regions were equivalent, so we just replaced the other
+                 * drawable with the new one */
                 stat_add(&display->priv->add_stat, start_time);
+                /* Caller doesn't need to add the new drawable to the pipe,
+                 * since current_add_equal already added it to the pipe */
                 return FALSE;
             }
 
             if (!(test_res & REGION_TEST_RIGHT_EXCLUSIVE) && item->effect == QXL_EFFECT_OPAQUE) {
+                /* the new drawable is opaque and entirely contains the sibling item */
                 Shadow *shadow;
                 int skip = now == exclude_base;
 
                 if ((shadow = tree_item_find_shadow(sibling))) {
+                    /* The sibling item was the destination of a COPY_BITS operation */
                     if (exclude_base) {
                         TreeItem *next = sibling;
                         exclude_region(display, ring, exclude_base, &exclude_rgn, &next, NULL);
@@ -775,7 +833,10 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                     region_or(&exclude_rgn, &shadow->on_hold);
                 }
                 now = now->prev;
+                /* remove the obscured sibling from the 'current' tree, which
+                 * will also remove its shadow (if any) */
                 current_remove(display, sibling);
+                /* advance the loop variable */
                 now = ring_next(ring, now);
                 if (shadow || skip) {
                     exclude_base = now;
@@ -784,6 +845,7 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
             }
 
             if (!(test_res & REGION_TEST_LEFT_EXCLUSIVE) && is_opaque_item(sibling)) {
+                /* the sibling item is opaque and entirely contains the new drawable */
                 Container *container;
 
                 if (exclude_base) {
@@ -793,13 +855,20 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                 }
                 if (sibling->type == TREE_ITEM_TYPE_CONTAINER) {
                     container = CONTAINER(sibling);
+                    /* NOTE: here, ring is reset to the ring of the container's children */
                     ring = &container->items;
+                    /* if the sibling item is a container, place the new
+                     * drawable into that container */
                     item->base.container = container;
+                    /* Start iterating over the container's children to see if
+                     * any of them intersect this new drawable */
                     now = ring_next(ring, ring);
                     continue;
                 }
                 spice_assert(IS_DRAW_ITEM(sibling));
                 if (!DRAW_ITEM(sibling)->container_root) {
+                    /* Create a new container to hold the sibling and the new
+                     * drawable */
                     container = container_new(DRAW_ITEM(sibling));
                     if (!container) {
                         spice_warning("create new container failed");
@@ -807,6 +876,8 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                         return FALSE;
                     }
                     item->base.container = container;
+                    /* reset 'ring' to the container's children ring, so that
+                     * we can add the new drawable to this ring below */
                     ring = &container->items;
                 }
             }
@@ -816,6 +887,8 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
         }
         break;
     }
+    /* we've removed any obscured siblings and figured out which ring the new
+     * drawable needs to be added to, so let's add it. */
     if (item->effect == QXL_EFFECT_OPAQUE) {
         region_or(&exclude_rgn, &item->base.rgn);
         exclude_region(display, ring, exclude_base, &exclude_rgn, NULL, drawable);
@@ -1625,6 +1698,8 @@ static void surface_update_dest(RedSurface *surface, const SpiceRect *area)
     canvas->ops->read_bits(canvas, dest, -stride, area);
 }
 
+/* Draws all drawables associated with @surface, starting from the tail of the
+ * ring, and stopping after it draws @last */
 static void draw_until(DisplayChannel *display, RedSurface *surface, Drawable *last)
 {
     RingItem *ring_item;
@@ -1648,6 +1723,11 @@ static void draw_until(DisplayChannel *display, RedSurface *surface, Drawable *l
     } while (now != last);
 }
 
+/* Find the first Drawable in the @current ring that intersects the given
+ * @area, starting at item @from (or the head of the ring if @from is NULL).
+ *
+ * NOTE: this function expects @current to be a ring of Drawables, and more
+ * specifically an instance of Surface::current_list (not Surface::current) */
 static Drawable* current_find_intersects_rect(Ring *current, RingItem *from,
                                               const SpiceRect *area)
 {

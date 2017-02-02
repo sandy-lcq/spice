@@ -185,6 +185,9 @@ void tree_item_dump(TreeItem *item)
     tree_foreach(item, dump_item, &di);
 }
 
+/* Creates a new Shadow item for the given DrawItem, with an offset of @delta.
+ * A shadow represents a source region for a COPY_BITS operation, while the
+ * DrawItem represents the destination region for the operation */
 Shadow* shadow_new(DrawItem *item, const SpicePoint *delta)
 {
     spice_return_val_if_fail(item->shadow == NULL, NULL);
@@ -205,6 +208,11 @@ Shadow* shadow_new(DrawItem *item, const SpicePoint *delta)
     return shadow;
 }
 
+/* Create a new container to hold @item and insert @item into this container.
+ *
+ * NOTE: This function assumes that @item is already inside a different Ring,
+ * so it removes @item from that ring before inserting it into the new
+ * container */
 Container* container_new(DrawItem *item)
 {
     Container *container = spice_new(Container, 1);
@@ -268,6 +276,8 @@ Shadow* tree_item_find_shadow(TreeItem *item)
     return DRAW_ITEM(item)->shadow;
 }
 
+/* return the Ring containing siblings of item, falling back to @ring if @item
+ * does not have a container */
 Ring *tree_item_container_items(TreeItem *item, Ring *ring)
 {
     return (item->container) ? &item->container->items : ring;
@@ -281,7 +291,7 @@ bool tree_item_contained_by(TreeItem *item, Ring *ring)
         if (now == ring) {
             return TRUE;
         }
-    } while ((item = &item->container->base));
+    } while ((item = &item->container->base)); /* move up one level */
 
     return FALSE;
 }

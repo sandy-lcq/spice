@@ -43,12 +43,18 @@ struct TreeItem {
     RingItem siblings_link;
     uint32_t type;
     Container *container;
+    /* rgn holds the region of the item. As additional items get added to the
+     * tree, this region may be modified to exclude the portion of the item
+     * that is obscured by other items */
     QRegion rgn;
 };
 
 /* A region "below" a copy, or the src region of the copy */
 struct Shadow {
     TreeItem base;
+    /* holds the union of all parts of this source region that have been
+     * obscured by a drawable item that has been subsequently added to the tree
+     */
     QRegion on_hold;
 };
 
