@@ -587,6 +587,48 @@ static bool current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem 
     return FALSE;
 }
 
+/* This function excludes the given region from a single TreeItem. Both @rgn
+ * and @item may be modified.
+ *
+ * If there is overlap between @rgn and the @item region, remove the
+ * overlapping intersection from both @rgn and the item's region (NOTE: it's
+ * not clear to me why this is done - jjongsma)
+ *
+ * However, if the item is a DrawItem that has a shadow, we add an additional
+ * region to @rgn: the intersection of the shadow item's region with @rgn when
+ * @rgn is shifted over by the delta between the DrawItem and the Shadow.
+ * [WORKING THEORY: since the destination region for a COPY_BITS operation was
+ * excluded, we no longer need the source region that corresponds with that
+ * copy operation, so we can also exclude any drawables that affect that
+ * region. Not sure if that actually makes sense... ]
+ *
+ * If the item is a Shadow, we store the intersection between @rgn and the
+ * Shadow's region in Shadow::on_hold and remove that region from @rgn. This is
+ * done since a Shadow represents the source region for a COPY_BITS operation,
+ * and we need to make sure that this source region stays up-to-date until the
+ * copy operation is executed.
+ *
+ * Consider the following case:
+ *  1) the surface is fully black at the beginning
+ *  2) we add a new item to the tree which paints region A white
+ *  3) we add a new item to the tree which copies region A to region B
+ *  4) we add another new item to the tree painting region A blue.
+ *
+ * After all operations are completed, region A should be blue, and region B
+ * should be white. If there were no copy operation (step 3), we could simply
+ * eliminate step 2 when we add item 4 to the tree, since step 4 overwrites the
+ * same region with a different color. However, if we did eliminate step 2,
+ * region B would be black after all operations were completed. So these
+ * regions that would normally be excluded are put "on hold" if they are part
+ * of a source region for a copy operation.
+ *
+ * @display: the display channel
+ * @ring: a fallback toplevel ring???
+ * @item: the tree item to exclude from @rgn
+ * @rgn: the region to exclude
+ * @top_ring: ???
+ * @frame_candidate: ???
+ */
 static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item, QRegion *rgn,
                              Ring **top_ring, Drawable *frame_candidate)
 {
@@ -594,28 +636,46 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
     stat_start(&display->priv->__exclude_stat, start_time);
 
     region_clone(&and_rgn, rgn);
+    /* find intersection of the @rgn argument with the region of the @item arg */
     region_and(&and_rgn, &item->rgn);
     if (!region_is_empty(&and_rgn)) {
         if (IS_DRAW_ITEM(item)) {
             DrawItem *draw = DRAW_ITEM(item);
 
             if (draw->effect == QXL_EFFECT_OPAQUE) {
+                /* remove the intersection from the original @rgn */
                 region_exclude(rgn, &and_rgn);
             }
 
             if (draw->shadow) {
+                /* @draw represents the destination of a COPY_BITS operation.
+                 * @shadow represents the source item for the copy operation */
                 Shadow *shadow;
                 int32_t x = item->rgn.extents.x1;
                 int32_t y = item->rgn.extents.y1;
 
+                /* remove the intersection from the item's region */
                 region_exclude(&draw->base.rgn, &and_rgn);
                 shadow = draw->shadow;
+                /* shift the intersected region by the difference between the
+                 * source and destination regions */
                 region_offset(&and_rgn, shadow->base.rgn.extents.x1 - x,
                               shadow->base.rgn.extents.y1 - y);
+                /* remove the shifted intersection region from the source
+                 * (shadow) item's region. If the destination is excluded, we
+                 * can also exclude the corresponding area from the source */
                 region_exclude(&shadow->base.rgn, &and_rgn);
+                /* find the intersection between the shifted intersection
+                 * region and the Shadow's 'on_hold' region. This represents
+                 * the portion of the Shadow's region that we just removed that
+                 * is currently stored in on_hold. */
                 region_and(&and_rgn, &shadow->on_hold);
                 if (!region_is_empty(&and_rgn)) {
+                    /* Since we removed a portion of the Shadow's region, we
+                     * can also remove that portion from on_hold */
                     region_exclude(&shadow->on_hold, &and_rgn);
+                    /* Since this region is no longer "on hold", add it back to
+                     * the @rgn argument */
                     region_or(rgn, &and_rgn);
                     // in flat representation of current, shadow is always his owner next
                     if (!tree_item_contained_by(&shadow->base, *top_ring)) {
@@ -623,22 +683,31 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
                     }
                 }
             } else {
+                /* TODO: document the purpose of this code */
                 if (frame_candidate) {
                     Drawable *drawable = SPICE_CONTAINEROF(draw, Drawable, tree_item);
                     stream_maintenance(display, frame_candidate, drawable);
                 }
+                /* Remove the intersection from the DrawItem's region */
                 region_exclude(&draw->base.rgn, &and_rgn);
             }
         } else if (item->type == TREE_ITEM_TYPE_CONTAINER) {
+            /* excludes the intersection between 'rgn' and item->rgn from the
+             * item's region */
             region_exclude(&item->rgn, &and_rgn);
 
             if (region_is_empty(&item->rgn)) {  //assume container removal will follow
                 Shadow *shadow;
 
+                /* exclude the intersection from the 'rgn' argument as well,
+                 * but only if the item is now empty.
+                 * TODO: explain why this is necessary */
                 region_exclude(rgn, &and_rgn);
                 if ((shadow = tree_item_find_shadow(item))) {
+                    /* add the shadow's on_hold region back to the 'rgn' argument */
                     region_or(rgn, &shadow->on_hold);
                     if (!tree_item_contained_by(&shadow->base, *top_ring)) {
+                        /* TODO: document why top_ring is set here */
                         *top_ring = tree_item_container_items(&shadow->base, ring);
                     }
                 }
@@ -648,14 +717,42 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
 
             spice_assert(item->type == TREE_ITEM_TYPE_SHADOW);
             shadow = SHADOW(item);
+            /* Since a Shadow represents the source region for a COPY_BITS
+             * operation, we need to make sure that we don't remove existing
+             * drawables that draw to this source region. If we did, it would
+             * affect the copy operation. So we remove the intersection between
+             * @rgn and item->rgn from the @rgn argument to avoid excluding
+             * these drawables */
             region_exclude(rgn, &and_rgn);
+            /* adds this intersection to on_hold */
             region_or(&shadow->on_hold, &and_rgn);
         }
     }
+    /* clean up memory */
     region_destroy(&and_rgn);
     stat_add(&display->priv->__exclude_stat, start_time);
 }
 
+/* This function iterates through the given @ring starting at @ring_item and
+ * continuing until reaching @last. and calls __exclude_region() on each item.
+ * Any items that have an empty region as a result of the __exclude_region()
+ * call are removed from the tree.
+ *
+ * TODO: What is the intended use of this function?
+ *
+ * @ring: every time this function is called, @ring is a Surface's 'current'
+ *      ring, or to the ring of children of a container within that ring.
+ * @ring_item: callers usually call this argument 'exclude_base'. We will
+ *      iterate through the tree starting at this item
+ * @rgn: callers usually call this 'exclude_rgn' -- it appears to be the region
+ *      we want to exclude from existing items in the tree. It is an in/out
+ *      parameter and it may be modified as the result of calling this function
+ * @last: We will stop iterating at this item, and the function will return the
+ *      next item after iteration is complete (which may be different than the
+ *      passed value if that item was removed from the tree
+ * @frame_candidate: usually callers pass NULL, sometimes it's the drawable
+ *      that's being added to the 'current' ring. TODO: What is its purpose?
+ */
 static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_item,
                            QRegion *rgn, TreeItem **last, Drawable *frame_candidate)
 {
@@ -674,40 +771,60 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
 
         spice_assert(!region_is_empty(&now->rgn));
 
+        /* check whether the ring_item item intersects the passed-in region */
         if (region_intersects(rgn, &now->rgn)) {
+            /* remove the overlapping portions of region and now->rgn, among
+             * other things. See documentation for __exclude_region() */
             __exclude_region(display, ring, now, rgn, &top_ring, frame_candidate);
 
             if (region_is_empty(&now->rgn)) {
+                /* __exclude_region() does not remove the region of shadow-type
+                 * items */
                 spice_assert(now->type != TREE_ITEM_TYPE_SHADOW);
                 ring_item = now->siblings_link.prev;
+                /* if __exclude_region() removed the entire region for this
+                 * sibling item, remove it from the 'current' tree */
                 current_remove(display, now);
                 if (last && *last == now) {
+                    /* the caller wanted to stop at this item, but this item
+                     * has been removed, so we set @last to the next item */
                     SPICE_VERIFY(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
                     *last = (TreeItem *)ring_next(ring, ring_item);
                 }
             } else if (now->type == TREE_ITEM_TYPE_CONTAINER) {
+                /* if this sibling is a container type, descend into the
+                 * container's child ring and continue iterating */
                 Container *container = CONTAINER(now);
                 if ((ring_item = ring_get_head(&container->items))) {
                     ring = &container->items;
                     spice_assert(SPICE_CONTAINEROF(ring_item, TreeItem, siblings_link)->container);
                     continue;
                 }
+                /* container had no children, so reset ring_item to the
+                 * container itself */
                 ring_item = &now->siblings_link;
             }
 
             if (region_is_empty(rgn)) {
+                /* __exclude_region() removed the entire region from 'rgn', so
+                 * no need to continue checking further items in the tree */
                 stat_add(&display->priv->exclude_stat, start_time);
                 return;
             }
         }
 
         SPICE_VERIFY(SPICE_OFFSETOF(TreeItem, siblings_link) == 0);
+        /* if this is the last item to check, or if the current ring is
+         * completed, don't go any further */
         while ((last && *last == (TreeItem *)ring_item) ||
                !(ring_item = ring_next(ring, ring_item))) {
+            /* we're currently iterating the top ring, so we're done */
             if (ring == top_ring) {
                 stat_add(&display->priv->exclude_stat, start_time);
                 return;
             }
+            /* we're iterating through a container child ring, so climb one
+             * level up the heirarchy and continue iterating that ring */
             ring_item = &container->base.siblings_link;
             container = container->base.container;
             ring = (container) ? &container->items : top_ring;
@@ -752,6 +869,10 @@ static bool current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawabl
     if (item->tree_item.effect == QXL_EFFECT_OPAQUE) {
         QRegion exclude_rgn;
         region_clone(&exclude_rgn, &item->tree_item.base.rgn);
+        /* Since the new drawable is opaque, remove overlapped regions from all
+         * items already in the tree.  Start iterating through the tree
+         * starting with the shadow item to avoid excluding the new item
+         * itself */
         exclude_region(display, ring, &shadow->base.siblings_link, &exclude_rgn, NULL, NULL);
         region_destroy(&exclude_rgn);
         streams_update_visible_region(display, item);
@@ -822,14 +943,41 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                 if ((shadow = tree_item_find_shadow(sibling))) {
                     /* The sibling item was the destination of a COPY_BITS operation */
                     if (exclude_base) {
+                        /* During a previous iteration through this loop, an
+                         * obscured sibling item was removed from the tree, and
+                         * exclude_base was set to the item immediately after
+                         * the removed item (see below). This time through the
+                         * loop, we encountered another sibling that was
+                         * completely obscured, so we call exclude_region()
+                         * using the previously saved item as our starting
+                         * point. @exlude_rgn will be the union of any previous
+                         * 'on_hold' regions from the shadows of previous
+                         * iterations
+                         *
+                         * TODO: it's unclear to me why we only only call
+                         * exclude_region() for the previous item if the next
+                         * item is obscured and has a shadow. -jjongsma
+                         */
                         TreeItem *next = sibling;
                         exclude_region(display, ring, exclude_base, &exclude_rgn, &next, NULL);
                         if (next != sibling) {
+                            /* the @next param is only changed if the given item
+                             * was removed as a side-effect of calling
+                             * exclude_region(), so update our loop variable */
                             now = next ? &next->siblings_link : NULL;
                             exclude_base = NULL;
                             continue;
                         }
                     }
+                    /* Since the destination item (sibling) of the COPY_BITS
+                     * operation is fully obscured, we no longer need the
+                     * source item (shadow) anymore. shadow->on_hold represents
+                     * a region that would normally have been excluded by a
+                     * previous call to __exclude_region() (see documentation
+                     * for that function), but was put on hold to make sure we
+                     * kept the source region up to date. Now that we no longer
+                     * need this source region, this "on hold" region can be
+                     * safely excluded again. */
                     region_or(&exclude_rgn, &shadow->on_hold);
                 }
                 now = now->prev;
@@ -839,6 +987,10 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                 /* advance the loop variable */
                 now = ring_next(ring, now);
                 if (shadow || skip) {
+                    /* 'now' is currently set to the the item immediately AFTER
+                     * the obscured sibling that we just removed.
+                     * TODO: document why this item is used as an
+                     * 'exclude_base' */
                     exclude_base = now;
                 }
                 continue;
@@ -848,6 +1000,11 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                 /* the sibling item is opaque and entirely contains the new drawable */
                 Container *container;
 
+                /* The first time through, @exclude_base will be NULL, but
+                 * subsequent loops may set it to something.  In addition,
+                 * @exclude_rgn starts out empty, but previous iterations of
+                 * this loop may have added various Shadow::on_hold regions to
+                 * it. */
                 if (exclude_base) {
                     exclude_region(display, ring, exclude_base, &exclude_rgn, NULL, NULL);
                     region_clear(&exclude_rgn);
@@ -882,6 +1039,11 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                 }
             }
         }
+        /* If we've gotten here, that means that:
+         *  - the new item is not opaque
+         *  - We just created a container to hold the new drawable and the
+         *    sibling that encloses it
+         *  - ??? */
         if (!exclude_base) {
             exclude_base = now;
         }
@@ -890,6 +1052,9 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
     /* we've removed any obscured siblings and figured out which ring the new
      * drawable needs to be added to, so let's add it. */
     if (item->effect == QXL_EFFECT_OPAQUE) {
+        /* @exclude_rgn may contain the union of on_hold regions from any
+         * Shadows that were associated with DrawItems that were removed from
+         * the tree.  Add the new item's region to that */
         region_or(&exclude_rgn, &item->base.rgn);
         exclude_region(display, ring, exclude_base, &exclude_rgn, NULL, drawable);
         stream_trace_update(display, drawable);
