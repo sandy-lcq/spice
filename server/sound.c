@@ -39,10 +39,6 @@
 #include "sound.h"
 #include "main-channel-client.h"
 
-#ifndef IOV_MAX
-#define IOV_MAX 1024
-#endif
-
 #define SND_RECEIVE_BUF_SIZE     (16 * 1024 * 2)
 #define RECORD_SAMPLES_SIZE (SND_RECEIVE_BUF_SIZE >> 2)
 
