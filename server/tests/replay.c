@@ -325,6 +325,9 @@ int main(int argc, char **argv)
     gint port = 5000, compression = SPICE_IMAGE_COMPRESSION_AUTO_GLZ;
     gint streaming = SPICE_STREAM_VIDEO_FILTER;
     gboolean wait = FALSE;
+    gint tls_port = 0;
+    gchar *cacert_file = NULL, *cert_file = NULL, *key_file = NULL;
+
     FILE *fd;
 
     GOptionEntry entries[] = {
@@ -337,6 +340,10 @@ int main(int argc, char **argv)
         { "slow", 's', 0, G_OPTION_ARG_INT, &slow, "Slow down replay. Delays USEC microseconds before each command", "USEC" },
         { "skip", 0, 0, G_OPTION_ARG_INT, &skip, "Skip 'slow' for the first n commands", NULL },
         { "count", 0, 0, G_OPTION_ARG_NONE, &print_count, "Print the number of commands processed", NULL },
+        { "tls-port", 0, 0, G_OPTION_ARG_INT, &tls_port, "Secure server port", "PORT" },
+        { "cacert-file", 0, 0, G_OPTION_ARG_FILENAME, &cacert_file, "TLS CA certificate", "FILE" },
+        { "cert-file", 0, 0, G_OPTION_ARG_FILENAME, &cert_file, "TLS server certificate", "FILE" },
+        { "key-file", 0, 0, G_OPTION_ARG_FILENAME, &key_file, "TLS server private key", "FILE" },
         { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &file, "replay file", "FILE" },
         { NULL }
     };
@@ -426,6 +433,19 @@ int main(int argc, char **argv)
         }
         g_free(codecs);
     }
+
+    if (tls_port) {
+        if (spice_server_set_tls(server, tls_port,
+                                 cacert_file, cert_file, key_file,
+                                 NULL, NULL, NULL) != 0) {
+            g_printerr("error setting TLS\n");
+            exit(1);
+        }
+    }
+    g_free(cacert_file);
+    g_free(cert_file);
+    g_free(key_file);
+    cacert_file = cert_file = key_file = NULL;
 
     spice_server_set_port(server, port);
     spice_server_set_noauth(server);
