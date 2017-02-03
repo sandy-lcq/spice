@@ -50,7 +50,6 @@ struct TreeItem {
 struct Shadow {
     TreeItem base;
     QRegion on_hold;
-    DrawItem* owner;
 };
 
 #define IS_SHADOW(item) ((item)->type == TREE_ITEM_TYPE_SHADOW)

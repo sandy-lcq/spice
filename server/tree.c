@@ -196,7 +196,6 @@ Shadow* shadow_new(DrawItem *item, const SpicePoint *delta)
 
     shadow->base.type = TREE_ITEM_TYPE_SHADOW;
     shadow->base.container = NULL;
-    shadow->owner = item;
     region_clone(&shadow->base.rgn, &item->base.rgn);
     region_offset(&shadow->base.rgn, delta->x, delta->y);
     ring_item_init(&shadow->base.siblings_link);
