@@ -881,8 +881,9 @@ int dcc_compress_image(DisplayChannelClient *dcc,
             break;
         }
 #endif
-lz_compress:
+        /* fall through */
     case SPICE_IMAGE_COMPRESSION_LZ:
+lz_compress:
         success = image_encoders_compress_lz(&dcc->priv->encoders, dest, src, o_comp_data);
         if (success && !bitmap_fmt_is_rgb(src->format)) {
             dcc_palette_cache_palette(dcc, dest->u.lz_plt.palette, &(dest->u.lz_plt.flags));

@@ -776,6 +776,7 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(RedCharDevice *self,
             }
             dev->priv->message_receive_len = dev->priv->vdi_chunk_header.size;
             dev->priv->read_state = VDI_PORT_READ_STATE_GET_BUFF;
+            /* fall through */
         case VDI_PORT_READ_STATE_GET_BUFF: {
             if (!(dev->priv->current_read_buf = vdi_port_get_read_buf(reds->agent_dev))) {
                 return NULL;
@@ -787,6 +788,7 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(RedCharDevice *self,
             dev->priv->message_receive_len -= dev->priv->receive_len;
             dev->priv->read_state = VDI_PORT_READ_STATE_READ_DATA;
         }
+            /* fall through */
         case VDI_PORT_READ_STATE_READ_DATA: {
             n = sif->read(reds->vdagent, dev->priv->receive_pos, dev->priv->receive_len);
             if (!n) {
