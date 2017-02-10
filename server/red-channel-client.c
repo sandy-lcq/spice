@@ -1277,6 +1277,7 @@ static void red_channel_client_handle_incoming(RedChannelClient *rcc)
             if (bytes_read == -1) {
                 red_channel_client_release_msg_buf(rcc, msg_type, msg_size,
                                                    buffer->msg);
+                buffer->msg = NULL;
                 red_channel_client_disconnect(rcc);
                 return;
             }
@@ -1296,6 +1297,7 @@ static void red_channel_client_handle_incoming(RedChannelClient *rcc)
             red_channel_client_release_msg_buf(rcc,
                                                msg_type, msg_size,
                                                buffer->msg);
+            buffer->msg = NULL;
             red_channel_client_disconnect(rcc);
             return;
         }
