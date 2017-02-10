@@ -124,7 +124,6 @@ typedef struct RedMsgItem {
 } RedMsgItem;
 
 static RedMsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc, VSCMsgHeader *vheader);
-static void smartcard_channel_client_pipe_add_push(RedChannelClient *rcc, RedPipeItem *item);
 
 static struct Readers {
     uint32_t num;
@@ -186,6 +185,9 @@ static RedPipeItem *smartcard_read_msg_from_device(RedCharDevice *self,
     return NULL;
 }
 
+/* this is called from both device input and client input. since the device is
+ * a usb device, the context is still the main thread (kvm_main_loop, timers)
+ * so no mutex is required. */
 static void smartcard_send_msg_to_client(RedCharDevice *self,
                                          RedPipeItem *msg,
                                          RedClient *client)
@@ -196,7 +198,7 @@ static void smartcard_send_msg_to_client(RedCharDevice *self,
     spice_assert(dev->priv->scc &&
                  red_channel_client_get_client(rcc) == client);
     red_pipe_item_ref(msg);
-    smartcard_channel_client_pipe_add_push(rcc, msg);
+    red_channel_client_pipe_add_push(rcc, msg);
 }
 
 static void smartcard_send_tokens_to_client(RedCharDevice *self,
@@ -458,15 +460,6 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
         return;
     }
     red_channel_client_begin_send_message(rcc);
-}
-
-/* this is called from both device input and client input. since the device is
- * a usb device, the context is still the main thread (kvm_main_loop, timers)
- * so no mutex is required. */
-static void smartcard_channel_client_pipe_add_push(RedChannelClient *rcc,
-                                                   RedPipeItem *item)
-{
-    red_channel_client_pipe_add_push(rcc, item);
 }
 
 static void smartcard_free_vsc_msg_item(RedPipeItem *base)
