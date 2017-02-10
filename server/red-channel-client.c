@@ -78,21 +78,21 @@ typedef struct RedChannelClientConnectivityMonitor {
     SpiceTimer *timer;
 } RedChannelClientConnectivityMonitor;
 
-typedef struct OutgoingHandler {
+typedef struct OutgoingMessageBuffer {
     struct iovec vec_buf[IOV_MAX];
     int vec_size;
     struct iovec *vec;
     int pos;
     int size;
-} OutgoingHandler;
+} OutgoingMessageBuffer;
 
-typedef struct IncomingHandler {
+typedef struct IncomingMessageBuffer {
     uint8_t header_buf[MAX_HEADER_SIZE];
     SpiceDataHeaderOpaque header;
     uint32_t header_pos;
     uint8_t *msg; // data of the msg following the header. allocated by alloc_msg_buf.
     uint32_t msg_pos;
-} IncomingHandler;
+} IncomingMessageBuffer;
 
 struct RedChannelClientPrivate
 {
@@ -139,8 +139,8 @@ struct RedChannelClientPrivate
     RedChannelClientLatencyMonitor latency_monitor;
     RedChannelClientConnectivityMonitor connectivity_monitor;
 
-    IncomingHandler incoming;
-    OutgoingHandler outgoing;
+    IncomingMessageBuffer incoming;
+    OutgoingMessageBuffer outgoing;
 };
 
 static const SpiceDataHeaderOpaque full_header_wrapper;
@@ -1115,24 +1115,24 @@ static void red_channel_client_release_msg_buf(RedChannelClient *rcc,
 static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
 {
     RedsStream *stream = rcc->priv->stream;
-    OutgoingHandler *handler = &rcc->priv->outgoing;
+    OutgoingMessageBuffer *buffer = &rcc->priv->outgoing;
     ssize_t n;
 
     if (!stream) {
         return;
     }
 
-    if (handler->size == 0) {
-        handler->vec = handler->vec_buf;
-        handler->size = red_channel_client_get_out_msg_size(rcc);
-        if (!handler->size) {  // nothing to be sent
+    if (buffer->size == 0) {
+        buffer->vec = buffer->vec_buf;
+        buffer->size = red_channel_client_get_out_msg_size(rcc);
+        if (!buffer->size) {  // nothing to be sent
             return;
         }
     }
 
     for (;;) {
-        red_channel_client_prepare_out_msg(rcc, handler->vec, &handler->vec_size, handler->pos);
-        n = reds_stream_writev(stream, handler->vec, handler->vec_size);
+        red_channel_client_prepare_out_msg(rcc, buffer->vec, &buffer->vec_size, buffer->pos);
+        n = reds_stream_writev(stream, buffer->vec, buffer->vec_size);
         if (n == -1) {
             switch (errno) {
             case EAGAIN:
@@ -1149,15 +1149,15 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
                 return;
             }
         } else {
-            handler->pos += n;
+            buffer->pos += n;
             red_channel_client_data_sent(rcc, n);
-            if (handler->pos == handler->size) { // finished writing data
-                /* reset handler before calling on_msg_done, since it
+            if (buffer->pos == buffer->size) { // finished writing data
+                /* reset buffer before calling on_msg_done, since it
                  * can trigger another call to red_channel_client_handle_outgoing (when
                  * switching from the urgent marshaller to the main one */
-                handler->vec = handler->vec_buf;
-                handler->pos = 0;
-                handler->size = 0;
+                buffer->vec = buffer->vec_buf;
+                buffer->pos = 0;
+                buffer->size = 0;
                 red_channel_client_msg_sent(rcc);
                 return;
             }
@@ -1225,7 +1225,7 @@ static uint8_t *red_channel_client_parse(RedChannelClient *rcc, uint8_t *message
 static void red_channel_client_handle_incoming(RedChannelClient *rcc)
 {
     RedsStream *stream = rcc->priv->stream;
-    IncomingHandler *handler = &rcc->priv->incoming;
+    IncomingMessageBuffer *buffer = &rcc->priv->incoming;
     int bytes_read;
     uint16_t msg_type;
     uint32_t msg_size;
@@ -1244,28 +1244,28 @@ static void red_channel_client_handle_incoming(RedChannelClient *rcc)
         RedChannel *channel = red_channel_client_get_channel(rcc);
         RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
 
-        if (handler->header_pos < handler->header.header_size) {
+        if (buffer->header_pos < buffer->header.header_size) {
             bytes_read = red_peer_receive(stream,
-                                          handler->header.data + handler->header_pos,
-                                          handler->header.header_size - handler->header_pos);
+                                          buffer->header.data + buffer->header_pos,
+                                          buffer->header.header_size - buffer->header_pos);
             if (bytes_read == -1) {
                 red_channel_client_disconnect(rcc);
                 return;
             }
             red_channel_client_data_read(rcc, bytes_read);
-            handler->header_pos += bytes_read;
+            buffer->header_pos += bytes_read;
 
-            if (handler->header_pos != handler->header.header_size) {
+            if (buffer->header_pos != buffer->header.header_size) {
                 return;
             }
         }
 
-        msg_size = handler->header.get_msg_size(&handler->header);
-        msg_type = handler->header.get_msg_type(&handler->header);
-        if (handler->msg_pos < msg_size) {
-            if (!handler->msg) {
-                handler->msg = red_channel_client_alloc_msg_buf(rcc, msg_type, msg_size);
-                if (handler->msg == NULL) {
+        msg_size = buffer->header.get_msg_size(&buffer->header);
+        msg_type = buffer->header.get_msg_type(&buffer->header);
+        if (buffer->msg_pos < msg_size) {
+            if (!buffer->msg) {
+                buffer->msg = red_channel_client_alloc_msg_buf(rcc, msg_type, msg_size);
+                if (buffer->msg == NULL) {
                     spice_printerr("ERROR: channel refused to allocate buffer.");
                     red_channel_client_disconnect(rcc);
                     return;
@@ -1273,30 +1273,30 @@ static void red_channel_client_handle_incoming(RedChannelClient *rcc)
             }
 
             bytes_read = red_peer_receive(stream,
-                                          handler->msg + handler->msg_pos,
-                                          msg_size - handler->msg_pos);
+                                          buffer->msg + buffer->msg_pos,
+                                          msg_size - buffer->msg_pos);
             if (bytes_read == -1) {
                 red_channel_client_release_msg_buf(rcc, msg_type, msg_size,
-                                                   handler->msg);
+                                                   buffer->msg);
                 red_channel_client_disconnect(rcc);
                 return;
             }
             red_channel_client_data_read(rcc, bytes_read);
-            handler->msg_pos += bytes_read;
-            if (handler->msg_pos != msg_size) {
+            buffer->msg_pos += bytes_read;
+            if (buffer->msg_pos != msg_size) {
                 return;
             }
         }
 
         parsed = red_channel_client_parse(rcc,
-                                          handler->msg, msg_size,
+                                          buffer->msg, msg_size,
                                           msg_type,
                                           &parsed_size, &parsed_free);
         if (parsed == NULL) {
             spice_printerr("failed to parse message type %d", msg_type);
             red_channel_client_release_msg_buf(rcc,
                                                msg_type, msg_size,
-                                               handler->msg);
+                                               buffer->msg);
             red_channel_client_disconnect(rcc);
             return;
         }
@@ -1305,12 +1305,12 @@ static void red_channel_client_handle_incoming(RedChannelClient *rcc)
         if (parsed_free != NULL) {
             parsed_free(parsed);
         }
-        handler->msg_pos = 0;
+        buffer->msg_pos = 0;
         red_channel_client_release_msg_buf(rcc,
                                            msg_type, msg_size,
-                                           handler->msg);
-        handler->msg = NULL;
-        handler->header_pos = 0;
+                                           buffer->msg);
+        buffer->msg = NULL;
+        buffer->header_pos = 0;
 
         if (!ret_handle) {
             red_channel_client_disconnect(rcc);
