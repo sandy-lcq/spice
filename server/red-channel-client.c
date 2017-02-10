@@ -79,9 +79,8 @@ typedef struct RedChannelClientConnectivityMonitor {
 } RedChannelClientConnectivityMonitor;
 
 typedef struct OutgoingMessageBuffer {
-    struct iovec vec_buf[IOV_MAX];
+    struct iovec vec[IOV_MAX];
     int vec_size;
-    struct iovec *vec;
     int pos;
     int size;
 } OutgoingMessageBuffer;
@@ -1123,7 +1122,6 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
     }
 
     if (buffer->size == 0) {
-        buffer->vec = buffer->vec_buf;
         buffer->size = red_channel_client_get_out_msg_size(rcc);
         if (!buffer->size) {  // nothing to be sent
             return;
@@ -1155,7 +1153,6 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
                 /* reset buffer before calling on_msg_done, since it
                  * can trigger another call to red_channel_client_handle_outgoing (when
                  * switching from the urgent marshaller to the main one */
-                buffer->vec = buffer->vec_buf;
                 buffer->pos = 0;
                 buffer->size = 0;
                 red_channel_client_msg_sent(rcc);
