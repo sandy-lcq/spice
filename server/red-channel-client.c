@@ -495,12 +495,12 @@ static int red_channel_client_get_out_msg_size(RedChannelClient *rcc)
     return rcc->priv->send_data.size;
 }
 
-static void red_channel_client_prepare_out_msg(RedChannelClient *rcc,
-                                               struct iovec *vec, int *vec_size,
-                                               int pos)
+static int red_channel_client_prepare_out_msg(RedChannelClient *rcc,
+                                              struct iovec *vec, int vec_size,
+                                              int pos)
 {
-    *vec_size = spice_marshaller_fill_iovec(rcc->priv->send_data.marshaller,
-                                            vec, IOV_MAX, pos);
+    return spice_marshaller_fill_iovec(rcc->priv->send_data.marshaller,
+                                       vec, vec_size, pos);
 }
 
 static void red_channel_client_set_blocked(RedChannelClient *rcc)
@@ -1129,7 +1129,9 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
     }
 
     for (;;) {
-        red_channel_client_prepare_out_msg(rcc, buffer->vec, &buffer->vec_size, buffer->pos);
+        buffer->vec_size =
+            red_channel_client_prepare_out_msg(rcc, buffer->vec, G_N_ELEMENTS(buffer->vec),
+                                               buffer->pos);
         n = reds_stream_writev(stream, buffer->vec, buffer->vec_size);
         if (n == -1) {
             switch (errno) {
