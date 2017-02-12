@@ -19,11 +19,7 @@
 #include <config.h>
 #endif
 
-#include <netinet/in.h> // IPPROTO_TCP
-#include <netinet/tcp.h> // TCP_NODELAY
-#include <fcntl.h>
 #include <stddef.h> // NULL
-#include <errno.h>
 #include <stdbool.h>
 #include <spice/macros.h>
 #include <spice/vd_agent.h>
@@ -490,17 +486,6 @@ static void inputs_pipe_add_init(RedChannelClient *rcc)
 
 static int inputs_channel_config_socket(RedChannelClient *rcc)
 {
-    int delay_val = 1;
-    RedsStream *stream = red_channel_client_get_stream(rcc);
-
-    if (setsockopt(stream->socket, IPPROTO_TCP, TCP_NODELAY,
-            &delay_val, sizeof(delay_val)) == -1) {
-        if (errno != ENOTSUP && errno != ENOPROTOOPT) {
-            spice_printerr("setsockopt failed, %s", strerror(errno));
-            return FALSE;
-        }
-    }
-
     return TRUE;
 }
 

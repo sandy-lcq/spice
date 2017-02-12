@@ -23,10 +23,7 @@
 #endif
 
 #include <assert.h>
-#include <errno.h>
 #include <string.h>
-#include <netinet/in.h> // IPPROTO_TCP
-#include <netinet/tcp.h> // TCP_NODELAY
 #ifdef USE_LZ4
 #include <lz4.h>
 #endif
@@ -445,22 +442,6 @@ static void spicevmc_char_dev_remove_client(RedCharDevice *self,
 
 static int spicevmc_red_channel_client_config_socket(RedChannelClient *rcc)
 {
-    int delay_val = 1;
-    RedsStream *stream = red_channel_client_get_stream(rcc);
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    uint32_t type;
-
-    g_object_get(channel, "channel-type", &type, NULL);
-    if (type == SPICE_CHANNEL_USBREDIR) {
-        if (setsockopt(stream->socket, IPPROTO_TCP, TCP_NODELAY,
-                &delay_val, sizeof(delay_val)) != 0) {
-            if (errno != ENOTSUP && errno != ENOPROTOOPT) {
-                spice_printerr("setsockopt failed, %s", strerror(errno));
-                return FALSE;
-            }
-        }
-    }
-
     return TRUE;
 }
 
