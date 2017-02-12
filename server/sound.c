@@ -740,7 +740,6 @@ static void record_channel_send_item(RedChannelClient *rcc, G_GNUC_UNUSED RedPip
 static int snd_channel_config_socket(RedChannelClient *rcc)
 {
     int delay_val;
-    int flags;
 #ifdef SO_PRIORITY
     int priority;
 #endif
@@ -748,11 +747,6 @@ static int snd_channel_config_socket(RedChannelClient *rcc)
     RedsStream *stream = red_channel_client_get_stream(rcc);
     RedClient *red_client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(red_client);
-
-    if ((flags = fcntl(stream->socket, F_GETFL)) == -1) {
-        spice_printerr("accept failed, %s", strerror(errno));
-        return FALSE;
-    }
 
 #ifdef SO_PRIORITY
     priority = 6;
@@ -776,11 +770,6 @@ static int snd_channel_config_socket(RedChannelClient *rcc)
         if (errno != ENOTSUP) {
             spice_printerr("setsockopt failed, %s", strerror(errno));
         }
-    }
-
-    if (fcntl(stream->socket, F_SETFL, flags | O_NONBLOCK) == -1) {
-        spice_printerr("accept failed, %s", strerror(errno));
-        return FALSE;
     }
 
     return TRUE;

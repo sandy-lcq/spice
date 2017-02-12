@@ -117,19 +117,8 @@ int common_channel_config_socket(RedChannelClient *rcc)
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
     RedsStream *stream = red_channel_client_get_stream(rcc);
-    int flags;
     int delay_val;
     gboolean is_low_bandwidth;
-
-    if ((flags = fcntl(stream->socket, F_GETFL)) == -1) {
-        spice_warning("accept failed, %s", strerror(errno));
-        return FALSE;
-    }
-
-    if (fcntl(stream->socket, F_SETFL, flags | O_NONBLOCK) == -1) {
-        spice_warning("accept failed, %s", strerror(errno));
-        return FALSE;
-    }
 
     // TODO - this should be dynamic, not one time at channel creation
     is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
