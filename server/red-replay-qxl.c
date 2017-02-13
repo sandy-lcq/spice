@@ -19,7 +19,6 @@
 #include <config.h>
 #endif
 
-#include <stdbool.h>
 #include <inttypes.h>
 #include <zlib.h>
 #include <pthread.h>

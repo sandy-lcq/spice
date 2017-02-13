@@ -34,7 +34,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
-#include <stdbool.h>
 
 #include <openssl/err.h>
 

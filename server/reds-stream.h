@@ -18,7 +18,6 @@
 #ifndef _H_REDS_STREAM
 #define _H_REDS_STREAM
 
-#include <stdbool.h>
 #include <openssl/ssl.h>
 #include <common/mem.h>
 

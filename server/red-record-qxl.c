@@ -19,7 +19,6 @@
 #include <config.h>
 #endif
 
-#include <stdbool.h>
 #include <inttypes.h>
 #include <glib.h>
 #include "red-common.h"

@@ -20,7 +20,6 @@
 #endif
 
 #include <stddef.h> // NULL
-#include <stdbool.h>
 #include <spice/macros.h>
 #include <spice/vd_agent.h>
 #include <spice/protocol.h>
