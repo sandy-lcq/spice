@@ -112,8 +112,6 @@ typedef void (*channel_release_msg_recv_buf_proc)(RedChannelClient *channel,
 typedef void (*channel_disconnect_proc)(RedChannelClient *rcc);
 typedef int (*channel_configure_socket_proc)(RedChannelClient *rcc);
 typedef void (*channel_send_pipe_item_proc)(RedChannelClient *rcc, RedPipeItem *item);
-typedef void (*channel_on_incoming_error_proc)(RedChannelClient *rcc);
-typedef void (*channel_on_outgoing_error_proc)(RedChannelClient *rcc);
 
 typedef int (*channel_handle_migrate_flush_mark_proc)(RedChannelClient *base);
 typedef int (*channel_handle_migrate_data_proc)(RedChannelClient *base,
