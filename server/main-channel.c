@@ -277,11 +277,6 @@ static void main_channel_release_msg_rcv_buf(RedChannelClient *rcc,
     }
 }
 
-static int main_channel_config_socket(RedChannelClient *rcc)
-{
-    return TRUE;
-}
-
 static int main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
@@ -355,7 +350,6 @@ main_channel_class_init(MainChannelClass *klass)
     channel_class->handle_message = main_channel_handle_message;
 
     /* channel callbacks */
-    channel_class->config_socket = main_channel_config_socket;
     channel_class->on_disconnect = main_channel_client_on_disconnect;
     channel_class->send_item = main_channel_client_send_item;
     channel_class->alloc_recv_buf = main_channel_alloc_msg_rcv_buf;

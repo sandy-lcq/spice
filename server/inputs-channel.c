@@ -484,11 +484,6 @@ static void inputs_pipe_add_init(RedChannelClient *rcc)
     red_channel_client_pipe_add_push(rcc, &item->base);
 }
 
-static int inputs_channel_config_socket(RedChannelClient *rcc)
-{
-    return TRUE;
-}
-
 static void inputs_connect(RedChannel *channel, RedClient *client,
                            RedsStream *stream, int migration,
                            int num_common_caps, uint32_t *common_caps,
@@ -634,7 +629,6 @@ inputs_channel_class_init(InputsChannelClass *klass)
     channel_class->handle_message = inputs_channel_handle_message;
 
     /* channel callbacks */
-    channel_class->config_socket = inputs_channel_config_socket;
     channel_class->on_disconnect = inputs_channel_on_disconnect;
     channel_class->send_item = inputs_channel_send_item;
     channel_class->alloc_recv_buf = inputs_channel_alloc_msg_rcv_buf;

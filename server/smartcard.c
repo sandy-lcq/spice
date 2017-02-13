@@ -394,11 +394,6 @@ void smartcard_char_device_detach_client(RedCharDeviceSmartcard *smartcard,
     smartcard->priv->scc = NULL;
 }
 
-static int smartcard_channel_client_config_socket(RedChannelClient *rcc)
-{
-    return TRUE;
-}
-
 SmartCardChannelClient* smartcard_char_device_get_client(RedCharDeviceSmartcard *smartcard)
 {
     return smartcard->priv->scc;
@@ -585,7 +580,6 @@ red_smartcard_channel_class_init(RedSmartcardChannelClass *klass)
 
     channel_class->handle_message = smartcard_channel_client_handle_message,
 
-    channel_class->config_socket = smartcard_channel_client_config_socket;
     channel_class->on_disconnect = smartcard_channel_client_on_disconnect;
     channel_class->send_item = smartcard_channel_send_item;
     channel_class->alloc_recv_buf = smartcard_channel_client_alloc_msg_rcv_buf;

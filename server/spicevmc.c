@@ -440,11 +440,6 @@ static void spicevmc_char_dev_remove_client(RedCharDevice *self,
     red_channel_client_shutdown(channel->rcc);
 }
 
-static int spicevmc_red_channel_client_config_socket(RedChannelClient *rcc)
-{
-    return TRUE;
-}
-
 static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     RedVmcChannel *channel;
@@ -736,7 +731,6 @@ red_vmc_channel_class_init(RedVmcChannelClass *klass)
 
     channel_class->handle_message = spicevmc_red_channel_client_handle_message;
 
-    channel_class->config_socket = spicevmc_red_channel_client_config_socket;
     channel_class->on_disconnect = spicevmc_red_channel_client_on_disconnect;
     channel_class->send_item = spicevmc_red_channel_send_item;
     channel_class->alloc_recv_buf = spicevmc_red_channel_alloc_msg_rcv_buf;
