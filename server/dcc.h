@@ -144,8 +144,8 @@ DisplayChannelClient*      dcc_new                                   (DisplayCha
 void                       dcc_start                                 (DisplayChannelClient *dcc);
 void                       dcc_stop                                  (DisplayChannelClient *dcc);
 int                        dcc_handle_message                        (RedChannelClient *rcc,
-                                                                      uint32_t size,
-                                                                      uint16_t type, void *msg);
+                                                                      uint16_t type,
+                                                                      uint32_t size, void *msg);
 int                        dcc_handle_migrate_data                   (DisplayChannelClient *dcc,
                                                                       uint32_t size, void *message);
 void                       dcc_push_monitors_config                  (DisplayChannelClient *dcc);

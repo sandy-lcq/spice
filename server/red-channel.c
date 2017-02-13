@@ -237,7 +237,6 @@ red_channel_constructed(GObject *object)
     self->priv->incoming_cb.release_msg_buf =
         (release_msg_recv_buf_proc)klass->release_recv_buf;
     self->priv->incoming_cb.handle_message = (handle_message_proc)klass->handle_message;
-    self->priv->incoming_cb.handle_parsed = (handle_parsed_proc)klass->handle_parsed;
     self->priv->incoming_cb.parser = klass->parser;
 }
 

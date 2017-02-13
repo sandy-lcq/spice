@@ -1082,6 +1082,24 @@ static int red_peer_receive(RedsStream *stream, uint8_t *buf, uint32_t size)
     return pos - buf;
 }
 
+static uint8_t *red_channel_client_parse(IncomingHandler *handler, uint8_t *message, size_t message_size,
+                                         uint16_t message_type,
+                                         size_t *size_out, message_destructor_t *free_message)
+{
+    uint8_t *parsed_message;
+
+    if (handler->cb->parser) {
+        parsed_message = handler->cb->parser(message, message + message_size, message_type,
+                                             SPICE_VERSION_MINOR, size_out, free_message);
+    } else {
+        parsed_message = message;
+        *size_out = message_size;
+        *free_message = NULL;
+    }
+
+    return parsed_message;
+}
+
 // TODO: this implementation, as opposed to the old implementation in red_worker,
 // does many calls to red_peer_receive and through it cb_read, and thus avoids pointer
 // arithmetic for the case where a single cb_read could return multiple messages. But
@@ -1100,6 +1118,9 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
 
     for (;;) {
         int ret_handle;
+        uint8_t *parsed;
+        size_t parsed_size;
+        message_destructor_t parsed_free = NULL;
         if (handler->header_pos < handler->header.header_size) {
             bytes_read = red_peer_receive(stream,
                                           handler->header.data + handler->header_pos,
@@ -1143,26 +1164,20 @@ static void red_peer_handle_incoming(RedsStream *stream, IncomingHandler *handle
             }
         }
 
-        if (handler->cb->parser) {
-            uint8_t *parsed;
-            size_t parsed_size;
-            message_destructor_t parsed_free;
-
-            parsed = handler->cb->parser(handler->msg,
-                handler->msg + msg_size, msg_type,
-                SPICE_VERSION_MINOR, &parsed_size, &parsed_free);
-            if (parsed == NULL) {
-                spice_printerr("failed to parse message type %d", msg_type);
-                handler->cb->release_msg_buf(handler->opaque, msg_type, msg_size, handler->msg);
-                handler->cb->on_error(handler->opaque);
-                return;
-            }
-            ret_handle = handler->cb->handle_parsed(handler->opaque, parsed_size,
-                                                    msg_type, parsed);
+        parsed = red_channel_client_parse(handler,
+                                          handler->msg, msg_size,
+                                          msg_type,
+                                          &parsed_size, &parsed_free);
+        if (parsed == NULL) {
+            spice_printerr("failed to parse message type %d", msg_type);
+            handler->cb->release_msg_buf(handler->opaque, msg_type, msg_size, handler->msg);
+            handler->cb->on_error(handler->opaque);
+            return;
+        }
+        ret_handle = handler->cb->handle_message(handler->opaque, msg_type,
+                                                 parsed_size, parsed);
+        if (parsed_free != NULL) {
             parsed_free(parsed);
-        } else {
-            ret_handle = handler->cb->handle_message(handler->opaque, msg_type, msg_size,
-                                                     handler->msg);
         }
         handler->msg_pos = 0;
         handler->cb->release_msg_buf(handler->opaque, msg_type, msg_size, handler->msg);
@@ -1343,8 +1358,8 @@ static void red_channel_client_handle_migrate_data(RedChannelClient *rcc,
 }
 
 
-int red_channel_client_handle_message(RedChannelClient *rcc, uint32_t size,
-                                      uint16_t type, void *message)
+int red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
+                                      uint32_t size, void *message)
 {
     switch (type) {
     case SPICE_MSGC_ACK_SYNC:

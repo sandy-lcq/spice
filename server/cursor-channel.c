@@ -448,7 +448,7 @@ cursor_channel_class_init(CursorChannelClass *klass)
     object_class->finalize = cursor_channel_finalize;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_CURSOR, NULL);
-    channel_class->handle_parsed = red_channel_client_handle_message;
+    channel_class->handle_message = red_channel_client_handle_message;
 
     channel_class->on_disconnect =  cursor_channel_client_on_disconnect;
     channel_class->send_item = cursor_channel_send_item;

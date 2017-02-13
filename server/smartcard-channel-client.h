@@ -86,7 +86,7 @@ void smartcard_channel_client_send_error(RedChannelClient *rcc,
 int smartcard_channel_client_handle_message(RedChannelClient *rcc,
                                             uint16_t type,
                                             uint32_t size,
-                                            uint8_t *msg);
+                                            void *msg);
 
 int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
                                                  uint32_t size,

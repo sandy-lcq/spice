@@ -179,8 +179,8 @@ void main_channel_migrate_switch(MainChannel *main_chan, RedsMigSpice *mig_targe
     red_channel_pipes_add_type(RED_CHANNEL(main_chan), RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_SWITCH_HOST);
 }
 
-static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint16_t type,
-                                      void *message)
+static int main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
+                                       uint32_t size, void *message)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     MainChannel *main_chan = MAIN_CHANNEL(channel);
@@ -243,7 +243,7 @@ static int main_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint
         main_channel_client_handle_migrate_end(mcc);
         break;
     default:
-        return red_channel_client_handle_message(rcc, size, type, message);
+        return red_channel_client_handle_message(rcc, type, size, message);
     }
     return TRUE;
 }
@@ -352,7 +352,7 @@ main_channel_class_init(MainChannelClass *klass)
     object_class->constructed = main_channel_constructed;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_MAIN, NULL);
-    channel_class->handle_parsed = main_channel_handle_parsed;
+    channel_class->handle_message = main_channel_handle_message;
 
     /* channel callbacks */
     channel_class->config_socket = main_channel_config_socket;

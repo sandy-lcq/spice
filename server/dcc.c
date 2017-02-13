@@ -1121,7 +1121,7 @@ static int dcc_handle_gl_draw_done(DisplayChannelClient *dcc)
     return TRUE;
 }
 
-int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void *msg)
+int dcc_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void *msg)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
 
@@ -1136,7 +1136,7 @@ int dcc_handle_message(RedChannelClient *rcc, uint32_t size, uint16_t type, void
     case SPICE_MSGC_DISPLAY_GL_DRAW_DONE:
         return dcc_handle_gl_draw_done(dcc);
     default:
-        return red_channel_client_handle_message(rcc, size, type, msg);
+        return red_channel_client_handle_message(rcc, type, size, msg);
     }
 }
 

@@ -86,8 +86,8 @@ int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap);
  * It should be followed by some way to guarantee a disconnection. */
 void red_channel_client_shutdown(RedChannelClient *rcc);
 /* handles general channel msgs from the client */
-int red_channel_client_handle_message(RedChannelClient *rcc, uint32_t size,
-                                      uint16_t type, void *message);
+int red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
+                                      uint32_t size, void *message);
 /* when preparing send_data: should call init and then use marshaller */
 void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type);
 

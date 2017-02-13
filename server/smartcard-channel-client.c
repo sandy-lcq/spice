@@ -295,15 +295,16 @@ static void smartcard_channel_client_write_to_reader(SmartCardChannelClient *scc
 int smartcard_channel_client_handle_message(RedChannelClient *rcc,
                                             uint16_t type,
                                             uint32_t size,
-                                            uint8_t *msg)
+                                            void *message)
 {
-    VSCMsgHeader* vheader = (VSCMsgHeader*)msg;
+    uint8_t *msg = message;
+    VSCMsgHeader* vheader = message;
     SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
 
     if (type != SPICE_MSGC_SMARTCARD_DATA) {
         /* Handles seamless migration protocol. Also handles ack's,
          * spicy sends them while spicec does not */
-        return red_channel_client_handle_message(rcc, size, type, msg);
+        return red_channel_client_handle_message(rcc, type, size, msg);
     }
 
     spice_assert(size == vheader->length + sizeof(VSCMsgHeader));

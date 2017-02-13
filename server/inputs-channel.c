@@ -279,8 +279,8 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
     red_channel_client_begin_send_message(rcc);
 }
 
-static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint16_t type,
-                                        void *message)
+static int inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
+                                         uint32_t size, void *message)
 {
     InputsChannel *inputs_channel = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
     InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
@@ -436,7 +436,7 @@ static int inputs_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, ui
     case SPICE_MSGC_DISCONNECTING:
         break;
     default:
-        return red_channel_client_handle_message(rcc, size, type, message);
+        return red_channel_client_handle_message(rcc, type, size, message);
     }
     return TRUE;
 }
@@ -646,7 +646,7 @@ inputs_channel_class_init(InputsChannelClass *klass)
     object_class->finalize = inputs_channel_finalize;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_INPUTS, NULL);
-    channel_class->handle_parsed = inputs_channel_handle_parsed;
+    channel_class->handle_message = inputs_channel_handle_message;
 
     /* channel callbacks */
     channel_class->config_socket = inputs_channel_config_socket;

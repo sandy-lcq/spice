@@ -550,10 +550,10 @@ static int handle_compressed_msg(RedVmcChannel *channel, RedChannelClient *rcc,
     return TRUE;
 }
 
-static int spicevmc_red_channel_client_handle_message_parsed(RedChannelClient *rcc,
-                                                             uint32_t size,
-                                                             uint16_t type,
-                                                             void *msg)
+static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
+                                                      uint16_t type,
+                                                      uint32_t size,
+                                                      void *msg)
 {
     /* NOTE: *msg free by free() (when cb to spicevmc_red_channel_release_msg_rcv_buf
      * with the compressed msg type) */
@@ -582,7 +582,7 @@ static int spicevmc_red_channel_client_handle_message_parsed(RedChannelClient *r
             sif->event(channel->chardev_sin, *(uint8_t*)msg);
         break;
     default:
-        return red_channel_client_handle_message(rcc, size, type, msg);
+        return red_channel_client_handle_message(rcc, type, size, msg);
     }
 
     return TRUE;
@@ -732,7 +732,7 @@ red_vmc_channel_class_init(RedVmcChannelClass *klass)
     object_class->constructed = red_vmc_channel_constructed;
     object_class->finalize = red_vmc_channel_finalize;
 
-    channel_class->handle_parsed = spicevmc_red_channel_client_handle_message_parsed;
+    channel_class->handle_message = spicevmc_red_channel_client_handle_message;
 
     channel_class->config_socket = spicevmc_red_channel_client_config_socket;
     channel_class->on_disconnect = spicevmc_red_channel_client_on_disconnect;

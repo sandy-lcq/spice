@@ -320,7 +320,7 @@ static int snd_record_handle_write(RecordChannelClient *record_client, size_t si
 }
 
 static int
-record_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint16_t type, void *message)
+record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void *message)
 {
     RecordChannelClient *record_client = RECORD_CHANNEL_CLIENT(rcc);
 
@@ -357,7 +357,7 @@ record_channel_handle_parsed(RedChannelClient *rcc, uint32_t size, uint16_t type
         break;
     }
     default:
-        return red_channel_client_handle_message(rcc, size, type, message);
+        return red_channel_client_handle_message(rcc, type, size, message);
     }
     return TRUE;
 }
@@ -1413,7 +1413,7 @@ playback_channel_class_init(PlaybackChannelClass *klass)
     object_class->constructed = playback_channel_constructed;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_PLAYBACK, NULL);
-    channel_class->handle_parsed = red_channel_client_handle_message;
+    channel_class->handle_message = red_channel_client_handle_message;
     channel_class->send_item = playback_channel_send_item;
 }
 
@@ -1463,7 +1463,7 @@ record_channel_class_init(RecordChannelClass *klass)
     object_class->constructed = record_channel_constructed;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_RECORD, NULL);
-    channel_class->handle_parsed = record_channel_handle_parsed;
+    channel_class->handle_message = record_channel_handle_message;
     channel_class->send_item = record_channel_send_item;
 }
 

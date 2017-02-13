@@ -61,7 +61,6 @@ struct SpiceDataHeaderOpaque {
 
 typedef int (*handle_message_proc)(void *opaque,
                                    uint16_t type, uint32_t size, uint8_t *msg);
-typedef int (*handle_parsed_proc)(void *opaque, uint32_t size, uint16_t type, void *message);
 typedef uint8_t *(*alloc_msg_recv_buf_proc)(void *opaque, uint16_t type, uint32_t size);
 typedef void (*release_msg_recv_buf_proc)(void *opaque,
                                           uint16_t type, uint32_t size, uint8_t *msg);
@@ -69,13 +68,12 @@ typedef void (*on_incoming_error_proc)(void *opaque);
 typedef void (*on_input_proc)(void *opaque, int n);
 
 typedef struct IncomingHandlerInterface {
-    handle_message_proc handle_message;
     alloc_msg_recv_buf_proc alloc_msg_buf;
     on_incoming_error_proc on_error; // recv error or handle_message error
     release_msg_recv_buf_proc release_msg_buf; // for errors
-    // The following is an optional alternative to handle_message, used if not null
+    // 'parser' is optional and will not be used if NULL
     spice_parse_channel_func_t parser;
-    handle_parsed_proc handle_parsed;
+    handle_message_proc handle_message;
     on_input_proc on_input;
 } IncomingHandlerInterface;
 
@@ -103,10 +101,8 @@ typedef struct MainChannelClient MainChannelClient;
 
 typedef uint8_t *(*channel_alloc_msg_recv_buf_proc)(RedChannelClient *channel,
                                                     uint16_t type, uint32_t size);
-typedef int (*channel_handle_parsed_proc)(RedChannelClient *rcc, uint32_t size, uint16_t type,
-                                        void *message);
-typedef int (*channel_handle_message_proc)(RedChannelClient *rcc,
-                                           uint16_t type, uint32_t size, uint8_t *msg);
+typedef int (*channel_handle_message_proc)(RedChannelClient *rcc, uint16_t type,
+                                           uint32_t size, void *msg);
 typedef void (*channel_release_msg_recv_buf_proc)(RedChannelClient *channel,
                                                   uint16_t type, uint32_t size, uint8_t *msg);
 typedef void (*channel_disconnect_proc)(RedChannelClient *rcc);
@@ -166,11 +162,14 @@ struct RedChannelClass
 {
     GObjectClass parent_class;
 
-    /* subclasses must implement either handle_message(), or both parser() and
-     * handle_parsed() */
-    channel_handle_message_proc handle_message;
+    /* subclasses must implement handle_message() and optionally parser().
+     * If parser() is implemented, then handle_message() will get passed the
+     * parsed message as its 'msg' argument, otherwise it will be passed
+     * the raw data. In both cases, the 'size' argument is the length of 'msg'
+     * in bytes
+     */
     spice_parse_channel_func_t parser;
-    channel_handle_parsed_proc handle_parsed;
+    channel_handle_message_proc handle_message;
 
     // TODO: add ASSERTS for thread_id  in client and channel calls
     /*
