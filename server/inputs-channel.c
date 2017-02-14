@@ -552,7 +552,7 @@ inputs_channel_constructed(GObject *object)
 
     client_cbs.connect = inputs_connect;
     client_cbs.migrate = inputs_migrate;
-    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs);
 
     red_channel_set_cap(RED_CHANNEL(self), SPICE_INPUTS_CAP_KEY_SCANCODE);
     reds_register_channel(reds, RED_CHANNEL(self));

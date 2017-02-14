@@ -111,7 +111,7 @@ red_test_channel_constructed(GObject *object)
     G_OBJECT_CLASS(red_test_channel_parent_class)->constructed(object);
 
     ClientCbs client_cbs = { .connect = test_connect_client, };
-    red_channel_register_client_cbs(RED_CHANNEL(object), &client_cbs, NULL);
+    red_channel_register_client_cbs(RED_CHANNEL(object), &client_cbs);
 }
 
 static void

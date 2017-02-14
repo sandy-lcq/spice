@@ -91,8 +91,6 @@ struct RedChannelPrivate
     RedChannelCapabilities local_caps;
     uint32_t migration_flags;
 
-    void *data;
-
     ClientCbs client_cbs;
     // TODO: when different channel_clients are in different threads
     // from Channel -> need to protect!
@@ -364,8 +362,7 @@ const RedStatNode *red_channel_get_stat_node(RedChannel *channel)
     return &channel->priv->stat;
 }
 
-void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs,
-                                     gpointer cbs_data)
+void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs)
 {
     spice_assert(client_cbs->connect || channel->priv->type == SPICE_CHANNEL_MAIN);
     channel->priv->client_cbs.connect = client_cbs->connect;
@@ -377,7 +374,6 @@ void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *clien
     if (client_cbs->migrate) {
         channel->priv->client_cbs.migrate = client_cbs->migrate;
     }
-    channel->priv->data = cbs_data;
 }
 
 static void add_capability(uint32_t **caps, int *num_caps, uint32_t cap)

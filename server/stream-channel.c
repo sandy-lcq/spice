@@ -445,7 +445,7 @@ stream_channel_constructed(GObject *object)
     G_OBJECT_CLASS(stream_channel_parent_class)->constructed(object);
 
     client_cbs.connect = stream_channel_connect;
-    red_channel_register_client_cbs(red_channel, &client_cbs, NULL);
+    red_channel_register_client_cbs(red_channel, &client_cbs);
 
     red_channel_set_cap(red_channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(red_channel, SPICE_DISPLAY_CAP_STREAM_REPORT);

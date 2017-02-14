@@ -544,7 +544,7 @@ red_smartcard_channel_constructed(GObject *object)
     G_OBJECT_CLASS(red_smartcard_channel_parent_class)->constructed(object);
 
     client_cbs.connect = smartcard_connect_client;
-    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs);
 
     reds_register_channel(reds, RED_CHANNEL(self));
 }

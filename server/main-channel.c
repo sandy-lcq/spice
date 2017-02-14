@@ -272,7 +272,7 @@ main_channel_constructed(GObject *object)
     red_channel_set_cap(RED_CHANNEL(self), SPICE_MAIN_CAP_SEAMLESS_MIGRATE);
 
     client_cbs.migrate = main_channel_client_migrate;
-    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs);
 }
 
 static void

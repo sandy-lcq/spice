@@ -1337,7 +1337,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
                                                 &worker->core);
     channel = RED_CHANNEL(worker->cursor_channel);
     red_channel_init_stat_node(channel, &worker->stat, "cursor_channel");
-    red_channel_register_client_cbs(channel, client_cursor_cbs, dispatcher);
+    red_channel_register_client_cbs(channel, client_cursor_cbs);
     g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
     reds_register_channel(reds, channel);
 
@@ -1348,7 +1348,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
                                                   init_info.n_surfaces);
     channel = RED_CHANNEL(worker->display_channel);
     red_channel_init_stat_node(channel, &worker->stat, "display_channel");
-    red_channel_register_client_cbs(channel, client_display_cbs, dispatcher);
+    red_channel_register_client_cbs(channel, client_display_cbs);
     g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
     reds_register_channel(reds, channel);
 

@@ -191,7 +191,7 @@ red_vmc_channel_constructed(GObject *object)
     G_OBJECT_CLASS(red_vmc_channel_parent_class)->constructed(object);
 
     client_cbs.connect = spicevmc_connect;
-    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs);
 
     red_channel_init_stat_node(RED_CHANNEL(self), NULL, "spicevmc");
     const RedStatNode *stat = red_channel_get_stat_node(RED_CHANNEL(self));

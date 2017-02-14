@@ -122,7 +122,7 @@ void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc);
 
 void red_channel_init_stat_node(RedChannel *channel, const RedStatNode *parent, const char *name);
 
-void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs, gpointer cbs_data);
+void red_channel_register_client_cbs(RedChannel *channel, const ClientCbs *client_cbs);
 // caps are freed when the channel is destroyed
 void red_channel_set_common_cap(RedChannel *channel, uint32_t cap);
 void red_channel_set_cap(RedChannel *channel, uint32_t cap);
