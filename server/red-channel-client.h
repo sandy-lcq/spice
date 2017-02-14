@@ -205,7 +205,7 @@ typedef enum
     SPICE_SERVER_ERROR_FAILED
 } SpiceServerError;
 
-/* Messages handled by red_channel
+/* Messages handled by RedChannel
  * SET_ACK - sent to client on channel connection
  * Note that the numbers don't have to correspond to spice message types,
  * but we keep the 100 first allocated for base channel approach.
