@@ -37,6 +37,14 @@
 #include "red-client.h"
 #include "glib-compat.h"
 
+#define CLIENT_ACK_WINDOW 20
+
+#define MAX_HEADER_SIZE sizeof(SpiceDataHeader)
+
+#ifndef IOV_MAX
+#define IOV_MAX 1024
+#endif
+
 typedef struct SpiceDataHeaderOpaque SpiceDataHeaderOpaque;
 
 typedef uint16_t (*get_msg_type_proc)(SpiceDataHeaderOpaque *header);
@@ -147,6 +155,21 @@ static const SpiceDataHeaderOpaque mini_header_wrapper;
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc);
 static void red_channel_client_destroy_remote_caps(RedChannelClient* rcc);
 static void red_channel_client_initable_interface_init(GInitableIface *iface);
+static void red_channel_client_set_message_serial(RedChannelClient *channel, uint64_t);
+
+/*
+ * When an error occurs over a channel, we treat it as a warning
+ * for spice-server and shutdown the channel.
+ */
+#define spice_channel_client_error(rcc, format, ...)                                     \
+    do {                                                                                 \
+        RedChannel *_ch = red_channel_client_get_channel(rcc);                           \
+        uint32_t _type, _id;                                                             \
+        g_object_get(_ch, "channel-type", &_type, "id", &_id, NULL);                     \
+        spice_warning("rcc %p type %u id %u: " format, rcc,                              \
+                    type, id, ## __VA_ARGS__);                                           \
+        red_channel_client_shutdown(rcc);                                                \
+    } while (0)
 
 G_DEFINE_TYPE_WITH_CODE(RedChannelClient, red_channel_client, G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE(G_TYPE_INITABLE,
@@ -1568,7 +1591,7 @@ uint64_t red_channel_client_get_message_serial(RedChannelClient *rcc)
     return rcc->priv->send_data.last_sent_serial + 1;
 }
 
-void red_channel_client_set_message_serial(RedChannelClient *rcc, uint64_t serial)
+static void red_channel_client_set_message_serial(RedChannelClient *rcc, uint64_t serial)
 {
     rcc->priv->send_data.last_sent_serial = serial - 1;
 }

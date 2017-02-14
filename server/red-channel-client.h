@@ -20,7 +20,6 @@
 
 #include <glib-object.h>
 #include <gio/gio.h>
-#include <spice/protocol.h>
 #include <common/marshaller.h>
 
 #include "red-pipe-item.h"
@@ -28,13 +27,6 @@
 #include "red-channel.h"
 
 G_BEGIN_DECLS
-
-#define MAX_HEADER_SIZE sizeof(SpiceDataHeader)
-#define CLIENT_ACK_WINDOW 20
-
-#ifndef IOV_MAX
-#define IOV_MAX 1024
-#endif
 
 #define RED_TYPE_CHANNEL_CLIENT red_channel_client_get_type()
 
@@ -54,20 +46,6 @@ typedef struct RedChannelClientClass RedChannelClientClass;
 typedef struct RedChannelClientPrivate RedChannelClientPrivate;
 
 GType red_channel_client_get_type(void) G_GNUC_CONST;
-
-/*
- * When an error occurs over a channel, we treat it as a warning
- * for spice-server and shutdown the channel.
- */
-#define spice_channel_client_error(rcc, format, ...)                                     \
-    do {                                                                                 \
-        RedChannel *_ch = red_channel_client_get_channel(rcc);                           \
-        uint32_t _type, _id;                                                             \
-        g_object_get(_ch, "channel-type", &_type, "id", &_id, NULL);                     \
-        spice_warning("rcc %p type %u id %u: " format, rcc,                              \
-                    type, id, ## __VA_ARGS__);                                           \
-        red_channel_client_shutdown(rcc);                                                \
-    } while (0)
 
 RedChannelClient *red_channel_client_create(RedChannel *channel,
                                             RedClient *client, RedsStream *stream,
@@ -92,7 +70,6 @@ int red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
 void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type);
 
 uint64_t red_channel_client_get_message_serial(RedChannelClient *channel);
-void red_channel_client_set_message_serial(RedChannelClient *channel, uint64_t);
 
 /* When sending a msg. Should first call red_channel_client_begin_send_message.
  * It will first send the pending urgent data, if there is any, and then
