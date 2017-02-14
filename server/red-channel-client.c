@@ -364,10 +364,6 @@ static void red_channel_client_initable_interface_init(GInitableIface *iface)
     iface->init = red_channel_client_initable_init;
 }
 
-static gboolean red_channel_client_default_is_connected(RedChannelClient *rcc);
-static void red_channel_client_default_disconnect(RedChannelClient *rcc);
-
-
 static void red_channel_client_constructed(GObject *object)
 {
     RedChannelClient *self =  RED_CHANNEL_CLIENT(object);
@@ -399,9 +395,6 @@ static void red_channel_client_class_init(RedChannelClientClass *klass)
     object_class->set_property = red_channel_client_set_property;
     object_class->finalize = red_channel_client_finalize;
     object_class->constructed = red_channel_client_constructed;
-
-    klass->is_connected = red_channel_client_default_is_connected;
-    klass->disconnect = red_channel_client_default_disconnect;
 
     spec = g_param_spec_pointer("stream", "stream",
                                 "Associated RedStream",
@@ -1701,18 +1694,10 @@ gboolean red_channel_client_is_mini_header(RedChannelClient *rcc)
     return rcc->priv->is_mini_header;
 }
 
-static gboolean red_channel_client_default_is_connected(RedChannelClient *rcc)
+gboolean red_channel_client_is_connected(RedChannelClient *rcc)
 {
     return rcc->priv->channel
         && (g_list_find(red_channel_get_clients(rcc->priv->channel), rcc) != NULL);
-}
-
-gboolean red_channel_client_is_connected(RedChannelClient *rcc)
-{
-    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
-
-    g_return_val_if_fail(klass->is_connected != NULL, FALSE);
-    return klass->is_connected(rcc);
 }
 
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc)
@@ -1752,7 +1737,7 @@ void red_channel_client_push_set_ack(RedChannelClient *rcc)
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SET_ACK);
 }
 
-static void red_channel_client_default_disconnect(RedChannelClient *rcc)
+void red_channel_client_disconnect(RedChannelClient *rcc)
 {
     RedChannel *channel = rcc->priv->channel;
     SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(channel);
@@ -1779,14 +1764,6 @@ static void red_channel_client_default_disconnect(RedChannelClient *rcc)
     }
     red_channel_remove_client(channel, rcc);
     red_channel_on_disconnect(channel, rcc);
-}
-
-void red_channel_client_disconnect(RedChannelClient *rcc)
-{
-    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
-
-    g_return_if_fail(klass->is_connected != NULL);
-    klass->disconnect(rcc);
 }
 
 int red_channel_client_is_blocked(RedChannelClient *rcc)

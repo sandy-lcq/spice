@@ -192,9 +192,6 @@ struct RedChannelClient
 struct RedChannelClientClass
 {
     GObjectClass parent_class;
-
-    gboolean (*is_connected)(RedChannelClient *rcc);
-    void (*disconnect)(RedChannelClient *rcc);
 };
 
 #define SPICE_SERVER_ERROR spice_server_error_quark()
