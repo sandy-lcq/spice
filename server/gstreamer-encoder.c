@@ -1140,36 +1140,6 @@ static int is_chunk_stride_aligned(const SpiceBitmap *bitmap, uint32_t index)
     return TRUE;
 }
 
-/* A helper for push_raw_frame() */
-static inline int line_copy(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
-                            uint32_t chunk_offset, uint32_t stream_stride,
-                            uint32_t height, uint8_t *buffer)
-{
-     uint8_t *dst = buffer;
-     SpiceChunks *chunks = bitmap->data;
-     uint32_t chunk_index = 0;
-     for (int l = 0; l < height; l++) {
-         /* We may have to move forward by more than one chunk the first
-          * time around. This also protects us against 0-byte chunks.
-          */
-         while (chunk_offset >= chunks->chunk[chunk_index].len) {
-             if (!is_chunk_stride_aligned(bitmap, chunk_index)) {
-                 return FALSE;
-             }
-             chunk_offset -= chunks->chunk[chunk_index].len;
-             chunk_index++;
-         }
-
-         /* Copy the line */
-         uint8_t *src = chunks->chunk[chunk_index].data + chunk_offset;
-         memcpy(dst, src, stream_stride);
-         dst += stream_stride;
-         chunk_offset += bitmap->stride;
-     }
-     spice_return_val_if_fail(dst - buffer == stream_stride * height, FALSE);
-     return TRUE;
-}
-
 #ifdef DO_ZERO_COPY
 typedef struct {
     gint refs;
@@ -1265,6 +1235,37 @@ static void clear_zero_copy_queue(SpiceGstEncoder *encoder, gboolean unref_queue
 {
     /* Nothing to do */
 }
+
+/* A helper for push_raw_frame() */
+static inline int line_copy(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
+                            uint32_t chunk_offset, uint32_t stream_stride,
+                            uint32_t height, uint8_t *buffer)
+{
+     uint8_t *dst = buffer;
+     SpiceChunks *chunks = bitmap->data;
+     uint32_t chunk_index = 0;
+     for (int l = 0; l < height; l++) {
+         /* We may have to move forward by more than one chunk the first
+          * time around. This also protects us against 0-byte chunks.
+          */
+         while (chunk_offset >= chunks->chunk[chunk_index].len) {
+             if (!is_chunk_stride_aligned(bitmap, chunk_index)) {
+                 return FALSE;
+             }
+             chunk_offset -= chunks->chunk[chunk_index].len;
+             chunk_index++;
+         }
+
+         /* Copy the line */
+         uint8_t *src = chunks->chunk[chunk_index].data + chunk_offset;
+         memcpy(dst, src, stream_stride);
+         dst += stream_stride;
+         chunk_offset += bitmap->stride;
+     }
+     spice_return_val_if_fail(dst - buffer == stream_stride * height, FALSE);
+     return TRUE;
+}
+
 #endif
 
 /* A helper for push_raw_frame() */
