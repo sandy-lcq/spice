@@ -347,11 +347,6 @@ static uint32_t get_network_latency(SpiceGstEncoder *encoder)
         encoder->cbs.get_roundtrip_ms(encoder->cbs.opaque) / 2 : 0;
 }
 
-static inline int rate_control_is_active(SpiceGstEncoder* encoder)
-{
-    return encoder->cbs.get_roundtrip_ms != NULL;
-}
-
 static void set_pipeline_changes(SpiceGstEncoder *encoder, uint32_t flags)
 {
     encoder->set_pipeline |= flags;
