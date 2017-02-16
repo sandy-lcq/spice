@@ -1789,7 +1789,7 @@ void red_channel_client_disconnect(RedChannelClient *rcc)
     red_channel_on_disconnect(channel, rcc);
 }
 
-int red_channel_client_is_blocked(RedChannelClient *rcc)
+gboolean red_channel_client_is_blocked(RedChannelClient *rcc)
 {
     return rcc && rcc->priv->send_data.blocked;
 }

@@ -38,7 +38,7 @@ void agent_msg_filter_config(AgentMsgFilter *filter,
 void agent_msg_filter_init(AgentMsgFilter *filter,
                            gboolean copy_paste, gboolean file_xfer,
                            gboolean use_client_monitors_config,
-                           int discard_all)
+                           gboolean discard_all)
 {
     memset(filter, 0, sizeof(*filter));
     agent_msg_filter_config(filter, copy_paste, file_xfer,
