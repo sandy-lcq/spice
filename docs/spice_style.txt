@@ -47,10 +47,18 @@ Examples: +
   use `(var == 7)` instead of  `(7 == var)` +
   use `(function(var) > 7)` instead of `(7 < function(var))`
 
-TRUE, FALSE and NULL
+boolean type
+------------
+Where possible prefer the usage of `bool` type to store boolean.
+
+If not technically possible (ie libJPEG uses `boolean` while GLib uses `gboolean`) uses proper library type.
+
+Constants should be consistent with the type used so `true` and `false` for `bool` type.
+
+true, false and NULL
 --------------------
 
-Use `TRUE`, `FALSE` and `NULL` instead of 1 and 0 in order to improve code readability.
+Use `true`, `false` and `NULL` instead of 1 and 0 in order to improve code readability.
 
 Static storage initialization
 -----------------------------
