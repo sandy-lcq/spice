@@ -168,6 +168,9 @@ struct RedChannelClient
 struct RedChannelClientClass
 {
     GObjectClass parent_class;
+
+    uint8_t *(*alloc_recv_buf)(RedChannelClient *channel, uint16_t type, uint32_t size);
+    void (*release_recv_buf)(RedChannelClient *channel, uint16_t type, uint32_t size, uint8_t *msg);
 };
 
 #define SPICE_SERVER_ERROR spice_server_error_quark()

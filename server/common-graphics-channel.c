@@ -35,11 +35,13 @@ G_DEFINE_TYPE(CommonGraphicsChannelClient, common_graphics_channel_client, RED_T
 
 #define GRAPHICS_CHANNEL_PRIVATE(o) \
     (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_COMMON_GRAPHICS_CHANNEL, CommonGraphicsChannelPrivate))
+#define GRAPHICS_CHANNEL_CLIENT_PRIVATE(o) \
+    (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT, \
+    CommonGraphicsChannelClientPrivate))
 
 struct CommonGraphicsChannelPrivate
 {
     QXLInstance *qxl;
-    uint8_t recv_buf[CHANNEL_RECEIVE_BUF_SIZE];
     int during_target_migrate; /* TRUE when the client that is associated with the channel
                                   is during migration. Turned off when the vm is started.
                                   The flag is used to avoid sending messages that are artifacts
@@ -47,10 +49,14 @@ struct CommonGraphicsChannelPrivate
                                   of the primary surface) */
 };
 
+struct CommonGraphicsChannelClientPrivate {
+    uint8_t recv_buf[CHANNEL_RECEIVE_BUF_SIZE];
+};
+
+
 static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
 {
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    CommonGraphicsChannel *common = COMMON_GRAPHICS_CHANNEL(channel);
+    CommonGraphicsChannelClient *common = COMMON_GRAPHICS_CHANNEL_CLIENT(rcc);
 
     /* SPICE_MSGC_MIGRATE_DATA is the only client message whose size is dynamic */
     if (type == SPICE_MSGC_MIGRATE_DATA) {
@@ -157,8 +163,6 @@ common_graphics_channel_class_init(CommonGraphicsChannelClass *klass)
     object_class->set_property = common_graphics_channel_set_property;
 
     channel_class->config_socket = common_channel_config_socket;
-    channel_class->alloc_recv_buf = common_alloc_recv_buf;
-    channel_class->release_recv_buf = common_release_recv_buf;
 
     g_object_class_install_property(object_class,
                                     PROP_QXL,
@@ -194,9 +198,16 @@ QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self)
 static void
 common_graphics_channel_client_init(CommonGraphicsChannelClient *self)
 {
+    self->priv = GRAPHICS_CHANNEL_CLIENT_PRIVATE(self);
 }
 
 static void
 common_graphics_channel_client_class_init(CommonGraphicsChannelClientClass *klass)
 {
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
+
+    g_type_class_add_private(klass, sizeof(CommonGraphicsChannelClientPrivate));
+
+    client_class->alloc_recv_buf = common_alloc_recv_buf;
+    client_class->release_recv_buf = common_release_recv_buf;
 }

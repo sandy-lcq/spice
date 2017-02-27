@@ -43,6 +43,12 @@ typedef struct RedErrorItem {
     VSCMsgError  error;
 } RedErrorItem;
 
+static uint8_t *
+smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size);
+static void
+smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc, uint16_t type,
+                                             uint32_t size, uint8_t *msg);
+
 static void smart_card_channel_client_get_property(GObject *object,
                                                    guint property_id,
                                                    GValue *value,
@@ -88,6 +94,10 @@ static void smart_card_channel_client_class_init(SmartCardChannelClientClass *kl
 
     g_type_class_add_private(klass, sizeof(SmartCardChannelClientPrivate));
 
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
+    client_class->alloc_recv_buf = smartcard_channel_client_alloc_msg_rcv_buf;
+    client_class->release_recv_buf = smartcard_channel_client_release_msg_rcv_buf;
+
     object_class->get_property = smart_card_channel_client_get_property;
     object_class->set_property = smart_card_channel_client_set_property;
     object_class->dispose = smart_card_channel_client_dispose;
@@ -119,9 +129,9 @@ SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
     return rcc;
 }
 
-uint8_t *smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
-                                                    uint16_t type,
-                                                    uint32_t size)
+static uint8_t *
+smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
+                                           uint16_t type, uint32_t size)
 {
     SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
     RedClient *client = red_channel_client_get_client(rcc);
@@ -152,10 +162,9 @@ uint8_t *smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
     }
 }
 
-void smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
-                                                  uint16_t type,
-                                                  uint32_t size,
-                                                  uint8_t *msg)
+static void
+smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
+                                             uint16_t type, uint32_t size, uint8_t *msg)
 {
     SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
 

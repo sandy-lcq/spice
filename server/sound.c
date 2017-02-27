@@ -1333,8 +1333,6 @@ snd_channel_class_init(SndChannelClass *klass)
     object_class->finalize = snd_channel_finalize;
 
     channel_class->config_socket = snd_channel_config_socket;
-    channel_class->alloc_recv_buf = snd_channel_client_alloc_recv_buf;
-    channel_class->release_recv_buf = snd_channel_client_release_recv_buf;
     channel_class->on_disconnect = snd_channel_on_disconnect;
 }
 
@@ -1484,8 +1482,12 @@ void snd_set_playback_compression(int on)
 }
 
 static void
-snd_channel_client_class_init(SndChannelClientClass *self)
+snd_channel_client_class_init(SndChannelClientClass *klass)
 {
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
+
+    client_class->alloc_recv_buf = snd_channel_client_alloc_recv_buf;
+    client_class->release_recv_buf = snd_channel_client_release_recv_buf;
 }
 
 static void

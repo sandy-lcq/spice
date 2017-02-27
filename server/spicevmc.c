@@ -181,6 +181,42 @@ static void red_vmc_channel_port_init(RedVmcChannelPort *self)
 }
 G_DEFINE_TYPE(RedVmcChannelPort, red_vmc_channel_port, RED_TYPE_VMC_CHANNEL)
 
+
+#define TYPE_VMC_CHANNEL_CLIENT vmc_channel_client_get_type()
+
+#define VMC_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_VMC_CHANNEL_CLIENT, VmcChannelClient))
+#define VMC_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_VMC_CHANNEL_CLIENT, VmcChannelClientClass))
+#define COMMON_IS_GRAPHICS_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_VMC_CHANNEL_CLIENT))
+#define COMMON_IS_GRAPHICS_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_VMC_CHANNEL_CLIENT))
+#define VMC_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_VMC_CHANNEL_CLIENT, VmcChannelClientClass))
+
+typedef struct VmcChannelClient VmcChannelClient;
+typedef struct VmcChannelClientClass VmcChannelClientClass;
+typedef struct VmcChannelClientPrivate VmcChannelClientPrivate;
+
+struct VmcChannelClient {
+    RedChannelClient parent;
+};
+
+struct VmcChannelClientClass {
+    RedChannelClientClass parent_class;
+};
+
+GType vmc_channel_client_get_type(void) G_GNUC_CONST;
+
+G_DEFINE_TYPE(VmcChannelClient, vmc_channel_client, RED_TYPE_CHANNEL_CLIENT)
+
+static RedChannelClient *
+vmc_channel_client_create(RedChannel *channel, RedClient *client,
+                          RedsStream *stream,
+                          RedChannelCapabilities *caps);
+
+
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
                              RedsStream *stream, int migration,
                              RedChannelCapabilities *caps);
@@ -733,8 +769,6 @@ red_vmc_channel_class_init(RedVmcChannelClass *klass)
 
     channel_class->on_disconnect = spicevmc_red_channel_client_on_disconnect;
     channel_class->send_item = spicevmc_red_channel_send_item;
-    channel_class->alloc_recv_buf = spicevmc_red_channel_alloc_msg_rcv_buf;
-    channel_class->release_recv_buf = spicevmc_red_channel_release_msg_rcv_buf;
     channel_class->handle_migrate_flush_mark = spicevmc_channel_client_handle_migrate_flush_mark;
     channel_class->handle_migrate_data = spicevmc_channel_client_handle_migrate_data;
 }
@@ -786,7 +820,7 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
         return;
     }
 
-    rcc = red_channel_client_create(channel, client, stream, FALSE, caps);
+    rcc = vmc_channel_client_create(channel, client, stream, caps);
     if (!rcc) {
         return;
     }
@@ -951,4 +985,37 @@ red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                         "self-tokens", ~0ULL,
                         "channel", channel,
                         NULL);
+}
+
+static void
+vmc_channel_client_init(VmcChannelClient *self)
+{
+}
+
+static void
+vmc_channel_client_class_init(VmcChannelClientClass *klass)
+{
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
+
+    client_class->alloc_recv_buf = spicevmc_red_channel_alloc_msg_rcv_buf;
+    client_class->release_recv_buf = spicevmc_red_channel_release_msg_rcv_buf;
+}
+
+static RedChannelClient *
+vmc_channel_client_create(RedChannel *channel, RedClient *client,
+                          RedsStream *stream,
+                          RedChannelCapabilities *caps)
+{
+    RedChannelClient *rcc;
+
+    rcc = g_initable_new(TYPE_VMC_CHANNEL_CLIENT,
+                         NULL, NULL,
+                         "channel", channel,
+                         "client", client,
+                         "stream", stream,
+                         "monitor-latency", FALSE,
+                         "caps", caps,
+                         NULL);
+
+    return rcc;
 }

@@ -28,15 +28,10 @@
 #include "main-channel.h"
 #include "main-channel-client.h"
 
-// approximate max receive message size for main channel
-#define MAIN_CHANNEL_RECEIVE_BUF_SIZE \
-    (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
-
 struct MainChannel
 {
     RedChannel parent;
 
-    uint8_t recv_buf[MAIN_CHANNEL_RECEIVE_BUF_SIZE];
     // TODO: add refs and release (afrer all clients completed migration in one way or the other?)
     RedsMigSpice mig_target;
     int num_clients_mig_wait;
@@ -248,35 +243,6 @@ static int main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
     return TRUE;
 }
 
-static uint8_t *main_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
-                                               uint16_t type,
-                                               uint32_t size)
-{
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    MainChannel *main_chan = MAIN_CHANNEL(channel);
-    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
-
-    if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        return reds_get_agent_data_buffer(red_channel_get_server(channel), mcc, size);
-    } else if (size > sizeof(main_chan->recv_buf)) {
-        /* message too large, caller will log a message and close the connection */
-        return NULL;
-    } else {
-        return main_chan->recv_buf;
-    }
-}
-
-static void main_channel_release_msg_rcv_buf(RedChannelClient *rcc,
-                                               uint16_t type,
-                                               uint32_t size,
-                                               uint8_t *msg)
-{
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
-        reds_release_agent_data_buffer(red_channel_get_server(channel), msg);
-    }
-}
-
 static int main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
@@ -349,8 +315,6 @@ main_channel_class_init(MainChannelClass *klass)
     /* channel callbacks */
     channel_class->on_disconnect = main_channel_client_on_disconnect;
     channel_class->send_item = main_channel_client_send_item;
-    channel_class->alloc_recv_buf = main_channel_alloc_msg_rcv_buf;
-    channel_class->release_recv_buf = main_channel_release_msg_rcv_buf;
     channel_class->handle_migrate_flush_mark = main_channel_handle_migrate_flush_mark;
     channel_class->handle_migrate_data = main_channel_handle_migrate_data;
 }

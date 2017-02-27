@@ -43,12 +43,8 @@ typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;
 typedef struct MainChannelClient MainChannelClient;
 
-typedef uint8_t *(*channel_alloc_msg_recv_buf_proc)(RedChannelClient *channel,
-                                                    uint16_t type, uint32_t size);
 typedef int (*channel_handle_message_proc)(RedChannelClient *rcc, uint16_t type,
                                            uint32_t size, void *msg);
-typedef void (*channel_release_msg_recv_buf_proc)(RedChannelClient *channel,
-                                                  uint16_t type, uint32_t size, uint8_t *msg);
 typedef void (*channel_disconnect_proc)(RedChannelClient *rcc);
 typedef int (*channel_configure_socket_proc)(RedChannelClient *rcc);
 typedef void (*channel_send_pipe_item_proc)(RedChannelClient *rcc, RedPipeItem *item);
@@ -122,8 +118,6 @@ struct RedChannelClass
     channel_configure_socket_proc config_socket;
     channel_disconnect_proc on_disconnect;
     channel_send_pipe_item_proc send_item;
-    channel_alloc_msg_recv_buf_proc alloc_recv_buf;
-    channel_release_msg_recv_buf_proc release_recv_buf;
     channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark;
     channel_handle_migrate_data_proc handle_migrate_data;
     channel_handle_migrate_data_get_serial_proc handle_migrate_data_get_serial;

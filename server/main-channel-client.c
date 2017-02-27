@@ -46,6 +46,10 @@ G_DEFINE_TYPE(MainChannelClient, main_channel_client, RED_TYPE_CHANNEL_CLIENT)
 #define MAIN_CHANNEL_CLIENT_PRIVATE(o) \
     (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_MAIN_CHANNEL_CLIENT, MainChannelClientPrivate))
 
+// approximate max receive message size for main channel
+#define MAIN_CHANNEL_RECEIVE_BUF_SIZE \
+    (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
+
 struct MainChannelClientPrivate {
     uint32_t connection_id;
     uint32_t ping_id;
@@ -63,6 +67,7 @@ struct MainChannelClientPrivate {
     int mig_wait_prev_try_seamless;
     int init_sent;
     int seamless_mig_dst;
+    uint8_t recv_buf[MAIN_CHANNEL_RECEIVE_BUF_SIZE];
 };
 
 typedef struct RedPingPipeItem {
@@ -194,9 +199,37 @@ static void main_channel_client_finalize(GObject *object)
     G_OBJECT_CLASS(main_channel_client_parent_class)->finalize(object);
 }
 
+static uint8_t *
+main_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
+                                      uint16_t type, uint32_t size)
+{
+    MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
+
+    if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
+        RedChannel *channel = red_channel_client_get_channel(rcc);
+        return reds_get_agent_data_buffer(red_channel_get_server(channel), mcc, size);
+    } else if (size > sizeof(mcc->priv->recv_buf)) {
+        /* message too large, caller will log a message and close the connection */
+        return NULL;
+    } else {
+        return mcc->priv->recv_buf;
+    }
+}
+
+static void
+main_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
+                                        uint16_t type, uint32_t size, uint8_t *msg)
+{
+    if (type == SPICE_MSGC_MAIN_AGENT_DATA) {
+        RedChannel *channel = red_channel_client_get_channel(rcc);
+        reds_release_agent_data_buffer(red_channel_get_server(channel), msg);
+    }
+}
+
 static void main_channel_client_class_init(MainChannelClientClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
 
     g_type_class_add_private(klass, sizeof(MainChannelClientPrivate));
 
@@ -204,6 +237,9 @@ static void main_channel_client_class_init(MainChannelClientClass *klass)
     object_class->set_property = main_channel_client_set_property;
     object_class->finalize = main_channel_client_finalize;
     object_class->constructed = main_channel_client_constructed;
+
+    client_class->alloc_recv_buf = main_channel_client_alloc_msg_rcv_buf;
+    client_class->release_recv_buf = main_channel_client_release_msg_rcv_buf;
 
     g_object_class_install_property(object_class,
                                     PROP_CONNECTION_ID,

@@ -60,15 +60,6 @@ SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
                                                         int monitor_latency,
                                                         RedChannelCapabilities *caps);
 
-uint8_t* smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
-                                                    uint16_t type,
-                                                    uint32_t size);
-
-void smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
-                                                  uint16_t type,
-                                                  uint32_t size,
-                                                  uint8_t *msg);
-
 int smartcard_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc);
 
 void smartcard_channel_client_on_disconnect(RedChannelClient *rcc);
@@ -95,15 +86,6 @@ void smartcard_channel_client_set_char_device(SmartCardChannelClient *scc,
                                               RedCharDeviceSmartcard *device);
 
 RedCharDeviceSmartcard* smartcard_channel_client_get_char_device(SmartCardChannelClient *scc);
-
-void smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
-                                                  uint16_t type,
-                                                  uint32_t size,
-                                                  uint8_t *msg);
-
-uint8_t *smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
-                                                    uint16_t type,
-                                                    uint32_t size);
 
 G_END_DECLS
 

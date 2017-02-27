@@ -27,15 +27,51 @@ G_DEFINE_TYPE(InputsChannelClient, inputs_channel_client, RED_TYPE_CHANNEL_CLIEN
 #define INPUTS_CHANNEL_CLIENT_PRIVATE(o) \
     (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_INPUTS_CHANNEL_CLIENT, InputsChannelClientPrivate))
 
+// TODO: RECEIVE_BUF_SIZE used to be the same for inputs_channel and main_channel
+// since it was defined once in reds.c which contained both.
+// Now that they are split we can give a more fitting value for inputs - what
+// should it be?
+#define REDS_AGENT_WINDOW_SIZE 10
+#define REDS_NUM_INTERNAL_AGENT_MESSAGES 1
+
+// approximate max receive message size
+#define RECEIVE_BUF_SIZE \
+    (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
+
 struct InputsChannelClientPrivate
 {
     uint16_t motion_count;
+    uint8_t recv_buf[RECEIVE_BUF_SIZE];
 };
+
+static uint8_t *
+inputs_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
+                                        uint16_t type, uint32_t size)
+{
+    if (size > RECEIVE_BUF_SIZE) {
+        spice_printerr("error: too large incoming message");
+        return NULL;
+    }
+
+    InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
+    return icc->priv->recv_buf;
+}
+
+static void
+inputs_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
+                                          uint16_t type, uint32_t size, uint8_t *msg)
+{
+}
 
 static void
 inputs_channel_client_class_init(InputsChannelClientClass *klass)
 {
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
+
     g_type_class_add_private(klass, sizeof(InputsChannelClientPrivate));
+
+    client_class->alloc_recv_buf = inputs_channel_client_alloc_msg_rcv_buf;
+    client_class->release_recv_buf = inputs_channel_client_release_msg_rcv_buf;
 }
 
 static void

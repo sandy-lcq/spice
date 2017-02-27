@@ -43,22 +43,10 @@
 #include "migration-protocol.h"
 #include "utils.h"
 
-// TODO: RECEIVE_BUF_SIZE used to be the same for inputs_channel and main_channel
-// since it was defined once in reds.c which contained both.
-// Now that they are split we can give a more fitting value for inputs - what
-// should it be?
-#define REDS_AGENT_WINDOW_SIZE 10
-#define REDS_NUM_INTERNAL_AGENT_MESSAGES 1
-
-// approximate max receive message size
-#define RECEIVE_BUF_SIZE \
-    (4096 + (REDS_AGENT_WINDOW_SIZE + REDS_NUM_INTERNAL_AGENT_MESSAGES) * SPICE_AGENT_MAX_DATA_SIZE)
-
 struct InputsChannel
 {
     RedChannel parent;
 
-    uint8_t recv_buf[RECEIVE_BUF_SIZE];
     VDAgentMouseState mouse_state;
     int src_during_migrate;
     SpiceTimer *key_modifiers_timer;
@@ -151,26 +139,6 @@ void inputs_channel_set_tablet_logical_size(InputsChannel *inputs, int x_res, in
 const VDAgentMouseState *inputs_channel_get_mouse_state(InputsChannel *inputs)
 {
     return &inputs->mouse_state;
-}
-
-static uint8_t *inputs_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
-                                                 uint16_t type,
-                                                 uint32_t size)
-{
-    InputsChannel *inputs_channel = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
-
-    if (size > RECEIVE_BUF_SIZE) {
-        spice_printerr("error: too large incoming message");
-        return NULL;
-    }
-    return inputs_channel->recv_buf;
-}
-
-static void inputs_channel_release_msg_rcv_buf(RedChannelClient *rcc,
-                                               uint16_t type,
-                                               uint32_t size,
-                                               uint8_t *msg)
-{
 }
 
 #define OUTGOING_OK 0
@@ -628,8 +596,6 @@ inputs_channel_class_init(InputsChannelClass *klass)
     /* channel callbacks */
     channel_class->on_disconnect = inputs_channel_on_disconnect;
     channel_class->send_item = inputs_channel_send_item;
-    channel_class->alloc_recv_buf = inputs_channel_alloc_msg_rcv_buf;
-    channel_class->release_recv_buf = inputs_channel_release_msg_rcv_buf;
     channel_class->handle_migrate_data = inputs_channel_handle_migrate_data;
     channel_class->handle_migrate_flush_mark = inputs_channel_handle_migrate_flush_mark;
 }

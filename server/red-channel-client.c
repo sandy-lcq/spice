@@ -363,6 +363,9 @@ static void red_channel_client_constructed(GObject *object)
 {
     RedChannelClient *self =  RED_CHANNEL_CLIENT(object);
 
+    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(self);
+    spice_assert(klass->alloc_recv_buf && klass->release_recv_buf);
+
     self->priv->outgoing.pos = 0;
     self->priv->outgoing.size = 0;
 
@@ -1053,8 +1056,7 @@ void red_channel_client_shutdown(RedChannelClient *rcc)
 static uint8_t *red_channel_client_alloc_msg_buf(RedChannelClient *rcc,
                                                  uint16_t type, uint32_t size)
 {
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
+    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
 
     return klass->alloc_recv_buf(rcc, type, size);
 }
@@ -1063,8 +1065,7 @@ static void red_channel_client_release_msg_buf(RedChannelClient *rcc,
                                                uint16_t type, uint32_t size,
                                                uint8_t *msg)
 {
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-    RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
+    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
 
     klass->release_recv_buf(rcc, type, size, msg);
 }
