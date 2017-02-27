@@ -27,7 +27,7 @@
 #include "spice-server-enums.h"
 #include "glib-compat.h"
 
-G_DEFINE_TYPE(DisplayChannelClient, display_channel_client, RED_TYPE_CHANNEL_CLIENT)
+G_DEFINE_TYPE(DisplayChannelClient, display_channel_client, TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT)
 
 #define DISPLAY_CLIENT_SHORT_TIMEOUT 15000000000ULL //nano
 #define DISPLAY_FREE_LIST_DEFAULT_SIZE 128

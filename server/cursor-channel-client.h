@@ -45,9 +45,8 @@ typedef struct CursorChannelClient CursorChannelClient;
 typedef struct CursorChannelClientClass CursorChannelClientClass;
 typedef struct CursorChannelClientPrivate CursorChannelClientPrivate;
 
-struct CursorChannelClient
-{
-    RedChannelClient parent;
+struct CursorChannelClient {
+    CommonGraphicsChannelClient parent;
 
     CursorChannelClientPrivate *priv;
 };

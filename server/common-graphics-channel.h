@@ -70,6 +70,38 @@ enum {
     RED_PIPE_ITEM_TYPE_COMMON_LAST
 };
 
+#define TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT common_graphics_channel_client_get_type()
+
+#define COMMON_GRAPHICS_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT, \
+    CommonGraphicsChannelClient))
+#define COMMON_GRAPHICS_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT, \
+    CommonGraphicsChannelClientClass))
+#define COMMON_IS_GRAPHICS_CHANNEL_CLIENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT))
+#define COMMON_IS_GRAPHICS_CHANNEL_CLIENT_CLASS(klass) \
+    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT))
+#define COMMON_GRAPHICS_CHANNEL_CLIENT_GET_CLASS(obj) \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT, \
+    CommonGraphicsChannelClientClass))
+
+typedef struct CommonGraphicsChannelClient CommonGraphicsChannelClient;
+typedef struct CommonGraphicsChannelClientClass CommonGraphicsChannelClientClass;
+typedef struct CommonGraphicsChannelClientPrivate CommonGraphicsChannelClientPrivate;
+
+struct CommonGraphicsChannelClient {
+    RedChannelClient parent;
+
+    CommonGraphicsChannelClientPrivate *priv;
+};
+
+struct CommonGraphicsChannelClientClass {
+    RedChannelClientClass parent_class;
+};
+
+GType common_graphics_channel_client_get_type(void) G_GNUC_CONST;
+
 G_END_DECLS
 
 #endif /* _COMMON_GRAPHICS_CHANNEL_H */

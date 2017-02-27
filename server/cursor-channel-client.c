@@ -35,7 +35,7 @@
 #define CURSOR_CACHE_HASH_KEY(id) ((id) & CURSOR_CACHE_HASH_MASK)
 #define CURSOR_CLIENT_TIMEOUT 30000000000ULL //nano
 
-G_DEFINE_TYPE(CursorChannelClient, cursor_channel_client, RED_TYPE_CHANNEL_CLIENT)
+G_DEFINE_TYPE(CursorChannelClient, cursor_channel_client, TYPE_COMMON_GRAPHICS_CHANNEL_CLIENT)
 
 #define CURSOR_CHANNEL_CLIENT_PRIVATE(o) \
     (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_CURSOR_CHANNEL_CLIENT, CursorChannelClientPrivate))

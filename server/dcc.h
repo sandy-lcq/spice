@@ -24,7 +24,7 @@
 #include "image-cache.h"
 #include "pixmap-cache.h"
 #include "display-limits.h"
-#include "red-channel-client.h"
+#include "common-graphics-channel.h"
 
 G_BEGIN_DECLS
 
@@ -45,18 +45,16 @@ typedef struct DisplayChannelClient DisplayChannelClient;
 typedef struct DisplayChannelClientClass DisplayChannelClientClass;
 typedef struct DisplayChannelClientPrivate DisplayChannelClientPrivate;
 
-struct DisplayChannelClient
-{
-    RedChannelClient parent;
+struct DisplayChannelClient {
+    CommonGraphicsChannelClient parent;
 
     int is_low_bandwidth;
 
     DisplayChannelClientPrivate *priv;
 };
 
-struct DisplayChannelClientClass
-{
-    RedChannelClientClass parent_class;
+struct DisplayChannelClientClass {
+    CommonGraphicsChannelClientClass parent_class;
 };
 
 GType display_channel_client_get_type(void) G_GNUC_CONST;

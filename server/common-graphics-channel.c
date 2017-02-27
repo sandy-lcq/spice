@@ -31,6 +31,8 @@
 
 G_DEFINE_ABSTRACT_TYPE(CommonGraphicsChannel, common_graphics_channel, RED_TYPE_CHANNEL)
 
+G_DEFINE_TYPE(CommonGraphicsChannelClient, common_graphics_channel_client, RED_TYPE_CHANNEL_CLIENT)
+
 #define GRAPHICS_CHANNEL_PRIVATE(o) \
     (G_TYPE_INSTANCE_GET_PRIVATE((o), TYPE_COMMON_GRAPHICS_CHANNEL, CommonGraphicsChannelPrivate))
 
@@ -187,4 +189,14 @@ gboolean common_graphics_channel_get_during_target_migrate(CommonGraphicsChannel
 QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self)
 {
     return self->priv->qxl;
+}
+
+static void
+common_graphics_channel_client_init(CommonGraphicsChannelClient *self)
+{
+}
+
+static void
+common_graphics_channel_client_class_init(CommonGraphicsChannelClientClass *klass)
+{
 }
