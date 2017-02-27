@@ -1079,11 +1079,9 @@ playback_channel_client_constructed(GObject *object)
 }
 
 static void snd_set_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
-                         int num_common_caps, uint32_t *common_caps,
-                         int num_caps, uint32_t *caps, GType type)
+                         RedChannelCapabilities *caps, GType type)
 {
     SndChannel *channel = SND_CHANNEL(red_channel);
-    GArray *common_caps_array = NULL, *caps_array = NULL;
     SndChannelClient *snd_client;
 
     if (channel->connection) {
@@ -1091,40 +1089,21 @@ static void snd_set_peer(RedChannel *red_channel, RedClient *client, RedsStream 
         channel->connection = NULL;
     }
 
-    if (common_caps) {
-        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
-                                              num_common_caps);
-        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
-    }
-    if (caps) {
-        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
-        g_array_append_vals(caps_array, caps, num_caps);
-    }
-
     snd_client = g_initable_new(type,
                                 NULL, NULL,
                                 "channel", channel,
                                 "client", client,
                                 "stream", stream,
-                                "caps", caps_array,
-                                "common-caps", common_caps_array,
+                                "caps", caps,
                                 NULL);
     g_warn_if_fail(snd_client != NULL);
-
-    if (caps_array) {
-        g_array_unref(caps_array);
-    }
-    if (common_caps_array) {
-        g_array_unref(common_caps_array);
-    }
 }
 
 static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
-                                  G_GNUC_UNUSED int migration, int num_common_caps, uint32_t *common_caps,
-                                  int num_caps, uint32_t *caps)
+                                  G_GNUC_UNUSED int migration,
+                                  RedChannelCapabilities *caps)
 {
-    snd_set_peer(red_channel, client, stream,
-                 num_common_caps, common_caps, num_caps, caps,
+    snd_set_peer(red_channel, client, stream, caps,
                  TYPE_PLAYBACK_CHANNEL_CLIENT);
 }
 
@@ -1302,11 +1281,9 @@ record_channel_client_constructed(GObject *object)
 
 static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
                                 G_GNUC_UNUSED int migration,
-                                int num_common_caps, uint32_t *common_caps,
-                                int num_caps, uint32_t *caps)
+                                RedChannelCapabilities *caps)
 {
-    snd_set_peer(red_channel, client, stream,
-                 num_common_caps, common_caps, num_caps, caps,
+    snd_set_peer(red_channel, client, stream, caps,
                  TYPE_RECORD_CHANNEL_CLIENT);
 }
 

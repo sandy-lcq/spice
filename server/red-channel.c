@@ -183,13 +183,7 @@ red_channel_finalize(GObject *object)
 {
     RedChannel *self = RED_CHANNEL(object);
 
-    if (self->priv->local_caps.num_common_caps) {
-        free(self->priv->local_caps.common_caps);
-    }
-
-    if (self->priv->local_caps.num_caps) {
-        free(self->priv->local_caps.caps);
-    }
+    red_channel_capabilities_reset(&self->priv->local_caps);
 
     G_OBJECT_CLASS(red_channel_parent_class)->finalize(object);
 }
@@ -219,8 +213,7 @@ red_channel_constructed(GObject *object)
 static void red_channel_client_default_connect(RedChannel *channel, RedClient *client,
                                                RedsStream *stream,
                                                int migration,
-                                               int num_common_caps, uint32_t *common_caps,
-                                               int num_caps, uint32_t *caps)
+                                               RedChannelCapabilities *caps)
 {
     spice_error("not implemented");
 }
@@ -513,12 +506,10 @@ void red_channel_disconnect(RedChannel *channel)
 }
 
 void red_channel_connect(RedChannel *channel, RedClient *client,
-                         RedsStream *stream, int migration, int num_common_caps,
-                         uint32_t *common_caps, int num_caps, uint32_t *caps)
+                         RedsStream *stream, int migration,
+                         RedChannelCapabilities *caps)
 {
-    channel->priv->client_cbs.connect(channel, client, stream, migration,
-                                      num_common_caps, common_caps, num_caps,
-                                      caps);
+    channel->priv->client_cbs.connect(channel, client, stream, migration, caps);
 }
 
 void red_channel_apply_clients(RedChannel *channel, channel_client_callback cb)

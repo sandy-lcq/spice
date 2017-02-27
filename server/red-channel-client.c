@@ -153,7 +153,6 @@ struct RedChannelClientPrivate
 static const SpiceDataHeaderOpaque full_header_wrapper;
 static const SpiceDataHeaderOpaque mini_header_wrapper;
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc);
-static void red_channel_client_destroy_remote_caps(RedChannelClient* rcc);
 static void red_channel_client_initable_interface_init(GInitableIface *iface);
 static void red_channel_client_set_message_serial(RedChannelClient *channel, uint64_t);
 
@@ -188,7 +187,6 @@ enum {
     PROP_CHANNEL,
     PROP_CLIENT,
     PROP_MONITOR_LATENCY,
-    PROP_COMMON_CAPS,
     PROP_CAPS
 };
 
@@ -315,25 +313,12 @@ red_channel_client_set_property(GObject *object,
         case PROP_MONITOR_LATENCY:
             self->priv->monitor_latency = g_value_get_boolean(value);
             break;
-        case PROP_COMMON_CAPS:
-            {
-                GArray *caps = g_value_get_boxed(value);
-                if (caps) {
-                    self->priv->remote_caps.num_common_caps = caps->len;
-                    free(self->priv->remote_caps.common_caps);
-                    self->priv->remote_caps.common_caps =
-                        spice_memdup(caps->data, caps->len * sizeof(uint32_t));
-                }
-            }
-            break;
         case PROP_CAPS:
             {
-                GArray *caps = g_value_get_boxed(value);
+                RedChannelCapabilities *caps = g_value_get_boxed(value);
                 if (caps) {
-                    self->priv->remote_caps.num_caps = caps->len;
-                    free(self->priv->remote_caps.caps);
-                    self->priv->remote_caps.caps =
-                        spice_memdup(caps->data, caps->len * sizeof(uint32_t));
+                    red_channel_capabilities_reset(&self->priv->remote_caps);
+                    red_channel_capabilities_init(&self->priv->remote_caps, caps);
                 }
             }
             break;
@@ -358,7 +343,7 @@ red_channel_client_finalize(GObject *object)
         spice_marshaller_destroy(self->priv->send_data.urgent.marshaller);
     }
 
-    red_channel_client_destroy_remote_caps(self);
+    red_channel_capabilities_reset(&self->priv->remote_caps);
     if (self->priv->channel) {
         g_object_unref(self->priv->channel);
     }
@@ -434,17 +419,9 @@ static void red_channel_client_class_init(RedChannelClientClass *klass)
                                 | G_PARAM_CONSTRUCT_ONLY);
     g_object_class_install_property(object_class, PROP_MONITOR_LATENCY, spec);
 
-    spec = g_param_spec_boxed("common-caps", "common-caps",
-                              "Common Capabilities",
-                              G_TYPE_ARRAY,
-                              G_PARAM_STATIC_STRINGS
-                              | G_PARAM_WRITABLE
-                              | G_PARAM_CONSTRUCT_ONLY);
-    g_object_class_install_property(object_class, PROP_COMMON_CAPS, spec);
-
     spec = g_param_spec_boxed("caps", "caps",
                               "Capabilities",
-                              G_TYPE_ARRAY,
+                              RED_TYPE_CHANNEL_CAPABILITIES,
                               G_PARAM_STATIC_STRINGS
                               | G_PARAM_WRITABLE
                               | G_PARAM_CONSTRUCT_ONLY);
@@ -684,14 +661,6 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
 static gboolean red_channel_client_pipe_remove(RedChannelClient *rcc, RedPipeItem *item)
 {
     return g_queue_remove(&rcc->priv->pipe, item);
-}
-
-static void red_channel_client_destroy_remote_caps(RedChannelClient* rcc)
-{
-    rcc->priv->remote_caps.num_common_caps = 0;
-    free(rcc->priv->remote_caps.common_caps);
-    rcc->priv->remote_caps.num_caps = 0;
-    free(rcc->priv->remote_caps.caps);
 }
 
 int red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t cap)
@@ -997,35 +966,18 @@ cleanup:
 RedChannelClient *red_channel_client_create(RedChannel *channel, RedClient *client,
                                             RedsStream *stream,
                                             int monitor_latency,
-                                            int num_common_caps, uint32_t *common_caps,
-                                            int num_caps, uint32_t *caps)
+                                            RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;
-    GArray *common_caps_array = NULL, *caps_array = NULL;
 
-    if (common_caps) {
-        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
-                                              num_common_caps);
-        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
-    }
-    if (caps) {
-        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
-        g_array_append_vals(caps_array, caps, num_caps);
-    }
     rcc = g_initable_new(RED_TYPE_CHANNEL_CLIENT,
                          NULL, NULL,
                          "channel", channel,
                          "client", client,
                          "stream", stream,
                          "monitor-latency", monitor_latency,
-                         "caps", caps_array,
-                         "common-caps", common_caps_array,
+                         "caps", caps,
                          NULL);
-
-    if (caps_array)
-        g_array_unref(caps_array);
-    if (common_caps_array)
-        g_array_unref(common_caps_array);
 
     return rcc;
 }

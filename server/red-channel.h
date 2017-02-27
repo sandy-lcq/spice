@@ -61,8 +61,7 @@ typedef uint64_t (*channel_handle_migrate_data_get_serial_proc)(RedChannelClient
 
 
 typedef void (*channel_client_connect_proc)(RedChannel *channel, RedClient *client, RedsStream *stream,
-                                            int migration, int num_common_caps, uint32_t *common_caps,
-                                            int num_caps, uint32_t *caps);
+                                            int migration, RedChannelCapabilities *caps);
 typedef void (*channel_client_disconnect_proc)(RedChannelClient *base);
 typedef void (*channel_client_migrate_proc)(RedChannelClient *base);
 
@@ -209,8 +208,8 @@ void red_channel_send(RedChannel *channel);
 // For red_worker
 void red_channel_disconnect(RedChannel *channel);
 void red_channel_connect(RedChannel *channel, RedClient *client,
-                         RedsStream *stream, int migration, int num_common_caps,
-                         uint32_t *common_caps, int num_caps, uint32_t *caps);
+                         RedsStream *stream, int migration,
+                         RedChannelCapabilities *caps);
 
 /* return the sum of all the rcc pipe size */
 uint32_t red_channel_max_pipe_size(RedChannel *channel);

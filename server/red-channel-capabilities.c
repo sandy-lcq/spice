@@ -62,7 +62,7 @@ static void red_channel_capabilities_free(RedChannelCapabilities *caps)
 SPICE_CONSTRUCTOR_FUNC(red_channel_capabilities_construct)
 {
     red_channel_capabilities_type =
-        g_boxed_type_register_static("red_channel_capabilities_type",
+        g_boxed_type_register_static("RedChannelCapabilities",
                                      (GBoxedCopyFunc) red_channel_capabilities_dup,
                                      (GBoxedFreeFunc) red_channel_capabilities_free);
 }

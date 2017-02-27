@@ -134,10 +134,7 @@ DisplayChannelClient*      dcc_new                                   (DisplayCha
                                                                       RedClient *client,
                                                                       RedsStream *stream,
                                                                       int mig_target,
-                                                                      uint32_t *common_caps,
-                                                                      int num_common_caps,
-                                                                      uint32_t *caps,
-                                                                      int num_caps,
+                                                                      RedChannelCapabilities *caps,
                                                                       SpiceImageCompression image_compression,
                                                                       spice_wan_compression_t jpeg_state,
                                                                       spice_wan_compression_t zlib_glz_state);

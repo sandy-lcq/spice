@@ -735,8 +735,7 @@ static void handle_dev_display_connect(void *opaque, void *payload)
     spice_debug("connect new client");
     spice_return_if_fail(display);
 
-    dcc = dcc_new(display, msg->client, msg->stream, msg->migration,
-                  msg->common_caps, msg->num_common_caps, msg->caps, msg->num_caps,
+    dcc = dcc_new(display, msg->client, msg->stream, msg->migration, &msg->caps,
                   worker->image_compression, worker->jpeg_state, worker->zlib_glz_state);
     if (!dcc) {
         return;
@@ -745,8 +744,7 @@ static void handle_dev_display_connect(void *opaque, void *payload)
     guest_set_client_capabilities(worker);
     dcc_start(dcc);
 
-    free(msg->caps);
-    free(msg->common_caps);
+    red_channel_capabilities_reset(&msg->caps);
 }
 
 static void handle_dev_display_disconnect(void *opaque, void *payload)
@@ -832,10 +830,8 @@ static void handle_dev_cursor_connect(void *opaque, void *payload)
     spice_debug("cursor connect");
     cursor_channel_connect(worker->cursor_channel,
                            msg->client, msg->stream, msg->migration,
-                           msg->common_caps, msg->num_common_caps,
-                           msg->caps, msg->num_caps);
-    free(msg->caps);
-    free(msg->common_caps);
+                           &msg->caps);
+    red_channel_capabilities_reset(&msg->caps);
 }
 
 static void handle_dev_cursor_disconnect(void *opaque, void *payload)

@@ -287,8 +287,7 @@ static int main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 
 MainChannelClient *main_channel_link(MainChannel *channel, RedClient *client,
                                      RedsStream *stream, uint32_t connection_id, int migration,
-                                     int num_common_caps, uint32_t *common_caps, int num_caps,
-                                     uint32_t *caps)
+                                     RedChannelCapabilities *caps)
 {
     MainChannelClient *mcc;
 
@@ -298,9 +297,7 @@ MainChannelClient *main_channel_link(MainChannel *channel, RedClient *client,
     // into usage somewhere (not an issue until we return migration to it's
     // former glory)
     spice_printerr("add main channel client");
-    mcc = main_channel_client_create(channel, client, stream, connection_id,
-                                     num_common_caps, common_caps,
-                                     num_caps, caps);
+    mcc = main_channel_client_create(channel, client, stream, connection_id, caps);
     return mcc;
 }
 

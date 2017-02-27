@@ -50,8 +50,7 @@ GType red_channel_client_get_type(void) G_GNUC_CONST;
 RedChannelClient *red_channel_client_create(RedChannel *channel,
                                             RedClient *client, RedsStream *stream,
                                             int monitor_latency,
-                                            int num_common_caps, uint32_t *common_caps,
-                                            int num_caps, uint32_t *caps);
+                                            RedChannelCapabilities *caps);
 
 gboolean red_channel_client_is_connected(RedChannelClient *rcc);
 void red_channel_client_default_migrate(RedChannelClient *rcc);

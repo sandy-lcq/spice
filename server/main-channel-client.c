@@ -651,21 +651,9 @@ static void ping_timer_cb(void *opaque)
 
 MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient *client,
                                               RedsStream *stream, uint32_t connection_id,
-                                              int num_common_caps, uint32_t *common_caps,
-                                              int num_caps, uint32_t *caps)
+                                              RedChannelCapabilities *caps)
 {
     MainChannelClient *mcc;
-    GArray *common_caps_array = NULL, *caps_array = NULL;
-
-    if (common_caps) {
-        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
-                                              num_common_caps);
-        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
-    }
-    if (caps) {
-        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
-        g_array_append_vals(caps_array, caps, num_caps);
-    }
 
     mcc = g_initable_new(TYPE_MAIN_CHANNEL_CLIENT,
                          NULL, NULL,
@@ -673,15 +661,9 @@ MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient 
                          "client", client,
                          "stream", stream,
                          "monitor-latency", FALSE,
-                         "caps", caps_array,
-                         "common-caps", common_caps_array,
+                         "caps", caps,
                          "connection-id", connection_id,
                          NULL);
-
-    if (caps_array)
-        g_array_unref(caps_array);
-    if (common_caps_array)
-        g_array_unref(common_caps_array);
 
     return mcc;
 }

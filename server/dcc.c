@@ -482,25 +482,13 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 DisplayChannelClient *dcc_new(DisplayChannel *display,
                               RedClient *client, RedsStream *stream,
                               int mig_target,
-                              uint32_t *common_caps, int num_common_caps,
-                              uint32_t *caps, int num_caps,
+                              RedChannelCapabilities *caps,
                               SpiceImageCompression image_compression,
                               spice_wan_compression_t jpeg_state,
                               spice_wan_compression_t zlib_glz_state)
 
 {
     DisplayChannelClient *dcc;
-    GArray *common_caps_array = NULL, *caps_array = NULL;
-
-    if (common_caps) {
-        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
-                                              num_common_caps);
-        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
-    }
-    if (caps) {
-        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
-        g_array_append_vals(caps_array, caps, num_caps);
-    }
 
     dcc = g_initable_new(TYPE_DISPLAY_CHANNEL_CLIENT,
                          NULL, NULL,
@@ -508,8 +496,7 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
                          "client", client,
                          "stream", stream,
                          "monitor-latency", TRUE,
-                         "common-caps", common_caps_array,
-                         "caps", caps_array,
+                         "caps", caps,
                          "image-compression", image_compression,
                          "jpeg-state", jpeg_state,
                          "zlib-glz-state", zlib_glz_state,
@@ -517,11 +504,6 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
     spice_debug("New display (client %p) dcc %p stream %p", client, dcc, stream);
     common_graphics_channel_set_during_target_migrate(COMMON_GRAPHICS_CHANNEL(display), mig_target);
     dcc->priv->id = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display))->id;
-
-    if (common_caps_array)
-        g_array_unref(common_caps_array);
-    if (caps_array)
-        g_array_unref(caps_array);
 
     return dcc;
 }

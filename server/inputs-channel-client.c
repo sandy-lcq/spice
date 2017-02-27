@@ -48,37 +48,18 @@ RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                RedClient *client,
                                                RedsStream *stream,
                                                int monitor_latency,
-                                               int num_common_caps,
-                                               uint32_t *common_caps,
-                                               int num_caps,
-                                               uint32_t *caps)
+                                               RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;
-    GArray *common_caps_array = NULL, *caps_array = NULL;
 
-    if (common_caps) {
-        common_caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*common_caps),
-                                              num_common_caps);
-        g_array_append_vals(common_caps_array, common_caps, num_common_caps);
-    }
-    if (caps) {
-        caps_array = g_array_sized_new(FALSE, FALSE, sizeof (*caps), num_caps);
-        g_array_append_vals(caps_array, caps, num_caps);
-    }
     rcc = g_initable_new(TYPE_INPUTS_CHANNEL_CLIENT,
                          NULL, NULL,
                          "channel", channel,
                          "client", client,
                          "stream", stream,
                          "monitor-latency", monitor_latency,
-                         "caps", caps_array,
-                         "common-caps", common_caps_array,
+                         "caps", caps,
                          NULL);
-
-    if (caps_array)
-        g_array_unref(caps_array);
-    if (common_caps_array)
-        g_array_unref(common_caps_array);
 
     return rcc;
 }

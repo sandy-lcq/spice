@@ -182,8 +182,8 @@ static void red_vmc_channel_port_init(RedVmcChannelPort *self)
 G_DEFINE_TYPE(RedVmcChannelPort, red_vmc_channel_port, RED_TYPE_VMC_CHANNEL)
 
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
-                             RedsStream *stream, int migration, int num_common_caps,
-                             uint32_t *common_caps, int num_caps, uint32_t *caps);
+                             RedsStream *stream, int migration,
+                             RedChannelCapabilities *caps);
 
 static void
 red_vmc_channel_constructed(GObject *object)
@@ -764,8 +764,8 @@ red_vmc_channel_port_class_init(RedVmcChannelPortClass *klass)
 }
 
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
-    RedsStream *stream, int migration, int num_common_caps,
-    uint32_t *common_caps, int num_caps, uint32_t *caps)
+    RedsStream *stream, int migration,
+    RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;
     RedVmcChannel *vmc_channel;
@@ -786,8 +786,7 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
         return;
     }
 
-    rcc = red_channel_client_create(channel, client, stream, FALSE,
-                                    num_common_caps, common_caps, num_caps, caps);
+    rcc = red_channel_client_create(channel, client, stream, FALSE, caps);
     if (!rcc) {
         return;
     }

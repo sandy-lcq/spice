@@ -58,8 +58,7 @@ GType main_channel_client_get_type(void) G_GNUC_CONST;
 
 MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient *client,
                                               RedsStream *stream, uint32_t connection_id,
-                                              int num_common_caps, uint32_t *common_caps,
-                                              int num_caps, uint32_t *caps);
+                                              RedChannelCapabilities *caps);
 
 void main_channel_client_push_agent_tokens(MainChannelClient *mcc, uint32_t num_tokens);
 void main_channel_client_push_agent_data(MainChannelClient *mcc, uint8_t* data, size_t len,

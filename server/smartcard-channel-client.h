@@ -58,8 +58,7 @@ GType smart_card_channel_client_get_type(void) G_GNUC_CONST;
 SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
                                                         RedClient *client, RedsStream *stream,
                                                         int monitor_latency,
-                                                        int num_common_caps, uint32_t *common_caps,
-                                                        int num_caps, uint32_t *caps);
+                                                        RedChannelCapabilities *caps);
 
 uint8_t* smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                                     uint16_t type,

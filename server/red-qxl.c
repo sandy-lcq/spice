@@ -76,8 +76,7 @@ int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor)
 
 static void red_qxl_set_display_peer(RedChannel *channel, RedClient *client,
                                      RedsStream *stream, int migration,
-                                     int num_common_caps, uint32_t *common_caps, int num_caps,
-                                     uint32_t *caps)
+                                     RedChannelCapabilities *caps)
 {
     RedWorkerMessageDisplayConnect payload = {0,};
     Dispatcher *dispatcher;
@@ -87,13 +86,7 @@ static void red_qxl_set_display_peer(RedChannel *channel, RedClient *client,
     payload.client = client;
     payload.stream = stream;
     payload.migration = migration;
-    payload.num_common_caps = num_common_caps;
-    payload.common_caps = spice_malloc(sizeof(uint32_t)*num_common_caps);
-    payload.num_caps = num_caps;
-    payload.caps = spice_malloc(sizeof(uint32_t)*num_caps);
-
-    memcpy(payload.common_caps, common_caps, sizeof(uint32_t)*num_common_caps);
-    memcpy(payload.caps, caps, sizeof(uint32_t)*num_caps);
+    red_channel_capabilities_init(&payload.caps, caps);
 
     dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_DISPLAY_CONNECT,
@@ -142,9 +135,8 @@ static void red_qxl_display_migrate(RedChannelClient *rcc)
 }
 
 static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, RedsStream *stream,
-                                    int migration, int num_common_caps,
-                                    uint32_t *common_caps, int num_caps,
-                                    uint32_t *caps)
+                                    int migration,
+                                    RedChannelCapabilities *caps)
 {
     RedWorkerMessageCursorConnect payload = {0,};
     Dispatcher *dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
@@ -152,13 +144,7 @@ static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, Reds
     payload.client = client;
     payload.stream = stream;
     payload.migration = migration;
-    payload.num_common_caps = num_common_caps;
-    payload.common_caps = spice_malloc(sizeof(uint32_t)*num_common_caps);
-    payload.num_caps = num_caps;
-    payload.caps = spice_malloc(sizeof(uint32_t)*num_caps);
-
-    memcpy(payload.common_caps, common_caps, sizeof(uint32_t)*num_common_caps);
-    memcpy(payload.caps, caps, sizeof(uint32_t)*num_caps);
+    red_channel_capabilities_init(&payload.caps, caps);
 
     dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_CURSOR_CONNECT,

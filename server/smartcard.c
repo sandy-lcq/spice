@@ -528,8 +528,7 @@ int smartcard_char_device_handle_migrate_data(RedCharDeviceSmartcard *smartcard,
 
 static void smartcard_connect_client(RedChannel *channel, RedClient *client,
                                      RedsStream *stream, int migration,
-                                     int num_common_caps, uint32_t *common_caps,
-                                     int num_caps, uint32_t *caps)
+                                     RedChannelCapabilities *caps)
 {
     SpiceCharDeviceInstance *char_device =
             smartcard_readers_get_unattached();
@@ -540,8 +539,7 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
                                           client,
                                           stream,
                                           FALSE,
-                                          num_common_caps, common_caps,
-                                          num_caps, caps);
+                                          caps);
 
     if (!scc) {
         return;

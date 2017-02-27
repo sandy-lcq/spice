@@ -1675,6 +1675,26 @@ static RedClient *reds_get_client(RedsState *reds)
     return reds->clients->data;
 }
 
+static void
+red_channel_capabilities_init_from_link_message(RedChannelCapabilities *caps,
+                                                const SpiceLinkMess *link_mess)
+{
+    const uint32_t *raw_caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
+
+    caps->num_common_caps = link_mess->num_common_caps;
+    caps->common_caps = NULL;
+    if (caps->num_common_caps) {
+        caps->common_caps = spice_memdup(raw_caps,
+                                         link_mess->num_common_caps * sizeof(uint32_t));
+    }
+    caps->num_caps = link_mess->num_channel_caps;
+    caps->caps = NULL;
+    if (link_mess->num_channel_caps) {
+        caps->caps = spice_memdup(raw_caps + link_mess->num_common_caps,
+                                  link_mess->num_channel_caps * sizeof(uint32_t));
+    }
+}
+
 // TODO: now that main is a separate channel this should
 // actually be joined with reds_handle_other_links, become reds_handle_link
 static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
@@ -1682,10 +1702,10 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     RedClient *client;
     RedsStream *stream;
     SpiceLinkMess *link_mess;
-    uint32_t *caps;
     uint32_t connection_id;
     MainChannelClient *mcc;
     int mig_target = FALSE;
+    RedChannelCapabilities caps;
 
     spice_debug(NULL);
     spice_assert(reds->main_channel);
@@ -1717,14 +1737,14 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     link->stream = NULL;
     link->link_mess = NULL;
     reds_link_free(link);
-    caps = (uint32_t *)((uint8_t *)link_mess + link_mess->caps_offset);
     client = red_client_new(reds, mig_target);
     reds->clients = g_list_prepend(reds->clients, client);
+
+    red_channel_capabilities_init_from_link_message(&caps, link_mess);
     mcc = main_channel_link(reds->main_channel, client,
                             stream, connection_id, mig_target,
-                            link_mess->num_common_caps,
-                            link_mess->num_common_caps ? caps : NULL, link_mess->num_channel_caps,
-                            link_mess->num_channel_caps ? caps + link_mess->num_common_caps : NULL);
+                            &caps);
+    red_channel_capabilities_reset(&caps);
     spice_debug("NEW Client %p mcc %p connect-id %d", client, mcc, connection_id);
     free(link_mess);
     red_client_set_main(client, mcc);
@@ -1784,20 +1804,17 @@ static void reds_channel_do_link(RedChannel *channel, RedClient *client,
                                  SpiceLinkMess *link_msg,
                                  RedsStream *stream)
 {
-    uint32_t *caps;
+    RedChannelCapabilities caps;
 
     spice_assert(channel);
     spice_assert(link_msg);
     spice_assert(stream);
 
-    caps = (uint32_t *)((uint8_t *)link_msg + link_msg->caps_offset);
+    red_channel_capabilities_init_from_link_message(&caps, link_msg);
     red_channel_connect(channel, client, stream,
                         red_client_during_migrate_at_target(client),
-                        link_msg->num_common_caps,
-                        link_msg->num_common_caps ? caps : NULL,
-                        link_msg->num_channel_caps,
-                        link_msg->num_channel_caps ?
-                        caps + link_msg->num_common_caps : NULL);
+                        &caps);
+    red_channel_capabilities_reset(&caps);
 }
 
 /*

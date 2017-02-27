@@ -406,8 +406,7 @@ void cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32_t mode)
 
 void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream *stream,
                             int migrate,
-                            uint32_t *common_caps, int num_common_caps,
-                            uint32_t *caps, int num_caps)
+                            RedChannelCapabilities *caps)
 {
     CursorChannelClient *ccc;
 
@@ -416,8 +415,7 @@ void cursor_channel_connect(CursorChannel *cursor, RedClient *client, RedsStream
     spice_debug("add cursor channel client");
     ccc = cursor_channel_client_new(cursor, client, stream,
                                     migrate,
-                                    common_caps, num_common_caps,
-                                    caps, num_caps);
+                                    caps);
     spice_return_if_fail(ccc != NULL);
 
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
