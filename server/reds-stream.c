@@ -202,12 +202,12 @@ bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n)
             if (now == -1 && (errno == EINTR || errno == EAGAIN)) {
                 continue;
             }
-            return FALSE;
+            return false;
         }
         n -= now;
         buf += now;
     }
-    return TRUE;
+    return true;
 }
 
 #if HAVE_SASL
@@ -240,19 +240,22 @@ int reds_stream_get_family(const RedsStream *s)
 
 bool reds_stream_is_plain_unix(const RedsStream *s)
 {
-    spice_return_val_if_fail(s != NULL, FALSE);
+    spice_return_val_if_fail(s != NULL, false);
 
-    if (reds_stream_get_family(s) != AF_UNIX)
-        return FALSE;
+    if (reds_stream_get_family(s) != AF_UNIX) {
+        return false;
+    }
 
 #if HAVE_SASL
-    if (s->priv->sasl.conn)
-        return FALSE;
+    if (s->priv->sasl.conn) {
+        return false;
+    }
 #endif
-    if (s->priv->ssl)
-        return FALSE;
+    if (s->priv->ssl) {
+        return false;
+    }
 
-    return TRUE;
+    return true;
 
 }
 
@@ -960,19 +963,19 @@ bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, v
         if (sasl->mechlist[sasl->len] != '\0' &&
             sasl->mechlist[sasl->len] != ',') {
             spice_debug("One %d", sasl->mechlist[sasl->len]);
-            return FALSE;
+            return false;
         }
     } else {
         char *offset = strstr(sasl->mechlist, sasl->mechname);
         spice_debug("Two %p", offset);
         if (!offset) {
-            return FALSE;
+            return false;
         }
         spice_debug("Two '%s'", offset);
         if (offset[-1] != ',' ||
             (offset[sasl->len] != '\0'&&
              offset[sasl->len] != ',')) {
-            return FALSE;
+            return false;
         }
     }
 
@@ -984,7 +987,7 @@ bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, v
     reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
                            read_cb, opaque);
 
-    return TRUE;
+    return true;
 }
 
 bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
@@ -993,7 +996,7 @@ bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, vo
 
     if (sasl->len < 1 || sasl->len > 100) {
         spice_warning("Got bad client mechname len %d", sasl->len);
-        return FALSE;
+        return false;
     }
 
     sasl->mechname = spice_malloc(sasl->len + 1);
@@ -1002,7 +1005,7 @@ bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, vo
     reds_stream_async_read(stream, (uint8_t *)sasl->mechname, sasl->len,
                            read_cb, opaque);
 
-    return TRUE;
+    return true;
 }
 
 bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
@@ -1111,12 +1114,12 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
     reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
                            read_cb, opaque);
 
-    return TRUE;
+    return true;
 
 error_dispose:
     sasl_dispose(&sasl->conn);
     sasl->conn = NULL;
 error:
-    return FALSE;
+    return false;
 }
 #endif
