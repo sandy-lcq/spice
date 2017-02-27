@@ -398,7 +398,7 @@ static void add_drawable_surface_images(DisplayChannelClient *dcc, Drawable *dra
 
         surface_id = drawable->surface_deps[x];
         if (surface_id != -1) {
-            if (dcc->priv->surface_client_created[surface_id] == TRUE) {
+            if (dcc->priv->surface_client_created[surface_id]) {
                 continue;
             }
             dcc_create_surface(dcc, surface_id);
@@ -407,7 +407,7 @@ static void add_drawable_surface_images(DisplayChannelClient *dcc, Drawable *dra
         }
     }
 
-    if (dcc->priv->surface_client_created[drawable->surface_id] == TRUE) {
+    if (dcc->priv->surface_client_created[drawable->surface_id]) {
         return;
     }
 
