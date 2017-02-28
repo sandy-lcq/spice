@@ -247,6 +247,9 @@ AC_ARG_ENABLE([extra-checks],
                AS_HELP_STRING([--enable-extra-checks=@<:@yes/no@:>@],
                               [Enable expensive checks @<:@default=no@:>@]))
 AM_CONDITIONAL(ENABLE_EXTRA_CHECKS, test "$enable_extra_checks" = "yes")
+AC_DEFINE_UNQUOTED([ENABLE_EXTRA_CHECKS],
+                   [$(test "x$enable_extra_checks" = xyes && echo 1 || echo 0)],
+                   [Define to 1 to enable extra checks on code otherwise define to 0])
 
 dnl ===========================================================================
 dnl check compiler flags

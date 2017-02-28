@@ -80,6 +80,30 @@ display_channel_finalize(GObject *object)
 
     display_channel_destroy_surfaces(self);
     image_cache_reset(&self->priv->image_cache);
+
+    if (ENABLE_EXTRA_CHECKS) {
+        unsigned int count;
+        _Drawable *drawable;
+        Stream *stream;
+
+        count = 0;
+        for (drawable = self->priv->free_drawables; drawable; drawable = drawable->u.next) {
+            ++count;
+        }
+        spice_assert(count == NUM_DRAWABLES);
+
+        count = 0;
+        for (stream = self->priv->free_streams; stream; stream = stream->next) {
+            ++count;
+        }
+        spice_assert(count == NUM_STREAMS);
+        spice_assert(ring_is_empty(&self->priv->streams));
+
+        for (count = 0; count < NUM_SURFACES; ++count) {
+            spice_assert(self->priv->surfaces[count].context.canvas == NULL);
+        }
+    }
+
     monitors_config_unref(self->priv->monitors_config);
     g_array_unref(self->priv->video_codecs);
     g_free(self->priv);
