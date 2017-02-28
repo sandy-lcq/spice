@@ -2909,13 +2909,13 @@ static void reds_set_one_channel_security(RedsState *reds, int id, uint32_t secu
 
 #define REDS_SAVE_VERSION 1
 
-static void reds_mig_release(RedsState *reds)
+static void reds_mig_release(RedServerConfig *config)
 {
-    if (reds->config->mig_spice) {
-        free(reds->config->mig_spice->cert_subject);
-        free(reds->config->mig_spice->host);
-        free(reds->config->mig_spice);
-        reds->config->mig_spice = NULL;
+    if (config->mig_spice) {
+        free(config->mig_spice->cert_subject);
+        free(config->mig_spice->host);
+        free(config->mig_spice);
+        config->mig_spice = NULL;
     }
 }
 
@@ -2987,7 +2987,7 @@ static void reds_mig_finished(RedsState *reds, int completed)
     } else {
         reds_mig_cleanup(reds);
     }
-    reds_mig_release(reds);
+    reds_mig_release(reds->config);
 }
 
 static void reds_mig_switch(RedsState *reds)
@@ -2997,7 +2997,7 @@ static void reds_mig_switch(RedsState *reds)
         return;
     }
     main_channel_migrate_switch(reds->main_channel, reds->config->mig_spice);
-    reds_mig_release(reds);
+    reds_mig_release(reds->config);
 }
 
 static void migrate_timeout(void *opaque)
@@ -3640,6 +3640,24 @@ SPICE_GNUC_VISIBLE int spice_server_init(SpiceServer *reds, SpiceCoreInterface *
     return ret;
 }
 
+static void reds_config_free(RedServerConfig *config)
+{
+    ChannelSecurityOptions *curr, *next;
+
+    reds_mig_release(config);
+    for (curr = config->channels_security; curr; curr = next) {
+        next = curr->next;
+        free(curr);
+    }
+#if HAVE_SASL
+    free(config->sasl_appname);
+#endif
+    free(config->spice_name);
+    g_array_unref(config->renderers);
+    g_array_unref(config->video_codecs);
+    free(config);
+}
+
 SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
 {
     /* remove the server from the list of servers so that we don't attempt to
@@ -3668,10 +3686,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     stat_file_free(reds->stat_file);
 #endif
 
-    g_array_unref(reds->config->renderers);
-    g_array_unref(reds->config->video_codecs);
-    free(reds->config);
-
+    reds_config_free(reds->config);
     free(reds);
 }
 
@@ -4019,7 +4034,7 @@ static int reds_set_migration_dest_info(RedsState *reds,
 {
     RedsMigSpice *spice_migration = NULL;
 
-    reds_mig_release(reds);
+    reds_mig_release(reds->config);
     if ((port == -1 && secure_port == -1) || !dest) {
         return FALSE;
     }
@@ -4079,7 +4094,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *reds, const cha
         reds_mig_started(reds);
     } else {
         if (reds->clients == NULL) {
-            reds_mig_release(reds);
+            reds_mig_release(reds->config);
             spice_info("no client connected");
         }
         sif->migrate_connect_complete(reds->migration_interface);
