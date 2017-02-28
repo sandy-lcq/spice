@@ -78,6 +78,9 @@ display_channel_finalize(GObject *object)
 {
     DisplayChannel *self = DISPLAY_CHANNEL(object);
 
+    display_channel_destroy_surfaces(self);
+    image_cache_reset(&self->priv->image_cache);
+    monitors_config_unref(self->priv->monitors_config);
     g_array_unref(self->priv->video_codecs);
     g_free(self->priv);
 
