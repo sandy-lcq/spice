@@ -316,6 +316,7 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, Stream *s
             region_or(&agent->clip, &drawable->tree_item.base.rgn);
             dcc_stream_agent_clip(dcc, agent);
         }
+        region_destroy(&clip_in_draw_dest);
 #ifdef STREAM_STATS
         agent->stats.num_input_frames++;
 #endif
