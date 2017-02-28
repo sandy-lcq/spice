@@ -60,9 +60,6 @@ void glz_enc_dictionary_get_restore_data(GlzEncDictContext *opaque_dict,
 GlzEncDictContext *glz_enc_dictionary_restore(GlzEncDictRestoreData *restore_data,
                                               GlzEncoderUsrContext *usr);
 
-/*  NOTE - you should use this routine only when no encoder uses the dictionary. */
-void glz_enc_dictionary_reset(GlzEncDictContext *opaque_dict, GlzEncoderUsrContext *usr);
-
 /* image: the context returned by the encoder when the image was encoded.
    NOTE - you should use this routine only when no encoder uses the dictionary.*/
 void glz_enc_dictionary_remove_image(GlzEncDictContext *opaque_dict,

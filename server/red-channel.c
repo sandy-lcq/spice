@@ -538,7 +538,8 @@ bool red_channel_all_blocked(RedChannel *channel)
     return TRUE;
 }
 
-bool red_channel_any_blocked(RedChannel *channel)
+/* return TRUE if any of the connected clients to this channel are blocked */
+static bool red_channel_any_blocked(RedChannel *channel)
 {
     GListIter iter;
     RedChannelClient *rcc;
@@ -551,7 +552,7 @@ bool red_channel_any_blocked(RedChannel *channel)
     return FALSE;
 }
 
-bool red_channel_no_item_being_sent(RedChannel *channel)
+static bool red_channel_no_item_being_sent(RedChannel *channel)
 {
     GListIter iter;
     RedChannelClient *rcc;

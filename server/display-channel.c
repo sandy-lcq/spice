@@ -153,7 +153,7 @@ static void monitors_config_debug(MonitorsConfig *mc)
                     mc->heads[i].width, mc->heads[i].height);
 }
 
-MonitorsConfig* monitors_config_new(QXLHead *heads, ssize_t nheads, ssize_t max)
+static MonitorsConfig* monitors_config_new(QXLHead *heads, ssize_t nheads, ssize_t max)
 {
     MonitorsConfig *mc;
 

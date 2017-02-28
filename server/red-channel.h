@@ -178,11 +178,6 @@ void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type);
 /* return TRUE if all of the connected clients to this channel are blocked */
 bool red_channel_all_blocked(RedChannel *channel);
 
-/* return TRUE if any of the connected clients to this channel are blocked */
-bool red_channel_any_blocked(RedChannel *channel);
-
-bool red_channel_no_item_being_sent(RedChannel *channel);
-
 // TODO: unstaticed for display/cursor channels. they do some specific pushes not through
 // adding elements or on events. but not sure if this is actually required (only result
 // should be that they ""try"" a little harder, but if the event system is correct it

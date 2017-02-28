@@ -48,7 +48,6 @@ void red_client_destroy(RedClient *client);
 
 gboolean red_client_add_channel(RedClient *client, RedChannelClient *rcc, GError **error);
 void red_client_remove_channel(RedChannelClient *rcc);
-RedChannelClient *red_client_get_channel(RedClient *client, int type, int id);
 
 MainChannelClient *red_client_get_main(RedClient *client);
 // main should be set once before all the other channels are created

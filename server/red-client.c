@@ -226,7 +226,7 @@ void red_client_destroy(RedClient *client)
 
 
 /* client->lock should be locked */
-RedChannelClient *red_client_get_channel(RedClient *client, int type, int id)
+static RedChannelClient *red_client_get_channel(RedClient *client, int type, int id)
 {
     GListIter iter;
     RedChannelClient *rcc;

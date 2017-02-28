@@ -141,8 +141,6 @@ typedef struct RedMonitorsConfigItem {
     MonitorsConfig *monitors_config;
 } RedMonitorsConfigItem;
 
-MonitorsConfig*            monitors_config_new                       (QXLHead *heads, ssize_t nheads,
-                                                                      ssize_t max);
 MonitorsConfig *           monitors_config_ref                       (MonitorsConfig *config);
 void                       monitors_config_unref                     (MonitorsConfig *config);
 

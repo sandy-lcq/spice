@@ -26,6 +26,8 @@
 #include "glz-encoder-dict.h"
 #include "glz-encoder-priv.h"
 
+static void glz_enc_dictionary_reset(GlzEncDictContext *opaque_dict, GlzEncoderUsrContext *usr);
+
 /* turning all used images to free ones. If they are alive, calling the free_image callback for
    each one */
 static inline void __glz_dictionary_window_reset_images(SharedDictionary *dict)
@@ -201,7 +203,8 @@ GlzEncDictContext *glz_enc_dictionary_restore(GlzEncDictRestoreData *restore_dat
     return ((GlzEncDictContext *)ret);
 }
 
-void glz_enc_dictionary_reset(GlzEncDictContext *opaque_dict, GlzEncoderUsrContext *usr)
+/*  NOTE - you should use this routine only when no encoder uses the dictionary. */
+static void glz_enc_dictionary_reset(GlzEncDictContext *opaque_dict, GlzEncoderUsrContext *usr)
 {
     SharedDictionary *dict = (SharedDictionary *)opaque_dict;
     dict->cur_usr = usr;
