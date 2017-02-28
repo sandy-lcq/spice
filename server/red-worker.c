@@ -112,6 +112,7 @@ static gboolean red_process_cursor_cmd(RedWorker *worker, const QXLCommandExt *e
         free(cursor_cmd);
         return FALSE;
     }
+    red_qxl_release_resource(worker->qxl, cursor_cmd->release_info_ext);
     cursor_channel_process_cmd(worker->cursor_channel, cursor_cmd);
     return TRUE;
 }

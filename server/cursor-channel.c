@@ -75,7 +75,6 @@ static void cursor_pipe_item_free(RedPipeItem *base)
     RedCursorPipeItem *pipe_item = SPICE_UPCAST(RedCursorPipeItem, base);
 
     cursor_cmd = pipe_item->red_cursor;
-    red_qxl_release_resource(pipe_item->qxl, cursor_cmd->release_info_ext);
     red_put_cursor_cmd(cursor_cmd);
     free(cursor_cmd);
 
