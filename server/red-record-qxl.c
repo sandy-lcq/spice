@@ -30,6 +30,7 @@
 
 struct RedRecord {
     FILE *fd;
+    pthread_mutex_t lock;
     unsigned int counter;
 };
 
@@ -794,15 +795,17 @@ void red_record_primary_surface_create(RedRecord *record,
 {
     FILE *fd = record->fd;
 
+    pthread_mutex_lock(&record->lock);
     fprintf(fd, "%d %d %d %d\n", surface->width, surface->height,
         surface->stride, surface->format);
     fprintf(fd, "%d %d %d %d\n", surface->position, surface->mouse_mode,
         surface->flags, surface->type);
     write_binary(fd, "data", line_0 ? abs(surface->stride)*surface->height : 0,
         line_0);
+    pthread_mutex_unlock(&record->lock);
 }
 
-void red_record_event(RedRecord *record, int what, uint32_t type)
+static void red_record_event_unlocked(RedRecord *record, int what, uint32_t type)
 {
     red_time_t ts = spice_get_monotonic_time_ns();
     // TODO: record the size of the packet in the header. This would make
@@ -813,12 +816,20 @@ void red_record_event(RedRecord *record, int what, uint32_t type)
     fprintf(record->fd, "event %u %d %u %"PRIu64"\n", record->counter++, what, type, ts);
 }
 
+void red_record_event(RedRecord *record, int what, uint32_t type)
+{
+    pthread_mutex_lock(&record->lock);
+    red_record_event_unlocked(record, what, type);
+    pthread_mutex_unlock(&record->lock);
+}
+
 void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
                             QXLCommandExt ext_cmd)
 {
     FILE *fd = record->fd;
 
-    red_record_event(record, 0, ext_cmd.cmd.type);
+    pthread_mutex_lock(&record->lock);
+    red_record_event_unlocked(record, 0, ext_cmd.cmd.type);
 
     switch (ext_cmd.cmd.type) {
     case QXL_CMD_DRAW:
@@ -837,6 +848,7 @@ void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
         red_record_cursor_cmd(fd, slots, ext_cmd.group_id, ext_cmd.cmd.data);
         break;
     }
+    pthread_mutex_unlock(&record->lock);
 }
 
 /**
@@ -900,6 +912,7 @@ RedRecord *red_record_new(const char *filename)
     record = g_new(RedRecord, 1);
     record->fd = f;
     record->counter = 0;
+    pthread_mutex_init(&record->lock, NULL);
     return record;
 }
 
@@ -907,6 +920,7 @@ void red_record_free(RedRecord *record)
 {
     if (record) {
         fclose(record->fd);
+        pthread_mutex_destroy(&record->lock);
         g_free(record);
     }
 }
