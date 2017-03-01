@@ -55,6 +55,7 @@ struct MainDispatcherPrivate
 {
     SpiceCoreInterfaceInternal *core; /* weak */
     RedsState *reds; /* weak */
+    SpiceWatch *watch;
 };
 
 
@@ -105,6 +106,7 @@ main_dispatcher_set_property(GObject      *object,
 }
 
 static void main_dispatcher_constructed(GObject *object);
+static void main_dispatcher_finalize(GObject *object);
 
 static void
 main_dispatcher_class_init(MainDispatcherClass *klass)
@@ -114,6 +116,7 @@ main_dispatcher_class_init(MainDispatcherClass *klass)
     g_type_class_add_private(klass, sizeof(MainDispatcherPrivate));
 
     object_class->constructed = main_dispatcher_constructed;
+    object_class->finalize = main_dispatcher_finalize;
     object_class->get_property = main_dispatcher_get_property;
     object_class->set_property = main_dispatcher_set_property;
 
@@ -304,10 +307,11 @@ void main_dispatcher_constructed(GObject *object)
     G_OBJECT_CLASS(main_dispatcher_parent_class)->constructed(object);
     dispatcher_set_opaque(DISPATCHER(self), self);
 
-    self->priv->core->watch_add(self->priv->core,
-                                dispatcher_get_recv_fd(DISPATCHER(self)),
-                                SPICE_WATCH_EVENT_READ, dispatcher_handle_read,
-                                self);
+    self->priv->watch =
+        self->priv->core->watch_add(self->priv->core,
+                                    dispatcher_get_recv_fd(DISPATCHER(self)),
+                                    SPICE_WATCH_EVENT_READ, dispatcher_handle_read,
+                                    self);
     dispatcher_register_handler(DISPATCHER(self), MAIN_DISPATCHER_CHANNEL_EVENT,
                                 main_dispatcher_handle_channel_event,
                                 sizeof(MainDispatcherChannelEventMessage), 0 /* no ack */);
@@ -320,4 +324,12 @@ void main_dispatcher_constructed(GObject *object)
     dispatcher_register_handler(DISPATCHER(self), MAIN_DISPATCHER_CLIENT_DISCONNECT,
                                 main_dispatcher_handle_client_disconnect,
                                 sizeof(MainDispatcherClientDisconnectMessage), 0 /* no ack */);
+}
+
+static void main_dispatcher_finalize(GObject *object)
+{
+    MainDispatcher *self = MAIN_DISPATCHER(object);
+
+    self->priv->core->watch_remove(self->priv->core, self->priv->watch);
+    self->priv->watch = NULL;
 }

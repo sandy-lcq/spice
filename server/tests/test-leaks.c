@@ -47,6 +47,7 @@ static void leaks(void)
     g_assert_cmpint(result, ==, 0);
 
     spice_server_destroy(server);
+    basic_event_loop_destroy();
 }
 
 int main(int argc, char *argv[])
