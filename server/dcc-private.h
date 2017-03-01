@@ -51,6 +51,12 @@ struct DisplayChannelClientPrivate
         int num_pixmap_cache_items;
     } send_data;
 
+    /* Host preferred video-codec order sorted with client preferred */
+    GArray *preferred_video_codecs;
+    /* Array with SPICE_VIDEO_CODEC_TYPE_ENUM_END elements, with the client
+     * preference order (index) as value */
+    GArray *client_preferred_video_codecs;
+
     uint8_t surface_client_created[NUM_SURFACES];
     QRegion surface_client_lossy_region[NUM_SURFACES];
 

@@ -25,6 +25,7 @@
 #include "red-client.h"
 #include "main-channel-client.h"
 #include "spice-server-enums.h"
+#include "glib-compat.h"
 
 G_DEFINE_TYPE(DisplayChannelClient, display_channel_client, RED_TYPE_CHANNEL_CLIENT)
 
@@ -38,6 +39,8 @@ enum
     PROP_JPEG_STATE,
     PROP_ZLIB_GLZ_STATE
 };
+
+static void on_display_video_codecs_update(GObject *gobject, GParamSpec *pspec, gpointer user_data);
 
 static void
 display_channel_client_get_property(GObject *object,
@@ -99,12 +102,19 @@ display_channel_client_constructed(GObject *object)
     dcc_init_stream_agents(self);
 
     image_encoders_init(&self->priv->encoders, &DCC_TO_DC(self)->priv->encoder_shared_data);
+
+    g_signal_connect(DCC_TO_DC(self), "notify::video-codecs",
+                     G_CALLBACK(on_display_video_codecs_update), self);
 }
 
 static void
 display_channel_client_finalize(GObject *object)
 {
     DisplayChannelClient *self = DISPLAY_CHANNEL_CLIENT(object);
+
+    g_signal_handlers_disconnect_by_func(DCC_TO_DC(self), on_display_video_codecs_update, self);
+    g_clear_pointer(&self->priv->preferred_video_codecs, g_array_unref);
+    g_clear_pointer(&self->priv->client_preferred_video_codecs, g_array_unref);
     g_free(self->priv);
 
     G_OBJECT_CLASS(display_channel_client_parent_class)->finalize(object);
@@ -1087,6 +1097,119 @@ static int dcc_handle_preferred_compression(DisplayChannelClient *dcc,
     return TRUE;
 }
 
+
+/* TODO: Client preference should only be considered when host has video-codecs
+ * with the same priority value. At the moment, the video-codec GArray will be
+ * sorted following only the client's preference (@user_data)
+ *
+ * example:
+ * host encoding preference: gstreamer:mjpeg;gstreamer:vp8;gstreamer:h264
+ * client decoding preference: h264, vp9, mjpeg
+ * result: gstreamer:h264;gstreamer:mjpeg;gstreamer:vp8
+ */
+static gint sort_video_codecs_by_client_preference(gconstpointer a_pointer,
+                                                   gconstpointer b_pointer,
+                                                   gpointer user_data)
+{
+    const RedVideoCodec *a = a_pointer;
+    const RedVideoCodec *b = b_pointer;
+    GArray *client_pref = user_data;
+
+    return (g_array_index(client_pref, gint, a->type) -
+            g_array_index(client_pref, gint, b->type));
+}
+
+static void dcc_update_preferred_video_codecs(DisplayChannelClient *dcc)
+{
+    guint i;
+    GArray *video_codecs, *server_codecs;
+    GString *msg;
+
+    server_codecs = display_channel_get_video_codecs(DCC_TO_DC(dcc));
+    spice_return_if_fail(server_codecs != NULL);
+
+    /* Copy current host preference */
+    video_codecs = g_array_sized_new(FALSE, FALSE, sizeof(RedVideoCodec), server_codecs->len);
+    g_array_append_vals(video_codecs, server_codecs->data, server_codecs->len);
+
+    /* Sort the copy of current host preference based on client's preference */
+    g_array_sort_with_data(video_codecs, sort_video_codecs_by_client_preference,
+                           dcc->priv->client_preferred_video_codecs);
+    g_clear_pointer(&dcc->priv->preferred_video_codecs, g_array_unref);
+    dcc->priv->preferred_video_codecs = video_codecs;
+
+    msg = g_string_new("Preferred video-codecs:");
+    for (i = 0; i < video_codecs->len; i++) {
+        RedVideoCodec codec = g_array_index(video_codecs, RedVideoCodec, i);
+        g_string_append_printf(msg, " %d", codec.type);
+    }
+    spice_debug("%s", msg->str);
+    g_string_free(msg, TRUE);
+}
+
+static void on_display_video_codecs_update(GObject *gobject, GParamSpec *pspec, gpointer user_data)
+{
+    DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(user_data);
+
+    /* Only worry about video-codecs update if client has sent
+     * SPICE_MSGC_DISPLAY_PREFERRED_VIDEO_CODEC_TYPE */
+    if (dcc->priv->client_preferred_video_codecs == NULL) {
+        return;
+    }
+
+    /* New host preference */
+    dcc_update_preferred_video_codecs(dcc);
+}
+
+static int dcc_handle_preferred_video_codec_type(DisplayChannelClient *dcc,
+                                                 SpiceMsgcDisplayPreferredVideoCodecType *msg)
+{
+    gint i, len;
+    gint indexes[SPICE_VIDEO_CODEC_TYPE_ENUM_END];
+    GArray *client;
+
+    g_return_val_if_fail(msg->num_of_codecs > 0, TRUE);
+
+    /* set default to a big and positive number */
+    memset(indexes, 0x7f, sizeof(indexes));
+
+    for (len = 0, i = 0; i < msg->num_of_codecs; i++) {
+        gint video_codec = msg->codecs[i];
+
+        if (video_codec < SPICE_VIDEO_CODEC_TYPE_MJPEG ||
+            video_codec >= SPICE_VIDEO_CODEC_TYPE_ENUM_END) {
+            spice_debug("Client has sent unknow video-codec (value %d at index %d). "
+                        "Ignoring as server can't handle it",
+                         video_codec, i);
+            continue;
+        }
+
+        if (indexes[video_codec] < SPICE_VIDEO_CODEC_TYPE_ENUM_END) {
+            continue;
+        }
+
+        len++;
+        indexes[video_codec] = len;
+    }
+    client = g_array_sized_new(FALSE, FALSE, sizeof(gint), SPICE_VIDEO_CODEC_TYPE_ENUM_END);
+    g_array_append_vals(client, indexes, SPICE_VIDEO_CODEC_TYPE_ENUM_END);
+
+    g_clear_pointer(&dcc->priv->client_preferred_video_codecs, g_array_unref);
+    dcc->priv->client_preferred_video_codecs = client;
+
+    /* New client preference */
+    dcc_update_preferred_video_codecs(dcc);
+    return TRUE;
+}
+
+GArray *dcc_get_preferred_video_codecs_for_encoding(DisplayChannelClient *dcc)
+{
+    if (dcc->priv->preferred_video_codecs != NULL) {
+        return dcc->priv->preferred_video_codecs;
+    }
+    return display_channel_get_video_codecs(DCC_TO_DC(dcc));
+}
+
 static int dcc_handle_gl_draw_done(DisplayChannelClient *dcc)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
@@ -1117,6 +1240,9 @@ int dcc_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void
             (SpiceMsgcDisplayPreferredCompression *)msg);
     case SPICE_MSGC_DISPLAY_GL_DRAW_DONE:
         return dcc_handle_gl_draw_done(dcc);
+    case SPICE_MSGC_DISPLAY_PREFERRED_VIDEO_CODEC_TYPE:
+        return dcc_handle_preferred_video_codec_type(dcc,
+            (SpiceMsgcDisplayPreferredVideoCodecType *)msg);
     default:
         return red_channel_client_handle_message(rcc, type, size, msg);
     }

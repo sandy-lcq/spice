@@ -688,13 +688,12 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
                                               uint64_t starting_bit_rate,
                                               VideoEncoderRateControlCbs *cbs)
 {
-    DisplayChannel *display = DCC_TO_DC(dcc);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
     int client_has_multi_codec = red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MULTI_CODEC);
     int i;
     GArray *video_codecs;
 
-    video_codecs = display_channel_get_video_codecs(display);
+    video_codecs = dcc_get_preferred_video_codecs_for_encoding(dcc);
     for (i = 0; i < video_codecs->len; i++) {
         RedVideoCodec* video_codec = &g_array_index (video_codecs, RedVideoCodec, i);
 

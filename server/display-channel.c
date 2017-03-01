@@ -217,6 +217,7 @@ void display_channel_set_video_codecs(DisplayChannel *display, GArray *video_cod
 
     g_clear_pointer(&display->priv->video_codecs, g_array_unref);
     display->priv->video_codecs = g_array_ref(video_codecs);
+    g_object_notify(G_OBJECT(display), "video-codecs");
 }
 
 GArray *display_channel_get_video_codecs(DisplayChannel *display)
@@ -2060,6 +2061,7 @@ display_channel_constructed(GObject *object)
 
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
+    red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_VIDEO_CODEC_TYPE);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
 }
 

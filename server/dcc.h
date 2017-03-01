@@ -201,6 +201,7 @@ uint64_t dcc_get_max_stream_bit_rate(DisplayChannelClient *dcc);
 void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate);
 int dcc_config_socket(RedChannelClient *rcc);
 gboolean dcc_is_low_bandwidth(DisplayChannelClient *dcc);
+GArray *dcc_get_preferred_video_codecs_for_encoding(DisplayChannelClient *dcc);
 
 G_END_DECLS
 
