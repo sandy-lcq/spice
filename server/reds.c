@@ -3469,7 +3469,9 @@ static const char default_video_codecs[] = "spice:mjpeg;" GSTREAMER_CODECS;
 /* new interface */
 SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 {
+    const char *record_filename;
     RedsState *reds = spice_new0(RedsState, 1);
+
     reds->config = spice_new0(RedServerConfig, 1);
     reds->config->default_channel_security =
         SPICE_CHANNEL_SECURITY_NONE | SPICE_CHANNEL_SECURITY_SSL;
@@ -3501,6 +3503,12 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
 
+    /* This environment was in red-worker so the "WORKER" in it.
+     * For compatibility reason we maintain the old name */
+    record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
+    if (record_filename) {
+        reds->record = red_record_new(record_filename);
+    }
     return reds;
 }
 
@@ -3709,6 +3717,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
        close(reds->secure_listen_socket);
     }
 
+    red_record_unref(reds->record);
     reds_cleanup(reds);
 #ifdef RED_STATISTICS
     stat_file_free(reds->stat_file);
@@ -4535,4 +4544,13 @@ static RedCharDeviceVDIPort *red_char_device_vdi_port_new(RedsState *reds)
                         "client-tokens-interval", (guint64)REDS_TOKENS_TO_SEND,
                         "self-tokens", (guint64)REDS_NUM_INTERNAL_AGENT_MESSAGES,
                         NULL);
+}
+
+RedRecord *reds_get_record(RedsState *reds)
+{
+    if (reds->record) {
+        return red_record_ref(reds->record);
+    }
+
+    return NULL;
 }

@@ -25,6 +25,7 @@
 #include "main-channel.h"
 #include "inputs-channel.h"
 #include "stat-file.h"
+#include "red-record-qxl.h"
 
 #define MIGRATE_TIMEOUT (MSEC_PER_SEC * 10)
 #define MM_TIME_DELTA 400 /*ms*/
@@ -135,6 +136,7 @@ struct RedsState {
     SpiceCoreInterfaceInternal core;
     GList *qxl_instances;
     MainDispatcher *main_dispatcher;
+    RedRecord *record;
 };
 
 #define FOREACH_QXL_INSTANCE(_reds, _iter, _qxl) \

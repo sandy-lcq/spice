@@ -101,6 +101,11 @@ SpiceCoreInterfaceInternal* reds_get_core_interface(RedsState *reds);
 void reds_update_client_mouse_allowed(RedsState *reds);
 MainDispatcher* reds_get_main_dispatcher(RedsState *reds);
 
+/* Get the recording object stored in RedsState.
+ * You should free with red_record_unref.
+ */
+struct RedRecord *reds_get_record(RedsState *reds);
+
 /* fd watches/timers */
 SpiceWatch *reds_core_watch_add(RedsState *reds,
                                 int fd, int event_mask,

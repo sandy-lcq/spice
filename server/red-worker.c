@@ -1308,7 +1308,6 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     QXLDevInitInfo init_info;
     RedWorker *worker;
     Dispatcher *dispatcher;
-    const char *record_filename;
     RedsState *reds = red_qxl_get_server(qxl->st);
     RedChannel *channel;
 
@@ -1318,10 +1317,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     worker->core = event_loop_core;
     worker->core.main_context = g_main_context_new();
 
-    record_filename = getenv("SPICE_WORKER_RECORD_FILENAME");
-    if (record_filename) {
-        worker->record = red_record_new(record_filename);
-    }
+    worker->record = reds_get_record(reds);
     dispatcher = red_qxl_get_dispatcher(qxl);
     dispatcher_set_opaque(dispatcher, worker);
 
