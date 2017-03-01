@@ -32,6 +32,7 @@ struct RedRecord {
     FILE *fd;
     pthread_mutex_t lock;
     unsigned int counter;
+    gint refs;
 };
 
 #if 0
@@ -910,17 +911,25 @@ RedRecord *red_record_new(const char *filename)
     }
 
     record = g_new(RedRecord, 1);
+    record->refs = 1;
     record->fd = f;
     record->counter = 0;
     pthread_mutex_init(&record->lock, NULL);
     return record;
 }
 
-void red_record_free(RedRecord *record)
+RedRecord *red_record_ref(RedRecord *record)
 {
-    if (record) {
-        fclose(record->fd);
-        pthread_mutex_destroy(&record->lock);
-        g_free(record);
+    g_atomic_int_inc(&record->refs);
+    return record;
+}
+
+void red_record_unref(RedRecord *record)
+{
+    if (!record || !g_atomic_int_dec_and_test(&record->refs)) {
+        return;
     }
+    fclose(record->fd);
+    pthread_mutex_destroy(&record->lock);
+    g_free(record);
 }

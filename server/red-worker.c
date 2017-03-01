@@ -1457,7 +1457,7 @@ void red_worker_free(RedWorker *worker)
     g_main_context_unref(worker->core.main_context);
 
     if (worker->record) {
-        red_record_free(worker->record);
+        red_record_unref(worker->record);
     }
     memslot_info_destroy(&worker->mem_slots);
     free(worker);

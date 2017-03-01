@@ -33,7 +33,8 @@ typedef struct RedRecord RedRecord;
  */
 RedRecord* red_record_new(const char *filename);
 
-void red_record_free(RedRecord *record);
+RedRecord *red_record_ref(RedRecord *record);
+void red_record_unref(RedRecord *record);
 
 void red_record_primary_surface_create(RedRecord *record,
                                        QXLDevSurfaceCreate *surface,
