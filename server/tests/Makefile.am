@@ -45,6 +45,7 @@ check_PROGRAMS =				\
 	test-loop				\
 	test-qxl-parsing			\
 	test-stat-file				\
+	test-leaks				\
 	$(NULL)
 
 noinst_PROGRAMS =				\

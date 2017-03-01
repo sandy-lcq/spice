@@ -23,3 +23,4 @@ test-stream
 test-two-servers
 test-vdagent
 test-gst
+test-leaks
