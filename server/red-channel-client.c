@@ -286,22 +286,6 @@ red_channel_client_get_property(GObject *object,
         case PROP_MONITOR_LATENCY:
             g_value_set_boolean(value, self->priv->monitor_latency);
             break;
-        case PROP_COMMON_CAPS:
-            {
-                GArray *arr = g_array_sized_new(FALSE, FALSE,
-                                                sizeof(*self->priv->remote_caps.common_caps),
-                                                self->priv->remote_caps.num_common_caps);
-                g_value_take_boxed(value, arr);
-            }
-            break;
-        case PROP_CAPS:
-            {
-                GArray *arr = g_array_sized_new(FALSE, FALSE,
-                                                sizeof(*self->priv->remote_caps.caps),
-                                                self->priv->remote_caps.num_caps);
-                g_value_take_boxed(value, arr);
-            }
-            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
     }
@@ -454,7 +438,7 @@ static void red_channel_client_class_init(RedChannelClientClass *klass)
                               "Common Capabilities",
                               G_TYPE_ARRAY,
                               G_PARAM_STATIC_STRINGS
-                              | G_PARAM_READWRITE
+                              | G_PARAM_WRITABLE
                               | G_PARAM_CONSTRUCT_ONLY);
     g_object_class_install_property(object_class, PROP_COMMON_CAPS, spec);
 
@@ -462,7 +446,7 @@ static void red_channel_client_class_init(RedChannelClientClass *klass)
                               "Capabilities",
                               G_TYPE_ARRAY,
                               G_PARAM_STATIC_STRINGS
-                              | G_PARAM_READWRITE
+                              | G_PARAM_WRITABLE
                               | G_PARAM_CONSTRUCT_ONLY);
     g_object_class_install_property(object_class, PROP_CAPS, spec);
 }
