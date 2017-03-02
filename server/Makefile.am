@@ -101,6 +101,8 @@ libserver_la_SOURCES =				\
 	red-channel.h				\
 	red-channel-client.c			\
 	red-channel-client.h			\
+	red-channel-capabilities.c		\
+	red-channel-capabilities.h		\
 	red-client.c				\
 	red-client.h				\
 	red-common.h				\

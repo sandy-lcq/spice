@@ -34,6 +34,7 @@
 #include "reds-stream.h"
 #include "stat.h"
 #include "red-pipe-item.h"
+#include "red-channel-capabilities.h"
 
 G_BEGIN_DECLS
 
@@ -134,13 +135,6 @@ struct RedChannelClass
                   _iter, RedChannelClient, _data)
 
 /* Red Channel interface */
-
-typedef struct RedChannelCapabilities {
-    int num_common_caps;
-    uint32_t *common_caps;
-    int num_caps;
-    uint32_t *caps;
-} RedChannelCapabilities;
 
 GType red_channel_get_type(void) G_GNUC_CONST;
 
