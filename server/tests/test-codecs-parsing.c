@@ -45,9 +45,6 @@ static void codecs_good(void)
     spice_server_destroy(server);
 }
 
-/* g_test_expect_message is available since Glib 2.34 */
-#if GLIB_CHECK_VERSION(2, 34, 0)
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 static void codecs_bad(void)
 {
     guint i;
@@ -137,17 +134,13 @@ static void codecs_bad(void)
 
     spice_server_destroy(server);
 }
-G_GNUC_END_IGNORE_DEPRECATIONS
-#endif
 
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/server/codecs-good", codecs_good);
-#if GLIB_CHECK_VERSION(2, 34, 0)
     g_test_add_func("/server/codecs-bad", codecs_bad);
-#endif
 
     return g_test_run();
 }
