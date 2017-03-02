@@ -16,13 +16,9 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
-#include <glib.h>
 #include <spice.h>
 
-/* GLIB_CHECK_VERSION(2, 40, 0) */
-#ifndef g_assert_nonnull
-#define g_assert_nonnull g_assert
-#endif
+#include "test-glib-compat.h"
 
 static void codecs_good(void)
 {

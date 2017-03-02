@@ -19,18 +19,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <glib.h>
 #include <spice.h>
 
+#include "test-glib-compat.h"
 #include "stat-file.h"
-
-/* GLIB_CHECK_VERSION(2, 40, 0) */
-#ifndef g_assert_nonnull
-#define g_assert_nonnull g_assert
-#endif
-#ifndef g_assert_null
-#define g_assert_null(ptr) g_assert((ptr) == NULL)
-#endif
 
 static void stat_file(void)
 {

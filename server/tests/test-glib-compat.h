@@ -31,4 +31,12 @@ void g_test_expect_message(const gchar *log_domain, GLogLevelFlags log_level,
                            const gchar *pattern);
 #endif
 
+/* GLIB_CHECK_VERSION(2, 40, 0) */
+#ifndef g_assert_nonnull
+#define g_assert_nonnull g_assert
+#endif
+#ifndef g_assert_null
+#define g_assert_null(ptr) g_assert((ptr) == NULL)
+#endif
+
 #endif // TEST_GLIB_COMPAT_H_
