@@ -594,7 +594,6 @@ int red_channel_no_item_being_sent(RedChannel *channel)
  */
 
 typedef void (*rcc_item_t)(RedChannelClient *rcc, RedPipeItem *item);
-typedef int (*rcc_item_cond_t)(RedChannelClient *rcc, RedPipeItem *item);
 
 /**
  * red_channel_pipes_create_batch:
