@@ -99,7 +99,6 @@ struct RedChannelPrivate
     pthread_t thread_id;
     RedsState *reds;
     RedStatNode stat;
-    RedStatCounter out_bytes_counter;
 };
 
 enum {
@@ -186,11 +185,6 @@ red_channel_finalize(GObject *object)
     red_channel_capabilities_reset(&self->priv->local_caps);
 
     G_OBJECT_CLASS(red_channel_parent_class)->finalize(object);
-}
-
-void red_channel_on_output(RedChannel *self, int n)
-{
-    stat_inc_counter(self->priv->out_bytes_counter, n);
 }
 
 static void
@@ -370,8 +364,6 @@ void red_channel_init_stat_node(RedChannel *channel, const RedStatNode *parent, 
 
     // TODO check not already initialized
     stat_init_node(&channel->priv->stat, channel->priv->reds, parent, name, TRUE);
-    stat_init_counter(&channel->priv->out_bytes_counter,
-                      channel->priv->reds, &channel->priv->stat, "out_bytes", TRUE);
 }
 
 const RedStatNode *red_channel_get_stat_node(RedChannel *channel)

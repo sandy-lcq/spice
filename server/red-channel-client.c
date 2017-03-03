@@ -150,6 +150,7 @@ struct RedChannelClientPrivate
     OutgoingMessageBuffer outgoing;
 
     RedStatCounter out_messages;
+    RedStatCounter out_bytes;
 };
 
 static const SpiceDataHeaderOpaque full_header_wrapper;
@@ -380,6 +381,7 @@ static void red_channel_client_constructed(GObject *object)
     RedsState* reds = red_channel_get_server(channel);
     const RedStatNode *node = red_channel_get_stat_node(channel);
     stat_init_counter(&self->priv->out_messages, reds, node, "out_messages", TRUE);
+    stat_init_counter(&self->priv->out_bytes, reds, node, "out_bytes", TRUE);
 }
 
 static void red_channel_client_class_init(RedChannelClientClass *klass)
@@ -458,13 +460,10 @@ RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
 
 static void red_channel_client_data_sent(RedChannelClient *rcc, int n)
 {
-    RedChannel *channel = red_channel_client_get_channel(rcc);
-
     if (rcc->priv->connectivity_monitor.timer) {
         rcc->priv->connectivity_monitor.out_bytes += n;
     }
-    /* TODO: use a signal rather than a hardcoded call to a RedChannel callback? */
-    red_channel_on_output(channel, n);
+    stat_inc_counter(rcc->priv->out_bytes, n);
 }
 
 static void red_channel_client_data_read(RedChannelClient *rcc, int n)
