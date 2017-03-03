@@ -33,7 +33,6 @@
 #include "red-common.h"
 #include "main-channel.h"
 #include "reds.h"
-#include "red-qxl.h"
 #include "red-channel-client.h"
 #include "red-client.h"
 #include "sound.h"
