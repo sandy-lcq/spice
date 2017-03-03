@@ -148,6 +148,8 @@ struct RedChannelClientPrivate
 
     IncomingMessageBuffer incoming;
     OutgoingMessageBuffer outgoing;
+
+    RedStatCounter out_messages;
 };
 
 static const SpiceDataHeaderOpaque full_header_wrapper;
@@ -373,6 +375,11 @@ static void red_channel_client_constructed(GObject *object)
         self->priv->is_mini_header = FALSE;
     }
     self->priv->incoming.header.data = self->priv->incoming.header_buf;
+
+    RedChannel *channel = self->priv->channel;
+    RedsState* reds = red_channel_get_server(channel);
+    const RedStatNode *node = red_channel_get_stat_node(channel);
+    stat_init_counter(&self->priv->out_messages, reds, node, "out_messages", TRUE);
 }
 
 static void red_channel_client_class_init(RedChannelClientClass *klass)
@@ -1495,6 +1502,8 @@ void red_channel_client_begin_send_message(RedChannelClient *rcc)
         spice_printerr("BUG: header->type == 0");
         return;
     }
+
+    stat_inc_counter(rcc->priv->out_messages, 1);
 
     /* canceling the latency test timer till the nework is idle */
     red_channel_client_cancel_ping_timer(rcc);
