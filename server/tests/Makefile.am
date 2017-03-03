@@ -25,6 +25,8 @@ libtest_a_SOURCES =				\
 	basic-event-loop.h			\
 	test-display-base.c			\
 	test-display-base.h			\
+	test-glib-compat.c			\
+	test-glib-compat.h			\
 	$(NULL)
 
 LDADD =								\
