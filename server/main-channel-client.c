@@ -510,7 +510,7 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
                            "bandwidth", mcc->priv->latency, roundtrip);
             mcc->priv->latency = 0;
             mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
-            red_channel_client_start_connectivity_monitoring(RED_CHANNEL_CLIENT(mcc),
+            red_channel_client_start_connectivity_monitoring(rcc,
                                                              CLIENT_CONNECTIVITY_TIMEOUT);
             break;
         }
@@ -522,7 +522,7 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
                        mcc->priv->bitrate_per_sec,
                        (double)mcc->priv->bitrate_per_sec / 1024 / 1024,
                        main_channel_client_is_low_bandwidth(mcc) ? " LOW BANDWIDTH" : "");
-        red_channel_client_start_connectivity_monitoring(RED_CHANNEL_CLIENT(mcc),
+        red_channel_client_start_connectivity_monitoring(rcc,
                                                          CLIENT_CONNECTIVITY_TIMEOUT);
         break;
     default:

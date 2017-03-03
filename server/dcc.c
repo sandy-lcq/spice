@@ -563,7 +563,7 @@ void dcc_start(DisplayChannelClient *dcc)
     DisplayChannel *display = DCC_TO_DC(dcc);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
 
-    red_channel_client_push_set_ack(RED_CHANNEL_CLIENT(dcc));
+    red_channel_client_push_set_ack(rcc);
 
     if (red_channel_client_is_waiting_for_migrate_data(rcc))
         return;
@@ -571,7 +571,7 @@ void dcc_start(DisplayChannelClient *dcc)
     if (!display_channel_client_wait_for_init(dcc))
         return;
 
-    red_channel_client_ack_zero_messages_window(RED_CHANNEL_CLIENT(dcc));
+    red_channel_client_ack_zero_messages_window(rcc);
     if (display->priv->surfaces[0].context.canvas) {
         display_channel_current_flush(display, 0);
         red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_INVAL_PALETTE_CACHE);

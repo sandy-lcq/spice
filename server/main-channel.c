@@ -87,7 +87,7 @@ static void main_channel_push_channels(MainChannelClient *mcc)
                    "during migration");
         return;
     }
-    red_channel_client_pipe_add_type(RED_CHANNEL_CLIENT(mcc), RED_PIPE_ITEM_TYPE_MAIN_CHANNELS_LIST);
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MAIN_CHANNELS_LIST);
 }
 
 void main_channel_push_mouse_mode(MainChannel *main_chan, int current_mode,
