@@ -3703,6 +3703,10 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     }
     reds_core_timer_remove(reds, reds->mig_timer);
 
+    if (reds->ctx) {
+        SSL_CTX_free(reds->ctx);
+    }
+
     if (reds->main_dispatcher) {
         g_object_unref(reds->main_dispatcher);
     }
