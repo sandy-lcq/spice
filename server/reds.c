@@ -1459,8 +1459,10 @@ static bool red_link_info_test_capability(const RedLinkInfo *link, uint32_t cap)
 
 static int reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
 {
-    SpiceLinkHeader header;
-    SpiceLinkReply ack;
+    struct {
+        SpiceLinkHeader header;
+        SpiceLinkReply ack;
+    } msg;
     RedChannel *channel;
     const RedChannelCapabilities *channel_caps;
     BUF_MEM *bmBuf;
@@ -1468,12 +1470,14 @@ static int reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
     int ret = FALSE;
     size_t hdr_size;
 
-    header.magic = SPICE_MAGIC;
-    hdr_size = sizeof(ack);
-    header.major_version = GUINT32_TO_LE(SPICE_VERSION_MAJOR);
-    header.minor_version = GUINT32_TO_LE(SPICE_VERSION_MINOR);
+    SPICE_VERIFY(sizeof(msg) == sizeof(SpiceLinkHeader) + sizeof(SpiceLinkReply));
 
-    ack.error = GUINT32_TO_LE(SPICE_LINK_ERR_OK);
+    msg.header.magic = SPICE_MAGIC;
+    hdr_size = sizeof(msg.ack);
+    msg.header.major_version = GUINT32_TO_LE(SPICE_VERSION_MAJOR);
+    msg.header.minor_version = GUINT32_TO_LE(SPICE_VERSION_MINOR);
+
+    msg.ack.error = GUINT32_TO_LE(SPICE_LINK_ERR_OK);
 
     channel = reds_find_channel(reds, link->link_mess->channel_type,
                                 link->link_mess->channel_id);
@@ -1489,12 +1493,12 @@ static int reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
     reds_channel_init_auth_caps(link, channel); /* make sure common caps are set */
 
     channel_caps = red_channel_get_local_capabilities(channel);
-    ack.num_common_caps = GUINT32_TO_LE(channel_caps->num_common_caps);
-    ack.num_channel_caps = GUINT32_TO_LE(channel_caps->num_caps);
+    msg.ack.num_common_caps = GUINT32_TO_LE(channel_caps->num_common_caps);
+    msg.ack.num_channel_caps = GUINT32_TO_LE(channel_caps->num_caps);
     hdr_size += channel_caps->num_common_caps * sizeof(uint32_t);
     hdr_size += channel_caps->num_caps * sizeof(uint32_t);
-    header.size = GUINT32_TO_LE(hdr_size);
-    ack.caps_offset = GUINT32_TO_LE(sizeof(SpiceLinkReply));
+    msg.header.size = GUINT32_TO_LE(hdr_size);
+    msg.ack.caps_offset = GUINT32_TO_LE(sizeof(SpiceLinkReply));
     if (!reds->config->sasl_enabled
         || !red_link_info_test_capability(link, SPICE_COMMON_CAP_AUTH_SASL)) {
         if (!(link->tiTicketing.rsa = RSA_new())) {
@@ -1520,7 +1524,7 @@ static int reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
 
         i2d_RSA_PUBKEY_bio(bio, link->tiTicketing.rsa);
         BIO_get_mem_ptr(bio, &bmBuf);
-        memcpy(ack.pub_key, bmBuf->data, sizeof(ack.pub_key));
+        memcpy(msg.ack.pub_key, bmBuf->data, sizeof(msg.ack.pub_key));
     } else {
         /* if the client sets the AUTH_SASL cap, it indicates that it
          * supports SASL, and will use it if the server supports SASL as
@@ -1532,12 +1536,10 @@ static int reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
          * will fail.
          */
         spice_warning("not initialising RSA key");
-        memset(ack.pub_key, '\0', sizeof(ack.pub_key));
+        memset(msg.ack.pub_key, '\0', sizeof(msg.ack.pub_key));
     }
 
-    if (!reds_stream_write_all(link->stream, &header, sizeof(header)))
-        goto end;
-    if (!reds_stream_write_all(link->stream, &ack, sizeof(ack)))
+    if (!reds_stream_write_all(link->stream, &msg, sizeof(msg)))
         goto end;
     for (unsigned int i = 0; i < channel_caps->num_common_caps; i++) {
         guint32 cap = GUINT32_TO_LE(channel_caps->common_caps[i]);
@@ -1560,17 +1562,19 @@ end:
 
 static bool reds_send_link_error(RedLinkInfo *link, uint32_t error)
 {
-    SpiceLinkHeader header;
-    SpiceLinkReply reply;
+    struct {
+        SpiceLinkHeader header;
+        SpiceLinkReply reply;
+    } msg;
+    SPICE_VERIFY(sizeof(msg) == sizeof(SpiceLinkHeader) + sizeof(SpiceLinkReply));
 
-    header.magic = SPICE_MAGIC;
-    header.size = GUINT32_TO_LE(sizeof(reply));
-    header.major_version = GUINT32_TO_LE(SPICE_VERSION_MAJOR);
-    header.minor_version = GUINT32_TO_LE(SPICE_VERSION_MINOR);
-    memset(&reply, 0, sizeof(reply));
-    reply.error = GUINT32_TO_LE(error);
-    return reds_stream_write_all(link->stream, &header, sizeof(header)) && reds_stream_write_all(link->stream, &reply,
-                                                                         sizeof(reply));
+    msg.header.magic = SPICE_MAGIC;
+    msg.header.size = GUINT32_TO_LE(sizeof(msg.reply));
+    msg.header.major_version = GUINT32_TO_LE(SPICE_VERSION_MAJOR);
+    msg.header.minor_version = GUINT32_TO_LE(SPICE_VERSION_MINOR);
+    memset(&msg.reply, 0, sizeof(msg.reply));
+    msg.reply.error = GUINT32_TO_LE(error);
+    return reds_stream_write_all(link->stream, &msg, sizeof(msg));
 }
 
 static void reds_info_new_channel(RedLinkInfo *link, int connection_id)
