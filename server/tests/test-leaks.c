@@ -22,6 +22,8 @@
 #include "basic-event-loop.h"
 #include "test-display-base.h"
 
+#define PKI_DIR SPICE_TOP_SRCDIR "/server/tests/pki/"
+
 static void server_leaks(void)
 {
     int result;
@@ -32,6 +34,13 @@ static void server_leaks(void)
 
     core = basic_event_loop_init();
     g_assert_nonnull(core);
+
+    result = spice_server_set_tls(server, 5913,
+                                  PKI_DIR "ca-cert.pem",
+                                  PKI_DIR "server-cert.pem",
+                                  PKI_DIR "server-key.pem",
+                                  NULL, NULL, NULL);
+    g_assert_cmpint(result, ==, 0);
 
     g_assert_cmpint(spice_server_init(server, core), ==, 0);
 

@@ -1,6 +1,7 @@
 NULL =
 
 AM_CPPFLAGS =					\
+	-DSPICE_TOP_SRCDIR=\"$(abs_top_srcdir)\"\
 	-I$(top_srcdir)				\
 	-I$(top_srcdir)/server			\
 	-I$(top_builddir)/server		\
