@@ -2012,12 +2012,13 @@ static void reds_handle_ticket(void *opaque)
             goto error;
         }
 
-        if (expired || strcmp(password, reds->config->taTicket.password) != 0) {
-            if (expired) {
-                spice_warning("Ticket has expired");
-            } else {
-                spice_warning("Invalid password");
-            }
+        if (expired) {
+            spice_warning("Ticket has expired");
+            goto error;
+        }
+
+        if (strcmp(password, reds->config->taTicket.password) != 0) {
+            spice_warning("Invalid password");
             goto error;
         }
     }
