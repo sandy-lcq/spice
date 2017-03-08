@@ -25,7 +25,7 @@
 
 G_BEGIN_DECLS
 
-int common_channel_config_socket(RedChannelClient *rcc);
+int common_channel_client_config_socket(RedChannelClient *rcc);
 
 #define COMMON_CLIENT_TIMEOUT (NSEC_PER_SEC * 30)
 

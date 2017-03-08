@@ -120,7 +120,7 @@ common_graphics_channel_set_property(GObject *object,
     }
 }
 
-int common_channel_config_socket(RedChannelClient *rcc)
+int common_channel_client_config_socket(RedChannelClient *rcc)
 {
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
@@ -155,14 +155,11 @@ static void
 common_graphics_channel_class_init(CommonGraphicsChannelClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
-    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
 
     g_type_class_add_private(klass, sizeof(CommonGraphicsChannelPrivate));
 
     object_class->get_property = common_graphics_channel_get_property;
     object_class->set_property = common_graphics_channel_set_property;
-
-    channel_class->config_socket = common_channel_config_socket;
 
     g_object_class_install_property(object_class,
                                     PROP_QXL,
@@ -208,6 +205,7 @@ common_graphics_channel_client_class_init(CommonGraphicsChannelClientClass *klas
 
     g_type_class_add_private(klass, sizeof(CommonGraphicsChannelClientPrivate));
 
+    client_class->config_socket = common_channel_client_config_socket;
     client_class->alloc_recv_buf = common_alloc_recv_buf;
     client_class->release_recv_buf = common_release_recv_buf;
 }

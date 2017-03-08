@@ -709,17 +709,6 @@ SpiceCoreInterfaceInternal* red_channel_get_core_interface(RedChannel *channel)
     return channel->priv->core;
 }
 
-int red_channel_config_socket(RedChannel *self, RedChannelClient *rcc)
-{
-    RedChannelClass *klass = RED_CHANNEL_GET_CLASS(self);
-
-    if (!klass->config_socket) {
-        return TRUE;
-    }
-
-    return klass->config_socket(rcc);
-}
-
 void red_channel_on_disconnect(RedChannel *self, RedChannelClient *rcc)
 {
     RedChannelClass *klass = RED_CHANNEL_GET_CLASS(self);

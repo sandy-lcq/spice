@@ -158,6 +158,7 @@ static const SpiceDataHeaderOpaque mini_header_wrapper;
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc);
 static void red_channel_client_initable_interface_init(GInitableIface *iface);
 static void red_channel_client_set_message_serial(RedChannelClient *channel, uint64_t);
+static int red_channel_client_config_socket(RedChannelClient *rcc);
 
 /*
  * When an error occurs over a channel, we treat it as a warning
@@ -931,7 +932,7 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     SpiceCoreInterfaceInternal *core;
     RedChannelClient *self = RED_CHANNEL_CLIENT(initable);
 
-    if (!red_channel_config_socket(self->priv->channel, self)) {
+    if (!red_channel_client_config_socket(self)) {
         g_set_error_literal(&local_error,
                             SPICE_SERVER_ERROR,
                             SPICE_SERVER_ERROR_FAILED,
@@ -1051,6 +1052,17 @@ void red_channel_client_shutdown(RedChannelClient *rcc)
         shutdown(rcc->priv->stream->socket, SHUT_RDWR);
         rcc->priv->stream->shutdown = TRUE;
     }
+}
+
+static int red_channel_client_config_socket(RedChannelClient *rcc)
+{
+    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
+
+    if (!klass->config_socket) {
+        return TRUE;
+    }
+
+    return klass->config_socket(rcc);
 }
 
 static uint8_t *red_channel_client_alloc_msg_buf(RedChannelClient *rcc,

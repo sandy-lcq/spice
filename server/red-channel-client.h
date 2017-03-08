@@ -169,6 +169,8 @@ struct RedChannelClientClass
 {
     GObjectClass parent_class;
 
+    /* configure socket connected to the client */
+    int (*config_socket)(RedChannelClient *rcc);
     uint8_t *(*alloc_recv_buf)(RedChannelClient *channel, uint16_t type, uint32_t size);
     void (*release_recv_buf)(RedChannelClient *channel, uint16_t type, uint32_t size, uint8_t *msg);
 };

@@ -41,6 +41,7 @@ enum
 };
 
 static void on_display_video_codecs_update(GObject *gobject, GParamSpec *pspec, gpointer user_data);
+static int dcc_config_socket(RedChannelClient *rcc);
 
 static void
 display_channel_client_get_property(GObject *object,
@@ -124,11 +125,14 @@ static void
 display_channel_client_class_init(DisplayChannelClientClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
 
     object_class->get_property = display_channel_client_get_property;
     object_class->set_property = display_channel_client_set_property;
     object_class->constructed = display_channel_client_constructed;
     object_class->finalize = display_channel_client_finalize;
+
+    client_class->config_socket = dcc_config_socket;
 
     g_object_class_install_property(object_class,
                                     PROP_IMAGE_COMPRESSION,
@@ -1417,14 +1421,14 @@ void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate)
     dcc->priv->streams_max_bit_rate = rate;
 }
 
-int dcc_config_socket(RedChannelClient *rcc)
+static int dcc_config_socket(RedChannelClient *rcc)
 {
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
 
     DISPLAY_CHANNEL_CLIENT(rcc)->is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
 
-    return common_channel_config_socket(rcc);
+    return common_channel_client_config_socket(rcc);
 }
 
 gboolean dcc_is_low_bandwidth(DisplayChannelClient *dcc)

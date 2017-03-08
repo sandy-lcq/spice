@@ -2237,7 +2237,6 @@ display_channel_class_init(DisplayChannelClass *klass)
     channel_class->handle_migrate_flush_mark = handle_migrate_flush_mark;
     channel_class->handle_migrate_data = handle_migrate_data;
     channel_class->handle_migrate_data_get_serial = handle_migrate_data_get_serial;
-    channel_class->config_socket = dcc_config_socket;
 
     g_object_class_install_property(object_class,
                                     PROP_N_SURFACES,
