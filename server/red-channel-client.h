@@ -103,7 +103,7 @@ void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type);
 gboolean red_channel_client_pipe_is_empty(RedChannelClient *rcc);
 uint32_t red_channel_client_get_pipe_size(RedChannelClient *rcc);
 GQueue* red_channel_client_get_pipe(RedChannelClient *rcc);
-gboolean red_channel_client_is_mini_header(RedChannelClient *rcc);
+bool red_channel_client_is_mini_header(RedChannelClient *rcc);
 
 void red_channel_client_ack_zero_messages_window(RedChannelClient *rcc);
 void red_channel_client_ack_set_client_window(RedChannelClient *rcc, int client_window);
@@ -151,7 +151,7 @@ void red_channel_client_init_outgoing_messages_window(RedChannelClient *rcc);
 
 gboolean red_channel_client_set_migration_seamless(RedChannelClient *rcc);
 void red_channel_client_set_destroying(RedChannelClient *rcc);
-gboolean red_channel_client_is_destroying(RedChannelClient *rcc);
+bool red_channel_client_is_destroying(RedChannelClient *rcc);
 
 struct RedChannelClient
 {

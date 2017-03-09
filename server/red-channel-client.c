@@ -147,15 +147,15 @@ struct RedChannelClientPrivate
         } urgent;
     } send_data;
 
-    int during_send;
+    bool during_send;
     GQueue pipe;
 
     RedChannelCapabilities remote_caps;
-    int is_mini_header;
-    gboolean destroying;
+    bool is_mini_header;
+    bool destroying;
 
-    int wait_migrate_data;
-    int wait_migrate_flush_mark;
+    bool wait_migrate_data;
+    bool wait_migrate_flush_mark;
 
     RedChannelClientLatencyMonitor latency_monitor;
     RedChannelClientConnectivityMonitor connectivity_monitor;
@@ -1619,7 +1619,7 @@ GQueue* red_channel_client_get_pipe(RedChannelClient *rcc)
     return &rcc->priv->pipe;
 }
 
-gboolean red_channel_client_is_mini_header(RedChannelClient *rcc)
+bool red_channel_client_is_mini_header(RedChannelClient *rcc)
 {
     return rcc->priv->is_mini_header;
 }
@@ -1872,7 +1872,7 @@ void red_channel_client_set_destroying(RedChannelClient *rcc)
     rcc->priv->destroying = TRUE;
 }
 
-gboolean red_channel_client_is_destroying(RedChannelClient *rcc)
+bool red_channel_client_is_destroying(RedChannelClient *rcc)
 {
     return rcc->priv->destroying;
 }
