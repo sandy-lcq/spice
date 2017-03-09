@@ -827,8 +827,8 @@ static void image_encoders_release_glz(ImageEncoders *enc)
     free(shared_dict);
 }
 
-int image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
-                                 SpiceBitmap *src, compress_send_data_t* o_comp_data)
+bool image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
+                                  SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     QuicData *quic_data = &enc->quic_data;
     QuicContext *quic = enc->quic;
@@ -914,9 +914,9 @@ static const LzImageType bitmap_fmt_to_lz_image_type[] = {
     LZ_IMAGE_TYPE_A8
 };
 
-int image_encoders_compress_lz(ImageEncoders *enc,
-                               SpiceImage *dest, SpiceBitmap *src,
-                               compress_send_data_t* o_comp_data)
+bool image_encoders_compress_lz(ImageEncoders *enc,
+                                SpiceImage *dest, SpiceBitmap *src,
+                                compress_send_data_t* o_comp_data)
 {
     LzData *lz_data = &enc->lz_data;
     LzContext *lz = enc->lz;
@@ -979,8 +979,8 @@ int image_encoders_compress_lz(ImageEncoders *enc,
     return TRUE;
 }
 
-int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
-                                 SpiceBitmap *src, compress_send_data_t* o_comp_data)
+bool image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
+                                  SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     JpegData *jpeg_data = &enc->jpeg_data;
     LzData *lz_data = &enc->lz_data;
@@ -1105,8 +1105,8 @@ int image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
 }
 
 #ifdef USE_LZ4
-int image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
-                                SpiceBitmap *src, compress_send_data_t* o_comp_data)
+bool image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
+                                 SpiceBitmap *src, compress_send_data_t* o_comp_data)
 {
     Lz4Data *lz4_data = &enc->lz4_data;
     Lz4EncoderContext *lz4 = enc->lz4;
@@ -1208,12 +1208,12 @@ static GlzDrawableInstanceItem *add_glz_drawable_instance(RedGlzDrawable *glz_dr
 
 #define MIN_GLZ_SIZE_FOR_ZLIB 100
 
-int image_encoders_compress_glz(ImageEncoders *enc,
-                                SpiceImage *dest, SpiceBitmap *src,
-                                RedDrawable *red_drawable,
-                                GlzImageRetention *glz_retention,
-                                compress_send_data_t* o_comp_data,
-                                gboolean enable_zlib_glz_wrap)
+bool image_encoders_compress_glz(ImageEncoders *enc,
+                                 SpiceImage *dest, SpiceBitmap *src,
+                                 RedDrawable *red_drawable,
+                                 GlzImageRetention *glz_retention,
+                                 compress_send_data_t* o_comp_data,
+                                 gboolean enable_zlib_glz_wrap)
 {
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &enc->shared_data->zlib_glz_stat);

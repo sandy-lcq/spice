@@ -242,8 +242,8 @@ static void inputs_channel_send_item(RedChannelClient *rcc, RedPipeItem *base)
     red_channel_client_begin_send_message(rcc);
 }
 
-static int inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
-                                         uint32_t size, void *message)
+static bool inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
+                                          uint32_t size, void *message)
 {
     InputsChannel *inputs_channel = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
     InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
@@ -498,15 +498,15 @@ static void key_modifiers_sender(void *opaque)
     inputs_channel_push_keyboard_modifiers(inputs, kbd_get_leds(inputs_channel_get_keyboard(inputs)));
 }
 
-static int inputs_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
+static bool inputs_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_MIGRATE_DATA);
     return TRUE;
 }
 
-static int inputs_channel_handle_migrate_data(RedChannelClient *rcc,
-                                              uint32_t size,
-                                              void *message)
+static bool inputs_channel_handle_migrate_data(RedChannelClient *rcc,
+                                               uint32_t size,
+                                               void *message)
 {
     InputsChannelClient *icc = INPUTS_CHANNEL_CLIENT(rcc);
     InputsChannel *inputs = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));

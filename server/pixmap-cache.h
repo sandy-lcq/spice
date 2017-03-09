@@ -68,6 +68,6 @@ PixmapCache *pixmap_cache_get(RedClient *client, uint8_t id, int64_t size);
 void         pixmap_cache_unref(PixmapCache *cache);
 void         pixmap_cache_clear(PixmapCache *cache);
 int          pixmap_cache_unlocked_set_lossy(PixmapCache *cache, uint64_t id, int lossy);
-int          pixmap_cache_freeze(PixmapCache *cache);
+bool         pixmap_cache_freeze(PixmapCache *cache);
 
 #endif /* _PIXMAP_CACHE_H */

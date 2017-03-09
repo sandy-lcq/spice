@@ -54,7 +54,7 @@ RedChannelClient *red_channel_client_create(RedChannel *channel,
 
 gboolean red_channel_client_is_connected(RedChannelClient *rcc);
 void red_channel_client_default_migrate(RedChannelClient *rcc);
-int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc);
+bool red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc);
 void red_channel_client_destroy(RedChannelClient *rcc);
 int red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t cap);
 int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap);
@@ -63,8 +63,8 @@ int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap);
  * It should be followed by some way to guarantee a disconnection. */
 void red_channel_client_shutdown(RedChannelClient *rcc);
 /* handles general channel msgs from the client */
-int red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
-                                      uint32_t size, void *message);
+bool red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
+                                       uint32_t size, void *message);
 /* when preparing send_data: should call init and then use marshaller */
 void red_channel_client_init_send_data(RedChannelClient *rcc, uint16_t msg_type);
 
@@ -142,11 +142,11 @@ void red_channel_client_set_header_sub_list(RedChannelClient *rcc, uint32_t sub_
  * Return: TRUE if waiting succeeded. FALSE if timeout expired.
  */
 
-int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
-                                           GList *item_pos,
+bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
+                                            GList *item_pos,
+                                            int64_t timeout);
+bool red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
                                            int64_t timeout);
-int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
-                                          int64_t timeout);
 void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc);
 
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc);
@@ -170,7 +170,7 @@ struct RedChannelClientClass
     GObjectClass parent_class;
 
     /* configure socket connected to the client */
-    int (*config_socket)(RedChannelClient *rcc);
+    bool (*config_socket)(RedChannelClient *rcc);
     uint8_t *(*alloc_recv_buf)(RedChannelClient *channel, uint16_t type, uint32_t size);
     void (*release_recv_buf)(RedChannelClient *channel, uint16_t type, uint32_t size, uint8_t *msg);
 };

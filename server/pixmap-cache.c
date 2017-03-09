@@ -57,7 +57,7 @@ void pixmap_cache_clear(PixmapCache *cache)
     cache->items = 0;
 }
 
-int pixmap_cache_freeze(PixmapCache *cache)
+bool pixmap_cache_freeze(PixmapCache *cache)
 {
     pthread_mutex_lock(&cache->lock);
 

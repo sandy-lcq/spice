@@ -43,15 +43,15 @@ typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;
 typedef struct MainChannelClient MainChannelClient;
 
-typedef int (*channel_handle_message_proc)(RedChannelClient *rcc, uint16_t type,
-                                           uint32_t size, void *msg);
+typedef bool (*channel_handle_message_proc)(RedChannelClient *rcc, uint16_t type,
+                                            uint32_t size, void *msg);
 typedef void (*channel_disconnect_proc)(RedChannelClient *rcc);
-typedef int (*channel_configure_socket_proc)(RedChannelClient *rcc);
+typedef bool (*channel_configure_socket_proc)(RedChannelClient *rcc);
 typedef void (*channel_send_pipe_item_proc)(RedChannelClient *rcc, RedPipeItem *item);
 
-typedef int (*channel_handle_migrate_flush_mark_proc)(RedChannelClient *base);
-typedef int (*channel_handle_migrate_data_proc)(RedChannelClient *base,
-                                                uint32_t size, void *message);
+typedef bool (*channel_handle_migrate_flush_mark_proc)(RedChannelClient *base);
+typedef bool (*channel_handle_migrate_data_proc)(RedChannelClient *base,
+                                                 uint32_t size, void *message);
 typedef uint64_t (*channel_handle_migrate_data_get_serial_proc)(RedChannelClient *base,
                                             uint32_t size, void *message);
 
@@ -145,7 +145,7 @@ int red_channel_is_connected(RedChannel *channel);
 /* seamless migration is supported for only one client. This routine
  * checks if the only channel client associated with channel is
  * waiting for migration data */
-int red_channel_is_waiting_for_migrate_data(RedChannel *channel);
+bool red_channel_is_waiting_for_migrate_data(RedChannel *channel);
 
 /*
  * the disconnect callback is called from the channel's thread,
@@ -157,8 +157,8 @@ int red_channel_is_waiting_for_migrate_data(RedChannel *channel);
 void red_channel_destroy(RedChannel *channel);
 
 /* return true if all the channel clients support the cap */
-int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap);
-int red_channel_test_remote_cap(RedChannel *channel, uint32_t cap);
+bool red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap);
+bool red_channel_test_remote_cap(RedChannel *channel, uint32_t cap);
 
 /* should be called when a new channel is ready to send messages */
 void red_channel_init_outgoing_messages_window(RedChannel *channel);
@@ -176,12 +176,12 @@ void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type);
 void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type);
 
 /* return TRUE if all of the connected clients to this channel are blocked */
-int red_channel_all_blocked(RedChannel *channel);
+bool red_channel_all_blocked(RedChannel *channel);
 
 /* return TRUE if any of the connected clients to this channel are blocked */
-int red_channel_any_blocked(RedChannel *channel);
+bool red_channel_any_blocked(RedChannel *channel);
 
-int red_channel_no_item_being_sent(RedChannel *channel);
+bool red_channel_no_item_being_sent(RedChannel *channel);
 
 // TODO: unstaticed for display/cursor channels. they do some specific pushes not through
 // adding elements or on events. but not sure if this is actually required (only result
@@ -238,8 +238,8 @@ const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *sel
  * Return: TRUE if waiting succeeded. FALSE if timeout expired.
  */
 
-int red_channel_wait_all_sent(RedChannel *channel,
-                              int64_t timeout);
+bool red_channel_wait_all_sent(RedChannel *channel,
+                               int64_t timeout);
 
 /* wrappers for client callbacks */
 void red_channel_migrate_client(RedChannel *channel, RedChannelClient *rcc);

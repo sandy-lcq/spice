@@ -273,7 +273,7 @@ Ring *tree_item_container_items(TreeItem *item, Ring *ring)
     return (item->container) ? &item->container->items : ring;
 }
 
-int tree_item_contained_by(TreeItem *item, Ring *ring)
+bool tree_item_contained_by(TreeItem *item, Ring *ring)
 {
     spice_assert(item && ring);
     do {

@@ -238,7 +238,7 @@ int reds_stream_get_family(const RedsStream *s)
     return s->priv->info->laddr_ext.ss_family;
 }
 
-int reds_stream_is_plain_unix(const RedsStream *s)
+bool reds_stream_is_plain_unix(const RedsStream *s)
 {
     spice_return_val_if_fail(s != NULL, FALSE);
 

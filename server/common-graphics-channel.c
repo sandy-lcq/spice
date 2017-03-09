@@ -120,7 +120,7 @@ common_graphics_channel_set_property(GObject *object,
     }
 }
 
-int common_channel_client_config_socket(RedChannelClient *rcc)
+bool common_channel_client_config_socket(RedChannelClient *rcc)
 {
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);

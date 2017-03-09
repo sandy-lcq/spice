@@ -429,12 +429,12 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
 }
 
 // returns whether a stream was created
-static int stream_add_frame(DisplayChannel *display,
-                            Drawable *frame_drawable,
-                            red_time_t first_frame_time,
-                            int frames_count,
-                            int gradual_frames_count,
-                            int last_gradual_frame)
+static bool stream_add_frame(DisplayChannel *display,
+                             Drawable *frame_drawable,
+                             red_time_t first_frame_time,
+                             int frames_count,
+                             int gradual_frames_count,
+                             int last_gradual_frame)
 {
     update_copy_graduality(display, frame_drawable);
     frame_drawable->first_frame_time = first_frame_time;

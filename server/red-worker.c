@@ -982,7 +982,7 @@ static void handle_dev_close(void *opaque, void *payload)
     g_main_loop_quit(worker->loop);
 }
 
-static int loadvm_command(RedWorker *worker, QXLCommandExt *ext)
+static bool loadvm_command(RedWorker *worker, QXLCommandExt *ext)
 {
     switch (ext->cmd.type) {
     case QXL_CMD_CURSOR:

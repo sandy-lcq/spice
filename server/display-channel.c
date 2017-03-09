@@ -473,7 +473,7 @@ static void current_remove_all(DisplayChannel *display, int surface_id)
     }
 }
 
-static int current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *other)
+static bool current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem *other)
 {
     DrawItem *other_draw_item;
     Drawable *drawable;
@@ -683,7 +683,7 @@ static void exclude_region(DisplayChannel *display, Ring *ring, RingItem *ring_i
     }
 }
 
-static int current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawable *item)
+static bool current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawable *item)
 {
     stat_start(&display->priv->add_stat, start_time);
 #ifdef RED_WORKER_STAT
@@ -726,7 +726,7 @@ static int current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawable
     return TRUE;
 }
 
-static int current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
+static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
 {
     DrawItem *item = &drawable->tree_item;
     RingItem *now;
@@ -1005,7 +1005,7 @@ static void surface_add_reverse_dependency(DisplayChannel *display, int surface_
     ring_add(&surface->depend_on_me, &depend_item->ring_item);
 }
 
-static int handle_surface_deps(DisplayChannel *display, Drawable *drawable)
+static bool handle_surface_deps(DisplayChannel *display, Drawable *drawable)
 {
     int x;
 
@@ -1043,7 +1043,7 @@ static void draw_depend_on_me(DisplayChannel *display, uint32_t surface_id)
     }
 }
 
-static int validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable)
+static bool validate_drawable_bbox(DisplayChannel *display, RedDrawable *drawable)
 {
         DrawContext *context;
         uint32_t surface_id = drawable->surface_id;
@@ -1192,7 +1192,7 @@ void display_channel_process_draw(DisplayChannel *display, RedDrawable *red_draw
     drawable_unref(drawable);
 }
 
-int display_channel_wait_for_migrate_data(DisplayChannel *display)
+bool display_channel_wait_for_migrate_data(DisplayChannel *display)
 {
     uint64_t end_time = spice_get_monotonic_time_ns() + DISPLAY_CLIENT_MIGRATE_DATA_TIMEOUT;
     RedChannelClient *rcc;
@@ -1950,7 +1950,7 @@ static void on_disconnect(RedChannelClient *rcc)
                 display->priv->encoder_shared_data.glz_drawable_count);
 }
 
-static int handle_migrate_flush_mark(RedChannelClient *rcc)
+static bool handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
 
@@ -1967,7 +1967,7 @@ static uint64_t handle_migrate_data_get_serial(RedChannelClient *rcc, uint32_t s
     return migrate_data->message_serial;
 }
 
-static int handle_migrate_data(RedChannelClient *rcc, uint32_t size, void *message)
+static bool handle_migrate_data(RedChannelClient *rcc, uint32_t size, void *message)
 {
     return dcc_handle_migrate_data(DISPLAY_CHANNEL_CLIENT(rcc), size, message);
 }

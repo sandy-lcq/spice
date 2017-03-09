@@ -35,7 +35,7 @@ static ImageCacheItem *image_cache_find(ImageCache *cache, uint64_t id)
     return NULL;
 }
 
-static int image_cache_hit(ImageCache *cache, uint64_t id)
+static bool image_cache_hit(ImageCache *cache, uint64_t id)
 {
     ImageCacheItem *item;
     if (!(item = image_cache_find(cache, id))) {

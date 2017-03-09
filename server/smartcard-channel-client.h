@@ -60,7 +60,7 @@ SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
                                                         int monitor_latency,
                                                         RedChannelCapabilities *caps);
 
-int smartcard_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc);
+bool smartcard_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc);
 
 void smartcard_channel_client_on_disconnect(RedChannelClient *rcc);
 
@@ -73,14 +73,14 @@ void smartcard_channel_client_send_error(RedChannelClient *rcc,
                                          SpiceMarshaller *m,
                                          RedPipeItem *item);
 
-int smartcard_channel_client_handle_message(RedChannelClient *rcc,
-                                            uint16_t type,
-                                            uint32_t size,
-                                            void *msg);
+bool smartcard_channel_client_handle_message(RedChannelClient *rcc,
+                                             uint16_t type,
+                                             uint32_t size,
+                                             void *msg);
 
-int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
-                                                 uint32_t size,
-                                                 void *message);
+bool smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
+                                                  uint32_t size,
+                                                  void *message);
 
 void smartcard_channel_client_set_char_device(SmartCardChannelClient *scc,
                                               RedCharDeviceSmartcard *device);

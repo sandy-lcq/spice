@@ -82,8 +82,8 @@ void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf);
 void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *message, size_t size);
 void reds_on_main_migrate_connected(RedsState *reds, int seamless); //should be called when all the clients
                                                    // are connected to the target
-int reds_handle_migrate_data(RedsState *recs, MainChannelClient *mcc,
-                             SpiceMigrateDataMain *mig_data, uint32_t size);
+bool reds_handle_migrate_data(RedsState *recs, MainChannelClient *mcc,
+                              SpiceMigrateDataMain *mig_data, uint32_t size);
 void reds_on_main_mouse_mode_request(RedsState *reds, void *message, size_t size);
 /* migration dest side: returns whether it can support seamless migration
  * with the given src migration protocol version */

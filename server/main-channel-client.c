@@ -260,7 +260,7 @@ static void main_channel_client_init(MainChannelClient *self)
     self->priv->bitrate_per_sec = ~0;
 }
 
-static int main_channel_client_push_ping(MainChannelClient *mcc, int size);
+static bool main_channel_client_push_ping(MainChannelClient *mcc, int size);
 
 static void main_notify_item_free(RedPipeItem *base)
 {
@@ -308,7 +308,7 @@ static RedPipeItem *red_ping_item_new(int size)
     return &item->base;
 }
 
-static int main_channel_client_push_ping(MainChannelClient *mcc, int size)
+static bool main_channel_client_push_ping(MainChannelClient *mcc, int size)
 {
     RedPipeItem *item;
 

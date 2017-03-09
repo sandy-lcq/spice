@@ -158,7 +158,7 @@ static const SpiceDataHeaderOpaque mini_header_wrapper;
 static void red_channel_client_clear_sent_item(RedChannelClient *rcc);
 static void red_channel_client_initable_interface_init(GInitableIface *iface);
 static void red_channel_client_set_message_serial(RedChannelClient *channel, uint64_t);
-static int red_channel_client_config_socket(RedChannelClient *rcc);
+static bool red_channel_client_config_socket(RedChannelClient *rcc);
 
 /*
  * When an error occurs over a channel, we treat it as a warning
@@ -1015,7 +1015,7 @@ void red_channel_client_semi_seamless_migration_complete(RedChannelClient *rcc)
     }
 }
 
-int red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc)
+bool red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc)
 {
     return rcc->priv->wait_migrate_data;
 }
@@ -1054,7 +1054,7 @@ void red_channel_client_shutdown(RedChannelClient *rcc)
     }
 }
 
-static int red_channel_client_config_socket(RedChannelClient *rcc)
+static bool red_channel_client_config_socket(RedChannelClient *rcc)
 {
     RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
 
@@ -1458,8 +1458,8 @@ static void red_channel_client_handle_migrate_data(RedChannelClient *rcc,
 }
 
 
-int red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
-                                      uint32_t size, void *message)
+bool red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
+                                       uint32_t size, void *message)
 {
     switch (type) {
     case SPICE_MSGC_ACK_SYNC:
@@ -1787,9 +1787,9 @@ static void marker_pipe_item_free(RedPipeItem *base)
 }
 
 /* TODO: more evil sync stuff. anything with the word wait in it's name. */
-int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
-                                           GList *item_pos,
-                                           int64_t timeout)
+bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
+                                            GList *item_pos,
+                                            int64_t timeout)
 {
     uint64_t end_time;
     gboolean item_in_pipe;
@@ -1835,8 +1835,8 @@ int red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     }
 }
 
-int red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
-                                          int64_t timeout)
+bool red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
+                                           int64_t timeout)
 {
     uint64_t end_time;
     int blocked;

@@ -118,8 +118,8 @@ static void main_channel_push_migrate_data_item(MainChannel *main_chan)
     red_channel_pipes_add_type(RED_CHANNEL(main_chan), RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_DATA);
 }
 
-static int main_channel_handle_migrate_data(RedChannelClient *rcc,
-    uint32_t size, void *message)
+static bool main_channel_handle_migrate_data(RedChannelClient *rcc,
+                                             uint32_t size, void *message)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
@@ -174,8 +174,8 @@ void main_channel_migrate_switch(MainChannel *main_chan, RedsMigSpice *mig_targe
     red_channel_pipes_add_type(RED_CHANNEL(main_chan), RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_SWITCH_HOST);
 }
 
-static int main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
-                                       uint32_t size, void *message)
+static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
+                                        uint32_t size, void *message)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     MainChannel *main_chan = MAIN_CHANNEL(channel);
@@ -243,7 +243,7 @@ static int main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
     return TRUE;
 }
 
-static int main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
+static bool main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     spice_debug(NULL);

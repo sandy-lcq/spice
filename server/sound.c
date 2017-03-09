@@ -269,7 +269,7 @@ static void snd_playback_on_message_done(SndChannelClient *client)
     }
 }
 
-static int snd_record_handle_write(RecordChannelClient *record_client, size_t size, void *message)
+static bool snd_record_handle_write(RecordChannelClient *record_client, size_t size, void *message)
 {
     SpiceMsgcRecordPacket *packet;
     uint32_t write_pos;
@@ -314,7 +314,7 @@ static int snd_record_handle_write(RecordChannelClient *record_client, size_t si
     return TRUE;
 }
 
-static int
+static bool
 record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void *message)
 {
     RecordChannelClient *record_client = RECORD_CHANNEL_CLIENT(rcc);
@@ -357,7 +357,7 @@ record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t siz
     return TRUE;
 }
 
-static int snd_channel_send_migrate(SndChannelClient *client)
+static bool snd_channel_send_migrate(SndChannelClient *client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(client);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -371,12 +371,12 @@ static int snd_channel_send_migrate(SndChannelClient *client)
     return TRUE;
 }
 
-static int snd_playback_send_migrate(PlaybackChannelClient *client)
+static bool snd_playback_send_migrate(PlaybackChannelClient *client)
 {
     return snd_channel_send_migrate(SND_CHANNEL_CLIENT(client));
 }
 
-static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
+static bool snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
 {
     SpiceMsgAudioVolume *vol;
     uint8_t c;
@@ -402,13 +402,13 @@ static int snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
     return TRUE;
 }
 
-static int snd_playback_send_volume(PlaybackChannelClient *playback_client)
+static bool snd_playback_send_volume(PlaybackChannelClient *playback_client)
 {
     return snd_send_volume(SND_CHANNEL_CLIENT(playback_client), SPICE_PLAYBACK_CAP_VOLUME,
                            SPICE_MSG_PLAYBACK_VOLUME);
 }
 
-static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
+static bool snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
 {
     SpiceMsgAudioMute mute;
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(client);
@@ -428,13 +428,13 @@ static int snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
     return TRUE;
 }
 
-static int snd_playback_send_mute(PlaybackChannelClient *playback_client)
+static bool snd_playback_send_mute(PlaybackChannelClient *playback_client)
 {
     return snd_send_mute(SND_CHANNEL_CLIENT(playback_client), SPICE_PLAYBACK_CAP_VOLUME,
                          SPICE_MSG_PLAYBACK_MUTE);
 }
 
-static int snd_playback_send_latency(PlaybackChannelClient *playback_client)
+static bool snd_playback_send_latency(PlaybackChannelClient *playback_client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -449,7 +449,7 @@ static int snd_playback_send_latency(PlaybackChannelClient *playback_client)
     return TRUE;
 }
 
-static int snd_playback_send_start(PlaybackChannelClient *playback_client)
+static bool snd_playback_send_start(PlaybackChannelClient *playback_client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -467,7 +467,7 @@ static int snd_playback_send_start(PlaybackChannelClient *playback_client)
     return TRUE;
 }
 
-static int snd_playback_send_stop(PlaybackChannelClient *playback_client)
+static bool snd_playback_send_stop(PlaybackChannelClient *playback_client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
 
@@ -488,7 +488,7 @@ static int snd_playback_send_ctl(PlaybackChannelClient *playback_client)
     }
 }
 
-static int snd_record_send_start(RecordChannelClient *record_client)
+static bool snd_record_send_start(RecordChannelClient *record_client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(record_client);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -506,7 +506,7 @@ static int snd_record_send_start(RecordChannelClient *record_client)
     return TRUE;
 }
 
-static int snd_record_send_stop(RecordChannelClient *record_client)
+static bool snd_record_send_stop(RecordChannelClient *record_client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(record_client);
 
@@ -527,19 +527,19 @@ static int snd_record_send_ctl(RecordChannelClient *record_client)
     }
 }
 
-static int snd_record_send_volume(RecordChannelClient *record_client)
+static bool snd_record_send_volume(RecordChannelClient *record_client)
 {
     return snd_send_volume(SND_CHANNEL_CLIENT(record_client), SPICE_RECORD_CAP_VOLUME,
                            SPICE_MSG_RECORD_VOLUME);
 }
 
-static int snd_record_send_mute(RecordChannelClient *record_client)
+static bool snd_record_send_mute(RecordChannelClient *record_client)
 {
     return snd_send_mute(SND_CHANNEL_CLIENT(record_client), SPICE_RECORD_CAP_VOLUME,
                          SPICE_MSG_RECORD_MUTE);
 }
 
-static int snd_record_send_migrate(RecordChannelClient *record_client)
+static bool snd_record_send_migrate(RecordChannelClient *record_client)
 {
     /* No need for migration data: if recording has started before migration,
      * the client receives RECORD_STOP from the src before the migration completion
@@ -548,7 +548,7 @@ static int snd_record_send_migrate(RecordChannelClient *record_client)
     return snd_channel_send_migrate(SND_CHANNEL_CLIENT(record_client));
 }
 
-static int snd_playback_send_write(PlaybackChannelClient *playback_client)
+static bool snd_playback_send_write(PlaybackChannelClient *playback_client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -586,7 +586,7 @@ static int snd_playback_send_write(PlaybackChannelClient *playback_client)
     return TRUE;
 }
 
-static int playback_send_mode(PlaybackChannelClient *playback_client)
+static bool playback_send_mode(PlaybackChannelClient *playback_client)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -732,7 +732,7 @@ static void record_channel_send_item(RedChannelClient *rcc, G_GNUC_UNUSED RedPip
     snd_send(client);
 }
 
-static int snd_channel_client_config_socket(RedChannelClient *rcc)
+static bool snd_channel_client_config_socket(RedChannelClient *rcc)
 {
     int delay_val;
 #ifdef SO_PRIORITY

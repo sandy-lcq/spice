@@ -916,7 +916,7 @@ SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *reds)
     return reds_get_n_clients(reds);
 }
 
-static int channel_supports_multiple_clients(RedChannel *channel)
+static bool channel_supports_multiple_clients(RedChannel *channel)
 {
     uint32_t type;
     g_object_get(channel, "channel-type", &type, NULL);
@@ -1379,8 +1379,8 @@ static int reds_agent_state_restore(RedsState *reds, SpiceMigrateDataMain *mig_d
  * attached only after the vm is started. It might be attached before or after
  * the migration data has reached the server.
  */
-int reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
-                             SpiceMigrateDataMain *mig_data, uint32_t size)
+bool reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
+                              SpiceMigrateDataMain *mig_data, uint32_t size)
 {
     RedCharDeviceVDIPort *agent_dev = reds->agent_dev;
 
@@ -1456,7 +1456,7 @@ static bool red_link_info_test_capability(const RedLinkInfo *link, uint32_t cap)
 }
 
 
-static int reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
+static bool reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
 {
     struct {
         SpiceLinkHeader header;
@@ -1652,7 +1652,7 @@ static void reds_mig_target_client_disconnect_all(RedsState *reds)
     }
 }
 
-static int reds_find_client(RedsState *reds, RedClient *client)
+static bool reds_find_client(RedsState *reds, RedClient *client)
 {
     GListIter iter;
     RedClient *list_client;
@@ -1828,7 +1828,7 @@ static void reds_channel_do_link(RedChannel *channel, RedClient *client,
  * not lose any data, we activate the target channels before
  * migration completes, as soon as we receive SPICE_MSGC_MAIN_MIGRATE_DST_DO_SEAMLESS
  */
-static int reds_link_mig_target_channels(RedsState *reds, RedClient *client)
+static bool reds_link_mig_target_channels(RedsState *reds, RedClient *client)
 {
     RedsMigTargetClient *mig_client;
     GList *item;

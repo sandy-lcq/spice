@@ -138,10 +138,10 @@ DisplayChannelClient*      dcc_new                                   (DisplayCha
                                                                       spice_wan_compression_t zlib_glz_state);
 void                       dcc_start                                 (DisplayChannelClient *dcc);
 void                       dcc_stop                                  (DisplayChannelClient *dcc);
-int                        dcc_handle_message                        (RedChannelClient *rcc,
+bool                       dcc_handle_message                        (RedChannelClient *rcc,
                                                                       uint16_t type,
                                                                       uint32_t size, void *msg);
-int                        dcc_handle_migrate_data                   (DisplayChannelClient *dcc,
+bool                       dcc_handle_migrate_data                   (DisplayChannelClient *dcc,
                                                                       uint32_t size, void *message);
 void                       dcc_push_monitors_config                  (DisplayChannelClient *dcc);
 void                       dcc_destroy_surface                       (DisplayChannelClient *dcc,
@@ -163,7 +163,7 @@ void                       dcc_palette_cache_reset                   (DisplayCha
 void                       dcc_palette_cache_palette                 (DisplayChannelClient *dcc,
                                                                       SpicePalette *palette,
                                                                       uint8_t *flags);
-int                        dcc_pixmap_cache_unlocked_add             (DisplayChannelClient *dcc,
+bool                       dcc_pixmap_cache_unlocked_add             (DisplayChannelClient *dcc,
                                                                       uint64_t id, uint32_t size, int lossy);
 void                       dcc_prepend_drawable                      (DisplayChannelClient *dcc,
                                                                       Drawable *drawable);
@@ -174,10 +174,10 @@ void                       dcc_add_drawable_after                    (DisplayCha
                                                                       RedPipeItem *pos);
 void                       dcc_send_item                             (RedChannelClient *dcc,
                                                                       RedPipeItem *item);
-int                        dcc_clear_surface_drawables_from_pipe     (DisplayChannelClient *dcc,
+bool                       dcc_clear_surface_drawables_from_pipe     (DisplayChannelClient *dcc,
                                                                       int surface_id,
                                                                       int wait_if_used);
-int                        dcc_drawable_is_in_pipe                   (DisplayChannelClient *dcc,
+bool                       dcc_drawable_is_in_pipe                   (DisplayChannelClient *dcc,
                                                                       Drawable *drawable);
 RedPipeItem *              dcc_gl_scanout_item_new                   (RedChannelClient *rcc,
                                                                       void *data, int num);

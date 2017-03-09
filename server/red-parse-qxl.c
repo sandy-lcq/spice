@@ -429,7 +429,7 @@ static const char *bitmap_format_to_string(int format)
 static const unsigned int MAP_BITMAP_FMT_TO_BITS_PER_PIXEL[] =
     {0, 1, 1, 4, 4, 8, 16, 24, 32, 32, 8};
 
-static int bitmap_consistent(SpiceBitmap *bitmap)
+static bool bitmap_consistent(SpiceBitmap *bitmap)
 {
     unsigned int bpp;
 

@@ -81,7 +81,7 @@ static inline int is_opaque_item(TreeItem *item)
 
 void       tree_item_dump                           (TreeItem *item);
 Shadow*    tree_item_find_shadow                    (TreeItem *item);
-int        tree_item_contained_by                   (TreeItem *item, Ring *ring);
+bool       tree_item_contained_by                   (TreeItem *item, Ring *ring);
 Ring*      tree_item_container_items                (TreeItem *item, Ring *ring);
 
 void       draw_item_remove_shadow                  (DrawItem *item);

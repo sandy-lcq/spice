@@ -306,7 +306,7 @@ static void red_char_device_send_msg_to_clients(RedCharDevice *dev,
     }
 }
 
-static int red_char_device_read_from_device(RedCharDevice *dev)
+static bool red_char_device_read_from_device(RedCharDevice *dev)
 {
     uint64_t max_send_tokens;
     int did_read = FALSE;
@@ -720,13 +720,13 @@ static RedCharDeviceClient *red_char_device_client_new(RedClient *client,
     return dev_client;
 }
 
-int red_char_device_client_add(RedCharDevice *dev,
-                               RedClient *client,
-                               int do_flow_control,
-                               uint32_t max_send_queue_size,
-                               uint32_t num_client_tokens,
-                               uint32_t num_send_tokens,
-                               int wait_for_migrate_data)
+bool red_char_device_client_add(RedCharDevice *dev,
+                                RedClient *client,
+                                int do_flow_control,
+                                uint32_t max_send_queue_size,
+                                uint32_t num_client_tokens,
+                                uint32_t num_send_tokens,
+                                int wait_for_migrate_data)
 {
     RedCharDeviceClient *dev_client;
 
@@ -921,8 +921,8 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                 dev, *write_to_dev_size_ptr, *write_to_dev_tokens_ptr);
 }
 
-int red_char_device_restore(RedCharDevice *dev,
-                            SpiceMigrateDataCharDevice *mig_data)
+bool red_char_device_restore(RedCharDevice *dev,
+                             SpiceMigrateDataCharDevice *mig_data)
 {
     RedCharDeviceClient *dev_client;
     uint32_t client_tokens_window;

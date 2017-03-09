@@ -108,7 +108,7 @@ static inline void compress_output_prev(Encoder *encoder)
     GLZ_ASSERT(encoder->usr, encoder->io.now == encoder->io.last_copy)
 }
 
-static int encoder_reset(Encoder *encoder, uint8_t *io_ptr, uint8_t *io_ptr_end)
+static bool encoder_reset(Encoder *encoder, uint8_t *io_ptr, uint8_t *io_ptr_end)
 {
     GLZ_ASSERT(encoder->usr, io_ptr <= io_ptr_end);
     encoder->io.bytes_count = io_ptr_end - io_ptr;

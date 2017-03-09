@@ -314,7 +314,7 @@ void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc)
     channel->priv->clients = g_list_prepend(channel->priv->clients, rcc);
 }
 
-int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
+bool red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
 {
     GListIter iter;
     RedChannelClient *rcc;
@@ -327,7 +327,7 @@ int red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
     return TRUE;
 }
 
-int red_channel_test_remote_cap(RedChannel *channel, uint32_t cap)
+bool red_channel_test_remote_cap(RedChannel *channel, uint32_t cap)
 {
     GListIter iter;
     RedChannelClient *rcc;
@@ -340,7 +340,7 @@ int red_channel_test_remote_cap(RedChannel *channel, uint32_t cap)
     return TRUE;
 }
 
-int red_channel_is_waiting_for_migrate_data(RedChannel *channel)
+bool red_channel_is_waiting_for_migrate_data(RedChannel *channel)
 {
     RedChannelClient *rcc;
     guint n_clients = g_list_length(channel->priv->clients);
@@ -522,7 +522,7 @@ guint red_channel_get_n_clients(RedChannel *channel)
     return g_list_length(channel->priv->clients);
 }
 
-int red_channel_all_blocked(RedChannel *channel)
+bool red_channel_all_blocked(RedChannel *channel)
 {
     GListIter iter;
     RedChannelClient *rcc;
@@ -538,7 +538,7 @@ int red_channel_all_blocked(RedChannel *channel)
     return TRUE;
 }
 
-int red_channel_any_blocked(RedChannel *channel)
+bool red_channel_any_blocked(RedChannel *channel)
 {
     GListIter iter;
     RedChannelClient *rcc;
@@ -551,7 +551,7 @@ int red_channel_any_blocked(RedChannel *channel)
     return FALSE;
 }
 
-int red_channel_no_item_being_sent(RedChannel *channel)
+bool red_channel_no_item_being_sent(RedChannel *channel)
 {
     GListIter iter;
     RedChannelClient *rcc;
@@ -665,8 +665,8 @@ uint32_t red_channel_sum_pipes_size(RedChannel *channel)
     return sum;
 }
 
-int red_channel_wait_all_sent(RedChannel *channel,
-                              int64_t timeout)
+bool red_channel_wait_all_sent(RedChannel *channel,
+                               int64_t timeout)
 {
     uint64_t end_time;
     uint32_t max_pipe_size;

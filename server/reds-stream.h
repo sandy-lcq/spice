@@ -71,7 +71,7 @@ bool reds_stream_is_ssl(RedsStream *stream);
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream);
 int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx);
 int reds_stream_get_family(const RedsStream *stream);
-int reds_stream_is_plain_unix(const RedsStream *stream);
+bool reds_stream_is_plain_unix(const RedsStream *stream);
 int reds_stream_send_msgfd(RedsStream *stream, int fd);
 
 typedef enum {

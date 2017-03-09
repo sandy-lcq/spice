@@ -41,7 +41,7 @@ enum
 };
 
 static void on_display_video_codecs_update(GObject *gobject, GParamSpec *pspec, gpointer user_data);
-static int dcc_config_socket(RedChannelClient *rcc);
+static bool dcc_config_socket(RedChannelClient *rcc);
 
 static void
 display_channel_client_get_property(GObject *object,
@@ -204,7 +204,7 @@ static RedSurfaceCreateItem *red_surface_create_item_new(RedChannel* channel,
     return create;
 }
 
-int dcc_drawable_is_in_pipe(DisplayChannelClient *dcc, Drawable *drawable)
+bool dcc_drawable_is_in_pipe(DisplayChannelClient *dcc, Drawable *drawable)
 {
     RedDrawablePipeItem *dpi;
     GList *l;
@@ -223,8 +223,8 @@ int dcc_drawable_is_in_pipe(DisplayChannelClient *dcc, Drawable *drawable)
  * Return: TRUE if wait_if_used == FALSE, or otherwise, if all of the pipe items that
  * are related to the surface have been cleared (or sent) from the pipe.
  */
-int dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface_id,
-                                          int wait_if_used)
+bool dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surface_id,
+                                           int wait_if_used)
 {
     GList *l;
     int x;
@@ -534,7 +534,7 @@ static void dcc_create_all_streams(DisplayChannelClient *dcc)
 }
 
 /* TODO: this function is evil^Wsynchronous, fix */
-static int display_channel_client_wait_for_init(DisplayChannelClient *dcc)
+static bool display_channel_client_wait_for_init(DisplayChannelClient *dcc)
 {
     dcc->priv->expect_init = TRUE;
     uint64_t end_time = spice_get_monotonic_time_ns() + COMMON_CLIENT_TIMEOUT;
@@ -946,8 +946,8 @@ static void dcc_push_release(DisplayChannelClient *dcc, uint8_t type, uint64_t i
     free_list->res->resources[free_list->res->count++].id = id;
 }
 
-int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
-                                  uint32_t size, int lossy)
+bool dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
+                                   uint32_t size, int lossy)
 {
     PixmapCache *cache = dcc->priv->pixmap_cache;
     NewCacheItem *item;
@@ -1012,7 +1012,7 @@ int dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
     return TRUE;
 }
 
-static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init)
+static bool dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init)
 {
     gboolean success;
     RedClient *client = red_channel_client_get_client(RED_CHANNEL_CLIENT(dcc));
@@ -1035,8 +1035,8 @@ static int dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *init
     return TRUE;
 }
 
-static int dcc_handle_stream_report(DisplayChannelClient *dcc,
-                                    SpiceMsgcDisplayStreamReport *report)
+static bool dcc_handle_stream_report(DisplayChannelClient *dcc,
+                                     SpiceMsgcDisplayStreamReport *report)
 {
     StreamAgent *agent;
 
@@ -1080,8 +1080,8 @@ static int dcc_handle_stream_report(DisplayChannelClient *dcc,
     return TRUE;
 }
 
-static int dcc_handle_preferred_compression(DisplayChannelClient *dcc,
-        SpiceMsgcDisplayPreferredCompression *pc)
+static bool dcc_handle_preferred_compression(DisplayChannelClient *dcc,
+                                             SpiceMsgcDisplayPreferredCompression *pc)
 {
     switch (pc->image_compression) {
     case SPICE_IMAGE_COMPRESSION_AUTO_LZ:
@@ -1100,7 +1100,6 @@ static int dcc_handle_preferred_compression(DisplayChannelClient *dcc,
     }
     return TRUE;
 }
-
 
 /* TODO: Client preference should only be considered when host has video-codecs
  * with the same priority value. At the moment, the video-codec GArray will be
@@ -1214,7 +1213,7 @@ GArray *dcc_get_preferred_video_codecs_for_encoding(DisplayChannelClient *dcc)
     return display_channel_get_video_codecs(DCC_TO_DC(dcc));
 }
 
-static int dcc_handle_gl_draw_done(DisplayChannelClient *dcc)
+static bool dcc_handle_gl_draw_done(DisplayChannelClient *dcc)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
 
@@ -1230,7 +1229,7 @@ static int dcc_handle_gl_draw_done(DisplayChannelClient *dcc)
     return TRUE;
 }
 
-int dcc_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void *msg)
+bool dcc_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void *msg)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
 
@@ -1261,7 +1260,7 @@ static int dcc_handle_migrate_glz_dictionary(DisplayChannelClient *dcc,
                                                  &migrate->glz_dict_data);
 }
 
-static int restore_surface(DisplayChannelClient *dcc, uint32_t surface_id)
+static bool restore_surface(DisplayChannelClient *dcc, uint32_t surface_id)
 {
     /* we don't process commands till we receive the migration data, thus,
      * we should have not sent any surface to the client. */
@@ -1273,8 +1272,8 @@ static int restore_surface(DisplayChannelClient *dcc, uint32_t surface_id)
     return TRUE;
 }
 
-static int restore_surfaces_lossless(DisplayChannelClient *dcc,
-                                         MigrateDisplaySurfacesAtClientLossless *mig_surfaces)
+static bool restore_surfaces_lossless(DisplayChannelClient *dcc,
+                                      MigrateDisplaySurfacesAtClientLossless *mig_surfaces)
 {
     uint32_t i;
 
@@ -1288,8 +1287,8 @@ static int restore_surfaces_lossless(DisplayChannelClient *dcc,
     return TRUE;
 }
 
-static int restore_surfaces_lossy(DisplayChannelClient *dcc,
-                                  MigrateDisplaySurfacesAtClientLossy *mig_surfaces)
+static bool restore_surfaces_lossy(DisplayChannelClient *dcc,
+                                   MigrateDisplaySurfacesAtClientLossy *mig_surfaces)
 {
     uint32_t i;
 
@@ -1313,7 +1312,7 @@ static int restore_surfaces_lossy(DisplayChannelClient *dcc,
     return TRUE;
 }
 
-int dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *message)
+bool dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *message)
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
     int surfaces_restored = FALSE;
@@ -1421,7 +1420,7 @@ void dcc_set_max_stream_bit_rate(DisplayChannelClient *dcc, uint64_t rate)
     dcc->priv->streams_max_bit_rate = rate;
 }
 
-static int dcc_config_socket(RedChannelClient *rcc)
+static bool dcc_config_socket(RedChannelClient *rcc)
 {
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);

@@ -512,14 +512,14 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
     }
 }
 
-static int spicevmc_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc)
+static bool spicevmc_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SPICEVMC_MIGRATE_DATA);
     return TRUE;
 }
 
-static int spicevmc_channel_client_handle_migrate_data(RedChannelClient *rcc,
-                                                       uint32_t size, void *message)
+static bool spicevmc_channel_client_handle_migrate_data(RedChannelClient *rcc,
+                                                        uint32_t size, void *message)
 {
     SpiceMigrateDataHeader *header;
     SpiceMigrateDataSpiceVmc *mig_data;
@@ -540,8 +540,8 @@ static int spicevmc_channel_client_handle_migrate_data(RedChannelClient *rcc,
     return red_char_device_restore(channel->chardev, &mig_data->base);
 }
 
-static int handle_compressed_msg(RedVmcChannel *channel, RedChannelClient *rcc,
-                                 SpiceMsgCompressedData *compressed_data_msg)
+static bool handle_compressed_msg(RedVmcChannel *channel, RedChannelClient *rcc,
+                                  SpiceMsgCompressedData *compressed_data_msg)
 {
     /* NOTE: *decompressed is free by the char-device */
     int decompressed_size;
@@ -582,10 +582,10 @@ static int handle_compressed_msg(RedVmcChannel *channel, RedChannelClient *rcc,
     return TRUE;
 }
 
-static int spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
-                                                      uint16_t type,
-                                                      uint32_t size,
-                                                      void *msg)
+static bool spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
+                                                       uint16_t type,
+                                                       uint32_t size,
+                                                       void *msg)
 {
     /* NOTE: *msg free by free() (when cb to spicevmc_red_channel_release_msg_rcv_buf
      * with the compressed msg type) */

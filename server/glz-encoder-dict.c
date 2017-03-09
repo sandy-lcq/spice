@@ -46,7 +46,7 @@ static inline void __glz_dictionary_window_reset_images(SharedDictionary *dict)
 }
 
 /* allocate window fields (no reset)*/
-static int glz_dictionary_window_create(SharedDictionary *dict, uint32_t size)
+static bool glz_dictionary_window_create(SharedDictionary *dict, uint32_t size)
 {
     if (size > LZ_MAX_WINDOW_SIZE) {
         return FALSE;
@@ -424,7 +424,7 @@ static WindowImage *glz_dictionary_window_get_new_head(SharedDictionary *dict, i
     return cur_head;
 }
 
-static inline int glz_dictionary_is_in_use(SharedDictionary *dict)
+static inline bool glz_dictionary_is_in_use(SharedDictionary *dict)
 {
     uint32_t i = 0;
     for (i = 0; i < dict->max_encoders; i++) {

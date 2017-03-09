@@ -236,7 +236,7 @@ void                       display_channel_surface_unref             (DisplayCha
                                                                       uint32_t surface_id);
 void                       display_channel_current_flush             (DisplayChannel *display,
                                                                       int surface_id);
-int                        display_channel_wait_for_migrate_data     (DisplayChannel *display);
+bool                       display_channel_wait_for_migrate_data     (DisplayChannel *display);
 void                       display_channel_flush_all_surfaces        (DisplayChannel *display);
 void                       display_channel_free_glz_drawables_to_free(DisplayChannel *display);
 void                       display_channel_free_glz_drawables        (DisplayChannel *display);

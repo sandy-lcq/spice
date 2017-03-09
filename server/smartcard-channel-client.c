@@ -283,10 +283,10 @@ static void smartcard_channel_client_write_to_reader(SmartCardChannelClient *scc
 }
 
 
-int smartcard_channel_client_handle_message(RedChannelClient *rcc,
-                                            uint16_t type,
-                                            uint32_t size,
-                                            void *message)
+bool smartcard_channel_client_handle_message(RedChannelClient *rcc,
+                                             uint16_t type,
+                                             uint32_t size,
+                                             void *message)
 {
     uint8_t *msg = message;
     VSCMsgHeader* vheader = message;
@@ -334,9 +334,9 @@ int smartcard_channel_client_handle_message(RedChannelClient *rcc,
     return TRUE;
 }
 
-int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
-                                                 uint32_t size,
-                                                 void *message)
+bool smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
+                                                  uint32_t size,
+                                                  void *message)
 {
     SmartCardChannelClient *scc;
     SpiceMigrateDataHeader *header;
@@ -376,7 +376,7 @@ int smartcard_channel_client_handle_migrate_data(RedChannelClient *rcc,
                                                      mig_data);
 }
 
-int smartcard_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc)
+bool smartcard_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA);
     return TRUE;

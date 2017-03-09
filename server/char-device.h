@@ -166,8 +166,8 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                            SpiceMarshaller *m);
 void red_char_device_migrate_data_marshall_empty(SpiceMarshaller *m);
 
-int red_char_device_restore(RedCharDevice *dev,
-                            SpiceMigrateDataCharDevice *mig_data);
+bool red_char_device_restore(RedCharDevice *dev,
+                             SpiceMigrateDataCharDevice *mig_data);
 
 /*
  * Resets write/read queues, and moves that state to being stopped.
@@ -186,13 +186,13 @@ void red_char_device_reset(RedCharDevice *dev);
 
 /* max_send_queue_size = how many messages we can read from the device and enqueue for this client,
  * when we have tokens for other clients and no tokens for this one */
-int red_char_device_client_add(RedCharDevice *dev,
-                               RedClient *client,
-                               int do_flow_control,
-                               uint32_t max_send_queue_size,
-                               uint32_t num_client_tokens,
-                               uint32_t num_send_tokens,
-                               int wait_for_migrate_data);
+bool red_char_device_client_add(RedCharDevice *dev,
+                                RedClient *client,
+                                int do_flow_control,
+                                uint32_t max_send_queue_size,
+                                uint32_t num_client_tokens,
+                                uint32_t num_send_tokens,
+                                int wait_for_migrate_data);
 
 void red_char_device_client_remove(RedCharDevice *dev,
                                    RedClient *client);
