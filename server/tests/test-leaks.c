@@ -15,6 +15,19 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
+/*
+ * This test allocate and free some resources in order to be able to detect
+ * leaks using a leak detector.
+ *
+ * To use with GCC/Clang address sanitizer you can set or add these options:
+ *   CFLAGS="-fsanitize=address -fno-omit-frame-pointer"
+ *   LDFLAGS="-fsanitize=address -lasan"
+ * Note that early GCC address sanitizer don't have a leak detector.
+ *
+ * To use Valgrind you can run the test with:
+ *   valgrind --tool=memcheck --leak-check=full ./test-leaks
+ * For cleaner output you should suppress GLib checks with glib.supp file.
+ */
 #include <config.h>
 #include <spice.h>
 
