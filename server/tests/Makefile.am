@@ -2,7 +2,12 @@ NULL =
 
 @VALGRIND_CHECK_RULES@
 VALGRIND_SUPPRESSIONS_FILES = $(top_srcdir)/server/tests/valgrind/glib.supp
-EXTRA_DIST = $(VALGRIND_SUPPRESSIONS_FILES)
+EXTRA_DIST =				\
+	$(VALGRIND_SUPPRESSIONS_FILES)	\
+	pki/ca-cert.pem			\
+	pki/server-cert.pem		\
+	pki/server-key.pem		\
+	$(NULL)
 
 AM_CPPFLAGS =					\
 	-DSPICE_TOP_SRCDIR=\"$(abs_top_srcdir)\"\
