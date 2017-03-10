@@ -116,6 +116,15 @@ AC_ARG_ENABLE([automated_tests],
 AS_IF([test x"$enable_automated_tests" != "xno"], [enable_automated_tests="yes"])
 AM_CONDITIONAL(HAVE_AUTOMATED_TESTS, test "x$enable_automated_tests" != "xno")
 
+dnl Check for the presence of Valgrind and do the plumbing to allow
+dnl the running of "make check-valgrind".
+AX_VALGRIND_DFLT(memcheck, on)
+AX_VALGRIND_DFLT(helgrind, off)
+AX_VALGRIND_DFLT(drd, off)
+AX_VALGRIND_DFLT(sgcheck, off)
+
+AX_VALGRIND_CHECK
+
 SPICE_CHECK_LZ4
 SPICE_CHECK_SASL
 

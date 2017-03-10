@@ -147,3 +147,6 @@ exclude_file_name_regexp--sc_prohibit_path_max_allocation = server/tests/test-di
 exclude_file_name_regexp--sc_cast_of_argument_to_free = server/red-replay-qxl.c
 
 exclude_file_name_regexp--sc_avoid_attribute_unused_in_header = server/stat.h
+
+# this contains a VALGRIND_CHECK_RULES occurrence wrapped in @ which is expected
+exclude_file_name_regexp--sc_makefile_at_at_check = server/tests/Makefile.am

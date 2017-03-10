@@ -1,5 +1,9 @@
 NULL =
 
+@VALGRIND_CHECK_RULES@
+VALGRIND_SUPPRESSIONS_FILES = $(top_srcdir)/server/tests/valgrind/glib.supp
+EXTRA_DIST = $(VALGRIND_SUPPRESSIONS_FILES)
+
 AM_CPPFLAGS =					\
 	-DSPICE_TOP_SRCDIR=\"$(abs_top_srcdir)\"\
 	-I$(top_srcdir)				\
