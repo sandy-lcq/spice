@@ -1,13 +1,16 @@
 image: fedora:latest
 
 before_script:
-  - dnf install 'dnf-command(copr)' git libtool make -y
+  - dnf install 'dnf-command(copr)' git libtool make libasan -y
   - dnf copr enable @spice/nightly -y
   - dnf builddep spice -y
 
 makecheck:
   script:
-  - ./autogen.sh
+  - >
+    CFLAGS='-O2 -pipe -g -fsanitize=address -fno-omit-frame-pointer'
+    LDFLAGS='-fsanitize=address -lasan'
+    ./autogen.sh
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
 
