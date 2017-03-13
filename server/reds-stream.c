@@ -308,7 +308,7 @@ ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt)
     int n;
     ssize_t ret = 0;
 
-    if (s->priv->writev != NULL) {
+    if (s->priv->writev != NULL && iovcnt > 1) {
         return s->priv->writev(s, iov, iovcnt);
     }
 
