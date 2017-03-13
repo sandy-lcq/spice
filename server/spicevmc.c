@@ -914,6 +914,7 @@ red_char_device_spicevmc_dispose(GObject *object)
         red_channel_destroy(channel);
         self->channel = NULL;
     }
+    G_OBJECT_CLASS(red_char_device_spicevmc_parent_class)->dispose(object);
 }
 
 enum {

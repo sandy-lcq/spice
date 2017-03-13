@@ -4525,6 +4525,8 @@ red_char_device_vdi_port_finalize(GObject *object)
 
    free(dev->priv->mig_data);
    /* FIXME: need to free the RedVDIReadBuf allocated previously */
+
+    G_OBJECT_CLASS(red_char_device_vdi_port_parent_class)->finalize(object);
 }
 
 static void

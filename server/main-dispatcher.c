@@ -332,4 +332,5 @@ static void main_dispatcher_finalize(GObject *object)
 
     self->priv->core->watch_remove(self->priv->core, self->priv->watch);
     self->priv->watch = NULL;
+    G_OBJECT_CLASS(main_dispatcher_parent_class)->finalize(object);
 }
