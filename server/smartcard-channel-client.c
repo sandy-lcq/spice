@@ -73,11 +73,6 @@ static void smart_card_channel_client_set_property(GObject *object,
     }
 }
 
-static void smart_card_channel_client_dispose(GObject *object)
-{
-    G_OBJECT_CLASS(smart_card_channel_client_parent_class)->dispose(object);
-}
-
 static void smart_card_channel_client_finalize(GObject *object)
 {
     SmartCardChannelClient *self = SMARTCARD_CHANNEL_CLIENT(object);
@@ -100,7 +95,6 @@ static void smart_card_channel_client_class_init(SmartCardChannelClientClass *kl
 
     object_class->get_property = smart_card_channel_client_get_property;
     object_class->set_property = smart_card_channel_client_set_property;
-    object_class->dispose = smart_card_channel_client_dispose;
     object_class->finalize = smart_card_channel_client_finalize;
 }
 
