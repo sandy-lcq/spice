@@ -113,6 +113,25 @@ stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
     red_channel_client_begin_send_message(rcc);
 }
 
+static bool
+handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void *msg)
+{
+    switch (type) {
+    case SPICE_MSGC_DISPLAY_INIT:
+    case SPICE_MSGC_DISPLAY_PREFERRED_COMPRESSION:
+        return true;
+    case SPICE_MSGC_DISPLAY_STREAM_REPORT:
+        /* TODO these will help tune the streaming reducing/increasing quality */
+        return true;
+    case SPICE_MSGC_DISPLAY_GL_DRAW_DONE:
+        /* client should not send this message */
+        return false;
+    default:
+        return red_channel_client_handle_message(rcc, type, size, msg);
+    }
+}
+
+
 StreamChannel*
 stream_channel_new(RedsState *server, uint32_t id)
 {
@@ -138,6 +157,22 @@ stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedsStrea
 
     client = stream_channel_client_new(channel, red_client, stream, migration, caps);
     spice_return_if_fail(client != NULL);
+
+    // TODO set capabilities like  SPICE_DISPLAY_CAP_MONITORS_CONFIG
+    // see guest_set_client_capabilities
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(client);
+    red_channel_client_push_set_ack(rcc);
+
+    // TODO what should happen on migration, dcc return if on migration wait ??
+    red_channel_client_ack_zero_messages_window(rcc);
+
+    // "emulate" dcc_start
+    // TODO only if "surface"
+    red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES);
+    // TODO red_surface_create_item_new
+    // TODO surface data ??
+    // TODO monitor configs ??
+    red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_DISPLAY_MARK);
 }
 
 static void
@@ -152,6 +187,10 @@ stream_channel_constructed(GObject *object)
     client_cbs.connect = stream_channel_connect;
     red_channel_register_client_cbs(red_channel, &client_cbs, NULL);
 
+    // TODO, send monitor to support multiple monitors in the future
+//    red_channel_set_cap(red_channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
+    red_channel_set_cap(red_channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
+
     reds_register_channel(reds, red_channel);
 }
 
@@ -164,7 +203,7 @@ stream_channel_class_init(StreamChannelClass *klass)
     object_class->constructed = stream_channel_constructed;
 
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_DISPLAY, NULL);
-    channel_class->handle_message = red_channel_client_handle_message;
+    channel_class->handle_message = handle_message;
 
     channel_class->send_item = stream_channel_send_item;
 }
