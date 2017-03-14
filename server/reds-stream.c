@@ -283,6 +283,10 @@ int reds_stream_send_msgfd(RedsStream *stream, int fd)
     if (fd != -1) {
         msgh.msg_control = control.data;
         msgh.msg_controllen = sizeof(control.data);
+        /* CMSG_SPACE() might be larger than CMSG_LEN() as it can include some
+         * padding. We set the whole control data to 0 to avoid valgrind warnings
+         */
+        memset(control.data, 0, sizeof(control.data));
 
         cmsg = CMSG_FIRSTHDR(&msgh);
         cmsg->cmsg_len = CMSG_LEN(fd_size);
