@@ -118,27 +118,27 @@ typedef struct RedCursorCmd {
 
 void red_get_rect_ptr(SpiceRect *red, const QXLRect *qxl);
 
-int red_get_drawable(RedMemSlotInfo *slots, int group_id,
-                     RedDrawable *red, QXLPHYSICAL addr, uint32_t flags);
+bool red_get_drawable(RedMemSlotInfo *slots, int group_id,
+                      RedDrawable *red, QXLPHYSICAL addr, uint32_t flags);
 void red_put_drawable(RedDrawable *red);
 
-int red_get_update_cmd(RedMemSlotInfo *slots, int group_id,
-                       RedUpdateCmd *red, QXLPHYSICAL addr);
+bool red_get_update_cmd(RedMemSlotInfo *slots, int group_id,
+                        RedUpdateCmd *red, QXLPHYSICAL addr);
 void red_put_update_cmd(RedUpdateCmd *red);
 
-int red_get_message(RedMemSlotInfo *slots, int group_id,
-                    RedMessage *red, QXLPHYSICAL addr);
+bool red_get_message(RedMemSlotInfo *slots, int group_id,
+                     RedMessage *red, QXLPHYSICAL addr);
 void red_put_message(RedMessage *red);
 
 bool red_validate_surface(uint32_t width, uint32_t height,
                           int32_t stride, uint32_t format);
 
-int red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
-                        RedSurfaceCmd *red, QXLPHYSICAL addr);
+bool red_get_surface_cmd(RedMemSlotInfo *slots, int group_id,
+                         RedSurfaceCmd *red, QXLPHYSICAL addr);
 void red_put_surface_cmd(RedSurfaceCmd *red);
 
-int red_get_cursor_cmd(RedMemSlotInfo *slots, int group_id,
-                       RedCursorCmd *red, QXLPHYSICAL addr);
+bool red_get_cursor_cmd(RedMemSlotInfo *slots, int group_id,
+                        RedCursorCmd *red, QXLPHYSICAL addr);
 void red_put_cursor_cmd(RedCursorCmd *red);
 
 #endif /* RED_PARSE_QXL_H_ */
