@@ -124,6 +124,7 @@ test_vdagent_CPPFLAGS =			\
 	-UGLIB_VERSION_MAX_ALLOWED	\
 	$(NULL)
 test_codecs_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
+test_qxl_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
 
 if HAVE_GSTREAMER
 test_gst_SOURCES = test-gst.c \
