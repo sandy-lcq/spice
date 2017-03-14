@@ -83,13 +83,13 @@ libserver_la_SOURCES =				\
 	event-loop.c				\
 	glz-encoder.c				\
 	glz-encoder.h				\
-	glz-encoder-dict.c		\
-	glz-encoder-dict.h		\
-	glz-encoder-priv.h	\
+	glz-encoder-dict.c			\
+	glz-encoder-dict.h			\
+	glz-encoder-priv.h			\
 	inputs-channel.c			\
 	inputs-channel.h			\
-	inputs-channel-client.c		\
-	inputs-channel-client.h		\
+	inputs-channel-client.c			\
+	inputs-channel-client.h			\
 	jpeg-encoder.c				\
 	jpeg-encoder.h				\
 	main-channel.c				\
@@ -112,7 +112,7 @@ libserver_la_SOURCES =				\
 	red-qxl.h				\
 	main-dispatcher.c			\
 	main-dispatcher.h			\
-	migration-protocol.h		\
+	migration-protocol.h			\
 	memslot.c				\
 	memslot.h				\
 	red-parse-qxl.c				\
@@ -136,9 +136,9 @@ libserver_la_SOURCES =				\
 	reds-private.h				\
 	reds-stream.c				\
 	reds-stream.h				\
-	sw-canvas.c			\
-	sound.c				\
-	sound.h				\
+	sw-canvas.c				\
+	sound.c					\
+	sound.h					\
 	stat.h					\
 	stat-file.c				\
 	stat-file.h				\
@@ -146,48 +146,48 @@ libserver_la_SOURCES =				\
 	video-encoder.h				\
 	zlib-encoder.c				\
 	zlib-encoder.h				\
-	image-cache.h			\
-	image-cache.c			\
+	image-cache.h				\
+	image-cache.c				\
 	pixmap-cache.h				\
 	pixmap-cache.c				\
-	tree.h				\
-	tree.c				\
+	tree.h					\
+	tree.c					\
 	spice-bitmap-utils.h			\
 	spice-bitmap-utils.c			\
 	utils.c					\
 	utils.h					\
-	stream.c					\
-	stream.h					\
+	stream.c				\
+	stream.h				\
 	dcc.c					\
-	dcc-send.c					\
+	dcc-send.c				\
 	dcc.h					\
 	display-limits.h			\
 	dcc-private.h				\
-	image-encoders.c					\
-	image-encoders.h					\
+	image-encoders.c			\
+	image-encoders.h			\
 	glib-compat.h				\
-	$(spice_built_sources)		\
+	$(spice_built_sources)			\
 	$(NULL)
 
 if HAVE_LZ4
-libserver_la_SOURCES +=	\
+libserver_la_SOURCES +=				\
 	lz4-encoder.c				\
 	lz4-encoder.h				\
 	$(NULL)
 endif
 
 if HAVE_SMARTCARD
-libserver_la_SOURCES +=	\
-	smartcard.c		\
-	smartcard.h		\
+libserver_la_SOURCES +=			\
+	smartcard.c			\
+	smartcard.h			\
 	smartcard-channel-client.c	\
 	smartcard-channel-client.h	\
 	$(NULL)
 endif
 
 if HAVE_GSTREAMER
-libserver_la_SOURCES +=	\
-	gstreamer-encoder.c			\
+libserver_la_SOURCES +=			\
+	gstreamer-encoder.c		\
 	$(NULL)
 endif
 
@@ -201,7 +201,7 @@ spice-server-enums.h: spice-server.h spice-server-enums.tmpl.h
 	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.tmpl.h $< > $@
 
 EXTRA_DIST =					\
-	spice-bitmap-utils.tmpl.c			\
+	spice-bitmap-utils.tmpl.c		\
 	cache-item.tmpl.c			\
 	glz-encode-match.tmpl.c			\
 	glz-encode.tmpl.c			\
