@@ -20,6 +20,7 @@
 
 #include <stdbool.h>
 
+bool red_socket_set_keepalive(int fd, bool enable, int timeout);
 bool red_socket_set_no_delay(int fd, bool no_delay);
 bool red_socket_set_non_blocking(int fd, bool non_blocking);
 

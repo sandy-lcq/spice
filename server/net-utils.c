@@ -32,6 +32,38 @@
 #include "net-utils.h"
 
 /**
+ * red_socket_set_keepalive:
+ * @fd: a socket file descriptor
+ * @keepalive: whether to enable keepalives on @fd
+ *
+ * Returns: #true if the operation succeeded, #false otherwise.
+ */
+bool red_socket_set_keepalive(int fd, bool enable, int timeout)
+{
+    int keepalive = !!enable;
+
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) == -1) {
+        if (errno != ENOTSUP) {
+            spice_printerr("setsockopt for keepalive failed, %s", strerror(errno));
+            return false;
+        }
+    }
+
+    if (!enable) {
+        return true;
+    }
+
+    if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout)) == -1) {
+        if (errno != ENOTSUP) {
+            spice_printerr("setsockopt for keepalive timeout failed, %s", strerror(errno));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
  * red_socket_set_no_delay:
  * @fd: a socket file descriptor
  * @no_delay: whether to enable TCP_NODELAY on @fd
