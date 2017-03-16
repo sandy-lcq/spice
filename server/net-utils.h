@@ -21,5 +21,6 @@
 #include <stdbool.h>
 
 bool red_socket_set_no_delay(int fd, bool no_delay);
+bool red_socket_set_non_blocking(int fd, bool non_blocking);
 
 #endif /* RED_NET_UTILS_H_ */

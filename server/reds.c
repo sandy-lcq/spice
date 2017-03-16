@@ -31,8 +31,6 @@
 #include <limits.h>
 #include <pthread.h>
 #include <sys/mman.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <ctype.h>
 
 #include <openssl/err.h>
@@ -2406,16 +2404,9 @@ static bool reds_init_keepalive(int socket)
 static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
 {
     RedLinkInfo *link;
-    int flags;
 
-    if ((flags = fcntl(socket, F_GETFL)) == -1) {
-        spice_warning("accept failed, %s", strerror(errno));
-        goto error;
-    }
-
-    if (fcntl(socket, F_SETFL, flags | O_NONBLOCK) == -1) {
-        spice_warning("accept failed, %s", strerror(errno));
-        goto error;
+    if (!red_socket_set_non_blocking(socket, TRUE)) {
+       goto error;
     }
 
     if (!red_socket_set_no_delay(socket, TRUE)) {

@@ -52,3 +52,33 @@ bool red_socket_set_no_delay(int fd, bool no_delay)
 
     return true;
 }
+
+/**
+ * red_socket_set_non_blocking:
+ * @fd: a socket file descriptor
+ * @non_blocking: whether to enable O_NONBLOCK on @fd
+ *
+ * Returns: #true if the operation succeeded, #false otherwise.
+ */
+bool red_socket_set_non_blocking(int fd, bool non_blocking)
+{
+    int flags;
+
+    if ((flags = fcntl(fd, F_GETFL)) == -1) {
+        spice_warning("fnctl(F_GETFL) failed, %s", strerror(errno));
+        return false;
+    }
+
+    if (non_blocking) {
+        flags |= O_NONBLOCK;
+    } else {
+        flags &= ~O_NONBLOCK;
+    }
+
+    if (fcntl(fd, F_SETFL, flags) == -1) {
+        spice_warning("fnctl(F_SETFL) failed, %s", strerror(errno));
+        return false;
+    }
+
+    return true;
+}
