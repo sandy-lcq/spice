@@ -75,6 +75,7 @@
 #include "main-channel-client.h"
 #include "red-client.h"
 #include "glib-compat.h"
+#include "net-utils.h"
 
 #define REDS_MAX_STAT_NODES 100
 
@@ -2405,7 +2406,6 @@ static bool reds_init_keepalive(int socket)
 static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
 {
     RedLinkInfo *link;
-    int delay_val = 1;
     int flags;
 
     if ((flags = fcntl(socket, F_GETFL)) == -1) {
@@ -2418,10 +2418,8 @@ static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
         goto error;
     }
 
-    if (setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &delay_val, sizeof(delay_val)) == -1) {
-        if (errno != ENOTSUP) {
-            spice_warning("setsockopt failed, %s", strerror(errno));
-        }
+    if (!red_socket_set_no_delay(socket, TRUE)) {
+       goto error;
     }
 
     reds_init_keepalive(socket);

@@ -734,7 +734,6 @@ static void record_channel_send_item(RedChannelClient *rcc, G_GNUC_UNUSED RedPip
 
 static bool snd_channel_client_config_socket(RedChannelClient *rcc)
 {
-    int delay_val;
 #ifdef SO_PRIORITY
     int priority;
 #endif
@@ -760,12 +759,7 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
         }
     }
 
-    delay_val = main_channel_client_is_low_bandwidth(mcc) ? 0 : 1;
-    if (setsockopt(stream->socket, IPPROTO_TCP, TCP_NODELAY, &delay_val, sizeof(delay_val)) == -1) {
-        if (errno != ENOTSUP) {
-            spice_printerr("setsockopt failed, %s", strerror(errno));
-        }
-    }
+    reds_stream_set_no_delay(stream, !main_channel_client_is_low_bandwidth(mcc));
 
     return TRUE;
 }

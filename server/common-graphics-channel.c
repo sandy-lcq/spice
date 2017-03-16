@@ -19,9 +19,6 @@
 #endif
 
 #include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 
 #include "common-graphics-channel.h"
 #include "dcc.h"
@@ -125,24 +122,18 @@ bool common_channel_client_config_socket(RedChannelClient *rcc)
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
     RedsStream *stream = red_channel_client_get_stream(rcc);
-    int delay_val;
     gboolean is_low_bandwidth;
 
     // TODO - this should be dynamic, not one time at channel creation
     is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
-    delay_val = is_low_bandwidth ? 0 : 1;
     /* FIXME: Using Nagle's Algorithm can lead to apparent delays, depending
      * on the delayed ack timeout on the other side.
      * Instead of using Nagle's, we need to implement message buffering on
      * the application level.
      * see: http://www.stuartcheshire.org/papers/NagleDelayedAck/
      */
-    if (setsockopt(stream->socket, IPPROTO_TCP, TCP_NODELAY, &delay_val,
-                   sizeof(delay_val)) == -1) {
-        if (errno != ENOTSUP) {
-            spice_warning("setsockopt failed, %s", strerror(errno));
-        }
-    }
+    reds_stream_set_no_delay(stream, !is_low_bandwidth);
+
     // TODO: move wide/narrow ack setting to red_channel.
     red_channel_client_ack_set_client_window(rcc,
         is_low_bandwidth ?

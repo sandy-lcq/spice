@@ -571,13 +571,7 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
         }  else {
             rcc->priv->latency_monitor.tcp_nodelay = delay_val;
             if (!delay_val) {
-                delay_val = 1;
-                if (setsockopt(rcc->priv->stream->socket, IPPROTO_TCP, TCP_NODELAY, &delay_val,
-                               sizeof(delay_val)) == -1) {
-                   if (errno != ENOTSUP) {
-                        spice_warning("setsockopt failed, %s", strerror(errno));
-                    }
-                }
+                reds_stream_set_no_delay(rcc->priv->stream, TRUE);
             }
         }
     }
@@ -1366,14 +1360,7 @@ static void red_channel_client_handle_pong(RedChannelClient *rcc, SpiceMsgPing *
 
     /* set TCP_NODELAY=0, in case we reverted it for the test*/
     if (!rcc->priv->latency_monitor.tcp_nodelay) {
-        int delay_val = 0;
-
-        if (setsockopt(rcc->priv->stream->socket, IPPROTO_TCP, TCP_NODELAY, &delay_val,
-                       sizeof(delay_val)) == -1) {
-            if (errno != ENOTSUP) {
-                spice_warning("setsockopt failed, %s", strerror(errno));
-            }
-        }
+        reds_stream_set_no_delay(rcc->priv->stream, FALSE);
     }
 
     /*

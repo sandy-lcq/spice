@@ -32,6 +32,7 @@
 #include <common/log.h>
 
 #include "main-dispatcher.h"
+#include "net-utils.h"
 #include "red-common.h"
 #include "reds-stream.h"
 #include "reds.h"
@@ -257,6 +258,18 @@ bool reds_stream_is_plain_unix(const RedsStream *s)
 
     return true;
 
+}
+
+/**
+ * reds_stream_set_no_delay:
+ * @stream: a #RedsStream
+ * @no_delay: whether to enable TCP_NODELAY on @@stream
+ *
+ * Returns: #true if the operation succeeded, #false otherwise.
+ */
+bool reds_stream_set_no_delay(RedsStream *stream, bool no_delay)
+{
+    return red_socket_set_no_delay(stream->socket, no_delay);
 }
 
 int reds_stream_send_msgfd(RedsStream *stream, int fd)

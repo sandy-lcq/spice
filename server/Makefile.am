@@ -125,6 +125,8 @@ libserver_la_SOURCES =				\
 	memslot.h				\
 	migration-protocol.h			\
 	mjpeg-encoder.c				\
+	net-utils.c				\
+	net-utils.h				\
 	pixmap-cache.c				\
 	pixmap-cache.h				\
 	red-channel.c				\
