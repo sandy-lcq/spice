@@ -272,6 +272,11 @@ bool reds_stream_set_no_delay(RedsStream *stream, bool no_delay)
     return red_socket_set_no_delay(stream->socket, no_delay);
 }
 
+int reds_stream_get_no_delay(RedsStream *stream)
+{
+    return red_socket_get_no_delay(stream->socket);
+}
+
 int reds_stream_send_msgfd(RedsStream *stream, int fd)
 {
     struct msghdr msgh = { 0, };

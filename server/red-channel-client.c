@@ -556,7 +556,6 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
 
     if (!rcc->priv->latency_monitor.warmup_was_sent) { // latency test start
         int delay_val;
-        socklen_t opt_size = sizeof(delay_val);
 
         rcc->priv->latency_monitor.warmup_was_sent = TRUE;
         /*
@@ -565,10 +564,8 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
          * roundtrip measurement is less accurate (bigger).
          */
         rcc->priv->latency_monitor.tcp_nodelay = 1;
-        if (getsockopt(rcc->priv->stream->socket, IPPROTO_TCP, TCP_NODELAY, &delay_val,
-                       &opt_size) == -1) {
-            spice_warning("getsockopt failed, %s", strerror(errno));
-        }  else {
+        delay_val = reds_stream_get_no_delay(rcc->priv->stream);
+        if (delay_val != -1) {
             rcc->priv->latency_monitor.tcp_nodelay = delay_val;
             if (!delay_val) {
                 reds_stream_set_no_delay(rcc->priv->stream, TRUE);

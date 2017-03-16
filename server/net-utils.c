@@ -114,3 +114,23 @@ bool red_socket_set_non_blocking(int fd, bool non_blocking)
 
     return true;
 }
+
+/**
+ * red_socket_get_no_delay:
+ * @fd: a socket file descriptor
+ *
+ * Returns: The current value of TCP_NODELAY for @fd, -1 if an error occurred
+ */
+int red_socket_get_no_delay(int fd)
+{
+    int delay_val;
+    socklen_t opt_size = sizeof(delay_val);
+
+    if (getsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &delay_val,
+                   &opt_size) == -1) {
+            spice_warning("getsockopt failed, %s", strerror(errno));
+            return -1;
+    }
+
+    return delay_val;
+}
