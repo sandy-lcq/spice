@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e
+
+base_test() {
+    echo "Running test with options: $*"
+    ./test-gst -i 'videotestsrc pattern=14 foreground-color=0x4080ff background-color=0x402000 kx=-2 ky=-4 kxy=14 kt=3 num-buffers=100 ! video/x-raw,width=1024,height=768 ! videoconvert qos=false' "$@"
+}
+
+# check different clippings
+# note that due to some internal alignment we are using odd number for sizes
+for clipping in '' '--clipping (10%,10%)x(409,307)'
+do
+    for encoder in mjpeg 'gstreamer:mjpeg --min-psnr 16' gstreamer:vp8 gstreamer:h264
+    do
+        for split in '' '--split-lines=40'
+        do
+            # TODO check if encoder is supported
+            for format in 16BIT 24BIT 32BIT RGBA
+            do
+                base_test -f $format -e $encoder $clipping $split
+            done
+        done
+    done
+done

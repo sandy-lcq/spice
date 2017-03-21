@@ -100,6 +100,7 @@ if test "x$enable_gstreamer" != "xno" && test "x$enable_gstreamer" != "x1.0"; th
     ])
 fi
 AM_CONDITIONAL(HAVE_GSTREAMER, test "x$have_gstreamer_0_10" = "xyes" || test "x$have_gstreamer_1_0" = "xyes")
+AM_CONDITIONAL(HAVE_GSTREAMER_1_0, test "x$have_gstreamer_1_0" = "xyes")
 
 AS_IF([test "x$enable_gstreamer" = "xyes"],
       [AC_MSG_ERROR("GStreamer support requested but not found")],

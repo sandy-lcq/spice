@@ -82,6 +82,13 @@ endif
 TESTS = $(check_PROGRAMS)			\
 	$(NULL)
 
+if ENABLE_EXTRA_CHECKS
+if HAVE_GSTREAMER_1_0
+TESTS += video-encoders
+endif
+endif
+EXTRA_DIST += video-encoders
+
 noinst_LIBRARIES += \
 	libtest-stat1.a \
 	libtest-stat2.a \
