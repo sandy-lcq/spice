@@ -1260,7 +1260,7 @@ static inline int line_copy(SpiceGstEncoder *encoder, const SpiceBitmap *bitmap,
 
          /* Copy the line */
          uint8_t *src = chunks->chunk[chunk_index].data + chunk_offset;
-         memcpy(dst, src, stream_stride);
+         memcpy(dst, src, MIN(stream_stride, bitmap->stride));
          dst += stream_stride;
          chunk_offset += bitmap->stride;
      }
@@ -1350,7 +1350,8 @@ static int push_raw_frame(SpiceGstEncoder *encoder,
                           gpointer bitmap_opaque)
 {
     uint32_t height = src->bottom - src->top;
-    uint32_t stream_stride = (src->right - src->left) * encoder->format->bpp / 8;
+    // GStreamer require the stream to be 4 bytes aligned
+    uint32_t stream_stride = GST_ROUND_UP_4((src->right - src->left) * encoder->format->bpp / 8);
     uint32_t len = stream_stride * height;
     GstBuffer *buffer = gst_buffer_new();
     /* TODO Use GST_MAP_INFO_INIT once GStreamer 1.4.5 is no longer relevant */
