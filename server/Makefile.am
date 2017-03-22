@@ -1,11 +1,8 @@
 NULL =
 SUBDIRS = . tests
 
-# Use 'check-valgrind-memcheck' rather than 'check-valgrind' to get a
-# non-0 exit code on failures, see
-# https://savannah.gnu.org/patch/index.php?9286
 check-valgrind:
-	$(MAKE) -C tests check-valgrind-memcheck
+	$(MAKE) -C tests check-valgrind
 
 AM_CPPFLAGS =					\
 	-DSPICE_SERVER_INTERNAL			\
