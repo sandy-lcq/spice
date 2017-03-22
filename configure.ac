@@ -237,6 +237,11 @@ AC_ARG_ENABLE([statistics],
 AS_IF([test "$enable_statistics" = "yes"],
       [AC_DEFINE([RED_STATISTICS], [1], [Enable SPICE statistics])])
 
+AC_ARG_ENABLE([extra-checks],
+               AS_HELP_STRING([--enable-extra-checks=@<:@yes/no@:>@],
+                              [Enable expensive checks @<:@default=no@:>@]))
+AM_CONDITIONAL(ENABLE_EXTRA_CHECKS, test "$enable_extra_checks" = "yes")
+
 dnl ===========================================================================
 dnl check compiler flags
 
