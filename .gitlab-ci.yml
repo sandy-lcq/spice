@@ -20,6 +20,14 @@ statistics:
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
 
+check-valgrind:
+  script:
+  - dnf debuginfo-install spice-server -y
+  - dnf install valgrind -y
+  - ./autogen.sh --enable-valgrind
+  - make
+  - make check-valgrind || (cat server/tests/test-suite-memcheck.log && exit 1)
+
 syntax-check:
   script:
   - ./autogen.sh
