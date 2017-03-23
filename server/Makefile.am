@@ -75,6 +75,7 @@ spice_built_sources = spice-server-enums.h spice-server-enums.c
 
 libserver_la_SOURCES =				\
 	$(libspice_serverinclude_HEADERS)	\
+	$(spice_built_sources)			\
 	agent-msg-filter.c			\
 	agent-msg-filter.h			\
 	cache-item.h				\
@@ -82,94 +83,93 @@ libserver_la_SOURCES =				\
 	char-device.h				\
 	common-graphics-channel.c		\
 	common-graphics-channel.h		\
+	cursor-channel.c			\
+	cursor-channel-client.c			\
+	cursor-channel-client.h			\
+	cursor-channel.h			\
+	dcc.c					\
+	dcc.h					\
+	dcc-private.h				\
+	dcc-send.c				\
 	demarshallers.h				\
-	event-loop.c				\
-	glz-encoder.c				\
-	glz-encoder.h				\
-	glz-encoder-dict.c			\
-	glz-encoder-dict.h			\
-	glz-encoder-priv.h			\
-	inputs-channel.c			\
-	inputs-channel.h			\
-	inputs-channel-client.c			\
-	inputs-channel-client.h			\
-	jpeg-encoder.c				\
-	jpeg-encoder.h				\
-	main-channel.c				\
-	main-channel.h				\
-	main-channel-client.c			\
-	main-channel-client.h			\
-	mjpeg-encoder.c				\
-	red-channel.c				\
-	red-channel.h				\
-	red-channel-client.c			\
-	red-channel-client.h			\
-	red-channel-capabilities.c		\
-	red-channel-capabilities.h		\
-	red-client.c				\
-	red-client.h				\
-	red-common.h				\
 	dispatcher.c				\
 	dispatcher.h				\
-	red-qxl.c				\
-	red-qxl.h				\
-	main-dispatcher.c			\
-	main-dispatcher.h			\
-	migration-protocol.h			\
-	memslot.c				\
-	memslot.h				\
-	red-parse-qxl.c				\
-	red-record-qxl.c			\
-	red-record-qxl.h			\
-	red-replay-qxl.c			\
-	red-parse-qxl.h				\
-	red-worker.c				\
-	red-worker.h				\
 	display-channel.c			\
 	display-channel.h			\
 	display-channel-private.h		\
-	cursor-channel-client.c			\
-	cursor-channel-client.h			\
-	cursor-channel.c			\
-	cursor-channel.h			\
+	display-limits.h			\
+	event-loop.c				\
+	glib-compat.h				\
+	glz-encoder.c				\
+	glz-encoder-dict.c			\
+	glz-encoder-dict.h			\
+	glz-encoder.h				\
+	glz-encoder-priv.h			\
+	image-cache.c				\
+	image-cache.h				\
+	image-encoders.c			\
+	image-encoders.h			\
+	inputs-channel.c			\
+	inputs-channel-client.c			\
+	inputs-channel-client.h			\
+	inputs-channel.h			\
+	jpeg-encoder.c				\
+	jpeg-encoder.h				\
+	main-channel.c				\
+	main-channel-client.c			\
+	main-channel-client.h			\
+	main-channel.h				\
+	main-dispatcher.c			\
+	main-dispatcher.h			\
+	memslot.c				\
+	memslot.h				\
+	migration-protocol.h			\
+	mjpeg-encoder.c				\
+	pixmap-cache.c				\
+	pixmap-cache.h				\
+	red-channel.c				\
+	red-channel-capabilities.c		\
+	red-channel-capabilities.h		\
+	red-channel-client.c			\
+	red-channel-client.h			\
+	red-channel.h				\
+	red-client.c				\
+	red-client.h				\
+	red-common.h				\
+	red-parse-qxl.c				\
+	red-parse-qxl.h				\
 	red-pipe-item.c				\
 	red-pipe-item.h				\
+	red-qxl.c				\
+	red-qxl.h				\
+	red-record-qxl.c			\
+	red-record-qxl.h			\
+	red-replay-qxl.c			\
 	reds.c					\
 	reds.h					\
 	reds-private.h				\
 	reds-stream.c				\
 	reds-stream.h				\
-	sw-canvas.c				\
+	red-worker.c				\
+	red-worker.h				\
 	sound.c					\
 	sound.h					\
-	stat.h					\
+	spice-bitmap-utils.c			\
+	spice-bitmap-utils.h			\
+	spicevmc.c				\
 	stat-file.c				\
 	stat-file.h				\
-	spicevmc.c				\
+	stat.h					\
+	stream.c				\
+	stream.h				\
+	sw-canvas.c				\
+	tree.c					\
+	tree.h					\
+	utils.c					\
+	utils.h					\
 	video-encoder.h				\
 	zlib-encoder.c				\
 	zlib-encoder.h				\
-	image-cache.h				\
-	image-cache.c				\
-	pixmap-cache.h				\
-	pixmap-cache.c				\
-	tree.h					\
-	tree.c					\
-	spice-bitmap-utils.h			\
-	spice-bitmap-utils.c			\
-	utils.c					\
-	utils.h					\
-	stream.c				\
-	stream.h				\
-	dcc.c					\
-	dcc-send.c				\
-	dcc.h					\
-	display-limits.h			\
-	dcc-private.h				\
-	image-encoders.c			\
-	image-encoders.h			\
-	glib-compat.h				\
-	$(spice_built_sources)			\
 	$(NULL)
 
 if HAVE_LZ4
