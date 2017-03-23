@@ -22,9 +22,13 @@ statistics:
 
 check-valgrind:
   script:
+  - dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm -y
   - dnf debuginfo-install spice-server -y
-  - dnf install valgrind -y
-  - ./autogen.sh --enable-valgrind
+  - >
+    dnf install valgrind
+    gstreamer1-libav gstreamer1-plugins-ugly gstreamer1-plugins-good gstreamer1-plugins-bad-free
+    -y
+  - ./autogen.sh --enable-valgrind --enable-extra-checks
   - make
   - make check-valgrind || (cat server/tests/test-suite-memcheck.log && exit 1)
 
