@@ -18,6 +18,9 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#include <sys/stat.h>
+
 #include "spice-bitmap-utils.h"
 
 #define RED_BITMAP_UTILS_RGB16
@@ -252,6 +255,7 @@ void dump_bitmap(SpiceBitmap *bitmap)
     file_size = bitmap_data_offset + (bitmap->y * row_size);
 
     id = ++file_id;
+    mkdir(RAM_PATH, 0755);
     sprintf(file_str, "%s/%u.bmp", RAM_PATH, id);
 
     f = fopen(file_str, "wb");
