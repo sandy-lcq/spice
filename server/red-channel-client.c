@@ -973,25 +973,6 @@ cleanup:
     return local_error == NULL;
 }
 
-RedChannelClient *red_channel_client_create(RedChannel *channel, RedClient *client,
-                                            RedsStream *stream,
-                                            int monitor_latency,
-                                            RedChannelCapabilities *caps)
-{
-    RedChannelClient *rcc;
-
-    rcc = g_initable_new(RED_TYPE_CHANNEL_CLIENT,
-                         NULL, NULL,
-                         "channel", channel,
-                         "client", client,
-                         "stream", stream,
-                         "monitor-latency", monitor_latency,
-                         "caps", caps,
-                         NULL);
-
-    return rcc;
-}
-
 static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
 {
     rcc->priv->wait_migrate_data = FALSE;

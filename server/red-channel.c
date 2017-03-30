@@ -37,7 +37,7 @@
  * red_channel_create.* and red_channel_destroy. The RedChannel resources
  * are deallocated only after red_channel_destroy is called and no RedChannelClient
  * refers to the channel.
- * RedChannelClient is created and destroyed by the calls to red_channel_client_create
+ * RedChannelClient is created and destroyed by the calls to xxx_channel_client_new
  * and red_channel_client_destroy. RedChannelClient resources are deallocated only when
  * its refs == 0. The reference count of RedChannelClient can be increased by routines
  * that include calls that might destroy the red_channel_client. For example,
