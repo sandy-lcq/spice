@@ -20,7 +20,9 @@
 #endif
 
 #include <inttypes.h>
+#include <pthread.h>
 #include <glib.h>
+
 #include "red-common.h"
 #include "memslot.h"
 #include "red-parse-qxl.h"

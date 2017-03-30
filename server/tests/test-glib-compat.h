@@ -39,4 +39,11 @@ void g_test_expect_message(const gchar *log_domain, GLogLevelFlags log_level,
 #define g_assert_null(ptr) g_assert((ptr) == NULL)
 #endif
 
+#ifndef g_assert_true
+#define g_assert_true g_assert
+#endif
+#ifndef g_assert_false
+#define g_assert_false(cond) g_assert(!(cond))
+#endif
+
 #endif // TEST_GLIB_COMPAT_H_

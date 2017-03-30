@@ -18,7 +18,7 @@
 
 #include <config.h>
 
-#include "glib-compat.h"
+#include "test-glib-compat.h"
 
 #if !GLIB_CHECK_VERSION(2, 34, 0)
 
