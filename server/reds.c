@@ -3401,9 +3401,6 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 {
     spice_debug("starting %s", VERSION);
 
-#if !GLIB_CHECK_VERSION(2,36,0)
-    g_type_init();
-#endif
     if (core_interface->base.major_version != SPICE_INTERFACE_CORE_MAJOR) {
         spice_warning("bad core interface version");
         goto err;
