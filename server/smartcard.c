@@ -535,11 +535,7 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
 
     SmartCardChannelClient *scc;
 
-    scc = smartcard_channel_client_create(channel,
-                                          client,
-                                          stream,
-                                          FALSE,
-                                          caps);
+    scc = smartcard_channel_client_create(channel, client, stream, caps);
 
     if (!scc) {
         return;

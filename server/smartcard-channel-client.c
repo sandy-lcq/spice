@@ -106,7 +106,6 @@ smart_card_channel_client_init(SmartCardChannelClient *self)
 
 SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
                                                         RedClient *client, RedsStream *stream,
-                                                        int monitor_latency,
                                                         RedChannelCapabilities *caps)
 {
     SmartCardChannelClient *rcc;
@@ -116,7 +115,6 @@ SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
                          "channel", channel,
                          "client", client,
                          "stream", stream,
-                         "monitor-latency", monitor_latency,
                          "caps", caps,
                          NULL);
 

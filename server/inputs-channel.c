@@ -463,7 +463,7 @@ static void inputs_connect(RedChannel *channel, RedClient *client,
     }
 
     spice_printerr("inputs channel client create");
-    rcc = inputs_channel_client_create(channel, client, stream, FALSE, caps);
+    rcc = inputs_channel_client_create(channel, client, stream, caps);
     if (!rcc) {
         return;
     }

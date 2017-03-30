@@ -83,7 +83,6 @@ inputs_channel_client_init(InputsChannelClient *self)
 RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                RedClient *client,
                                                RedsStream *stream,
-                                               int monitor_latency,
                                                RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;
@@ -93,7 +92,6 @@ RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                          "channel", channel,
                          "client", client,
                          "stream", stream,
-                         "monitor-latency", monitor_latency,
                          "caps", caps,
                          NULL);
 
