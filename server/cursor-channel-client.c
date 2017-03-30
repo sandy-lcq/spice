@@ -102,7 +102,6 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient 
                          "channel", cursor,
                          "client", client,
                          "stream", stream,
-                         "monitor-latency", FALSE,
                          "caps", caps,
                          NULL);
     common_graphics_channel_set_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor), mig_target);

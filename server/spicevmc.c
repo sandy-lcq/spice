@@ -1014,7 +1014,6 @@ vmc_channel_client_create(RedChannel *channel, RedClient *client,
                          "channel", channel,
                          "client", client,
                          "stream", stream,
-                         "monitor-latency", FALSE,
                          "caps", caps,
                          NULL);
 
