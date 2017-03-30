@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _H_STAT
-#define _H_STAT
+#ifndef STAT_H_
+#define STAT_H_
 
 #include <stdint.h>
 #include <glib.h>
@@ -189,4 +189,4 @@ static inline void stat_add(G_GNUC_UNUSED stat_info_t *info,
 #endif
 }
 
-#endif /* _H_STAT */
+#endif /* STAT_H_ */

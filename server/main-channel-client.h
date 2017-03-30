@@ -14,8 +14,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __MAIN_CHANNEL_CLIENT_H__
-#define __MAIN_CHANNEL_CLIENT_H__
+
+#ifndef MAIN_CHANNEL_CLIENT_H_
+#define MAIN_CHANNEL_CLIENT_H_
 
 #include <glib-object.h>
 #include <common/messages.h>
@@ -139,4 +140,4 @@ RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
 
 G_END_DECLS
 
-#endif /* __MAIN_CHANNEL_CLIENT_H__ */
+#endif /* MAIN_CHANNEL_CLIENT_H_ */

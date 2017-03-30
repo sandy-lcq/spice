@@ -15,6 +15,7 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifndef SPICE_REPLAY_H_
 #define SPICE_REPLAY_H_
 
@@ -34,4 +35,4 @@ void            spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt *cmd);
 void            spice_replay_free(SpiceReplay *replay);
 SpiceReplay *   spice_replay_new(FILE *file, int nsurfaces);
 
-#endif // SPICE_REPLAY_H_
+#endif /* SPICE_REPLAY_H_ */

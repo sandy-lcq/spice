@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _H_RED_COMMON
-#define _H_RED_COMMON
+#ifndef RED_COMMON_H_
+#define RED_COMMON_H_
 
 #include <errno.h>
 #include <stdbool.h>
@@ -93,4 +93,4 @@ typedef struct GListIter {
 #define GLIST_FOREACH_REVERSED(_list, _iter, _type, _data) \
     GLIST_FOREACH_GENERIC(_list, _iter, _type, _data, prev)
 
-#endif
+#endif /* RED_COMMON_H_ */

@@ -200,4 +200,4 @@ void glz_dictionary_post_encode(uint32_t encoder_id, GlzEncoderUsrContext *usr,
 #endif
 
 
-#endif // GLZ_ENCODER_PRIV_H_
+#endif /* GLZ_ENCODER_PRIV_H_ */

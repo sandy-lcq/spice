@@ -18,8 +18,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _H_VIDEO_ENCODER
-#define _H_VIDEO_ENCODER
+#ifndef VIDEO_ENCODER_H_
+#define VIDEO_ENCODER_H_
 
 #include <inttypes.h>
 #include <glib.h>
@@ -213,4 +213,4 @@ typedef struct RedVideoCodec {
     uint32_t cap;
 } RedVideoCodec;
 
-#endif
+#endif /* VIDEO_ENCODER_H_ */

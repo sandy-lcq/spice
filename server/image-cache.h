@@ -15,6 +15,7 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifndef IMAGE_CACHE_H_
 #define IMAGE_CACHE_H_
 
@@ -59,4 +60,4 @@ void         image_cache_localize_brush    (ImageCache *cache, SpiceBrush *brush
 void         image_cache_localize_mask     (ImageCache *cache, SpiceQMask *mask,
                                             SpiceImage *image_store);
 
-#endif
+#endif /* IMAGE_CACHE_H_ */

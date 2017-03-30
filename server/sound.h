@@ -32,4 +32,4 @@ void snd_set_playback_compression(int on);
 
 void snd_set_playback_latency(struct RedClient *client, uint32_t latency);
 
-#endif
+#endif /* SOUND_H_ */

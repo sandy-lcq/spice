@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _H_REDWORKER
-#define _H_REDWORKER
+#ifndef RED_WORKER_H_
+#define RED_WORKER_H_
 
 #include "red-common.h"
 #include "red-qxl.h"
@@ -31,4 +31,4 @@ RedWorker* red_worker_new(QXLInstance *qxl,
 bool       red_worker_run(RedWorker *worker);
 void red_worker_free(RedWorker *worker);
 
-#endif
+#endif /* RED_WORKER_H_ */

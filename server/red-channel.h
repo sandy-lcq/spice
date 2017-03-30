@@ -19,8 +19,8 @@
         yhalperi@redhat.com
 */
 
-#ifndef _H_RED_CHANNEL
-#define _H_RED_CHANNEL
+#ifndef RED_CHANNEL_H_
+#define RED_CHANNEL_H_
 
 #include <pthread.h>
 #include <limits.h>
@@ -249,4 +249,4 @@ void red_channel_disconnect_client(RedChannel *channel, RedChannelClient *rcc);
 
 G_END_DECLS
 
-#endif
+#endif /* RED_CHANNEL_H_ */

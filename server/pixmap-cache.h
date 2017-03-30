@@ -15,8 +15,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _PIXMAP_CACHE_H
-# define _PIXMAP_CACHE_H
+
+#ifndef PIXMAP_CACHE_H_
+#define PIXMAP_CACHE_H_
 
 #include "red-channel.h"
 
@@ -70,4 +71,4 @@ void         pixmap_cache_clear(PixmapCache *cache);
 int          pixmap_cache_unlocked_set_lossy(PixmapCache *cache, uint64_t id, int lossy);
 bool         pixmap_cache_freeze(PixmapCache *cache);
 
-#endif /* _PIXMAP_CACHE_H */
+#endif /* PIXMAP_CACHE_H_ */

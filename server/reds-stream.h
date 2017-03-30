@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _H_REDS_STREAM
-#define _H_REDS_STREAM
+#ifndef REDS_STREAM_H_
+#define REDS_STREAM_H_
 
 #include <openssl/ssl.h>
 #include <common/mem.h>
@@ -91,4 +91,4 @@ bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, v
 bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
 bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaque);
 
-#endif
+#endif /* REDS_STREAM_H_ */

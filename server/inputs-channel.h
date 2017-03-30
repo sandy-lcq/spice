@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _INPUTS_CHANNEL_H_
-#define _INPUTS_CHANNEL_H_
+#ifndef INPUTS_CHANNEL_H_
+#define INPUTS_CHANNEL_H_
 
 // Inputs channel, dealing with keyboard, mouse, tablet.
 // This include should only be used by reds.c and inputs-channel.c
@@ -61,4 +61,4 @@ gboolean inputs_channel_is_src_during_migrate(InputsChannel *inputs);
 
 G_END_DECLS
 
-#endif
+#endif /* INPUTS_CHANNEL_H_ */

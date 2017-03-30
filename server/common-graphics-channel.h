@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _COMMON_GRAPHICS_CHANNEL_H
-#define _COMMON_GRAPHICS_CHANNEL_H
+#ifndef COMMON_GRAPHICS_CHANNEL_H_
+#define COMMON_GRAPHICS_CHANNEL_H_
 
 #include <glib-object.h>
 
@@ -104,4 +104,4 @@ GType common_graphics_channel_client_get_type(void) G_GNUC_CONST;
 
 G_END_DECLS
 
-#endif /* _COMMON_GRAPHICS_CHANNEL_H */
+#endif /* COMMON_GRAPHICS_CHANNEL_H_ */

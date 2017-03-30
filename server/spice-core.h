@@ -102,5 +102,4 @@ struct SpiceCoreInterface {
     void (*channel_event)(int event, SpiceChannelEventInfo *info);
 };
 
-
 #endif /* SPICE_CORE_H_ */

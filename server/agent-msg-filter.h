@@ -18,8 +18,8 @@
         hdegoede@redhat.com
 */
 
-#ifndef _H_AGENT_MSG_FILTER
-#define _H_AGENT_MSG_FILTER
+#ifndef AGENT_MSG_FILTER_H_
+#define AGENT_MSG_FILTER_H_
 
 #include <inttypes.h>
 #include <glib.h>
@@ -51,4 +51,4 @@ void agent_msg_filter_config(AgentMsgFilter *filter,
 AgentMsgFilterResult agent_msg_filter_process_data(AgentMsgFilter *filter,
                                                    const uint8_t *data, uint32_t len);
 
-#endif
+#endif /* AGENT_MSG_FILTER_H_ */

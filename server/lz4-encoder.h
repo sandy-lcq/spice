@@ -27,8 +27,9 @@
    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#ifndef _H_LZ4_ENCODER
-#define _H_LZ4_ENCODER
+
+#ifndef LZ4_ENCODER_H_
+#define LZ4_ENCODER_H_
 
 #include <spice/types.h>
 
@@ -46,4 +47,5 @@ void lz4_encoder_destroy(Lz4EncoderContext *encoder);
 /* returns the total size of the encoded data. */
 int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
                unsigned int num_io_bytes, int top_down, uint8_t format);
-#endif
+
+#endif /* LZ4_ENCODER_H_ */

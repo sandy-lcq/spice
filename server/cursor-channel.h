@@ -15,8 +15,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifndef CURSOR_CHANNEL_H_
-# define CURSOR_CHANNEL_H_
+#define CURSOR_CHANNEL_H_
 
 #include "common-graphics-channel.h"
 #include "red-parse-qxl.h"

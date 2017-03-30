@@ -14,8 +14,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _H_DEMARSHAL
-#define _H_DEMARSHAL
+
+#ifndef DEMARSHALLERS_H_
+#define DEMARSHALLERS_H_
 
 #include <stddef.h>
 #include <inttypes.h>
@@ -26,4 +27,4 @@ typedef uint8_t * (*spice_parse_channel_func_t)(uint8_t *message_start, uint8_t 
 
 spice_parse_channel_func_t spice_get_client_channel_parser(uint32_t channel, unsigned int *max_message_type);
 
-#endif
+#endif /* DEMARSHALLERS_H_ */

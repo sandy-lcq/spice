@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef RED_ABI_RECORD_H
-#define RED_ABI_RECORD_H
+#ifndef RED_RECORD_QXL_H_
+#define RED_RECORD_QXL_H_
 
 #include <spice/qxl_dev.h>
 
@@ -45,4 +45,4 @@ void red_record_event(RedRecord *record, int what, uint32_t type);
 void red_record_qxl_command(RedRecord *record, RedMemSlotInfo *slots,
                             QXLCommandExt ext_cmd);
 
-#endif
+#endif /* RED_RECORD_QXL_H_ */

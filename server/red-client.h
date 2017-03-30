@@ -16,8 +16,8 @@
 
 */
 
-#ifndef _H_RED_CLIENT
-#define _H_RED_CLIENT
+#ifndef RED_CLIENT_H_
+#define RED_CLIENT_H_
 
 #include <glib-object.h>
 
@@ -73,4 +73,4 @@ RedsState* red_client_get_server(RedClient *client);
 
 G_END_DECLS
 
-#endif /* _H_RED_CLIENT */
+#endif /* RED_CLIENT_H_ */

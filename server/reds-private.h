@@ -15,8 +15,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef REDS_PRIVATE_H
-#define REDS_PRIVATE_H
+
+#ifndef REDS_PRIVATE_H_
+#define REDS_PRIVATE_H_
 
 #include <spice/protocol.h>
 #include <spice/stats.h>
@@ -142,4 +143,4 @@ struct RedsState {
 #define FOREACH_QXL_INSTANCE(_reds, _iter, _qxl) \
     GLIST_FOREACH(_reds->qxl_instances, _iter, QXLInstance, _qxl)
 
-#endif
+#endif /* REDS_PRIVATE_H_ */

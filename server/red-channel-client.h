@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _H_RED_CHANNEL_CLIENT
-#define _H_RED_CHANNEL_CLIENT
+#ifndef RED_CHANNEL_CLIENT_H_
+#define RED_CHANNEL_CLIENT_H_
 
 #include <glib-object.h>
 #include <gio/gio.h>
@@ -195,4 +195,4 @@ enum {
 
 G_END_DECLS
 
-#endif /* _H_RED_CHANNEL_CLIENT */
+#endif /* RED_CHANNEL_CLIENT_H_ */

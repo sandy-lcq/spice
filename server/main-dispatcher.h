@@ -15,8 +15,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef MAIN_DISPATCHER_H
-#define MAIN_DISPATCHER_H
+
+#ifndef MAIN_DISPATCHER_H_
+#define MAIN_DISPATCHER_H_
 
 #include "spice.h"
 #include "dispatcher.h"
@@ -60,4 +61,4 @@ void main_dispatcher_client_disconnect(MainDispatcher *self, RedClient *client);
 
 MainDispatcher* main_dispatcher_new(RedsState *reds, SpiceCoreInterfaceInternal *core);
 
-#endif //MAIN_DISPATCHER_H
+#endif /* MAIN_DISPATCHER_H_ */

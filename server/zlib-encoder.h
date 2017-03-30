@@ -27,8 +27,9 @@
    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#ifndef _H_ZLIB_ENCODER
-#define _H_ZLIB_ENCODER
+
+#ifndef ZLIB_ENCODER_H_
+#define ZLIB_ENCODER_H_
 
 #include <inttypes.h>
 
@@ -46,4 +47,5 @@ void zlib_encoder_destroy(ZlibEncoder *encoder);
 /* returns the total size of the encoded data */
 int zlib_encode(ZlibEncoder *zlib, int level, int input_size,
                 uint8_t *io_ptr, unsigned int num_io_bytes);
-#endif
+
+#endif /* ZLIB_ENCODER_H_ */

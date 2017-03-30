@@ -48,4 +48,4 @@ extern GType red_channel_capabilities_type;
 
 G_END_DECLS
 
-#endif
+#endif /* RED_CHANNEL_CAPABILITIES_H_ */

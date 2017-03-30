@@ -16,8 +16,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef RED_ABI_TRANSLATE_H
-#define RED_ABI_TRANSLATE_H
+#ifndef RED_PARSE_QXL_H_
+#define RED_PARSE_QXL_H_
 
 #include <spice/qxl_dev.h>
 
@@ -141,4 +141,4 @@ int red_get_cursor_cmd(RedMemSlotInfo *slots, int group_id,
                        RedCursorCmd *red, QXLPHYSICAL addr);
 void red_put_cursor_cmd(RedCursorCmd *red);
 
-#endif
+#endif /* RED_PARSE_QXL_H_ */

@@ -15,6 +15,7 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
+
 #ifndef CHAR_DEVICE_H_
 #define CHAR_DEVICE_H_
 
@@ -238,4 +239,4 @@ void spicevmc_device_disconnect(RedsState *reds,
 
 SpiceCharDeviceInterface *spice_char_device_get_interface(SpiceCharDeviceInstance *instance);
 
-#endif // CHAR_DEVICE_H_
+#endif /* CHAR_DEVICE_H_ */

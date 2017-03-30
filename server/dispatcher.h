@@ -15,8 +15,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef DISPATCHER_H
-#define DISPATCHER_H
+
+#ifndef DISPATCHER_H_
+#define DISPATCHER_H_
 
 #include <glib-object.h>
 
@@ -139,4 +140,4 @@ void dispatcher_set_opaque(Dispatcher *dispatcher, void *opaque);
 
 pthread_t dispatcher_get_thread_id(Dispatcher *self);
 
-#endif //DISPATCHER_H
+#endif /* DISPATCHER_H_ */

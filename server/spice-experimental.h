@@ -15,9 +15,10 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __SPICE_EXPERIMENTAL_H__
-#define __SPICE_EXPERIMENTAL_H__
+
+#ifndef SPICE_EXPERIMENTAL_H_
+#define SPICE_EXPERIMENTAL_H_
 
 #warning spice-experimental.h is deprecated
 
-#endif // __SPICE_EXPERIMENTAL_H__
+#endif /* SPICE_EXPERIMENTAL_H_ */

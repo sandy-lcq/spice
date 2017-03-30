@@ -15,8 +15,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _H_RED_PIPE_ITEM
-#define _H_RED_PIPE_ITEM
+
+#ifndef RED_PIPE_ITEM_H_
+#define RED_PIPE_ITEM_H_
 
 #include <glib.h>
 #include <common/ring.h>
@@ -46,4 +47,4 @@ static inline void red_pipe_item_init(RedPipeItem *item, int type)
 /* a convenience function for unreffing a pipe item after it has been sent */
 void marshaller_unref_pipe_item(uint8_t *data, void *opaque);
 
-#endif
+#endif /* RED_PIPE_ITEM_H_ */

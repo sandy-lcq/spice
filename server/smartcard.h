@@ -15,8 +15,9 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __SMART_CARD_H__
-#define __SMART_CARD_H__
+
+#ifndef SMART_CARD_H_
+#define SMART_CARD_H_
 
 #include <glib-object.h>
 
@@ -75,4 +76,4 @@ enum {
     RED_PIPE_ITEM_TYPE_SMARTCARD_MIGRATE_DATA,
 };
 
-#endif // __SMART_CARD_H__
+#endif /* SMART_CARD_H_ */

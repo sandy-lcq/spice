@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __MAIN_CHANNEL_H__
-#define __MAIN_CHANNEL_H__
+#ifndef MAIN_CHANNEL_H_
+#define MAIN_CHANNEL_H_
 
 #include <stdint.h>
 #include <glib-object.h>
@@ -86,4 +86,4 @@ void main_channel_on_migrate_connected(MainChannel *main_channel,
 
 G_END_DECLS
 
-#endif
+#endif /* MAIN_CHANNEL_H_ */

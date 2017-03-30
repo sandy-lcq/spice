@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _H_GLZ_ENCODER
-#define _H_GLZ_ENCODER
+#ifndef GLZ_ENCODER_H_
+#define GLZ_ENCODER_H_
 
 /* Manging the lz encoding using a dictionary that is shared among encoders */
 
@@ -71,4 +71,4 @@ int glz_encode(GlzEncoderContext *opaque_encoder, LzImageType type, int width, i
                GlzEncDictImageContext **o_enc_dict_context);
 
 
-#endif // _H_GLZ_ENCODER
+#endif /* GLZ_ENCODER_H_ */

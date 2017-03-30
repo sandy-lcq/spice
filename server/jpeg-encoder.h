@@ -27,8 +27,9 @@
    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#ifndef _H_JPEG_ENCODER
-#define _H_JPEG_ENCODER
+
+#ifndef JPEG_ENCODER_H_
+#define JPEG_ENCODER_H_
 
 #include <spice/types.h>
 
@@ -58,4 +59,5 @@ void jpeg_encoder_destroy(JpegEncoderContext *encoder);
 int jpeg_encode(JpegEncoderContext *jpeg, int quality, JpegEncoderImageType type,
                 int width, int height, uint8_t *lines, unsigned int num_lines, int stride,
                 uint8_t *io_ptr, unsigned int num_io_bytes);
-#endif
+
+#endif /* JPEG_ENCODER_H_ */

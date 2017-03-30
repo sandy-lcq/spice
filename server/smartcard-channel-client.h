@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SMARTCARD_CHANNEL_CLIENT_H__
-#define SMARTCARD_CHANNEL_CLIENT_H__
+#ifndef SMARTCARD_CHANNEL_CLIENT_H_
+#define SMARTCARD_CHANNEL_CLIENT_H_
 
 #include <glib-object.h>
 
@@ -88,4 +88,4 @@ RedCharDeviceSmartcard* smartcard_channel_client_get_char_device(SmartCardChanne
 
 G_END_DECLS
 
-#endif /* SMARTCARD_CHANNEL_CLIENT_H__ */
+#endif /* SMARTCARD_CHANNEL_CLIENT_H_ */
