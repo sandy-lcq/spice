@@ -3500,6 +3500,10 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     reds->config->exit_on_disconnect = FALSE;
 #ifdef RED_STATISTICS
     reds->stat_file = stat_file_new(REDS_MAX_STAT_NODES);
+    /* Create an initial node. This will be the 0 node making easier
+     * to initialize node references.
+     */
+    stat_file_add_node(reds->stat_file, INVALID_STAT_REF, "default_channel", TRUE);
 #endif
     reds->listen_socket = -1;
     reds->secure_listen_socket = -1;
