@@ -107,7 +107,7 @@ static gboolean red_process_cursor_cmd(RedWorker *worker, const QXLCommandExt *e
     RedCursorCmd *cursor_cmd;
 
     cursor_cmd = spice_new0(RedCursorCmd, 1);
-    if (red_get_cursor_cmd(&worker->mem_slots, ext->group_id, cursor_cmd, ext->cmd.data)) {
+    if (!red_get_cursor_cmd(&worker->mem_slots, ext->group_id, cursor_cmd, ext->cmd.data)) {
         free(cursor_cmd);
         return FALSE;
     }
@@ -171,7 +171,7 @@ static gboolean red_process_surface_cmd(RedWorker *worker, QXLCommandExt *ext, g
 {
     RedSurfaceCmd surface_cmd;
 
-    if (red_get_surface_cmd(&worker->mem_slots, ext->group_id, &surface_cmd, ext->cmd.data)) {
+    if (!red_get_surface_cmd(&worker->mem_slots, ext->group_id, &surface_cmd, ext->cmd.data)) {
         return FALSE;
     }
     display_channel_process_surface_cmd(worker->display_channel, &surface_cmd, loadvm);
@@ -217,7 +217,7 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         case QXL_CMD_DRAW: {
             RedDrawable *red_drawable = red_drawable_new(worker->qxl); // returns with 1 ref
 
-            if (!red_get_drawable(&worker->mem_slots, ext_cmd.group_id,
+            if (red_get_drawable(&worker->mem_slots, ext_cmd.group_id,
                                  red_drawable, ext_cmd.cmd.data, ext_cmd.flags)) {
                 display_channel_process_draw(worker->display_channel, red_drawable,
                                              worker->process_display_generation);
@@ -229,8 +229,8 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         case QXL_CMD_UPDATE: {
             RedUpdateCmd update;
 
-            if (red_get_update_cmd(&worker->mem_slots, ext_cmd.group_id,
-                                   &update, ext_cmd.cmd.data)) {
+            if (!red_get_update_cmd(&worker->mem_slots, ext_cmd.group_id,
+                                    &update, ext_cmd.cmd.data)) {
                 break;
             }
             if (!display_channel_validate_surface(worker->display_channel, update.surface_id)) {
@@ -246,8 +246,8 @@ static int red_process_display(RedWorker *worker, int *ring_is_empty)
         case QXL_CMD_MESSAGE: {
             RedMessage message;
 
-            if (red_get_message(&worker->mem_slots, ext_cmd.group_id,
-                                &message, ext_cmd.cmd.data)) {
+            if (!red_get_message(&worker->mem_slots, ext_cmd.group_id,
+                                 &message, ext_cmd.cmd.data)) {
                 break;
             }
 #ifdef DEBUG
