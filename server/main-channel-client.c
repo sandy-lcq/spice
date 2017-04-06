@@ -696,7 +696,6 @@ MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient 
                          "channel", RED_CHANNEL(main_chan),
                          "client", client,
                          "stream", stream,
-                         "monitor-latency", FALSE,
                          "caps", caps,
                          "connection-id", connection_id,
                          NULL);
