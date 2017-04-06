@@ -314,19 +314,6 @@ void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc)
     channel->priv->clients = g_list_prepend(channel->priv->clients, rcc);
 }
 
-bool red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap)
-{
-    GListIter iter;
-    RedChannelClient *rcc;
-
-    FOREACH_CLIENT(channel, iter, rcc) {
-        if (!red_channel_client_test_remote_common_cap(rcc, cap)) {
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
-
 bool red_channel_test_remote_cap(RedChannel *channel, uint32_t cap)
 {
     GListIter iter;

@@ -157,7 +157,6 @@ bool red_channel_is_waiting_for_migrate_data(RedChannel *channel);
 void red_channel_destroy(RedChannel *channel);
 
 /* return true if all the channel clients support the cap */
-bool red_channel_test_remote_common_cap(RedChannel *channel, uint32_t cap);
 bool red_channel_test_remote_cap(RedChannel *channel, uint32_t cap);
 
 /* should be called when a new channel is ready to send messages */
