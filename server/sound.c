@@ -976,7 +976,7 @@ void snd_set_playback_latency(RedClient *client, uint32_t latency)
 static int snd_desired_audio_mode(bool playback_compression, int frequency,
                                   bool client_can_celt, bool client_can_opus)
 {
-    if (! playback_compression)
+    if (!playback_compression)
         return SPICE_AUDIO_DATA_MODE_RAW;
 
     if (client_can_opus && snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_OPUS, frequency))
