@@ -620,8 +620,8 @@ gboolean main_channel_client_migrate_src_complete(MainChannelClient *mcc,
     gboolean ret = FALSE;
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(mcc);
     RedClient *client = red_channel_client_get_client(rcc);
-    int semi_seamless_support = red_channel_client_test_remote_cap(rcc,
-                                                                   SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE);
+    bool semi_seamless_support = red_channel_client_test_remote_cap(rcc,
+                                                                    SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE);
     if (semi_seamless_support && mcc->priv->mig_connect_ok) {
         if (success) {
             spice_printerr("client %p MIGRATE_END", client);

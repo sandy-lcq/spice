@@ -1044,9 +1044,9 @@ playback_channel_client_constructed(GObject *object)
     SND_CHANNEL_CLIENT(playback_client)->on_message_done = snd_playback_on_message_done;
 
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
-    int client_can_celt = red_channel_client_test_remote_cap(rcc,
+    bool client_can_celt = red_channel_client_test_remote_cap(rcc,
                                           SPICE_PLAYBACK_CAP_CELT_0_5_1);
-    int client_can_opus = red_channel_client_test_remote_cap(rcc,
+    bool client_can_opus = red_channel_client_test_remote_cap(rcc,
                                           SPICE_PLAYBACK_CAP_OPUS);
     bool playback_compression =
         reds_config_get_playback_compression(red_channel_get_server(red_channel));
@@ -1192,7 +1192,7 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
 
 static uint32_t snd_get_best_rate(SndChannelClient *client, uint32_t cap_opus)
 {
-    int client_can_opus = TRUE;
+    bool client_can_opus = TRUE;
     if (client) {
         client_can_opus = red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(client), cap_opus);
     }
@@ -1460,9 +1460,9 @@ void snd_set_playback_compression(bool on)
         if (type == SPICE_CHANNEL_PLAYBACK && now->connection) {
             PlaybackChannelClient* playback = (PlaybackChannelClient*)now->connection;
             RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback);
-            int client_can_celt = red_channel_client_test_remote_cap(rcc,
+            bool client_can_celt = red_channel_client_test_remote_cap(rcc,
                                     SPICE_PLAYBACK_CAP_CELT_0_5_1);
-            int client_can_opus = red_channel_client_test_remote_cap(rcc,
+            bool client_can_opus = red_channel_client_test_remote_cap(rcc,
                                     SPICE_PLAYBACK_CAP_OPUS);
             int desired_mode = snd_desired_audio_mode(on, now->frequency,
                                                       client_can_opus, client_can_celt);

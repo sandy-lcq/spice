@@ -664,14 +664,14 @@ static gboolean red_channel_client_pipe_remove(RedChannelClient *rcc, RedPipeIte
     return g_queue_remove(&rcc->priv->pipe, item);
 }
 
-int red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t cap)
+bool red_channel_client_test_remote_common_cap(RedChannelClient *rcc, uint32_t cap)
 {
     return test_capability(rcc->priv->remote_caps.common_caps,
                            rcc->priv->remote_caps.num_common_caps,
                            cap);
 }
 
-int red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap)
+bool red_channel_client_test_remote_cap(RedChannelClient *rcc, uint32_t cap)
 {
     return test_capability(rcc->priv->remote_caps.caps,
                            rcc->priv->remote_caps.num_caps,

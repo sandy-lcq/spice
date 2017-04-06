@@ -689,7 +689,7 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
                                               VideoEncoderRateControlCbs *cbs)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dcc);
-    int client_has_multi_codec = red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MULTI_CODEC);
+    bool client_has_multi_codec = red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MULTI_CODEC);
     int i;
     GArray *video_codecs;
 
