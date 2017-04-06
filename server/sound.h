@@ -28,7 +28,7 @@ void snd_detach_playback(SpicePlaybackInstance *sin);
 void snd_attach_record(RedsState *reds, SpiceRecordInstance *sin);
 void snd_detach_record(SpiceRecordInstance *sin);
 
-void snd_set_playback_compression(int on);
+void snd_set_playback_compression(bool on);
 
 void snd_set_playback_latency(struct RedClient *client, uint32_t latency);
 

@@ -182,7 +182,7 @@ struct RedServerConfig {
     uint32_t streaming_video;
     GArray* video_codecs;
     SpiceImageCompression image_compression;
-    uint32_t playback_compression;
+    bool playback_compression;
     spice_wan_compression_t jpeg_state;
     spice_wan_compression_t zlib_glz_state;
 
@@ -593,7 +593,7 @@ static void reds_mig_disconnect(RedsState *reds)
     }
 }
 
-int reds_config_get_playback_compression(RedsState *reds)
+bool reds_config_get_playback_compression(RedsState *reds)
 {
     return reds->config->playback_compression;
 }

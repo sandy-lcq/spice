@@ -973,7 +973,7 @@ void snd_set_playback_latency(RedClient *client, uint32_t latency)
     }
 }
 
-static int snd_desired_audio_mode(int playback_compression, int frequency,
+static int snd_desired_audio_mode(bool playback_compression, int frequency,
                                   int client_can_celt, int client_can_opus)
 {
     if (! playback_compression)
@@ -1048,7 +1048,7 @@ playback_channel_client_constructed(GObject *object)
                                           SPICE_PLAYBACK_CAP_CELT_0_5_1);
     int client_can_opus = red_channel_client_test_remote_cap(rcc,
                                           SPICE_PLAYBACK_CAP_OPUS);
-    int playback_compression =
+    bool playback_compression =
         reds_config_get_playback_compression(red_channel_get_server(red_channel));
     int desired_mode = snd_desired_audio_mode(playback_compression, channel->frequency,
                                               client_can_celt, client_can_opus);
@@ -1450,7 +1450,7 @@ void snd_detach_record(SpiceRecordInstance *sin)
     snd_detach_common(&sin->st->channel);
 }
 
-void snd_set_playback_compression(int on)
+void snd_set_playback_compression(bool on)
 {
     SndChannel *now = snd_channels;
 
