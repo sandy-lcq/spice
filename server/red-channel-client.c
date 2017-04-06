@@ -67,8 +67,15 @@ struct SpiceDataHeaderOpaque {
     get_msg_size_proc get_msg_size;
 };
 
+typedef enum {
+    PING_STATE_NONE,
+    PING_STATE_TIMER,
+    PING_STATE_WARMUP,
+    PING_STATE_LATENCY,
+} QosPingState;
+
 typedef struct RedChannelClientLatencyMonitor {
-    int state;
+    QosPingState state;
     uint64_t last_pong_time;
     SpiceTimer *timer;
     uint32_t id;
@@ -78,8 +85,15 @@ typedef struct RedChannelClientLatencyMonitor {
     int64_t roundtrip;
 } RedChannelClientLatencyMonitor;
 
+typedef enum {
+    CONNECTIVITY_STATE_CONNECTED,
+    CONNECTIVITY_STATE_BLOCKED,
+    CONNECTIVITY_STATE_WAIT_PONG,
+    CONNECTIVITY_STATE_DISCONNECTED,
+} ConnectivityState;
+
 typedef struct RedChannelClientConnectivityMonitor {
-    int state;
+    ConnectivityState state;
     bool sent_bytes;
     bool received_bytes;
     uint32_t timeout;
@@ -196,20 +210,6 @@ enum {
 
 #define PING_TEST_TIMEOUT_MS (MSEC_PER_SEC * 15)
 #define PING_TEST_IDLE_NET_TIMEOUT_MS (MSEC_PER_SEC / 10)
-
-enum QosPingState {
-    PING_STATE_NONE,
-    PING_STATE_TIMER,
-    PING_STATE_WARMUP,
-    PING_STATE_LATENCY,
-};
-
-enum ConnectivityState {
-    CONNECTIVITY_STATE_CONNECTED,
-    CONNECTIVITY_STATE_BLOCKED,
-    CONNECTIVITY_STATE_WAIT_PONG,
-    CONNECTIVITY_STATE_DISCONNECTED,
-};
 
 typedef struct RedEmptyMsgPipeItem {
     RedPipeItem base;
