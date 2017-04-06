@@ -79,8 +79,8 @@ typedef struct RedChannelClientLatencyMonitor {
     uint64_t last_pong_time;
     SpiceTimer *timer;
     uint32_t id;
-    int tcp_nodelay;
-    int warmup_was_sent;
+    bool tcp_nodelay;
+    bool warmup_was_sent;
 
     int64_t roundtrip;
 } RedChannelClientLatencyMonitor;
@@ -557,13 +557,13 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
     if (!rcc->priv->latency_monitor.warmup_was_sent) { // latency test start
         int delay_val;
 
-        rcc->priv->latency_monitor.warmup_was_sent = TRUE;
+        rcc->priv->latency_monitor.warmup_was_sent = true;
         /*
          * When testing latency, TCP_NODELAY must be switched on, otherwise,
          * sending the ping message is delayed by Nagle algorithm, and the
          * roundtrip measurement is less accurate (bigger).
          */
-        rcc->priv->latency_monitor.tcp_nodelay = 1;
+        rcc->priv->latency_monitor.tcp_nodelay = true;
         delay_val = reds_stream_get_no_delay(rcc->priv->stream);
         if (delay_val != -1) {
             rcc->priv->latency_monitor.tcp_nodelay = delay_val;
@@ -682,7 +682,7 @@ static void red_channel_client_push_ping(RedChannelClient *rcc)
 {
     spice_assert(rcc->priv->latency_monitor.state == PING_STATE_NONE);
     rcc->priv->latency_monitor.state = PING_STATE_WARMUP;
-    rcc->priv->latency_monitor.warmup_was_sent = FALSE;
+    rcc->priv->latency_monitor.warmup_was_sent = false;
     rcc->priv->latency_monitor.id = rand();
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_PING);
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_PING);
