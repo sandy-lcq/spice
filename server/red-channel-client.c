@@ -80,8 +80,8 @@ typedef struct RedChannelClientLatencyMonitor {
 
 typedef struct RedChannelClientConnectivityMonitor {
     int state;
-    uint32_t out_bytes;
-    uint32_t in_bytes;
+    bool sent_bytes;
+    bool received_bytes;
     uint32_t timeout;
     SpiceTimer *timer;
 } RedChannelClientConnectivityMonitor;
@@ -465,7 +465,7 @@ RedChannel* red_channel_client_get_channel(RedChannelClient *rcc)
 static void red_channel_client_data_sent(RedChannelClient *rcc, int n)
 {
     if (rcc->priv->connectivity_monitor.timer) {
-        rcc->priv->connectivity_monitor.out_bytes += n;
+        rcc->priv->connectivity_monitor.sent_bytes = true;
     }
     stat_inc_counter(rcc->priv->out_bytes, n);
 }
@@ -473,7 +473,7 @@ static void red_channel_client_data_sent(RedChannelClient *rcc, int n)
 static void red_channel_client_data_read(RedChannelClient *rcc, int n)
 {
     if (rcc->priv->connectivity_monitor.timer) {
-        rcc->priv->connectivity_monitor.in_bytes += n;
+        rcc->priv->connectivity_monitor.received_bytes = true;
     }
 }
 
@@ -746,7 +746,7 @@ static void red_channel_client_connectivity_timer(void *opaque)
     int is_alive = TRUE;
 
     if (monitor->state == CONNECTIVITY_STATE_BLOCKED) {
-        if (monitor->in_bytes == 0 && monitor->out_bytes == 0) {
+        if (!monitor->received_bytes && !monitor->sent_bytes) {
             if (!rcc->priv->send_data.blocked && !red_channel_client_waiting_for_ack(rcc)) {
                 spice_error("mismatch between rcc-state and connectivity-state");
             }
@@ -754,7 +754,7 @@ static void red_channel_client_connectivity_timer(void *opaque)
             is_alive = FALSE;
         }
     } else if (monitor->state == CONNECTIVITY_STATE_WAIT_PONG) {
-        if (monitor->in_bytes == 0) {
+        if (!monitor->received_bytes) {
             if (rcc->priv->latency_monitor.state != PING_STATE_WARMUP &&
                 rcc->priv->latency_monitor.state != PING_STATE_LATENCY) {
                 spice_error("mismatch between rcc-state and connectivity-state");
@@ -766,8 +766,8 @@ static void red_channel_client_connectivity_timer(void *opaque)
 
     if (is_alive) {
         SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
-        monitor->in_bytes = 0;
-        monitor->out_bytes = 0;
+        monitor->received_bytes = false;
+        monitor->sent_bytes = false;
         if (rcc->priv->send_data.blocked || red_channel_client_waiting_for_ack(rcc)) {
             monitor->state = CONNECTIVITY_STATE_BLOCKED;
         } else if (rcc->priv->latency_monitor.state == PING_STATE_WARMUP ||
