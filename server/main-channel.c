@@ -99,12 +99,16 @@ void main_channel_push_mouse_mode(MainChannel *main_chan, int current_mode,
 
 void main_channel_push_agent_connected(MainChannel *main_chan)
 {
-    if (red_channel_test_remote_cap(RED_CHANNEL(main_chan),
-                                    SPICE_MAIN_CAP_AGENT_CONNECTED_TOKENS)) {
-        red_channel_pipes_add_type(RED_CHANNEL(main_chan),
-                                   RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS);
-    } else {
-        red_channel_pipes_add_empty_msg(RED_CHANNEL(main_chan), SPICE_MSG_MAIN_AGENT_CONNECTED);
+    GListIter iter;
+    RedChannelClient *rcc;
+    FOREACH_CLIENT(RED_CHANNEL(main_chan), iter, rcc) {
+        if (red_channel_client_test_remote_cap(rcc,
+                                               SPICE_MAIN_CAP_AGENT_CONNECTED_TOKENS)) {
+            red_channel_client_pipe_add_type(rcc,
+                                             RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS);
+        } else {
+            red_channel_client_pipe_add_empty_msg(rcc, SPICE_MSG_MAIN_AGENT_CONNECTED);
+        }
     }
 }
 
