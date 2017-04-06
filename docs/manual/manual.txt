@@ -890,9 +890,8 @@ Guest configuration
 
 .Windows
 In a Windows guest, you must then install
-http://elmarco.fedorapeople.org/spice-webdavd-x86-0.1.24.msi[spice-webdavd]
-service, and register the drive (by running 'map-drive.bat' from
-'Program Files/Spice webdav').
+https://www.spice-space.org/download/windows/spice-webdavd/[spice-webdavd]
+service.
 
 .Linux
 
