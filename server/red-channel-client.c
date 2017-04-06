@@ -637,7 +637,7 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
     }
 
     red_channel_client_clear_sent_item(rcc);
-    if (rcc->priv->send_data.blocked) {
+    if (red_channel_client_is_blocked(rcc)) {
         SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
         rcc->priv->send_data.blocked = FALSE;
         core->watch_update_mask(core, rcc->priv->stream->watch,
@@ -650,7 +650,7 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
         red_channel_client_begin_send_message(rcc);
     } else {
         if (rcc->priv->latency_monitor.timer
-            && !rcc->priv->send_data.blocked
+            && !red_channel_client_is_blocked(rcc)
             && g_queue_is_empty(&rcc->priv->pipe)) {
             /* It is possible that the socket will become idle, so we may be able to test latency */
             red_channel_client_restart_ping_timer(rcc);
@@ -747,7 +747,7 @@ static void red_channel_client_connectivity_timer(void *opaque)
 
     if (monitor->state == CONNECTIVITY_STATE_BLOCKED) {
         if (!monitor->received_bytes && !monitor->sent_bytes) {
-            if (!rcc->priv->send_data.blocked && !red_channel_client_waiting_for_ack(rcc)) {
+            if (!red_channel_client_is_blocked(rcc) && !red_channel_client_waiting_for_ack(rcc)) {
                 spice_error("mismatch between rcc-state and connectivity-state");
             }
             spice_debug("rcc is blocked; connection is idle");
@@ -768,7 +768,7 @@ static void red_channel_client_connectivity_timer(void *opaque)
         SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
         monitor->received_bytes = false;
         monitor->sent_bytes = false;
-        if (rcc->priv->send_data.blocked || red_channel_client_waiting_for_ack(rcc)) {
+        if (red_channel_client_is_blocked(rcc) || red_channel_client_waiting_for_ack(rcc)) {
             monitor->state = CONNECTIVITY_STATE_BLOCKED;
         } else if (rcc->priv->latency_monitor.state == PING_STATE_WARMUP ||
                    rcc->priv->latency_monitor.state == PING_STATE_LATENCY) {
@@ -1279,7 +1279,7 @@ void red_channel_client_send(RedChannelClient *rcc)
 
 static inline RedPipeItem *red_channel_client_pipe_item_get(RedChannelClient *rcc)
 {
-    if (!rcc || rcc->priv->send_data.blocked
+    if (!rcc || red_channel_client_is_blocked(rcc)
              || red_channel_client_waiting_for_ack(rcc)) {
         return NULL;
     }
@@ -1296,11 +1296,11 @@ void red_channel_client_push(RedChannelClient *rcc)
         return;
     }
     g_object_ref(rcc);
-    if (rcc->priv->send_data.blocked) {
+    if (red_channel_client_is_blocked(rcc)) {
         red_channel_client_send(rcc);
     }
 
-    if (!red_channel_client_no_item_being_sent(rcc) && !rcc->priv->send_data.blocked) {
+    if (!red_channel_client_no_item_being_sent(rcc) && !red_channel_client_is_blocked(rcc)) {
         rcc->priv->send_data.blocked = TRUE;
         spice_printerr("ERROR: an item waiting to be sent and not blocked");
     }
