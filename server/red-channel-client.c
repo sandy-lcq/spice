@@ -257,6 +257,9 @@ static void red_channel_client_restart_ping_timer(RedChannelClient *rcc)
 {
     uint64_t passed, timeout;
 
+    if (!rcc->priv->latency_monitor.timer) {
+        return;
+    }
     passed = (spice_get_monotonic_time_ns() - rcc->priv->latency_monitor.last_pong_time) / NSEC_PER_MILLISEC;
     timeout = PING_TEST_IDLE_NET_TIMEOUT_MS;
     if (passed  < PING_TEST_TIMEOUT_MS) {
@@ -649,8 +652,7 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
         spice_assert(rcc->priv->send_data.header.data != NULL);
         red_channel_client_begin_send_message(rcc);
     } else {
-        if (rcc->priv->latency_monitor.timer
-            && !red_channel_client_is_blocked(rcc)
+        if (!red_channel_client_is_blocked(rcc)
             && g_queue_is_empty(&rcc->priv->pipe)) {
             /* It is possible that the socket will become idle, so we may be able to test latency */
             red_channel_client_restart_ping_timer(rcc);
@@ -969,9 +971,7 @@ static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
     rcc->priv->wait_migrate_data = FALSE;
 
     if (red_client_seamless_migration_done_for_channel(rcc->priv->client)) {
-        if (rcc->priv->latency_monitor.timer) {
-            red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
-        }
+        red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
         if (rcc->priv->connectivity_monitor.timer) {
             SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
             core->timer_start(core, rcc->priv->connectivity_monitor.timer,
@@ -982,9 +982,7 @@ static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
 
 void red_channel_client_semi_seamless_migration_complete(RedChannelClient *rcc)
 {
-    if (rcc->priv->latency_monitor.timer) {
-        red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
-    }
+    red_channel_client_start_ping_timer(rcc, PING_TEST_IDLE_NET_TIMEOUT_MS);
 }
 
 bool red_channel_client_is_waiting_for_migrate_data(RedChannelClient *rcc)
