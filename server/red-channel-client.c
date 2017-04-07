@@ -634,9 +634,6 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
     }
 
     red_channel_client_clear_sent_item(rcc);
-    if (red_channel_client_is_blocked(rcc)) {
-        rcc->priv->send_data.blocked = FALSE;
-    }
 
     if (red_channel_client_urgent_marshaller_is_active(rcc)) {
         red_channel_client_restore_main_sender(rcc);
