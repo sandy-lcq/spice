@@ -39,7 +39,6 @@ enum NetTestStage {
 };
 
 #define CLIENT_CONNECTIVITY_TIMEOUT (MSEC_PER_SEC * 30)
-#define PING_INTERVAL (MSEC_PER_SEC * 10)
 
 G_DEFINE_TYPE(MainChannelClient, main_channel_client, RED_TYPE_CHANNEL_CLIENT)
 
@@ -57,10 +56,6 @@ struct MainChannelClientPrivate {
     int net_test_stage;
     uint64_t latency;
     uint64_t bitrate_per_sec;
-#ifdef RED_STATISTICS
-    SpiceTimer *ping_timer;
-    int ping_interval;
-#endif
     int mig_wait_connect;
     int mig_connect_ok;
     int mig_wait_prev_complete;
@@ -167,38 +162,6 @@ static void main_channel_client_set_property(GObject *object,
     }
 }
 
-#ifdef RED_STATISTICS
-static void ping_timer_cb(void *opaque);
-#endif
-
-static void main_channel_client_constructed(GObject *object)
-{
-    G_OBJECT_CLASS(main_channel_client_parent_class)->constructed(object);
-#ifdef RED_STATISTICS
-    MainChannelClient *self = MAIN_CHANNEL_CLIENT(object);
-    RedsState *reds =
-        red_channel_get_server(red_channel_client_get_channel(RED_CHANNEL_CLIENT(object)));
-
-    self->priv->ping_timer = reds_core_timer_add(reds, ping_timer_cb, self);
-    if (!self->priv->ping_timer) {
-        spice_error("ping timer create failed");
-    }
-    self->priv->ping_interval = PING_INTERVAL;
-#endif
-}
-
-static void main_channel_client_finalize(GObject *object)
-{
-#ifdef RED_STATISTICS
-    MainChannelClient *self = MAIN_CHANNEL_CLIENT(object);
-    RedsState *reds =
-        red_channel_get_server(red_channel_client_get_channel(RED_CHANNEL_CLIENT(object)));
-
-    reds_core_timer_remove(reds, self->priv->ping_timer);
-#endif
-    G_OBJECT_CLASS(main_channel_client_parent_class)->finalize(object);
-}
-
 static uint8_t *
 main_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                       uint16_t type, uint32_t size)
@@ -235,8 +198,6 @@ static void main_channel_client_class_init(MainChannelClientClass *klass)
 
     object_class->get_property = main_channel_client_get_property;
     object_class->set_property = main_channel_client_set_property;
-    object_class->finalize = main_channel_client_finalize;
-    object_class->constructed = main_channel_client_constructed;
 
     client_class->alloc_recv_buf = main_channel_client_alloc_msg_rcv_buf;
     client_class->release_recv_buf = main_channel_client_release_msg_rcv_buf;
@@ -645,45 +606,6 @@ gboolean main_channel_client_migrate_src_complete(MainChannelClient *mcc,
 
     return ret;
 }
-
-#ifdef RED_STATISTICS
-static void do_ping_client(MainChannelClient *mcc,
-    const char *opt, int has_interval, int interval)
-{
-    RedChannel *channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(mcc));
-    spice_printerr("");
-    if (!opt) {
-        main_channel_client_push_ping(mcc, 0);
-    } else if (!strcmp(opt, "on")) {
-        if (has_interval && interval > 0) {
-            mcc->priv->ping_interval = interval * MSEC_PER_SEC;
-        }
-        reds_core_timer_start(red_channel_get_server(channel),
-                              mcc->priv->ping_timer, mcc->priv->ping_interval);
-    } else if (!strcmp(opt, "off")) {
-        reds_core_timer_cancel(red_channel_get_server(channel),
-                               mcc->priv->ping_timer);
-    } else {
-        return;
-    }
-}
-
-static void ping_timer_cb(void *opaque)
-{
-    MainChannelClient *mcc = opaque;
-    RedChannel *channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(mcc));
-
-    if (!red_channel_client_is_connected(RED_CHANNEL_CLIENT(mcc))) {
-        spice_printerr("not connected to peer, ping off");
-        reds_core_timer_cancel(red_channel_get_server(channel),
-                               mcc->priv->ping_timer);
-        return;
-    }
-    do_ping_client(mcc, NULL, 0, 0);
-    reds_core_timer_start(red_channel_get_server(channel),
-                          mcc->priv->ping_timer, mcc->priv->ping_interval);
-}
-#endif /* RED_STATISTICS */
 
 MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient *client,
                                               RedsStream *stream, uint32_t connection_id,
