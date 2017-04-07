@@ -11,7 +11,7 @@ base_test() {
 # note that due to some internal alignment we are using odd number for sizes
 for clipping in '' '--clipping (10%,10%)x(409,307)'
 do
-    for encoder in mjpeg 'gstreamer:mjpeg --min-psnr 16' gstreamer:vp8 gstreamer:h264
+    for encoder in mjpeg 'gstreamer:mjpeg --min-psnr 16' gstreamer:vp8 gstreamer:vp9 gstreamer:h264
     do
         for split in '' '--split-lines=40'
         do

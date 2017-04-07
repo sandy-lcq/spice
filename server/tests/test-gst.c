@@ -300,6 +300,8 @@ static const EncoderInfo encoder_infos[] = {
       "caps=image/jpeg", "jpegdec" },
     { "gstreamer:vp8",   gstreamer_encoder_new, SPICE_VIDEO_CODEC_TYPE_VP8,
       "caps=video/x-vp8", "vp8dec" },
+    { "gstreamer:vp9",   gstreamer_encoder_new, SPICE_VIDEO_CODEC_TYPE_VP9,
+      "caps=video/x-vp9", "vp9dec" },
     { "gstreamer:h264",  gstreamer_encoder_new, SPICE_VIDEO_CODEC_TYPE_H264,
 #ifdef HAVE_GSTREAMER_0_10
       "", "h264parse ! ffdec_h264" },
