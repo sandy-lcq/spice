@@ -314,6 +314,22 @@ static bool snd_record_handle_write(RecordChannelClient *record_client, size_t s
     return TRUE;
 }
 
+static
+const char* spice_audio_data_mode_to_string(gint mode)
+{
+    static const char * const str[] = {
+        [ SPICE_AUDIO_DATA_MODE_INVALID ] = "invalid",
+        [ SPICE_AUDIO_DATA_MODE_RAW ] = "raw",
+        [ SPICE_AUDIO_DATA_MODE_CELT_0_5_1 ] = "celt",
+        [ SPICE_AUDIO_DATA_MODE_OPUS ] = "opus",
+    };
+    if (mode >= 0 && mode < G_N_ELEMENTS(str)) {
+        return str[mode];
+    }
+
+    return "unknown audio codec";
+}
+
 static bool
 record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t size, void *message)
 {
@@ -343,6 +359,9 @@ record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t siz
         }
         else
             record_client->mode = mode->mode;
+
+        spice_debug("record client %p using mode %s", record_client,
+                    spice_audio_data_mode_to_string(record_client->mode));
         break;
     }
 
@@ -1061,6 +1080,9 @@ playback_channel_client_constructed(GObject *object)
         }
     }
 
+    spice_debug("playback client %p using mode %s", playback_client,
+                spice_audio_data_mode_to_string(playback_client->mode));
+
     if (!red_client_during_migrate_at_target(client)) {
         on_new_playback_channel_client(channel, SND_CHANNEL_CLIENT(playback_client));
     }
@@ -1469,6 +1491,8 @@ void snd_set_playback_compression(bool on)
             if (playback->mode != desired_mode) {
                 playback->mode = desired_mode;
                 snd_set_command(now->connection, SND_PLAYBACK_MODE_MASK);
+                spice_debug("playback client %p using mode %s", playback,
+                            spice_audio_data_mode_to_string(playback->mode));
             }
         }
     }
