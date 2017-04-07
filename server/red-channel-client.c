@@ -652,8 +652,7 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
         spice_assert(rcc->priv->send_data.header.data != NULL);
         red_channel_client_begin_send_message(rcc);
     } else {
-        if (!red_channel_client_is_blocked(rcc)
-            && g_queue_is_empty(&rcc->priv->pipe)) {
+        if (g_queue_is_empty(&rcc->priv->pipe)) {
             /* It is possible that the socket will become idle, so we may be able to test latency */
             red_channel_client_restart_ping_timer(rcc);
         }
