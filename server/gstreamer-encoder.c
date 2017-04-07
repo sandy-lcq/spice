@@ -1745,6 +1745,8 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
 
     if (!create_pipeline(encoder)) {
         /* Some GStreamer dependency is probably missing */
+        pthread_cond_destroy(&encoder->outbuf_cond);
+        pthread_mutex_destroy(&encoder->outbuf_mutex);
         free(encoder);
         encoder = NULL;
     }
