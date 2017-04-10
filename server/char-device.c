@@ -36,6 +36,7 @@ struct RedCharDeviceWriteBufferPrivate {
                           NULL if the server created the message */
     int origin;
     uint32_t token_price;
+    uint32_t refs;
 };
 
 typedef struct RedCharDeviceClient RedCharDeviceClient;
@@ -164,7 +165,7 @@ static void write_buffers_queue_free(GQueue *write_queue)
 static void red_char_device_write_buffer_pool_add(RedCharDevice *dev,
                                                   RedCharDeviceWriteBuffer *buf)
 {
-    if (buf->refs == 1 &&
+    if (buf->priv->refs == 1 &&
         dev->priv->cur_pool_size < MAX_POOL_SIZE) {
         buf->buf_used = 0;
         buf->priv->origin = WRITE_BUFFER_ORIGIN_NONE;
@@ -588,7 +589,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
     }
 
     ret->priv->token_price = migrated_data_tokens ? migrated_data_tokens : 1;
-    ret->refs = 1;
+    ret->priv->refs = 1;
     return ret;
 error:
     dev->priv->cur_pool_size += ret->buf_size;
@@ -616,7 +617,7 @@ static RedCharDeviceWriteBuffer *red_char_device_write_buffer_ref(RedCharDeviceW
 {
     spice_assert(write_buf);
 
-    write_buf->refs++;
+    write_buf->priv->refs++;
     return write_buf;
 }
 
@@ -624,8 +625,8 @@ static void red_char_device_write_buffer_unref(RedCharDeviceWriteBuffer *write_b
 {
     spice_assert(write_buf);
 
-    write_buf->refs--;
-    if (write_buf->refs == 0)
+    write_buf->priv->refs--;
+    if (write_buf->priv->refs == 0)
         red_char_device_write_buffer_free(write_buf);
 }
 
