@@ -151,7 +151,6 @@ typedef struct RedCharDeviceWriteBuffer {
     uint8_t *buf;
     uint32_t buf_size;
     uint32_t buf_used;
-    uint32_t token_price;
     uint32_t refs;
 
     RedCharDeviceWriteBufferPrivate *priv;

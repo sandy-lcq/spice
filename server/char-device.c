@@ -35,6 +35,7 @@ struct RedCharDeviceWriteBufferPrivate {
     RedClient *client; /* The client that sent the message to the device.
                           NULL if the server created the message */
     int origin;
+    uint32_t token_price;
 };
 
 typedef struct RedCharDeviceClient RedCharDeviceClient;
@@ -586,7 +587,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
         dev->priv->num_self_tokens--;
     }
 
-    ret->token_price = migrated_data_tokens ? migrated_data_tokens : 1;
+    ret->priv->token_price = migrated_data_tokens ? migrated_data_tokens : 1;
     ret->refs = 1;
     return ret;
 error:
@@ -654,7 +655,7 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
     *p_write_buf = NULL;
 
     int buf_origin = write_buf->priv->origin;
-    uint32_t buf_token_price = write_buf->token_price;
+    uint32_t buf_token_price = write_buf->priv->token_price;
     RedClient *client = write_buf->priv->client;
 
     if (!dev) {
@@ -912,7 +913,7 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
         *write_to_dev_size_ptr += buf_remaining;
         if (dev->priv->cur_write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(dev->priv->cur_write_buf->priv->client == dev_client->client);
-            (*write_to_dev_tokens_ptr) += dev->priv->cur_write_buf->token_price;
+            (*write_to_dev_tokens_ptr) += dev->priv->cur_write_buf->priv->token_price;
         }
     }
 
@@ -926,7 +927,7 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
         *write_to_dev_size_ptr += write_buf->buf_used;
         if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(write_buf->priv->client == dev_client->client);
-            (*write_to_dev_tokens_ptr) += write_buf->token_price;
+            (*write_to_dev_tokens_ptr) += write_buf->priv->token_price;
         }
     }
     spice_debug("migration data dev %p: write_queue size %u tokens %u",
