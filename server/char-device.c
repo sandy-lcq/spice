@@ -31,6 +31,9 @@
 #define RED_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT 30000
 #define MAX_POOL_SIZE (10 * 64 * 1024)
 
+struct RedCharDeviceWriteBufferPrivate {
+};
+
 typedef struct RedCharDeviceClient RedCharDeviceClient;
 struct RedCharDeviceClient {
     RedCharDevice *dev;
@@ -539,7 +542,13 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
     if (ret) {
         dev->priv->cur_pool_size -= ret->buf_size;
     } else {
-        ret = spice_new0(RedCharDeviceWriteBuffer, 1);
+        struct RedCharDeviceWriteBufferFull {
+            RedCharDeviceWriteBuffer buffer;
+            RedCharDeviceWriteBufferPrivate priv;
+        } *write_buf;
+        write_buf = spice_new0(struct RedCharDeviceWriteBufferFull, 1);
+        ret = &write_buf->buffer;
+        ret->priv = &write_buf->priv;
     }
 
     spice_assert(!ret->buf_used);

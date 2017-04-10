@@ -146,6 +146,7 @@ GType red_char_device_get_type(void) G_GNUC_CONST;
  * */
 
 /* buffer that is used for writing to the device */
+typedef struct RedCharDeviceWriteBufferPrivate RedCharDeviceWriteBufferPrivate;
 typedef struct RedCharDeviceWriteBuffer {
     int origin;
     RedClient *client; /* The client that sent the message to the device.
@@ -156,6 +157,8 @@ typedef struct RedCharDeviceWriteBuffer {
     uint32_t buf_used;
     uint32_t token_price;
     uint32_t refs;
+
+    RedCharDeviceWriteBufferPrivate *priv;
 } RedCharDeviceWriteBuffer;
 
 void red_char_device_reset_dev_instance(RedCharDevice *dev,
