@@ -32,6 +32,7 @@
 #define MAX_POOL_SIZE (10 * 64 * 1024)
 
 struct RedCharDeviceWriteBufferPrivate {
+    int origin;
 };
 
 typedef struct RedCharDeviceClient RedCharDeviceClient;
@@ -163,7 +164,7 @@ static void red_char_device_write_buffer_pool_add(RedCharDevice *dev,
     if (buf->refs == 1 &&
         dev->priv->cur_pool_size < MAX_POOL_SIZE) {
         buf->buf_used = 0;
-        buf->origin = WRITE_BUFFER_ORIGIN_NONE;
+        buf->priv->origin = WRITE_BUFFER_ORIGIN_NONE;
         buf->client = NULL;
         dev->priv->cur_pool_size += buf->buf_size;
         g_queue_push_head(&dev->priv->write_bufs_pool, buf);
@@ -191,7 +192,7 @@ static void red_char_device_client_free(RedCharDevice *dev,
         RedCharDeviceWriteBuffer *write_buf = l->data;
         next = l->next;
 
-        if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
+        if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
             write_buf->client == dev_client->client) {
             g_queue_delete_link(&dev->priv->write_queue, l);
             red_char_device_write_buffer_pool_add(dev, write_buf);
@@ -199,9 +200,9 @@ static void red_char_device_client_free(RedCharDevice *dev,
         l = next;
     }
 
-    if (dev->priv->cur_write_buf && dev->priv->cur_write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
+    if (dev->priv->cur_write_buf && dev->priv->cur_write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
         dev->priv->cur_write_buf->client == dev_client->client) {
-        dev->priv->cur_write_buf->origin = WRITE_BUFFER_ORIGIN_NONE;
+        dev->priv->cur_write_buf->priv->origin = WRITE_BUFFER_ORIGIN_NONE;
         dev->priv->cur_write_buf->client = NULL;
     }
 
@@ -557,7 +558,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
         ret->buf = spice_realloc(ret->buf, size);
         ret->buf_size = size;
     }
-    ret->origin = origin;
+    ret->priv->origin = origin;
 
     if (origin == WRITE_BUFFER_ORIGIN_CLIENT) {
        spice_assert(client);
@@ -630,7 +631,7 @@ void red_char_device_write_buffer_add(RedCharDevice *dev,
 {
     spice_assert(dev);
     /* caller shouldn't add buffers for client that was removed */
-    if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
+    if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
         !red_char_device_client_find(dev, write_buf->client)) {
         spice_printerr("client not found: dev %p client %p", dev, write_buf->client);
         red_char_device_write_buffer_pool_add(dev, write_buf);
@@ -650,7 +651,7 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
     }
     *p_write_buf = NULL;
 
-    int buf_origin = write_buf->origin;
+    int buf_origin = write_buf->priv->origin;
     uint32_t buf_token_price = write_buf->token_price;
     RedClient *client = write_buf->client;
 
@@ -907,7 +908,7 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                          red_char_device_write_buffer_ref(dev->priv->cur_write_buf)
                                          );
         *write_to_dev_size_ptr += buf_remaining;
-        if (dev->priv->cur_write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
+        if (dev->priv->cur_write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(dev->priv->cur_write_buf->client == dev_client->client);
             (*write_to_dev_tokens_ptr) += dev->priv->cur_write_buf->token_price;
         }
@@ -921,7 +922,7 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                          red_char_device_write_buffer_ref(write_buf)
                                          );
         *write_to_dev_size_ptr += write_buf->buf_used;
-        if (write_buf->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
+        if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(write_buf->client == dev_client->client);
             (*write_to_dev_tokens_ptr) += write_buf->token_price;
         }
