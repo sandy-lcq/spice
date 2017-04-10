@@ -32,6 +32,8 @@
 #define MAX_POOL_SIZE (10 * 64 * 1024)
 
 struct RedCharDeviceWriteBufferPrivate {
+    RedClient *client; /* The client that sent the message to the device.
+                          NULL if the server created the message */
     int origin;
 };
 
@@ -165,7 +167,7 @@ static void red_char_device_write_buffer_pool_add(RedCharDevice *dev,
         dev->priv->cur_pool_size < MAX_POOL_SIZE) {
         buf->buf_used = 0;
         buf->priv->origin = WRITE_BUFFER_ORIGIN_NONE;
-        buf->client = NULL;
+        buf->priv->client = NULL;
         dev->priv->cur_pool_size += buf->buf_size;
         g_queue_push_head(&dev->priv->write_bufs_pool, buf);
         return;
@@ -193,7 +195,7 @@ static void red_char_device_client_free(RedCharDevice *dev,
         next = l->next;
 
         if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
-            write_buf->client == dev_client->client) {
+            write_buf->priv->client == dev_client->client) {
             g_queue_delete_link(&dev->priv->write_queue, l);
             red_char_device_write_buffer_pool_add(dev, write_buf);
         }
@@ -201,9 +203,9 @@ static void red_char_device_client_free(RedCharDevice *dev,
     }
 
     if (dev->priv->cur_write_buf && dev->priv->cur_write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
-        dev->priv->cur_write_buf->client == dev_client->client) {
+        dev->priv->cur_write_buf->priv->client == dev_client->client) {
         dev->priv->cur_write_buf->priv->origin = WRITE_BUFFER_ORIGIN_NONE;
-        dev->priv->cur_write_buf->client = NULL;
+        dev->priv->cur_write_buf->priv->client = NULL;
     }
 
     dev->priv->clients = g_list_remove(dev->priv->clients, dev_client);
@@ -570,7 +572,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
                 red_char_device_handle_client_overflow(dev_client);
                 goto error;
             }
-            ret->client = client;
+            ret->priv->client = client;
             if (!migrated_data_tokens && dev_client->do_flow_control) {
                 dev_client->num_client_tokens--;
             }
@@ -632,8 +634,8 @@ void red_char_device_write_buffer_add(RedCharDevice *dev,
     spice_assert(dev);
     /* caller shouldn't add buffers for client that was removed */
     if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
-        !red_char_device_client_find(dev, write_buf->client)) {
-        spice_printerr("client not found: dev %p client %p", dev, write_buf->client);
+        !red_char_device_client_find(dev, write_buf->priv->client)) {
+        spice_printerr("client not found: dev %p client %p", dev, write_buf->priv->client);
         red_char_device_write_buffer_pool_add(dev, write_buf);
         return;
     }
@@ -653,7 +655,7 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
 
     int buf_origin = write_buf->priv->origin;
     uint32_t buf_token_price = write_buf->token_price;
-    RedClient *client = write_buf->client;
+    RedClient *client = write_buf->priv->client;
 
     if (!dev) {
         spice_printerr("no device. write buffer is freed");
@@ -909,7 +911,7 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                          );
         *write_to_dev_size_ptr += buf_remaining;
         if (dev->priv->cur_write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
-            spice_assert(dev->priv->cur_write_buf->client == dev_client->client);
+            spice_assert(dev->priv->cur_write_buf->priv->client == dev_client->client);
             (*write_to_dev_tokens_ptr) += dev->priv->cur_write_buf->token_price;
         }
     }
@@ -923,7 +925,7 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                          );
         *write_to_dev_size_ptr += write_buf->buf_used;
         if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
-            spice_assert(write_buf->client == dev_client->client);
+            spice_assert(write_buf->priv->client == dev_client->client);
             (*write_to_dev_tokens_ptr) += write_buf->token_price;
         }
     }

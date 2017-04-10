@@ -148,9 +148,6 @@ GType red_char_device_get_type(void) G_GNUC_CONST;
 /* buffer that is used for writing to the device */
 typedef struct RedCharDeviceWriteBufferPrivate RedCharDeviceWriteBufferPrivate;
 typedef struct RedCharDeviceWriteBuffer {
-    RedClient *client; /* The client that sent the message to the device.
-                          NULL if the server created the message */
-
     uint8_t *buf;
     uint32_t buf_size;
     uint32_t buf_used;
