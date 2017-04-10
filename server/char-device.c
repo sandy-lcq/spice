@@ -31,10 +31,17 @@
 #define RED_CHAR_DEVICE_WAIT_TOKENS_TIMEOUT 30000
 #define MAX_POOL_SIZE (10 * 64 * 1024)
 
+typedef enum {
+    WRITE_BUFFER_ORIGIN_NONE,
+    WRITE_BUFFER_ORIGIN_CLIENT,
+    WRITE_BUFFER_ORIGIN_SERVER,
+    WRITE_BUFFER_ORIGIN_SERVER_NO_TOKEN,
+} WriteBufferOrigin;
+
 struct RedCharDeviceWriteBufferPrivate {
     RedClient *client; /* The client that sent the message to the device.
                           NULL if the server created the message */
-    int origin;
+    WriteBufferOrigin origin;
     uint32_t token_price;
     uint32_t refs;
 };
@@ -76,14 +83,6 @@ struct RedCharDevicePrivate {
 
     SpiceServer *reds;
 };
-
-enum {
-    WRITE_BUFFER_ORIGIN_NONE,
-    WRITE_BUFFER_ORIGIN_CLIENT,
-    WRITE_BUFFER_ORIGIN_SERVER,
-    WRITE_BUFFER_ORIGIN_SERVER_NO_TOKEN,
-};
-
 
 G_DEFINE_TYPE(RedCharDevice, red_char_device, G_TYPE_OBJECT)
 
@@ -535,7 +534,7 @@ static void red_char_device_write_retry(void *opaque)
 
 static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
     RedCharDevice *dev, RedClient *client,
-    int size, int origin, int migrated_data_tokens)
+    int size, WriteBufferOrigin origin, int migrated_data_tokens)
 {
     RedCharDeviceWriteBuffer *ret;
 
@@ -655,7 +654,7 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
     }
     *p_write_buf = NULL;
 
-    int buf_origin = write_buf->priv->origin;
+    WriteBufferOrigin buf_origin = write_buf->priv->origin;
     uint32_t buf_token_price = write_buf->priv->token_price;
     RedClient *client = write_buf->priv->client;
 
