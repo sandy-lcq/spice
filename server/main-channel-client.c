@@ -30,13 +30,13 @@
 #define NET_TEST_WARMUP_BYTES 0
 #define NET_TEST_BYTES (1024 * 250)
 
-enum NetTestStage {
+typedef enum {
     NET_TEST_STAGE_INVALID,
     NET_TEST_STAGE_WARMUP,
     NET_TEST_STAGE_LATENCY,
     NET_TEST_STAGE_RATE,
     NET_TEST_STAGE_COMPLETE,
-};
+} NetTestStage;
 
 #define CLIENT_CONNECTIVITY_TIMEOUT (MSEC_PER_SEC * 30)
 
@@ -53,7 +53,7 @@ struct MainChannelClientPrivate {
     uint32_t connection_id;
     uint32_t ping_id;
     uint32_t net_test_id;
-    int net_test_stage;
+    NetTestStage net_test_stage;
     uint64_t latency;
     uint64_t bitrate_per_sec;
     int mig_wait_connect;
