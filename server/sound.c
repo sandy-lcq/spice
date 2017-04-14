@@ -1010,10 +1010,14 @@ static int snd_desired_audio_mode(bool playback_compression, int frequency,
 static void on_new_playback_channel_client(SndChannel *channel, SndChannelClient *client)
 {
     RedsState *reds = red_channel_get_server(RED_CHANNEL(channel));
+    RedClient *red_client = red_channel_client_get_client(RED_CHANNEL_CLIENT(client));
 
     spice_assert(client);
 
     channel->connection = client;
+    if (red_client_during_migrate_at_target(red_client)) {
+        return;
+    }
     snd_set_command(client, SND_PLAYBACK_MODE_MASK);
     if (client->active) {
         snd_set_command(client, SND_CTRL_MASK);
@@ -1055,7 +1059,6 @@ playback_channel_client_constructed(GObject *object)
 {
     PlaybackChannelClient *playback_client = PLAYBACK_CHANNEL_CLIENT(object);
     RedChannel *red_channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(playback_client));
-    RedClient *client = red_channel_client_get_client(RED_CHANNEL_CLIENT(playback_client));
     SndChannel *channel = SND_CHANNEL(red_channel);
 
     G_OBJECT_CLASS(playback_channel_client_parent_class)->constructed(object);
@@ -1083,9 +1086,7 @@ playback_channel_client_constructed(GObject *object)
     spice_debug("playback client %p using mode %s", playback_client,
                 spice_audio_data_mode_to_string(playback_client->mode));
 
-    if (!red_client_during_migrate_at_target(client)) {
-        on_new_playback_channel_client(channel, SND_CHANNEL_CLIENT(playback_client));
-    }
+    on_new_playback_channel_client(channel, SND_CHANNEL_CLIENT(playback_client));
 
     if (channel->active) {
         snd_playback_start(channel);
