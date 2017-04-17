@@ -86,8 +86,8 @@ GType snd_channel_client_get_type(void) G_GNUC_CONST;
 struct SndChannelClient {
     RedChannelClient parent;
 
-    gboolean active;
-    gboolean client_active;
+    bool active;
+    bool client_active;
 
     uint32_t command;
 
@@ -117,7 +117,7 @@ struct AudioFrame {
     PlaybackChannelClient *client;
     AudioFrame *next;
     AudioFrameContainer *container;
-    gboolean allocated;
+    bool allocated;
 };
 
 #define NUM_AUDIO_FRAMES 3
@@ -169,7 +169,7 @@ struct SndChannel {
     SndChannelClient *connection; /* Only one client is supported */
     SndChannel *next; /* For the global SndChannel list */
 
-    gboolean active;
+    bool active;
     SpiceVolumeState volume;
     uint32_t frequency;
 };
@@ -278,7 +278,7 @@ static bool snd_record_handle_write(RecordChannelClient *record_client, size_t s
     uint32_t now;
 
     if (!record_client) {
-        return FALSE;
+        return false;
     }
 
     packet = (SpiceMsgcRecordPacket *)message;
@@ -292,7 +292,7 @@ static bool snd_record_handle_write(RecordChannelClient *record_client, size_t s
         decode_size = sizeof(record_client->decode_buf);
         if (snd_codec_decode(record_client->codec, packet->data, packet->data_size,
                     record_client->decode_buf, &decode_size) != SND_CODEC_OK)
-            return FALSE;
+            return false;
         data = (uint32_t *) record_client->decode_buf;
         size = decode_size >> 2;
     }
@@ -311,7 +311,7 @@ static bool snd_record_handle_write(RecordChannelClient *record_client, size_t s
     if (record_client->write_pos - record_client->read_pos > RECORD_SAMPLES_SIZE) {
         record_client->read_pos = record_client->write_pos - RECORD_SAMPLES_SIZE;
     }
-    return TRUE;
+    return true;
 }
 
 static
@@ -349,12 +349,12 @@ record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t siz
                     record_client->mode = mode->mode;
                 } else {
                     spice_printerr("create decoder failed");
-                    return FALSE;
+                    return false;
                 }
             }
             else {
                 spice_printerr("unsupported mode %d", record_client->mode);
-                return FALSE;
+                return false;
             }
         }
         else
@@ -373,7 +373,7 @@ record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t siz
     default:
         return red_channel_client_handle_message(rcc, type, size, message);
     }
-    return TRUE;
+    return true;
 }
 
 static bool snd_channel_send_migrate(SndChannelClient *client)
@@ -387,7 +387,7 @@ static bool snd_channel_send_migrate(SndChannelClient *client)
     spice_marshall_msg_migrate(m, &migrate);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static bool snd_playback_send_migrate(PlaybackChannelClient *client)
@@ -405,7 +405,7 @@ static bool snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
     SpiceVolumeState *st = &channel->volume;
 
     if (!red_channel_client_test_remote_cap(rcc, cap)) {
-        return FALSE;
+        return false;
     }
 
     vol = alloca(sizeof (SpiceMsgAudioVolume) +
@@ -418,7 +418,7 @@ static bool snd_send_volume(SndChannelClient *client, uint32_t cap, int msg)
     spice_marshall_SpiceMsgAudioVolume(m, vol);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static bool snd_playback_send_volume(PlaybackChannelClient *playback_client)
@@ -436,7 +436,7 @@ static bool snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
     SpiceVolumeState *st = &channel->volume;
 
     if (!red_channel_client_test_remote_cap(rcc, cap)) {
-        return FALSE;
+        return false;
     }
 
     red_channel_client_init_send_data(rcc, msg);
@@ -444,7 +444,7 @@ static bool snd_send_mute(SndChannelClient *client, uint32_t cap, int msg)
     spice_marshall_SpiceMsgAudioMute(m, &mute);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static bool snd_playback_send_mute(PlaybackChannelClient *playback_client)
@@ -465,7 +465,7 @@ static bool snd_playback_send_latency(PlaybackChannelClient *playback_client)
     spice_marshall_msg_playback_latency(m, &latency_msg);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static bool snd_playback_send_start(PlaybackChannelClient *playback_client)
@@ -483,7 +483,7 @@ static bool snd_playback_send_start(PlaybackChannelClient *playback_client)
     spice_marshall_msg_playback_start(m, &start);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static bool snd_playback_send_stop(PlaybackChannelClient *playback_client)
@@ -493,7 +493,7 @@ static bool snd_playback_send_stop(PlaybackChannelClient *playback_client)
     red_channel_client_init_send_data(rcc, SPICE_MSG_PLAYBACK_STOP);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static int snd_playback_send_ctl(PlaybackChannelClient *playback_client)
@@ -522,7 +522,7 @@ static bool snd_record_send_start(RecordChannelClient *record_client)
     spice_marshall_msg_record_start(m, &start);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static bool snd_record_send_stop(RecordChannelClient *record_client)
@@ -532,7 +532,7 @@ static bool snd_record_send_stop(RecordChannelClient *record_client)
     red_channel_client_init_send_data(rcc, SPICE_MSG_RECORD_STOP);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static int snd_record_send_ctl(RecordChannelClient *record_client)
@@ -595,14 +595,14 @@ static bool snd_playback_send_write(PlaybackChannelClient *playback_client)
                                     playback_client->encode_buf, &n) != SND_CODEC_OK) {
             spice_printerr("encode failed");
             red_channel_client_disconnect(rcc);
-            return FALSE;
+            return false;
         }
         spice_marshaller_add_by_ref_full(m, playback_client->encode_buf, n,
                                          marshaller_unref_pipe_item, pipe_item);
     }
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 static bool playback_send_mode(PlaybackChannelClient *playback_client)
@@ -617,7 +617,7 @@ static bool playback_send_mode(PlaybackChannelClient *playback_client)
     spice_marshall_msg_playback_mode(m, &mode);
 
     red_channel_client_begin_send_message(rcc);
-    return TRUE;
+    return true;
 }
 
 /* This function is called when the "persistent" item is removed from the
@@ -780,7 +780,7 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
 
     reds_stream_set_no_delay(stream, !main_channel_client_is_low_bandwidth(mcc));
 
-    return TRUE;
+    return true;
 }
 
 static void snd_channel_on_disconnect(RedChannelClient *rcc)
@@ -867,12 +867,12 @@ static void snd_playback_start(SndChannel *channel)
 {
     SndChannelClient *client = channel->connection;
 
-    channel->active = TRUE;
+    channel->active = true;
     if (!client)
         return;
     spice_assert(!client->active);
     reds_disable_mm_time(snd_channel_get_server(client));
-    client->active = TRUE;
+    client->active = true;
     if (!client->client_active) {
         snd_set_command(client, SND_CTRL_MASK);
         snd_send(client);
@@ -890,13 +890,13 @@ SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
 {
     SndChannelClient *client = sin->st->channel.connection;
 
-    sin->st->channel.active = FALSE;
+    sin->st->channel.active = false;
     if (!client)
         return;
     PlaybackChannelClient *playback_client = PLAYBACK_CHANNEL_CLIENT(client);
     spice_assert(client->active);
     reds_enable_mm_time(snd_channel_get_server(client));
-    client->active = FALSE;
+    client->active = false;
     if (client->client_active) {
         snd_set_command(client, SND_CTRL_MASK);
         snd_send(client);
@@ -929,7 +929,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_get_buffer(SpicePlaybackInstance *
     }
     spice_assert(client->active);
     if (!playback_client->free_frames->allocated) {
-        playback_client->free_frames->allocated = TRUE;
+        playback_client->free_frames->allocated = true;
         ++playback_client->frames->refs;
     }
 
@@ -945,7 +945,7 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
 
     frame = SPICE_CONTAINEROF(samples, AudioFrame, samples[0]);
     if (frame->allocated) {
-        frame->allocated = FALSE;
+        frame->allocated = false;
         if (--frame->container->refs == 0) {
             free(frame->container);
             return;
@@ -1145,7 +1145,7 @@ static void snd_record_start(SndChannel *channel)
 {
     SndChannelClient *client = channel->connection;
 
-    channel->active = TRUE;
+    channel->active = true;
     if (!client) {
         return;
     }
@@ -1153,7 +1153,7 @@ static void snd_record_start(SndChannel *channel)
     spice_assert(!client->active);
     record_client->read_pos = record_client->write_pos = 0;   //todo: improve by
                                                               //stream generation
-    client->active = TRUE;
+    client->active = true;
     if (!client->client_active) {
         snd_set_command(client, SND_CTRL_MASK);
         snd_send(client);
@@ -1171,11 +1171,11 @@ SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
 {
     SndChannelClient *client = sin->st->channel.connection;
 
-    sin->st->channel.active = FALSE;
+    sin->st->channel.active = false;
     if (!client)
         return;
     spice_assert(client->active);
-    client->active = FALSE;
+    client->active = false;
     if (client->client_active) {
         snd_set_command(client, SND_CTRL_MASK);
         snd_send(client);
@@ -1215,7 +1215,7 @@ SPICE_GNUC_VISIBLE uint32_t spice_server_record_get_samples(SpiceRecordInstance 
 
 static uint32_t snd_get_best_rate(SndChannelClient *client, uint32_t cap_opus)
 {
-    bool client_can_opus = TRUE;
+    bool client_can_opus = true;
     if (client) {
         client_can_opus = red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(client), cap_opus);
     }
