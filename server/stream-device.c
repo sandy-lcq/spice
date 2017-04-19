@@ -44,6 +44,7 @@ struct StreamDevice {
     uint8_t hdr_pos;
     bool has_error;
     bool opened;
+    bool flow_stopped;
     StreamChannel *stream_channel;
 };
 
@@ -72,7 +73,7 @@ stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *si
     int n;
     bool handled = false;
 
-    if (dev->has_error || !dev->stream_channel) {
+    if (dev->has_error || dev->flow_stopped || !dev->stream_channel) {
         return NULL;
     }
 
@@ -181,6 +182,9 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         if (n <= 0) {
             break;
         }
+        // TODO collect all message ??
+        // up: we send a single frame together
+        // down: guest can cause a crash
         stream_channel_send_data(dev->stream_channel, buf, n, reds_get_mm_time());
         dev->hdr.size -= n;
     }
@@ -233,6 +237,33 @@ stream_device_stream_start(void *opaque, StreamMsgStartStop *start,
     red_char_device_write_buffer_add(char_dev, buf);
 }
 
+static void
+stream_device_stream_queue_stat(void *opaque, const StreamQueueStat *stats G_GNUC_UNUSED,
+                                StreamChannel *stream_channel G_GNUC_UNUSED)
+{
+    StreamDevice *dev = (StreamDevice *) opaque;
+
+    if (!dev->opened) {
+        return;
+    }
+
+    // very easy control flow... if any data stop
+    // this seems a very small queue but as we use tcp
+    // there's already that queue
+    if (stats->num_items) {
+        dev->flow_stopped = true;
+        return;
+    }
+
+    if (dev->flow_stopped) {
+        dev->flow_stopped = false;
+        // TODO resume flow...
+        // avoid recursion if we need to call get data from data handling from
+        // data handling
+        red_char_device_wakeup(&dev->parent);
+    }
+}
+
 RedCharDevice *
 stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
@@ -277,6 +308,7 @@ allocate_channels(StreamDevice *dev)
     dev->stream_channel = stream_channel;
 
     stream_channel_register_start_cb(stream_channel, stream_device_stream_start, dev);
+    stream_channel_register_queue_stat_cb(stream_channel, stream_device_stream_queue_stat, dev);
 }
 
 static void
@@ -303,6 +335,7 @@ stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
     }
     dev->hdr_pos = 0;
     dev->has_error = false;
+    dev->flow_stopped = false;
     red_char_device_reset(char_dev);
     reset_channels(dev);
 }

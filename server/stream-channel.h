@@ -67,6 +67,16 @@ typedef void (*stream_channel_start_proc)(void *opaque, struct StreamMsgStartSto
 void stream_channel_register_start_cb(StreamChannel *channel,
                                       stream_channel_start_proc cb, void *opaque);
 
+typedef struct StreamQueueStat {
+    uint32_t num_items;
+    uint32_t size;
+} StreamQueueStat;
+
+typedef void (*stream_channel_queue_stat_proc)(void *opaque, const StreamQueueStat *stats,
+                                               StreamChannel *channel);
+void stream_channel_register_queue_stat_cb(StreamChannel *channel,
+                                           stream_channel_queue_stat_proc cb, void *opaque);
+
 G_END_DECLS
 
 #endif /* STREAM_CHANNEL_H_ */

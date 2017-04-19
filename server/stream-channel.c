@@ -71,9 +71,15 @@ struct StreamChannel {
     /* size of the current video stream */
     unsigned width, height;
 
+    StreamQueueStat queue_stat;
+
     /* callback to notify when a stream should be started or stopped */
     stream_channel_start_proc start_cb;
     void *start_opaque;
+
+    /* callback to notify when queue statistics changes */
+    stream_channel_queue_stat_proc queue_cb;
+    void *queue_opaque;
 };
 
 struct StreamChannelClass {
@@ -98,6 +104,7 @@ typedef struct StreamCreateItem {
 
 typedef struct StreamDataItem {
     RedPipeItem base;
+    StreamChannel *channel;
     // NOTE: this must be the last field in the structure
     SpiceMsgDisplayStreamData data;
 } StreamDataItem;
@@ -454,6 +461,27 @@ stream_channel_change_format(StreamChannel *channel, const StreamMsgFormat *fmt)
     red_channel_pipes_add(red_channel, &item->base);
 }
 
+static inline void
+stream_channel_update_queue_stat(StreamChannel *channel,
+                                 int32_t num_diff, int32_t size_diff)
+{
+    channel->queue_stat.num_items += num_diff;
+    channel->queue_stat.size += size_diff;
+    if (channel->queue_cb) {
+        channel->queue_cb(channel->queue_opaque, &channel->queue_stat, channel);
+    }
+}
+
+static void
+data_item_free(RedPipeItem *base)
+{
+    StreamDataItem *pipe_item = SPICE_UPCAST(StreamDataItem, base);
+
+    stream_channel_update_queue_stat(pipe_item->channel, -1, -pipe_item->data.data_size);
+
+    g_free(pipe_item);
+}
+
 void
 stream_channel_send_data(StreamChannel *channel, const void *data, size_t size, uint32_t mm_time)
 {
@@ -467,10 +495,13 @@ stream_channel_send_data(StreamChannel *channel, const void *data, size_t size, 
     RedChannel *red_channel = RED_CHANNEL(channel);
 
     StreamDataItem *item = g_malloc(sizeof(*item) + size);
-    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_STREAM_DATA);
+    red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_STREAM_DATA,
+                            data_item_free);
     item->data.base.id = channel->stream_id;
     item->data.base.multi_media_time = mm_time;
     item->data.data_size = size;
+    item->channel = channel;
+    stream_channel_update_queue_stat(channel, 1, size);
     // TODO try to optimize avoiding the copy
     memcpy(item->data.data, data, size);
     red_channel_pipes_add(red_channel, &item->base);
@@ -482,6 +513,14 @@ stream_channel_register_start_cb(StreamChannel *channel,
 {
     channel->start_cb = cb;
     channel->start_opaque = opaque;
+}
+
+void
+stream_channel_register_queue_stat_cb(StreamChannel *channel,
+                                      stream_channel_queue_stat_proc cb, void *opaque)
+{
+    channel->queue_cb = cb;
+    channel->queue_opaque = opaque;
 }
 
 void
