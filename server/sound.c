@@ -1247,19 +1247,6 @@ SPICE_GNUC_VISIBLE void spice_server_set_record_rate(SpiceRecordInstance *sin, u
     snd_set_rate(&sin->st->channel, frequency, SPICE_RECORD_CAP_OPUS);
 }
 
-static void on_new_record_channel_client(SndChannel *channel, SndChannelClient *client)
-{
-    spice_assert(client);
-
-    channel->connection = client;
-    if (channel->volume.volume_nchannels) {
-        snd_set_command(client, SND_VOLUME_MUTE_MASK);
-    }
-    if (client->active) {
-        snd_set_command(client, SND_CTRL_MASK);
-    }
-}
-
 static void
 record_channel_client_finalize(GObject *object)
 {
@@ -1276,14 +1263,22 @@ record_channel_client_constructed(GObject *object)
     RecordChannelClient *record_client = RECORD_CHANNEL_CLIENT(object);
     RedChannel *red_channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(record_client));
     SndChannel *channel = SND_CHANNEL(red_channel);
+    SndChannelClient *scc = SND_CHANNEL_CLIENT(record_client);
 
     G_OBJECT_CLASS(record_channel_client_parent_class)->constructed(object);
 
-    on_new_record_channel_client(channel, SND_CHANNEL_CLIENT(record_client));
+    channel->connection = scc;
+    if (channel->volume.volume_nchannels) {
+        snd_set_command(scc, SND_VOLUME_MUTE_MASK);
+    }
+    if (scc->active) {
+        snd_set_command(scc, SND_CTRL_MASK);
+    }
+
     if (channel->active) {
         snd_record_start(channel);
     }
-    snd_send(SND_CHANNEL_CLIENT(record_client));
+    snd_send(scc);
 }
 
 
