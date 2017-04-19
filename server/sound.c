@@ -1007,29 +1007,6 @@ static int snd_desired_audio_mode(bool playback_compression, int frequency,
     return SPICE_AUDIO_DATA_MODE_RAW;
 }
 
-static void on_new_playback_channel_client(SndChannel *channel, SndChannelClient *client)
-{
-    RedsState *reds = red_channel_get_server(RED_CHANNEL(channel));
-    RedClient *red_client = red_channel_client_get_client(RED_CHANNEL_CLIENT(client));
-
-    spice_assert(client);
-
-    channel->connection = client;
-    if (red_client_during_migrate_at_target(red_client)) {
-        return;
-    }
-    snd_set_command(client, SND_PLAYBACK_MODE_MASK);
-    if (client->active) {
-        snd_set_command(client, SND_CTRL_MASK);
-    }
-    if (channel->volume.volume_nchannels) {
-        snd_set_command(client, SND_VOLUME_MUTE_MASK);
-    }
-    if (client->active) {
-        reds_disable_mm_time(reds);
-    }
-}
-
 static void
 playback_channel_client_finalize(GObject *object)
 {
@@ -1058,14 +1035,17 @@ static void
 playback_channel_client_constructed(GObject *object)
 {
     PlaybackChannelClient *playback_client = PLAYBACK_CHANNEL_CLIENT(object);
-    RedChannel *red_channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(playback_client));
+    RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
+    RedChannel *red_channel = red_channel_client_get_channel(rcc);
     SndChannel *channel = SND_CHANNEL(red_channel);
+    RedClient *red_client = red_channel_client_get_client(rcc);
+    RedsState *reds = red_channel_get_server(red_channel);
+    SndChannelClient *scc = SND_CHANNEL_CLIENT(playback_client);
 
     G_OBJECT_CLASS(playback_channel_client_parent_class)->constructed(object);
 
-    SND_CHANNEL_CLIENT(playback_client)->on_message_done = snd_playback_on_message_done;
+    scc->on_message_done = snd_playback_on_message_done;
 
-    RedChannelClient *rcc = RED_CHANNEL_CLIENT(playback_client);
     bool client_can_celt = red_channel_client_test_remote_cap(rcc,
                                           SPICE_PLAYBACK_CAP_CELT_0_5_1);
     bool client_can_opus = red_channel_client_test_remote_cap(rcc,
@@ -1086,12 +1066,24 @@ playback_channel_client_constructed(GObject *object)
     spice_debug("playback client %p using mode %s", playback_client,
                 spice_audio_data_mode_to_string(playback_client->mode));
 
-    on_new_playback_channel_client(channel, SND_CHANNEL_CLIENT(playback_client));
+    channel->connection = scc;
+    if (!red_client_during_migrate_at_target(red_client)) {
+        snd_set_command(scc, SND_PLAYBACK_MODE_MASK);
+        if (scc->active) {
+            snd_set_command(scc, SND_CTRL_MASK);
+        }
+        if (channel->volume.volume_nchannels) {
+            snd_set_command(scc, SND_VOLUME_MUTE_MASK);
+        }
+        if (scc->active) {
+            reds_disable_mm_time(reds);
+        }
+    }
 
     if (channel->active) {
         snd_playback_start(channel);
     }
-    snd_send(SND_CHANNEL_CLIENT(playback_client));
+    snd_send(scc);
 }
 
 static void snd_set_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
