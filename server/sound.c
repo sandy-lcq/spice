@@ -238,8 +238,6 @@ G_DEFINE_TYPE(RecordChannelClient, record_channel_client, TYPE_SND_CHANNEL_CLIEN
 /* A list of all Spice{Playback,Record}State objects */
 static GList *snd_channels;
 
-static void snd_playback_start(SndChannel *channel);
-static void snd_record_start(SndChannel *channel);
 static void snd_send(SndChannelClient * client);
 
 static RedsState* snd_channel_get_server(SndChannelClient *client)
@@ -862,15 +860,9 @@ SPICE_GNUC_VISIBLE void spice_server_playback_set_mute(SpicePlaybackInstance *si
     snd_channel_set_mute(&sin->st->channel, mute);
 }
 
-static void snd_playback_start(SndChannel *channel)
+static void snd_channel_client_start(SndChannelClient *client)
 {
-    SndChannelClient *client = channel->connection;
-
-    channel->active = true;
-    if (!client)
-        return;
     spice_assert(!client->active);
-    reds_disable_mm_time(snd_channel_get_server(client));
     client->active = true;
     if (!client->client_active) {
         snd_set_command(client, SND_CTRL_MASK);
@@ -880,9 +872,21 @@ static void snd_playback_start(SndChannel *channel)
     }
 }
 
+static void playback_channel_client_start(SndChannelClient *client)
+{
+    if (!client) {
+        return;
+    }
+
+    reds_disable_mm_time(snd_channel_get_server(client));
+    snd_channel_client_start(client);
+}
+
 SPICE_GNUC_VISIBLE void spice_server_playback_start(SpicePlaybackInstance *sin)
 {
-    return snd_playback_start(&sin->st->channel);
+    SndChannel *channel = &sin->st->channel;
+    channel->active = true;
+    return playback_channel_client_start(channel->connection);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_playback_stop(SpicePlaybackInstance *sin)
@@ -1074,7 +1078,7 @@ playback_channel_client_constructed(GObject *object)
     }
 
     if (channel->active) {
-        snd_playback_start(channel);
+        playback_channel_client_start(scc);
     }
     snd_send(scc);
 }
@@ -1126,30 +1130,23 @@ SPICE_GNUC_VISIBLE void spice_server_record_set_mute(SpiceRecordInstance *sin, u
     snd_channel_set_mute(&sin->st->channel, mute);
 }
 
-static void snd_record_start(SndChannel *channel)
+static void record_channel_client_start(SndChannelClient *client)
 {
-    SndChannelClient *client = channel->connection;
-
-    channel->active = true;
     if (!client) {
         return;
     }
+
     RecordChannelClient *record_client = RECORD_CHANNEL_CLIENT(client);
-    spice_assert(!client->active);
     record_client->read_pos = record_client->write_pos = 0;   //todo: improve by
                                                               //stream generation
-    client->active = true;
-    if (!client->client_active) {
-        snd_set_command(client, SND_CTRL_MASK);
-        snd_send(client);
-    } else {
-        client->command &= ~SND_CTRL_MASK;
-    }
+    snd_channel_client_start(client);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_record_start(SpiceRecordInstance *sin)
 {
-    snd_record_start(&sin->st->channel);
+    SndChannel *channel = &sin->st->channel;
+    channel->active = true;
+    record_channel_client_start(channel->connection);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_record_stop(SpiceRecordInstance *sin)
@@ -1266,7 +1263,7 @@ record_channel_client_constructed(GObject *object)
     }
 
     if (channel->active) {
-        snd_record_start(channel);
+        record_channel_client_start(scc);
     }
     snd_send(scc);
 }
