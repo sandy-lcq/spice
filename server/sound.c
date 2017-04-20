@@ -167,7 +167,6 @@ struct SndChannel {
     RedChannel parent;
 
     SndChannelClient *connection; /* Only one client is supported */
-    SndChannel *next; /* For the global SndChannel list */
 
     bool active;
     SpiceVolumeState volume;
@@ -237,7 +236,7 @@ G_DEFINE_TYPE(RecordChannelClient, record_channel_client, TYPE_SND_CHANNEL_CLIEN
 
 
 /* A list of all Spice{Playback,Record}State objects */
-static SndChannel *snd_channels;
+static GList *snd_channels;
 
 static void snd_playback_start(SndChannel *channel);
 static void snd_record_start(SndChannel *channel);
@@ -970,9 +969,10 @@ SPICE_GNUC_VISIBLE void spice_server_playback_put_samples(SpicePlaybackInstance 
 
 void snd_set_playback_latency(RedClient *client, uint32_t latency)
 {
-    SndChannel *now = snd_channels;
+    GList *l;
 
-    for (; now; now = now->next) {
+    for (l = snd_channels; l != NULL; l = l->next) {
+        SndChannel *now = l->data;
         uint32_t type;
         g_object_get(RED_CHANNEL(now), "channel-type", &type, NULL);
         if (type == SPICE_CHANNEL_PLAYBACK && now->connection &&
@@ -1282,21 +1282,12 @@ static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, Reds
 
 static void add_channel(SndChannel *channel)
 {
-    channel->next = snd_channels;
-    snd_channels = channel;
+    snd_channels = g_list_prepend(snd_channels, channel);
 }
 
 static void remove_channel(SndChannel *channel)
 {
-    SndChannel **now = &snd_channels;
-    while (*now) {
-        if (*now == channel) {
-            *now = channel->next;
-            return;
-        }
-        now = &(*now)->next;
-    }
-    spice_printerr("not found");
+    snd_channels = g_list_remove(snd_channels, channel);
 }
 
 static void
@@ -1452,9 +1443,10 @@ void snd_detach_record(SpiceRecordInstance *sin)
 
 void snd_set_playback_compression(bool on)
 {
-    SndChannel *now = snd_channels;
+    GList *l;
 
-    for (; now; now = now->next) {
+    for (l = snd_channels; l != NULL; l = l->next) {
+        SndChannel *now = l->data;
         uint32_t type;
         g_object_get(RED_CHANNEL(now), "channel-type", &type, NULL);
         if (type == SPICE_CHANNEL_PLAYBACK && now->connection) {
