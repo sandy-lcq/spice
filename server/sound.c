@@ -1039,7 +1039,6 @@ playback_channel_client_constructed(GObject *object)
     RedChannel *red_channel = red_channel_client_get_channel(rcc);
     SndChannel *channel = SND_CHANNEL(red_channel);
     RedClient *red_client = red_channel_client_get_client(rcc);
-    RedsState *reds = red_channel_get_server(red_channel);
     SndChannelClient *scc = SND_CHANNEL_CLIENT(playback_client);
 
     G_OBJECT_CLASS(playback_channel_client_parent_class)->constructed(object);
@@ -1069,14 +1068,8 @@ playback_channel_client_constructed(GObject *object)
     channel->connection = scc;
     if (!red_client_during_migrate_at_target(red_client)) {
         snd_set_command(scc, SND_PLAYBACK_MODE_MASK);
-        if (scc->active) {
-            snd_set_command(scc, SND_CTRL_MASK);
-        }
         if (channel->volume.volume_nchannels) {
             snd_set_command(scc, SND_VOLUME_MUTE_MASK);
-        }
-        if (scc->active) {
-            reds_disable_mm_time(reds);
         }
     }
 
@@ -1270,9 +1263,6 @@ record_channel_client_constructed(GObject *object)
     channel->connection = scc;
     if (channel->volume.volume_nchannels) {
         snd_set_command(scc, SND_VOLUME_MUTE_MASK);
-    }
-    if (scc->active) {
-        snd_set_command(scc, SND_CTRL_MASK);
     }
 
     if (channel->active) {
