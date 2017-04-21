@@ -198,7 +198,7 @@ VALGRIND_TESTS_ENVIRONMENT = \
 	$(TESTS_ENVIRONMENT) \
 	env VALGRIND=$(VALGRIND) \
 	G_SLICE=always-malloc,debug-blocks \
-	G_DEBUG=fatal-warnings,fatal-criticals,gc-friendly
+	G_DEBUG=$${G_DEBUG:+$$G_DEBUG,}gc-friendly
 
 VALGRIND_LOG_COMPILER = \
 	$(valgrind_lt) \
