@@ -82,7 +82,7 @@ if test "x$enable_gstreamer" != "xno" && test "x$enable_gstreamer" != "x0.10"; t
         [enable_gstreamer="1.0"
          SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gst-plugins-base 1.0], [appsrc videoconvert appsink])
          SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gstreamer-libav 1.0], [avenc_mjpeg])
-         SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gst-plugins-good 1.0], [vp8enc])
+         SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gst-plugins-good 1.0], [vp8enc vp9enc])
          SPICE_CHECK_GSTREAMER_ELEMENTS($GST_INSPECT_1_0, [gst-plugins-ugly 1.0], [x264enc])
          ],
          [if test "x$enable_gstreamer" = "x1.0"; then
