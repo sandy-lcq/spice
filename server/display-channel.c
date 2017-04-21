@@ -987,7 +987,7 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
                 /* advance the loop variable */
                 now = ring_next(ring, now);
                 if (shadow || skip) {
-                    /* 'now' is currently set to the the item immediately AFTER
+                    /* 'now' is currently set to the item immediately AFTER
                      * the obscured sibling that we just removed.
                      * TODO: document why this item is used as an
                      * 'exclude_base' */
