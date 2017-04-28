@@ -1289,7 +1289,7 @@ void red_channel_client_push(RedChannelClient *rcc)
     }
 
     if (!red_channel_client_no_item_being_sent(rcc) && !red_channel_client_is_blocked(rcc)) {
-        rcc->priv->send_data.blocked = TRUE;
+        red_channel_client_set_blocked(rcc);
         spice_printerr("ERROR: an item waiting to be sent and not blocked");
     }
 
