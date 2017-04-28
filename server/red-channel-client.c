@@ -1659,9 +1659,7 @@ static void red_channel_client_pipe_clear(RedChannelClient *rcc)
 {
     RedPipeItem *item;
 
-    if (rcc) {
-        red_channel_client_clear_sent_item(rcc);
-    }
+    red_channel_client_clear_sent_item(rcc);
     while ((item = g_queue_pop_head(&rcc->priv->pipe)) != NULL) {
         red_pipe_item_unref(item);
     }
