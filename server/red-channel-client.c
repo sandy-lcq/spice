@@ -495,13 +495,7 @@ static int red_channel_client_prepare_out_msg(RedChannelClient *rcc,
 
 static void red_channel_client_set_blocked(RedChannelClient *rcc)
 {
-    SpiceCoreInterfaceInternal *core;
-
     rcc->priv->send_data.blocked = TRUE;
-    core = red_channel_get_core_interface(rcc->priv->channel);
-    core->watch_update_mask(core, rcc->priv->stream->watch,
-                            SPICE_WATCH_EVENT_READ |
-                            SPICE_WATCH_EVENT_WRITE);
 }
 
 static inline int red_channel_client_urgent_marshaller_is_active(RedChannelClient *rcc)
@@ -641,10 +635,7 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
 
     red_channel_client_clear_sent_item(rcc);
     if (red_channel_client_is_blocked(rcc)) {
-        SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
         rcc->priv->send_data.blocked = FALSE;
-        core->watch_update_mask(core, rcc->priv->stream->watch,
-                                SPICE_WATCH_EVENT_READ);
     }
 
     if (red_channel_client_urgent_marshaller_is_active(rcc)) {
