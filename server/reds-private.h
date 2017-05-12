@@ -62,7 +62,6 @@ typedef struct RedsMigTargetClient {
 /* Intermediate state for on going monitors config message from a single
  * client, being passed to the guest */
 typedef struct RedsClientMonitorsConfig {
-    MainChannelClient *mcc;
     uint8_t *buffer;
     int buffer_size;
     int buffer_pos;

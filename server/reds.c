@@ -1085,7 +1085,6 @@ static void reds_client_monitors_config_cleanup(RedsState *reds)
     cmc->buffer_size = cmc->buffer_pos = 0;
     free(cmc->buffer);
     cmc->buffer = NULL;
-    cmc->mcc = NULL;
 }
 
 static void reds_on_main_agent_monitors_config(RedsState *reds,
@@ -1098,7 +1097,6 @@ static void reds_on_main_agent_monitors_config(RedsState *reds,
     cmc->buffer_size += size;
     cmc->buffer = realloc(cmc->buffer, cmc->buffer_size);
     spice_assert(cmc->buffer);
-    cmc->mcc = mcc;
     memcpy(cmc->buffer + cmc->buffer_pos, message, size);
     cmc->buffer_pos += size;
     msg_header = (VDAgentMessage *)cmc->buffer;
