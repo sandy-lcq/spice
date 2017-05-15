@@ -1105,20 +1105,41 @@ void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf)
 static void reds_on_main_agent_monitors_config(RedsState *reds,
         MainChannelClient *mcc, const void *message, size_t size)
 {
+    const unsigned int MAX_MONITORS = 256;
+    const unsigned int MAX_MONITOR_CONFIG_SIZE =
+       sizeof(VDAgentMonitorsConfig) + MAX_MONITORS * sizeof(VDAgentMonConfig);
+
     VDAgentMessage *msg_header;
     VDAgentMonitorsConfig *monitors_config;
     SpiceBuffer *cmc = &reds->client_monitors_config;
 
+    // limit size of message sent by the client as this can cause a DoS through
+    // memory exhaustion, or potentially some integer overflows
+    if (sizeof(VDAgentMessage) + MAX_MONITOR_CONFIG_SIZE - cmc->offset < size) {
+        goto overflow;
+    }
     spice_buffer_append(cmc, message, size);
+    if (sizeof(VDAgentMessage) > cmc->offset) {
+        spice_debug("not enough data yet. %zd", cmc->offset);
+        return;
+    }
     msg_header = (VDAgentMessage *)cmc->buffer;
-    if (sizeof(VDAgentMessage) > cmc->offset ||
-            msg_header->size > cmc->offset - sizeof(VDAgentMessage)) {
+    if (msg_header->size > MAX_MONITOR_CONFIG_SIZE) {
+        goto overflow;
+    }
+    if (msg_header->size > cmc->offset - sizeof(VDAgentMessage)) {
         spice_debug("not enough data yet. %zd", cmc->offset);
         return;
     }
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
     spice_debug("monitors_config->num_of_monitors: %d", monitors_config->num_of_monitors);
     reds_client_monitors_config(reds, monitors_config);
+    spice_buffer_free(cmc);
+    return;
+
+overflow:
+    spice_warning("received invalid MonitorsConfig request from client, disconnecting");
+    red_channel_client_disconnect(RED_CHANNEL_CLIENT(mcc));
     spice_buffer_free(cmc);
 }
 
