@@ -1131,6 +1131,9 @@ static void reds_on_main_agent_monitors_config(RedsState *reds,
         spice_debug("not enough data yet. %zd", cmc->offset);
         return;
     }
+    if (msg_header->size < sizeof(VDAgentMonitorsConfig)) {
+        goto overflow;
+    }
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
     spice_debug("monitors_config->num_of_monitors: %d", monitors_config->num_of_monitors);
     reds_client_monitors_config(reds, monitors_config);
