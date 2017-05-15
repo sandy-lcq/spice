@@ -1000,6 +1000,7 @@ static void reds_on_main_agent_monitors_config(
     VDAgentMessage *msg_header;
     VDAgentMonitorsConfig *monitors_config;
     RedsClientMonitorsConfig *cmc = &reds->client_monitors_config;
+    uint32_t max_monitors;
 
     // limit size of message sent by the client as this can cause a DoS through
     // memory exhaustion, or potentially some integer overflows
@@ -1028,6 +1029,12 @@ static void reds_on_main_agent_monitors_config(
         goto overflow;
     }
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
+    // limit the monitor number to avoid buffer overflows
+    max_monitors = (msg_header->size - sizeof(VDAgentMonitorsConfig)) /
+                   sizeof(VDAgentMonConfig);
+    if (monitors_config->num_of_monitors > max_monitors) {
+        goto overflow;
+    }
     spice_debug("%s: %d", __func__, monitors_config->num_of_monitors);
     red_dispatcher_client_monitors_config(monitors_config);
     reds_client_monitors_config_cleanup();
