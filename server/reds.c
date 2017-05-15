@@ -993,25 +993,46 @@ static void reds_client_monitors_config_cleanup(void)
 static void reds_on_main_agent_monitors_config(
         MainChannelClient *mcc, void *message, size_t size)
 {
+    const unsigned int MAX_MONITORS = 256;
+    const unsigned int MAX_MONITOR_CONFIG_SIZE =
+       sizeof(VDAgentMonitorsConfig) + MAX_MONITORS * sizeof(VDAgentMonConfig);
+
     VDAgentMessage *msg_header;
     VDAgentMonitorsConfig *monitors_config;
     RedsClientMonitorsConfig *cmc = &reds->client_monitors_config;
 
+    // limit size of message sent by the client as this can cause a DoS through
+    // memory exhaustion, or potentially some integer overflows
+    if (sizeof(VDAgentMessage) + MAX_MONITOR_CONFIG_SIZE - cmc->buffer_size < size) {
+        goto overflow;
+    }
     cmc->buffer_size += size;
     cmc->buffer = realloc(cmc->buffer, cmc->buffer_size);
     spice_assert(cmc->buffer);
     cmc->mcc = mcc;
     memcpy(cmc->buffer + cmc->buffer_pos, message, size);
     cmc->buffer_pos += size;
+    if (sizeof(VDAgentMessage) > cmc->buffer_size) {
+        spice_debug("not enough data yet. %d", cmc->buffer_size);
+        return;
+    }
     msg_header = (VDAgentMessage *)cmc->buffer;
-    if (sizeof(VDAgentMessage) > cmc->buffer_size ||
-            msg_header->size > cmc->buffer_size - sizeof(VDAgentMessage)) {
+    if (msg_header->size > MAX_MONITOR_CONFIG_SIZE) {
+        goto overflow;
+    }
+    if (msg_header->size > cmc->buffer_size - sizeof(VDAgentMessage)) {
         spice_debug("not enough data yet. %d", cmc->buffer_size);
         return;
     }
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
     spice_debug("%s: %d", __func__, monitors_config->num_of_monitors);
     red_dispatcher_client_monitors_config(monitors_config);
+    reds_client_monitors_config_cleanup();
+    return;
+
+overflow:
+    spice_warning("received invalid MonitorsConfig request from client, disconnecting");
+    red_channel_client_disconnect(main_channel_client_get_base(mcc));
     reds_client_monitors_config_cleanup();
 }
 
