@@ -78,6 +78,9 @@ struct RedCharDeviceClass
      * due to slow flow or due to some other error.
      * The called instance should disconnect the client, or at least the corresponding channel */
     void (*remove_client)(RedCharDevice *self, RedClient *client);
+
+    /* This cb is called when device receives an event */
+    void (*port_event)(RedCharDevice *self, uint8_t event);
 };
 
 GType red_char_device_get_type(void) G_GNUC_CONST;

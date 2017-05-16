@@ -1110,6 +1110,11 @@ red_char_device_finalize(GObject *object)
 }
 
 static void
+port_event_none(RedCharDevice *self G_GNUC_UNUSED, uint8_t event G_GNUC_UNUSED)
+{
+}
+
+static void
 red_char_device_class_init(RedCharDeviceClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
@@ -1152,6 +1157,24 @@ red_char_device_class_init(RedCharDeviceClass *klass)
                                                         0, G_MAXUINT64, 0,
                                                         G_PARAM_STATIC_STRINGS |
                                                         G_PARAM_READWRITE));
+
+    klass->port_event = port_event_none;
+}
+
+SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, uint8_t event)
+{
+    if (sin->st == NULL) {
+        spice_warning("no SpiceCharDeviceState attached to instance %p", sin);
+        return;
+    }
+
+    RedCharDeviceClass *klass = RED_CHAR_DEVICE_GET_CLASS(sin->st);
+    if (!klass) {
+        // wrong object, a warning is already produced by RED_CHAR_DEVICE_GET_CLASS
+        return;
+    }
+
+    return klass->port_event(sin->st, event);
 }
 
 static void

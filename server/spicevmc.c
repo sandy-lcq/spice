@@ -866,15 +866,10 @@ void spicevmc_device_disconnect(RedsState *reds, SpiceCharDeviceInstance *sin)
     sin->st = NULL;
 }
 
-SPICE_GNUC_VISIBLE void spice_server_port_event(SpiceCharDeviceInstance *sin, uint8_t event)
+static void spicevmc_port_event(RedCharDevice *char_dev, uint8_t event)
 {
     RedVmcChannel *channel;
-    RedCharDeviceSpiceVmc *device = RED_CHAR_DEVICE_SPICEVMC(sin->st);
-
-    if (sin->st == NULL) {
-        spice_warning("no SpiceCharDeviceState attached to instance %p", sin);
-        return;
-    }
+    RedCharDeviceSpiceVmc *device = RED_CHAR_DEVICE_SPICEVMC(char_dev);
 
     channel = RED_VMC_CHANNEL(device->channel);
 
@@ -953,6 +948,7 @@ red_char_device_spicevmc_class_init(RedCharDeviceSpiceVmcClass *klass)
     char_dev_class->send_msg_to_client = spicevmc_chardev_send_msg_to_client;
     char_dev_class->send_tokens_to_client = spicevmc_char_dev_send_tokens_to_client;
     char_dev_class->remove_client = spicevmc_char_dev_remove_client;
+    char_dev_class->port_event = spicevmc_port_event;
 
     g_object_class_install_property(object_class,
                                     PROP_CHANNEL,
