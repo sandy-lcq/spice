@@ -123,6 +123,7 @@ typedef struct RedInputsInitPipeItem {
 
 #define KEY_MODIFIERS_TTL (MSEC_PER_SEC * 2)
 
+#define SCAN_CODE_RELEASE 0x80
 #define SCROLL_LOCK_SCAN_CODE 0x46
 #define NUM_LOCK_SCAN_CODE 0x45
 #define CAPS_LOCK_SCAN_CODE 0x3a
@@ -174,7 +175,7 @@ static void kbd_push_scan(SpiceKbdInstance *sin, uint8_t scan)
     } else {
         if (sin->st->push_ext_type == 0 || sin->st->push_ext_type == 0xe0) {
             bool *state = sin->st->push_ext_type ? sin->st->key_ext : sin->st->key;
-            state[scan & 0x7f] = !(scan & 0x80);
+            state[scan & 0x7f] = !(scan & SCAN_CODE_RELEASE);
         }
         sin->st->push_ext_type = 0;
     }
@@ -381,17 +382,17 @@ static bool inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
         if ((modifiers->modifiers & SPICE_KEYBOARD_MODIFIER_FLAGS_SCROLL_LOCK) !=
             (leds & SPICE_KEYBOARD_MODIFIER_FLAGS_SCROLL_LOCK)) {
             kbd_push_scan(keyboard, SCROLL_LOCK_SCAN_CODE);
-            kbd_push_scan(keyboard, SCROLL_LOCK_SCAN_CODE | 0x80);
+            kbd_push_scan(keyboard, SCROLL_LOCK_SCAN_CODE | SCAN_CODE_RELEASE);
         }
         if ((modifiers->modifiers & SPICE_KEYBOARD_MODIFIER_FLAGS_NUM_LOCK) !=
             (leds & SPICE_KEYBOARD_MODIFIER_FLAGS_NUM_LOCK)) {
             kbd_push_scan(keyboard, NUM_LOCK_SCAN_CODE);
-            kbd_push_scan(keyboard, NUM_LOCK_SCAN_CODE | 0x80);
+            kbd_push_scan(keyboard, NUM_LOCK_SCAN_CODE | SCAN_CODE_RELEASE);
         }
         if ((modifiers->modifiers & SPICE_KEYBOARD_MODIFIER_FLAGS_CAPS_LOCK) !=
             (leds & SPICE_KEYBOARD_MODIFIER_FLAGS_CAPS_LOCK)) {
             kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE);
-            kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE | 0x80);
+            kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE | SCAN_CODE_RELEASE);
         }
         activate_modifiers_watch(inputs_channel, reds);
         break;
@@ -420,7 +421,7 @@ static void inputs_release_keys(InputsChannel *inputs)
             continue;
 
         st->key[i] = FALSE;
-        kbd_push_scan(keyboard, i | 0x80);
+        kbd_push_scan(keyboard, i | SCAN_CODE_RELEASE);
     }
 
     for (i = 0; i < SPICE_N_ELEMENTS(st->key_ext); i++) {
@@ -429,7 +430,7 @@ static void inputs_release_keys(InputsChannel *inputs)
 
         st->key_ext[i] = FALSE;
         kbd_push_scan(keyboard, 0xe0);
-        kbd_push_scan(keyboard, i | 0x80);
+        kbd_push_scan(keyboard, i | SCAN_CODE_RELEASE);
     }
 }
 
