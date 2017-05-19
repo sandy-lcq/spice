@@ -20,6 +20,7 @@ AM_CPPFLAGS =					\
 	$(SSL_CFLAGS)				\
 	$(VISIBILITY_HIDDEN_CFLAGS)		\
 	$(WARN_CFLAGS)				\
+	$(ORC_CFLAGS)				\
 	$(NULL)
 
 noinst_LTLIBRARIES = libserver.la
@@ -54,6 +55,7 @@ libserver_la_LIBADD =							\
 	$(SSL_LIBS)							\
 	$(Z_LIBS)							\
 	$(SPICE_NONPKGCONFIG_LIBS)					\
+	$(ORC_LIBS)							\
 	$(NULL)
 
 libspice_serverincludedir = $(includedir)/spice-server

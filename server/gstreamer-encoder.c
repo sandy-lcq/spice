@@ -27,6 +27,7 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
 #include <gst/video/video.h>
+#include <orc/orcprogram.h>
 
 #include "red-common.h"
 #include "video-encoder.h"
@@ -1702,6 +1703,30 @@ static void spice_gst_encoder_get_stats(VideoEncoder *video_encoder,
     }
 }
 
+/* Check if ORC library can work.
+ * ORC library is used quite extensively by GStreamer
+ * to generate code dynamically. If ORC cannot work, GStreamer
+ * will abort(3) the entire process.
+ */
+static bool orc_check(void)
+{
+    static bool orc_checked = false;
+    static bool orc_dynamic_code_ok = false;
+
+    if (SPICE_UNLIKELY(!orc_checked)) {
+        OrcCode *code = orc_code_new();
+        if (code) {
+            /* allocating 0 byte for code makes the function not crash
+             * but it does all the initializations and checks */
+            orc_code_allocate_codemem(code, 0);
+            orc_dynamic_code_ok = code->code != NULL;
+            orc_code_free(code);
+        }
+        orc_checked = true;
+    }
+    return orc_dynamic_code_ok;
+}
+
 VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
                                     uint64_t starting_bit_rate,
                                     VideoEncoderRateControlCbs *cbs,
@@ -1718,6 +1743,11 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
     if (!gst_init_check(NULL, NULL, &err)) {
         spice_warning("GStreamer error: %s", err->message);
         g_clear_error(&err);
+        return NULL;
+    }
+
+    // avoid aborting the process
+    if (!orc_check()) {
         return NULL;
     }
 
