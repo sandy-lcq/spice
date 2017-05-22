@@ -41,7 +41,7 @@ struct CursorChannel
     CommonGraphicsChannel parent;
 
     CursorItem *item;
-    int cursor_visible;
+    bool cursor_visible;
     SpicePoint16 cursor_position;
     uint16_t cursor_trail_length;
     uint16_t cursor_trail_frequency;
@@ -309,7 +309,7 @@ CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
 void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 {
     CursorItem *cursor_item;
-    int cursor_show = FALSE;
+    bool cursor_show = false;
     QXLInstance *qxl;
 
     spice_return_if_fail(cursor);
@@ -320,16 +320,16 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
-        cursor->cursor_visible = cursor_cmd->u.set.visible;
+        cursor->cursor_visible = !!cursor_cmd->u.set.visible;
         cursor_channel_set_item(cursor, cursor_item);
         break;
     case QXL_CURSOR_MOVE:
         cursor_show = !cursor->cursor_visible;
-        cursor->cursor_visible = TRUE;
+        cursor->cursor_visible = true;
         cursor->cursor_position = cursor_cmd->u.position;
         break;
     case QXL_CURSOR_HIDE:
-        cursor->cursor_visible = FALSE;
+        cursor->cursor_visible = false;
         break;
     case QXL_CURSOR_TRAIL:
         cursor->cursor_trail_length = cursor_cmd->u.trail.length;
@@ -358,7 +358,7 @@ void cursor_channel_reset(CursorChannel *cursor)
     spice_return_if_fail(cursor);
 
     cursor_channel_set_item(cursor, NULL);
-    cursor->cursor_visible = TRUE;
+    cursor->cursor_visible = true;
     cursor->cursor_position.x = cursor->cursor_position.y = 0;
     cursor->cursor_trail_length = cursor->cursor_trail_frequency = 0;
 
@@ -455,6 +455,6 @@ cursor_channel_class_init(CursorChannelClass *klass)
 static void
 cursor_channel_init(CursorChannel *self)
 {
-    self->cursor_visible = TRUE;
+    self->cursor_visible = true;
     self->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 }
