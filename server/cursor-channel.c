@@ -34,8 +34,6 @@ typedef struct CursorItem {
     RedCursorCmd *red_cursor;
 } CursorItem;
 
-G_STATIC_ASSERT(sizeof(CursorItem) <= QXL_CURSUR_DEVICE_DATA_SIZE);
-
 struct CursorChannel
 {
     CommonGraphicsChannel parent;
