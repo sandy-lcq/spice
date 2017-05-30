@@ -59,14 +59,6 @@ typedef struct RedsMigTargetClient {
     GList *pending_links;
 } RedsMigTargetClient;
 
-/* Intermediate state for on going monitors config message from a single
- * client, being passed to the guest */
-typedef struct RedsClientMonitorsConfig {
-    uint8_t *buffer;
-    int buffer_size;
-    int buffer_pos;
-} RedsClientMonitorsConfig;
-
 typedef struct ChannelSecurityOptions ChannelSecurityOptions;
 
 typedef struct RedSSLParameters {
@@ -126,7 +118,10 @@ struct RedsState {
 #endif
     int allow_multiple_clients;
 
-    RedsClientMonitorsConfig client_monitors_config;
+    /* Intermediate state for on going monitors config message from a single
+     * client, being passed to the guest */
+    SpiceBuffer client_monitors_config;
+
     int mm_time_enabled;
     uint32_t mm_time_latency;
 

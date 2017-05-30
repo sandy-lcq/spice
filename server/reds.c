@@ -1102,37 +1102,24 @@ void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf)
     dev->priv->recv_from_client_buf_pushed = FALSE;
 }
 
-static void reds_client_monitors_config_cleanup(RedsState *reds)
-{
-    RedsClientMonitorsConfig *cmc = &reds->client_monitors_config;
-
-    cmc->buffer_size = cmc->buffer_pos = 0;
-    free(cmc->buffer);
-    cmc->buffer = NULL;
-}
-
 static void reds_on_main_agent_monitors_config(RedsState *reds,
         MainChannelClient *mcc, const void *message, size_t size)
 {
     VDAgentMessage *msg_header;
     VDAgentMonitorsConfig *monitors_config;
-    RedsClientMonitorsConfig *cmc = &reds->client_monitors_config;
+    SpiceBuffer *cmc = &reds->client_monitors_config;
 
-    cmc->buffer_size += size;
-    cmc->buffer = realloc(cmc->buffer, cmc->buffer_size);
-    spice_assert(cmc->buffer);
-    memcpy(cmc->buffer + cmc->buffer_pos, message, size);
-    cmc->buffer_pos += size;
+    spice_buffer_append(cmc, message, size);
     msg_header = (VDAgentMessage *)cmc->buffer;
-    if (sizeof(VDAgentMessage) > cmc->buffer_size ||
-            msg_header->size > cmc->buffer_size - sizeof(VDAgentMessage)) {
-        spice_debug("not enough data yet. %d", cmc->buffer_size);
+    if (sizeof(VDAgentMessage) > cmc->offset ||
+            msg_header->size > cmc->offset - sizeof(VDAgentMessage)) {
+        spice_debug("not enough data yet. %zd", cmc->offset);
         return;
     }
     monitors_config = (VDAgentMonitorsConfig *)(cmc->buffer + sizeof(*msg_header));
     spice_debug("%s: %d", __func__, monitors_config->num_of_monitors);
     reds_client_monitors_config(reds, monitors_config);
-    reds_client_monitors_config_cleanup(reds);
+    spice_buffer_free(cmc);
 }
 
 void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, const void *message,
@@ -3438,7 +3425,7 @@ static int do_spice_init(RedsState *reds, SpiceCoreInterface *core_interface)
 
     reds->mouse_mode = SPICE_MOUSE_MODE_SERVER;
 
-    reds_client_monitors_config_cleanup(reds);
+    spice_buffer_free(&reds->client_monitors_config);
 
     reds->allow_multiple_clients = getenv(SPICE_DEBUG_ALLOW_MC_ENV) != NULL;
     if (reds->allow_multiple_clients) {
