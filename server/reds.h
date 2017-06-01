@@ -79,7 +79,8 @@ void reds_on_main_agent_start(RedsState *reds, MainChannelClient *mcc, uint32_t 
 void reds_on_main_agent_tokens(RedsState *reds, MainChannelClient *mcc, uint32_t num_tokens);
 uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, size_t size);
 void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf);
-void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *message, size_t size);
+void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, const void *message,
+                             size_t size);
 void reds_on_main_migrate_connected(RedsState *reds, int seamless); //should be called when all the clients
                                                    // are connected to the target
 bool reds_handle_migrate_data(RedsState *recs, MainChannelClient *mcc,

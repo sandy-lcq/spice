@@ -1088,7 +1088,7 @@ static void reds_client_monitors_config_cleanup(RedsState *reds)
 }
 
 static void reds_on_main_agent_monitors_config(RedsState *reds,
-        MainChannelClient *mcc, void *message, size_t size)
+        MainChannelClient *mcc, const void *message, size_t size)
 {
     VDAgentMessage *msg_header;
     VDAgentMonitorsConfig *monitors_config;
@@ -1111,7 +1111,8 @@ static void reds_on_main_agent_monitors_config(RedsState *reds,
     reds_client_monitors_config_cleanup(reds);
 }
 
-void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, void *message, size_t size)
+void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, const void *message,
+                             size_t size)
 {
     RedCharDeviceVDIPort *dev = reds->agent_dev;
     VDIChunkHeader *header;
