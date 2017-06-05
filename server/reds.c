@@ -745,6 +745,27 @@ static void vdi_port_read_buf_free(RedPipeItem *base)
     }
 }
 
+static void agent_adjust_capabilities(VDAgentMessage *message,
+                                      bool clipboard_enabled, bool xfer_enabled)
+{
+    VDAgentAnnounceCapabilities *capabilities;
+
+    if (message->type != VD_AGENT_ANNOUNCE_CAPABILITIES) {
+        return;
+    }
+    capabilities = (VDAgentAnnounceCapabilities *) message->data;
+
+    if (!clipboard_enabled) {
+        VD_AGENT_CLEAR_CAPABILITY(capabilities->caps, VD_AGENT_CAP_CLIPBOARD);
+        VD_AGENT_CLEAR_CAPABILITY(capabilities->caps, VD_AGENT_CAP_CLIPBOARD_BY_DEMAND);
+        VD_AGENT_CLEAR_CAPABILITY(capabilities->caps, VD_AGENT_CAP_CLIPBOARD_SELECTION);
+    }
+
+    if (!xfer_enabled) {
+        VD_AGENT_SET_CAPABILITY(capabilities->caps, VD_AGENT_CAP_FILE_XFER_DISABLED);
+    }
+}
+
 /* reads from the device till completes reading a message that is addressed to the client,
  * or otherwise, when reading from the device fails */
 static RedPipeItem *vdi_port_read_one_msg_from_device(RedCharDevice *self,
@@ -810,6 +831,9 @@ static RedPipeItem *vdi_port_read_one_msg_from_device(RedCharDevice *self,
             }
             switch (vdi_port_read_buf_process(reds->agent_dev, dispatch_buf)) {
             case AGENT_MSG_FILTER_OK:
+                agent_adjust_capabilities((VDAgentMessage *) dispatch_buf->data,
+                                          reds->config->agent_copypaste,
+                                          reds->config->agent_file_xfer);
                 return &dispatch_buf->base;
             case AGENT_MSG_FILTER_PROTO_ERROR:
                 reds_agent_remove(reds);
@@ -1199,6 +1223,9 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
         read_buf->len = read_data_len;
         switch (vdi_port_read_buf_process(reds->agent_dev, read_buf)) {
         case AGENT_MSG_FILTER_OK:
+            agent_adjust_capabilities((VDAgentMessage *)read_buf->data,
+                                      reds->config->agent_copypaste,
+                                      reds->config->agent_file_xfer);
             main_channel_client_push_agent_data(mcc,
                                                 read_buf->data,
                                                 read_buf->len,
