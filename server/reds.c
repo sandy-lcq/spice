@@ -2461,8 +2461,9 @@ static RedLinkInfo *reds_init_client_ssl_connection(RedsState *reds, int socket)
     int ssl_status;
 
     link = reds_init_client_connection(reds, socket);
-    if (link == NULL)
-        goto error;
+    if (link == NULL) {
+        return NULL;
+    }
 
     ssl_status = reds_stream_enable_ssl(link->stream, reds->ctx);
     switch (ssl_status) {
