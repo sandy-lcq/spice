@@ -523,6 +523,7 @@ static void red_replay_image_free(SpiceReplay *replay, QXLPHYSICAL p, uint32_t f
         break;
     case SPICE_IMAGE_TYPE_QUIC:
         red_replay_data_chunks_free(replay, qxl, 0);
+        qxl = NULL;
         break;
     default:
         spice_warn_if_reached();
