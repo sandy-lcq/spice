@@ -1055,7 +1055,7 @@ static bool dcc_handle_stream_report(DisplayChannelClient *dcc,
         return TRUE;
     }
 
-    if (report->num_frames == 0 && report->num_drops == UINT_MAX) {
+    if (report->num_frames == 0 && report->num_drops == UINT32_MAX) {
         spice_warning("stream_report: the client does not support stream %u",
                       report->stream_id);
         /* Stop streaming the video so the client can see it */
