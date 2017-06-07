@@ -27,6 +27,7 @@
 #include "reds.h"
 #include "common-graphics-channel.h"
 #include "display-limits.h"
+#include "stream.h" // TODO remove, put common stuff
 
 #define TYPE_STREAM_CHANNEL_CLIENT stream_channel_client_get_type()
 
@@ -95,6 +96,7 @@ enum {
     RED_PIPE_ITEM_TYPE_STREAM_CREATE,
     RED_PIPE_ITEM_TYPE_STREAM_DATA,
     RED_PIPE_ITEM_TYPE_STREAM_DESTROY,
+    RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT,
 };
 
 typedef struct StreamCreateItem {
@@ -228,6 +230,20 @@ stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         client->stream_id = item->stream_create.id;
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_CREATE);
         spice_marshall_msg_display_stream_create(m, &item->stream_create);
+        break;
+    }
+    case RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT: {
+        if (client->stream_id < 0
+            || !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_STREAM_REPORT)) {
+            return;
+        }
+        SpiceMsgDisplayStreamActivateReport msg;
+        msg.stream_id = client->stream_id;
+        msg.unique_id = 1; // TODO useful ?
+        msg.max_window_size = RED_STREAM_CLIENT_REPORT_WINDOW;
+        msg.timeout_ms = RED_STREAM_CLIENT_REPORT_TIMEOUT;
+        red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_ACTIVATE_REPORT);
+        spice_marshall_msg_display_stream_activate_report(m, &msg);
         break;
     }
     case RED_PIPE_ITEM_TYPE_STREAM_DATA: {
@@ -459,6 +475,9 @@ stream_channel_change_format(StreamChannel *channel, const StreamMsgFormat *fmt)
     item->stream_create.dest = (SpiceRect) { 0, 0, fmt->width, fmt->height };
     item->stream_create.clip = (SpiceClip) { SPICE_CLIP_TYPE_NONE, NULL };
     red_channel_pipes_add(red_channel, &item->base);
+
+    // activate stream report if possible
+    red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
 }
 
 static inline void
