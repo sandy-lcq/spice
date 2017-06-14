@@ -18,8 +18,6 @@
 #include <config.h>
 #endif
 
-#define SPICE_LOG_DOMAIN "SpiceLz4Encoder"
-
 #include <arpa/inet.h>
 #include <lz4.h>
 #include "red-common.h"

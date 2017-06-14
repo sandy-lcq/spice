@@ -19,8 +19,6 @@
 #include <config.h>
 #endif
 
-#define SPICE_LOG_DOMAIN "SpiceWorker"
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>

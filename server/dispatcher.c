@@ -26,8 +26,6 @@
 #include <fcntl.h>
 #include <poll.h>
 
-#define SPICE_LOG_DOMAIN "SpiceDispatcher"
-
 #include <common/mem.h>
 #include <common/spice_common.h>
 #include "dispatcher.h"
