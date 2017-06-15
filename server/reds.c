@@ -3706,7 +3706,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
        reds_core_watch_remove(reds, reds->secure_listen_watch);
        close(reds->secure_listen_socket);
     }
-
+    spice_buffer_free(&reds->client_monitors_config);
     red_record_unref(reds->record);
     reds_cleanup(reds);
 #ifdef RED_STATISTICS
