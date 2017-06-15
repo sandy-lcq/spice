@@ -250,7 +250,7 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
 static bool main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    spice_debug(NULL);
+    spice_debug("trace");
     main_channel_push_migrate_data_item(MAIN_CHANNEL(channel));
     return TRUE;
 }

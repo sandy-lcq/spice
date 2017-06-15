@@ -1067,7 +1067,7 @@ static void mjpeg_encoder_handle_negative_client_stream_report(MJpegEncoder *enc
 {
     MJpegEncoderRateControl *rate_control = &encoder->rate_control;
 
-    spice_debug(NULL);
+    spice_debug("trace");
 
     if ((rate_control->bit_rate_info.change_start_mm_time > report_end_frame_mm_time ||
         !rate_control->bit_rate_info.change_start_mm_time) &&

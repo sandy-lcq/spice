@@ -862,7 +862,7 @@ void red_char_device_migrate_data_marshall_empty(SpiceMarshaller *m)
 {
     SpiceMigrateDataCharDevice *mig_data;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     mig_data = (SpiceMigrateDataCharDevice *)spice_marshaller_reserve_space(m,
                                                                             sizeof(*mig_data));
     memset(mig_data, 0, sizeof(*mig_data));

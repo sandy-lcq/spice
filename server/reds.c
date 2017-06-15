@@ -501,7 +501,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
         return;
     }
 
-    spice_debug(NULL);
+    spice_debug("trace");
     /* disconnecting is set to prevent recursion because of the following:
      * main_channel_client_on_disconnect->
      *  reds_client_disconnect->red_client_destroy->main_channel...
@@ -577,7 +577,7 @@ static void reds_disconnect(RedsState *reds)
     GListIter iter;
     RedClient *client;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     GLIST_FOREACH(reds->clients, iter, RedClient, client) {
         reds_client_disconnect(reds, client);
     }
@@ -1627,7 +1627,7 @@ static void reds_mig_target_client_add(RedsState *reds, RedClient *client)
     RedsMigTargetClient *mig_client;
 
     g_return_if_fail(reds);
-    spice_debug(NULL);
+    spice_debug("trace");
     mig_client = spice_new0(RedsMigTargetClient, 1);
     mig_client->client = client;
     mig_client->reds = reds;
@@ -1737,7 +1737,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
     int mig_target = FALSE;
     RedChannelCapabilities caps;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_assert(reds->main_channel);
 
     link_mess = link->link_mess;
@@ -1908,7 +1908,7 @@ int reds_on_migrate_dst_set_seamless(RedsState *reds, MainChannelClient *mcc, ui
 
 void reds_on_client_seamless_migrate_complete(RedsState *reds, RedClient *client)
 {
-    spice_debug(NULL);
+    spice_debug("trace");
     if (!reds_find_client(reds, client)) {
         spice_debug("client no longer exists");
         return;
@@ -2624,7 +2624,7 @@ static void reds_send_mm_time(RedsState *reds)
     if (!reds_main_channel_connected(reds)) {
         return;
     }
-    spice_debug(NULL);
+    spice_debug("trace");
     main_channel_push_multi_media_time(reds->main_channel,
                                        reds_get_mm_time() - reds->mm_time_latency);
 }
@@ -2936,7 +2936,7 @@ static void reds_mig_release(RedServerConfig *config)
 
 static void reds_mig_started(RedsState *reds)
 {
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_assert(reds->config->mig_spice);
 
     reds->mig_inprogress = TRUE;
@@ -2987,7 +2987,7 @@ static void reds_migrate_channels_seamless(RedsState *reds)
 
 static void reds_mig_finished(RedsState *reds, int completed)
 {
-    spice_debug(NULL);
+    spice_debug("trace");
 
     reds->mig_inprogress = TRUE;
 
@@ -3018,7 +3018,7 @@ static void reds_mig_switch(RedsState *reds)
 static void migrate_timeout(void *opaque)
 {
     RedsState *reds = opaque;
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_assert(reds->mig_wait_connect || reds->mig_wait_disconnect);
     if (reds->mig_wait_connect) {
         /* we will fall back to the switch host scheme when migration completes */
@@ -4100,7 +4100,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_connect(SpiceServer *reds, const cha
     SpiceMigrateInterface *sif;
     int try_seamless;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_assert(reds->migration_interface);
 
     if (reds->expect_migrate) {
@@ -4147,7 +4147,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_info(SpiceServer *reds, const char* 
                                           int port, int secure_port,
                                           const char* cert_subject)
 {
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_assert(!reds->migration_interface);
 
     if (!reds_set_migration_dest_info(reds, dest, port, secure_port, cert_subject)) {
@@ -4158,7 +4158,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_info(SpiceServer *reds, const char* 
 
 SPICE_GNUC_VISIBLE int spice_server_migrate_start(SpiceServer *reds)
 {
-    spice_debug(NULL);
+    spice_debug("trace");
     if (!reds->config->mig_spice) {
         return -1;
     }
@@ -4170,7 +4170,7 @@ SPICE_GNUC_VISIBLE int spice_server_migrate_end(SpiceServer *reds, int completed
     SpiceMigrateInterface *sif;
     int ret = 0;
 
-    spice_debug(NULL);
+    spice_debug("trace");
 
     spice_assert(reds->migration_interface);
 
@@ -4199,7 +4199,7 @@ complete:
 /* interface for switch-host migration */
 SPICE_GNUC_VISIBLE int spice_server_migrate_switch(SpiceServer *reds)
 {
-    spice_debug(NULL);
+    spice_debug("trace");
     if (reds->clients == NULL) {
        return 0;
     }

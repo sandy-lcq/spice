@@ -786,7 +786,7 @@ void red_channel_client_start_connectivity_monitoring(RedChannelClient *rcc, uin
     if (!red_channel_client_is_connected(rcc)) {
         return;
     }
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_assert(timeout_ms > 0);
     /*
      * If latency_monitor is not active, we activate it in order to enable
@@ -1742,7 +1742,7 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     uint64_t end_time;
     gboolean item_in_pipe;
 
-    spice_debug(NULL);
+    spice_debug("trace");
 
     if (timeout != -1) {
         end_time = spice_get_monotonic_time_ns() + timeout;

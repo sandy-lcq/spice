@@ -1278,7 +1278,7 @@ static bool restore_surfaces_lossless(DisplayChannelClient *dcc,
 {
     uint32_t i;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     for (i = 0; i < mig_surfaces->num_surfaces; i++) {
         uint32_t surface_id = mig_surfaces->surfaces[i].id;
 
@@ -1293,7 +1293,7 @@ static bool restore_surfaces_lossy(DisplayChannelClient *dcc,
 {
     uint32_t i;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     for (i = 0; i < mig_surfaces->num_surfaces; i++) {
         uint32_t surface_id = mig_surfaces->surfaces[i].id;
         SpiceMigrateDataRect *mig_lossy_rect;

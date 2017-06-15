@@ -914,7 +914,7 @@ void stream_detach_and_stop(DisplayChannel *display)
 {
     RingItem *stream_item;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     while ((stream_item = ring_get_head(&display->priv->streams))) {
         Stream *stream = SPICE_CONTAINEROF(stream_item, Stream, link);
 

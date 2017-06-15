@@ -505,7 +505,7 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
     uint8_t *line_0;
     int error;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_warn_if_fail(surface_id == 0);
     spice_warn_if_fail(surface.height != 0);
 
@@ -1022,7 +1022,7 @@ static void worker_handle_dispatcher_async_done(void *opaque,
     RedWorker *worker = opaque;
     RedWorkerMessageAsync *msg_async = payload;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     red_qxl_async_complete(worker->qxl, msg_async->cmd);
 }
 

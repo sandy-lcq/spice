@@ -1441,7 +1441,7 @@ bool display_channel_wait_for_migrate_data(DisplayChannel *display)
         return FALSE;
     }
 
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_warn_if_fail(g_list_length(clients) == 1);
 
     rcc = g_list_nth_data(clients, 0);
@@ -2071,7 +2071,7 @@ void display_channel_destroy_surfaces(DisplayChannel *display)
 {
     int i;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     //to handle better
     for (i = 0; i < NUM_SURFACES; ++i) {
         if (display->priv->surfaces[i].context.canvas) {
@@ -2180,7 +2180,7 @@ static void on_disconnect(RedChannelClient *rcc)
     DisplayChannel *display;
     DisplayChannelClient *dcc;
 
-    spice_debug(NULL);
+    spice_debug("trace");
     spice_return_if_fail(rcc != NULL);
 
     dcc = DISPLAY_CHANNEL_CLIENT(rcc);
