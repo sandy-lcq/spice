@@ -84,7 +84,7 @@ static void main_channel_push_channels(MainChannelClient *mcc)
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MAIN_CHANNELS_LIST);
 }
 
-void main_channel_push_mouse_mode(MainChannel *main_chan, int current_mode,
+void main_channel_push_mouse_mode(MainChannel *main_chan, SpiceMouseMode current_mode,
                                   int is_client_mouse_allowed)
 {
     MainMouseModeItemInfo info = {

@@ -304,7 +304,7 @@ static void reds_on_sv_change(RedsState *reds);
 static void reds_on_vc_change(RedsState *reds);
 static void reds_on_vm_stop(RedsState *reds);
 static void reds_on_vm_start(RedsState *reds);
-static void reds_set_mouse_mode(RedsState *reds, uint32_t mode);
+static void reds_set_mouse_mode(RedsState *reds, SpiceMouseMode mode);
 static uint32_t reds_qxl_ram_size(RedsState *reds);
 static int calc_compression_level(RedsState *reds);
 
@@ -596,12 +596,12 @@ bool reds_config_get_playback_compression(RedsState *reds)
     return reds->config->playback_compression;
 }
 
-int reds_get_mouse_mode(RedsState *reds)
+SpiceMouseMode reds_get_mouse_mode(RedsState *reds)
 {
     return reds->mouse_mode;
 }
 
-static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
+static void reds_set_mouse_mode(RedsState *reds, SpiceMouseMode mode)
 {
     QXLInstance *qxl;
 

@@ -48,7 +48,7 @@ uint32_t reds_get_mm_time(void);
 void reds_register_channel(RedsState *reds, RedChannel *channel);
 void reds_unregister_channel(RedsState *reds, RedChannel *channel);
 RedChannel *reds_find_channel(RedsState *reds, uint32_t type, uint32_t id);
-int reds_get_mouse_mode(RedsState *reds); // used by inputs_channel
+SpiceMouseMode reds_get_mouse_mode(RedsState *reds); // used by inputs_channel
 gboolean reds_config_get_agent_mouse(const RedsState *reds); // used by inputs_channel
 int reds_has_vdagent(RedsState *reds); // used by inputs channel
 bool reds_config_get_playback_compression(RedsState *reds); // used by playback channel

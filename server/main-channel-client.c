@@ -110,7 +110,7 @@ typedef struct RedNotifyPipeItem {
 
 typedef struct RedMouseModePipeItem {
     RedPipeItem base;
-    int current_mode;
+    SpiceMouseMode current_mode;
     int is_client_mouse_allowed;
 } RedMouseModePipeItem;
 
@@ -331,7 +331,7 @@ void main_channel_client_push_agent_data(MainChannelClient *mcc, uint8_t* data, 
 
 static RedPipeItem *main_init_item_new(int connection_id,
                                        int display_channels_hint,
-                                       int current_mouse_mode,
+                                       SpiceMouseMode current_mouse_mode,
                                        int is_client_mouse_allowed,
                                        int multi_media_time,
                                        int ram_hint)
@@ -350,7 +350,7 @@ static RedPipeItem *main_init_item_new(int connection_id,
 
 void main_channel_client_push_init(MainChannelClient *mcc,
                                    int display_channels_hint,
-                                   int current_mouse_mode,
+                                   SpiceMouseMode current_mouse_mode,
                                    int is_client_mouse_allowed,
                                    int multi_media_time,
                                    int ram_hint)

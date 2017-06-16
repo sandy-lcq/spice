@@ -101,7 +101,7 @@ struct RedsState {
     GList *mig_target_clients;
 
     GList *channels;
-    int mouse_mode;
+    SpiceMouseMode mouse_mode;
     int is_client_mouse_allowed;
     int dispatcher_allows_client_mouse;
     MonitorMode monitor_mode;
