@@ -1063,7 +1063,7 @@ static QXLCompatDrawable *red_replay_compat_drawable(SpiceReplay *replay, uint32
         red_replay_whiteness_ptr(replay, &qxl->u.whiteness, flags);
         break;
     default:
-        spice_error("%s: unknown type %d", __FUNCTION__, qxl->type);
+        spice_error("unknown type %d", qxl->type);
         break;
     };
     return qxl;

@@ -2592,8 +2592,7 @@ static int reds_init_socket(const char *addr, int portnr, int family)
         }
         close(slisten);
     }
-    spice_warning("%s: binding socket to %s:%d failed", __FUNCTION__,
-                  addr, portnr);
+    spice_warning("binding socket to %s:%d failed", addr, portnr);
     freeaddrinfo(res);
     return -1;
 

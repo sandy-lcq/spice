@@ -316,7 +316,7 @@ static void red_record_image(FILE *fd, RedMemSlotInfo *slots, int group_id,
         spice_assert(size == qxl->quic.data_size);
         break;
     default:
-        spice_error("%s: unknown type %d", __FUNCTION__, qxl->descriptor.type);
+        spice_error("unknown type %d", qxl->descriptor.type);
     }
 }
 
@@ -595,7 +595,7 @@ static void red_record_native_drawable(FILE *fd, RedMemSlotInfo *slots, int grou
         red_record_composite_ptr(fd, slots, group_id, &qxl->u.composite, flags);
         break;
     default:
-        spice_error("%s: unknown type %d", __FUNCTION__, qxl->type);
+        spice_error("unknown type %d", qxl->type);
         break;
     };
 }
@@ -663,7 +663,7 @@ static void red_record_compat_drawable(FILE *fd, RedMemSlotInfo *slots, int grou
         red_record_whiteness_ptr(fd, slots, group_id, &qxl->u.whiteness, flags);
         break;
     default:
-        spice_error("%s: unknown type %d", __FUNCTION__, qxl->type);
+        spice_error("unknown type %d", qxl->type);
         break;
     };
 }
