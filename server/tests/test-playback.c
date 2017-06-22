@@ -37,10 +37,12 @@
 SpicePlaybackInstance playback_instance;
 
 static const SpicePlaybackInterface playback_sif = {
-    .base.type          = SPICE_INTERFACE_PLAYBACK,
-    .base.description   = "test playback",
-    .base.major_version = SPICE_INTERFACE_PLAYBACK_MAJOR,
-    .base.minor_version = SPICE_INTERFACE_PLAYBACK_MINOR,
+    .base = {
+        .type          = SPICE_INTERFACE_PLAYBACK,
+        .description   = "test playback",
+        .major_version = SPICE_INTERFACE_PLAYBACK_MAJOR,
+        .minor_version = SPICE_INTERFACE_PLAYBACK_MINOR,
+    }
 };
 
 uint32_t *frame;

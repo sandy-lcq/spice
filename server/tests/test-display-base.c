@@ -840,10 +840,12 @@ static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
 
 
 static SpiceCharDeviceInterface vdagent_sif = {
-    .base.type          = SPICE_INTERFACE_CHAR_DEVICE,
-    .base.description   = "test spice virtual channel char device",
-    .base.major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
-    .base.minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
+    .base = {
+        .type          = SPICE_INTERFACE_CHAR_DEVICE,
+        .description   = "test spice virtual channel char device",
+        .major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
+        .minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
+    },
     .state              = vmc_state,
     .write              = vmc_write,
     .read               = vmc_read,
