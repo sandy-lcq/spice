@@ -2416,6 +2416,11 @@ int display_channel_get_stream_id(DisplayChannel *display, Stream *stream)
     return (int)(stream - display->priv->streams_buf);
 }
 
+Stream *display_channel_get_nth_stream(DisplayChannel *display, gint i)
+{
+    return &display->priv->streams_buf[i];
+}
+
 gboolean display_channel_validate_surface(DisplayChannel *display, uint32_t surface_id)
 {
     if SPICE_UNLIKELY(surface_id >= display->priv->n_surfaces) {

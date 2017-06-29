@@ -141,7 +141,7 @@ void display_channel_init_streams(DisplayChannel *display)
     ring_init(&display->priv->streams);
     display->priv->free_streams = NULL;
     for (i = 0; i < NUM_STREAMS; i++) {
-        Stream *stream = &display->priv->streams_buf[i];
+        Stream *stream = display_channel_get_nth_stream(display, i);
         ring_item_init(&stream->link);
         stream_free(display, stream);
     }

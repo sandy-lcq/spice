@@ -487,7 +487,7 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 
     for (i = 0; i < NUM_STREAMS; i++) {
         StreamAgent *agent = &dcc->priv->stream_agents[i];
-        agent->stream = &display->priv->streams_buf[i];
+        agent->stream = display_channel_get_nth_stream(display, i);
         region_init(&agent->vis_region);
         region_init(&agent->clip);
     }

@@ -184,6 +184,7 @@ typedef struct RedSurface {
                   _iter, DisplayChannelClient, _data)
 
 int display_channel_get_stream_id(DisplayChannel *display, Stream *stream);
+Stream *display_channel_get_nth_stream(DisplayChannel *display, gint i);
 
 typedef struct RedSurfaceDestroyItem {
     RedPipeItem pipe_item;
