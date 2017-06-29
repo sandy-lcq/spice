@@ -422,7 +422,7 @@ static void display_channel_create_stream(DisplayChannel *display, Drawable *dra
         dcc_create_stream(dcc, stream);
     }
     spice_debug("stream %d %dx%d (%d, %d) (%d, %d) %u fps",
-                (int)(stream - display->priv->streams_buf), stream->width,
+                display_channel_get_stream_id(display, stream), stream->width,
                 stream->height, stream->dest_area.left, stream->dest_area.top,
                 stream->dest_area.right, stream->dest_area.bottom,
                 stream->input_fps);
