@@ -1,3 +1,22 @@
+Major Changes in 0.13.90:
+=========================
+
+*** IMPORTANT ***
+0.13.90 is the first release candidate for the stable 0.14.x series. While some
+bugs might still be present, it should be reasonably stable. If you are looking
+for stability for daily use, please keep using the latest 0.12.x release.
+
+* Close TCP connection early when client did not send the correct SPICE magic
+  bytes: this allows VNC clients to gracefully fail when connecting to a SPICE
+  port
+* Fixes for CVE-2016-9577, CVE-2016-9578 and CVE-2017-7506
+* Fix client being disconnected after migration (bug introduced in 0.13.3)
+* Add a --enable-statistics configure option
+* GLIB 2.28 is now a required build time dependency (used to be 2.22)
+* Add VP9 encoding support when GStreamer is being used and misc
+  streaming/encoding improvements
+* more code refactoring/reorganization work
+
 Major Changes in 0.13.3:
 ========================
 
