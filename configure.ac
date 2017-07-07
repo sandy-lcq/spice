@@ -139,7 +139,7 @@ dnl Check deps
 
 AC_CONFIG_SUBDIRS([spice-common])
 COMMON_CFLAGS='-I ${top_srcdir}/spice-common/ -I ${top_builddir}/spice-common/'
-COMMON_CFLAGS+=' -DG_LOG_DOMAIN=\"Spice\"'
+COMMON_CFLAGS="$COMMON_CFLAGS -DG_LOG_DOMAIN=\\\"Spice\\\""
 AC_SUBST(COMMON_CFLAGS)
 
 AC_CHECK_LIBM
