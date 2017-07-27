@@ -24,7 +24,7 @@ Or to install into a private user specific location
   make
   make install
 
-The following mandatory dependancies are required in order to
+The following mandatory dependencies are required in order to
 build SPICE
 
     Spice protocol >= 0.9.0
@@ -34,7 +34,7 @@ build SPICE
     zlib
     Cyrus-SASL
 
-The following optional dependancies increase the available
+The following optional dependencies increase the available
 functionality
 
     GE Gui         >= 0.6.0,  < 0.7.0   (GUI app support)
