@@ -37,7 +37,6 @@ build SPICE
 The following optional dependencies increase the available
 functionality
 
-    OpenGL                              (GUI app support)
     libcacard      >= 0.1.2             (Smartcard support)
 
 Communication
