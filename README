@@ -32,11 +32,11 @@ build SPICE
     OpenSSL
     libjpeg
     zlib
-    Cyrus-SASL
 
 The following optional dependencies increase the available
 functionality
 
+    Cyrus-SASL
     libcacard      >= 0.1.2             (Smartcard support)
 
 Communication
