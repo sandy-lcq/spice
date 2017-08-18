@@ -1419,12 +1419,6 @@ static void red_worker_close_channel(RedChannel *channel)
  */
 void red_worker_free(RedWorker *worker)
 {
-    RedsState *reds = red_qxl_get_server(worker->qxl->st);
-
-    /* prevent any possible future attempt to connect to new clients */
-    reds_unregister_channel(reds, RED_CHANNEL(worker->cursor_channel));
-    reds_unregister_channel(reds, RED_CHANNEL(worker->display_channel));
-
     pthread_join(worker->thread, NULL);
 
     red_worker_close_channel(RED_CHANNEL(worker->cursor_channel));

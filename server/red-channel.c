@@ -401,6 +401,9 @@ void red_channel_destroy(RedChannel *channel)
         return;
     }
 
+    // prevent future connection
+    reds_unregister_channel(channel->priv->reds, channel);
+
     g_list_foreach(channel->priv->clients, (GFunc)red_channel_client_destroy, NULL);
     g_object_unref(channel);
 }

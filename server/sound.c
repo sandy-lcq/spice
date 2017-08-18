@@ -1428,9 +1428,7 @@ static void snd_detach_common(SndChannel *channel)
     if (!channel) {
         return;
     }
-    RedsState *reds = red_channel_get_server(RED_CHANNEL(channel));
 
-    reds_unregister_channel(reds, RED_CHANNEL(channel));
     red_channel_destroy(RED_CHANNEL(channel));
 }
 

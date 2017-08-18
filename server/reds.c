@@ -391,11 +391,7 @@ void reds_register_channel(RedsState *reds, RedChannel *channel)
 
 void reds_unregister_channel(RedsState *reds, RedChannel *channel)
 {
-    if (g_list_find(reds->channels, channel)) {
-        reds->channels = g_list_remove(reds->channels, channel);
-    } else {
-        spice_warning("not found");
-    }
+    reds->channels = g_list_remove(reds->channels, channel);
 }
 
 RedChannel *reds_find_channel(RedsState *reds, uint32_t type, uint32_t id)
@@ -3705,7 +3701,6 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     g_list_free_full(reds->qxl_instances, (GDestroyNotify)red_qxl_destroy);
 
     if (reds->inputs_channel) {
-        reds_unregister_channel(reds, RED_CHANNEL(reds->inputs_channel));
         red_channel_destroy(RED_CHANNEL(reds->inputs_channel));
     }
     if (reds->main_channel) {
