@@ -485,15 +485,6 @@ static void handle_dev_destroy_surfaces(void *opaque, void *payload)
     cursor_channel_reset(worker->cursor_channel);
 }
 
-static void red_worker_push_monitors_config(RedWorker *worker)
-{
-    DisplayChannelClient *dcc;
-
-    FOREACH_DCC(worker->display_channel, dcc) {
-        dcc_push_monitors_config(dcc);
-    }
-}
-
 static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
                                        QXLDevSurfaceCreate surface)
 {
@@ -539,7 +530,7 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
         /* guest created primary, so it will (hopefully) send a monitors_config
          * now, don't send our own temporary one */
         if (!worker->driver_cap_monitors_config) {
-            red_worker_push_monitors_config(worker);
+            display_channel_push_monitors_config(display);
         }
         red_channel_pipes_add_empty_msg(RED_CHANNEL(worker->display_channel),
                                         SPICE_MSG_DISPLAY_MARK);
@@ -814,7 +805,6 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
     display_channel_update_monitors_config(worker->display_channel, dev_monitors_config,
                                            MIN(count, msg->max_monitors),
                                            MIN(max_allowed, msg->max_monitors));
-    red_worker_push_monitors_config(worker);
 }
 
 /* TODO: special, perhaps use another dispatcher? */

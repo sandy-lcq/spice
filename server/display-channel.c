@@ -2426,6 +2426,15 @@ gboolean display_channel_validate_surface(DisplayChannel *display, uint32_t surf
     return TRUE;
 }
 
+void display_channel_push_monitors_config(DisplayChannel *display)
+{
+    DisplayChannelClient *dcc;
+
+    FOREACH_DCC(display, dcc) {
+        dcc_push_monitors_config(dcc);
+    }
+}
+
 void display_channel_update_monitors_config(DisplayChannel *display,
                                             QXLMonitorsConfig *config,
                                             uint16_t count, uint16_t max_allowed)
@@ -2436,6 +2445,8 @@ void display_channel_update_monitors_config(DisplayChannel *display,
 
     display->priv->monitors_config =
         monitors_config_new(config->heads, count, max_allowed);
+
+    display_channel_push_monitors_config(display);
 }
 
 void display_channel_set_monitors_config_to_primary(DisplayChannel *display)
