@@ -185,8 +185,8 @@ void red_client_migrate(RedClient *client)
                       client->thread_id, pthread_self());
     }
     FOREACH_CHANNEL_CLIENT(client, iter, rcc) {
-        channel = red_channel_client_get_channel(rcc);
         if (red_channel_client_is_connected(rcc)) {
+            channel = red_channel_client_get_channel(rcc);
             red_channel_migrate_client(channel, rcc);
         }
     }
