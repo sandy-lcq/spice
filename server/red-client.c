@@ -139,7 +139,7 @@ red_client_class_init (RedClientClass *klass)
 }
 
 static void
-red_client_init (RedClient *self)
+red_client_init(RedClient *self)
 {
     pthread_mutex_init(&self->lock, NULL);
     self->thread_id = pthread_self();
@@ -147,10 +147,10 @@ red_client_init (RedClient *self)
 
 RedClient *red_client_new(RedsState *reds, int migrated)
 {
-  return g_object_new (RED_TYPE_CLIENT,
-                       "spice-server", reds,
-                       "migrated", migrated,
-                       NULL);
+    return g_object_new(RED_TYPE_CLIENT,
+                        "spice-server", reds,
+                        "migrated", migrated,
+                        NULL);
 }
 
 void red_client_set_migration_seamless(RedClient *client) // dest
@@ -280,11 +280,13 @@ cleanup:
     return result;
 }
 
-MainChannelClient *red_client_get_main(RedClient *client) {
+MainChannelClient *red_client_get_main(RedClient *client)
+{
     return client->mcc;
 }
 
-void red_client_set_main(RedClient *client, MainChannelClient *mcc) {
+void red_client_set_main(RedClient *client, MainChannelClient *mcc)
+{
     client->mcc = mcc;
 }
 
