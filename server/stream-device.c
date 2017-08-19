@@ -47,6 +47,7 @@ struct StreamDevice {
         StreamMsgFormat format;
         StreamMsgCapabilities capabilities;
         StreamMsgCursorSet cursor_set;
+        StreamMsgCursorMove cursor_move;
         uint8_t buf[STREAM_MSG_CAPABILITIES_MAX_BYTES];
     } *msg;
     uint32_t msg_pos;
@@ -70,7 +71,8 @@ G_DEFINE_TYPE(StreamDevice, stream_device, RED_TYPE_CHAR_DEVICE)
 typedef bool StreamMsgHandler(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     SPICE_GNUC_WARN_UNUSED_RESULT;
 
-static StreamMsgHandler handle_msg_format, handle_msg_data, handle_msg_cursor_set;
+static StreamMsgHandler handle_msg_format, handle_msg_data, handle_msg_cursor_set,
+    handle_msg_cursor_move;
 
 static bool handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin,
                                const char *error_msg) SPICE_GNUC_WARN_UNUSED_RESULT;
@@ -115,6 +117,13 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         break;
     case STREAM_TYPE_CURSOR_SET:
         handled = handle_msg_cursor_set(dev, sin);
+        break;
+    case STREAM_TYPE_CURSOR_MOVE:
+        if (dev->hdr.size != sizeof(StreamMsgCursorMove)) {
+            handled = handle_msg_invalid(dev, sin, "Wrong size for StreamMsgCursorMove");
+        } else {
+            handled = handle_msg_cursor_move(dev, sin);
+        }
         break;
     case STREAM_TYPE_CAPABILITIES:
         /* FIXME */
@@ -356,6 +365,33 @@ handle_msg_cursor_set(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     if (!cmd) {
         return handle_msg_invalid(dev, sin, NULL);
     }
+    cursor_channel_process_cmd(dev->cursor_channel, cmd);
+
+    return true;
+}
+
+static bool
+handle_msg_cursor_move(StreamDevice *dev, SpiceCharDeviceInstance *sin)
+{
+    SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
+    int n = sif->read(sin, dev->msg->buf + dev->msg_pos, dev->hdr.size - dev->msg_pos);
+    if (n <= 0) {
+        return false;
+    }
+    dev->msg_pos += n;
+    if (dev->msg_pos != dev->hdr.size) {
+        return false;
+    }
+
+    StreamMsgCursorMove *move = &dev->msg->cursor_move;
+    move->x = GINT32_FROM_LE(move->x);
+    move->y = GINT32_FROM_LE(move->y);
+
+    RedCursorCmd *cmd = g_new0(RedCursorCmd, 1);
+    cmd->type = QXL_CURSOR_MOVE;
+    cmd->u.position.x = move->x;
+    cmd->u.position.y = move->y;
+
     cursor_channel_process_cmd(dev->cursor_channel, cmd);
 
     return true;
