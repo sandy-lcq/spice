@@ -380,7 +380,6 @@ static void guest_set_client_capabilities(RedWorker *worker)
 {
     int i;
     RedChannelClient *rcc;
-    GListIter iter;
     uint8_t caps[SPICE_CAPABILITIES_SIZE] = { 0 };
     int caps_available[] = {
         SPICE_DISPLAY_CAP_SIZED_STREAM,
@@ -413,7 +412,7 @@ static void guest_set_client_capabilities(RedWorker *worker)
         for (i = 0 ; i < SPICE_N_ELEMENTS(caps_available); ++i) {
             SET_CAP(caps, caps_available[i]);
         }
-        FOREACH_CLIENT(worker->display_channel, iter, rcc) {
+        FOREACH_CLIENT(worker->display_channel, rcc) {
             for (i = 0 ; i < SPICE_N_ELEMENTS(caps_available); ++i) {
                 if (!red_channel_client_test_remote_cap(rcc, caps_available[i]))
                     CLEAR_CAP(caps, caps_available[i]);
@@ -489,9 +488,8 @@ static void handle_dev_destroy_surfaces(void *opaque, void *payload)
 static void red_worker_push_monitors_config(RedWorker *worker)
 {
     DisplayChannelClient *dcc;
-    GListIter iter;
 
-    FOREACH_DCC(worker->display_channel, iter, dcc) {
+    FOREACH_DCC(worker->display_channel, dcc) {
         dcc_push_monitors_config(dcc);
     }
 }

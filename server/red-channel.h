@@ -122,9 +122,9 @@ struct RedChannelClass
     channel_handle_migrate_data_get_serial_proc handle_migrate_data_get_serial;
 };
 
-#define FOREACH_CLIENT(_channel, _iter, _data) \
+#define FOREACH_CLIENT(_channel, _data) \
     GLIST_FOREACH((_channel ? red_channel_get_clients(RED_CHANNEL(_channel)) : NULL), \
-                  _iter, RedChannelClient, _data)
+                  RedChannelClient, _data)
 
 /* Red Channel interface */
 

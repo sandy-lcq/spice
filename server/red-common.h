@@ -81,16 +81,16 @@ typedef struct GListIter {
 } GListIter;
 
 #define GLIST_FOREACH_GENERIC(_list, _iter, _type, _data, _dir) \
-    for (_iter.link = _list; \
+    for (GListIter _iter = { .link = _list }; \
         (_data = (_type *) (_iter.link ? _iter.link->data : NULL), \
          _iter.next = (_iter.link ? _iter.link->_dir : NULL), \
          _iter.link) != NULL; \
          _iter.link = _iter.next)
 
-#define GLIST_FOREACH(_list, _iter, _type, _data) \
-    GLIST_FOREACH_GENERIC(_list, _iter, _type, _data, next)
+#define GLIST_FOREACH(_list, _type, _data) \
+    GLIST_FOREACH_GENERIC(_list, G_PASTE(_iter_, __LINE__), _type, _data, next)
 
-#define GLIST_FOREACH_REVERSED(_list, _iter, _type, _data) \
-    GLIST_FOREACH_GENERIC(_list, _iter, _type, _data, prev)
+#define GLIST_FOREACH_REVERSED(_list, _type, _data) \
+    GLIST_FOREACH_GENERIC(_list, G_PASTE(_iter_, __LINE__), _type, _data, prev)
 
 #endif /* RED_COMMON_H_ */

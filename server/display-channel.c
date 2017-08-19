@@ -256,7 +256,6 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
     RedSurface *surface = &display->priv->surfaces[surface_id];
     QXLInstance *qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display));
     DisplayChannelClient *dcc;
-    GListIter iter;
 
     if (--surface->refs != 0) {
         return;
@@ -278,7 +277,7 @@ void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 
     region_destroy(&surface->draw_dirty_region);
     surface->context.canvas = NULL;
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         dcc_destroy_surface(dcc, surface_id);
     }
 
@@ -296,7 +295,6 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
 {
     Ring *ring;
     RingItem *item;
-    GListIter iter;
     DisplayChannelClient *dcc;
 
     if (!red_channel_is_connected(RED_CHANNEL(display))) {
@@ -320,7 +318,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
             continue;
         }
 
-        FOREACH_DCC(display, iter, dcc) {
+        FOREACH_DCC(display, dcc) {
             agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
@@ -335,10 +333,9 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
 static void pipes_add_drawable(DisplayChannel *display, Drawable *drawable)
 {
     DisplayChannelClient *dcc;
-    GListIter iter;
 
     spice_warn_if_fail(drawable->pipes == NULL);
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         dcc_prepend_drawable(dcc, drawable);
     }
 }
@@ -363,9 +360,8 @@ static void pipes_add_drawable_after(DisplayChannel *display,
         return;
     }
     if (num_other_linked != red_channel_get_n_clients(RED_CHANNEL(display))) {
-        GListIter iter;
         spice_debug("TODO: not O(n^2)");
-        FOREACH_DCC(display, iter, dcc) {
+        FOREACH_DCC(display, dcc) {
             int sent = 0;
             GList *l;
             for (l = pos_after->pipes; l != NULL; l = l->next) {
@@ -546,7 +542,6 @@ static bool current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem 
 
             DisplayChannelClient *dcc;
             GList *dpi_item;
-            GListIter iter;
 
             other_drawable->refs++;
             current_remove_drawable(display, other_drawable);
@@ -555,7 +550,7 @@ static bool current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem 
              * (or will receive) other_drawable */
             dpi_item = g_list_first(other_drawable->pipes);
             /* dpi contains a sublist of dcc's, ordered the same */
-            FOREACH_DCC(display, iter, dcc) {
+            FOREACH_DCC(display, dcc) {
                 if (dpi_item && dcc == ((RedDrawablePipeItem *) dpi_item->data)->dcc) {
                     dpi_item = dpi_item->next;
                 } else {
@@ -1481,24 +1476,22 @@ void display_channel_flush_all_surfaces(DisplayChannel *display)
 
 void display_channel_free_glz_drawables_to_free(DisplayChannel *display)
 {
-    GListIter iter;
     DisplayChannelClient *dcc;
 
     spice_return_if_fail(display);
 
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         image_encoders_free_glz_drawables_to_free(dcc_get_encoders(dcc));
     }
 }
 
 void display_channel_free_glz_drawables(DisplayChannel *display)
 {
-    GListIter iter;
     DisplayChannelClient *dcc;
 
     spice_return_if_fail(display);
 
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         image_encoders_free_glz_drawables(dcc_get_encoders(dcc));
     }
 }
@@ -1537,11 +1530,10 @@ void display_channel_free_some(DisplayChannel *display)
 {
     int n = 0;
     DisplayChannelClient *dcc;
-    GListIter iter;
 
     spice_debug("#draw=%d, #glz_draw=%d", display->priv->drawable_count,
                 display->priv->encoder_shared_data.glz_drawable_count);
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         ImageEncoders *encoders = dcc_get_encoders(dcc);
 
         // encoding using the dictionary is prevented since the following operations might
@@ -1555,7 +1547,7 @@ void display_channel_free_some(DisplayChannel *display)
         free_one_drawable(display, TRUE);
     }
 
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         ImageEncoders *encoders = dcc_get_encoders(dcc);
 
         image_encoders_glz_encode_unlock(encoders);
@@ -2028,10 +2020,9 @@ void display_channel_update(DisplayChannel *display,
 static void clear_surface_drawables_from_pipes(DisplayChannel *display, int surface_id,
                                                int wait_if_used)
 {
-    GListIter iter;
     DisplayChannelClient *dcc;
 
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         if (!dcc_clear_surface_drawables_from_pipe(dcc, surface_id, wait_if_used)) {
             red_channel_client_disconnect(RED_CHANNEL_CLIENT(dcc));
         }
@@ -2095,9 +2086,8 @@ void display_channel_destroy_surfaces(DisplayChannel *display)
 static void send_create_surface(DisplayChannel *display, int surface_id, int image_ready)
 {
     DisplayChannelClient *dcc;
-    GListIter iter;
 
-    FOREACH_DCC(display, iter, dcc) {
+    FOREACH_DCC(display, dcc) {
         dcc_create_surface(dcc, surface_id);
         if (image_ready)
             dcc_push_surface_image(dcc, surface_id);

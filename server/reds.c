@@ -400,10 +400,9 @@ void reds_unregister_channel(RedsState *reds, RedChannel *channel)
 
 RedChannel *reds_find_channel(RedsState *reds, uint32_t type, uint32_t id)
 {
-    GListIter it;
     RedChannel *channel;
 
-    GLIST_FOREACH(reds->channels, it, RedChannel, channel) {
+    GLIST_FOREACH(reds->channels, RedChannel, channel) {
         uint32_t this_type, this_id;
         g_object_get(channel, "channel-type", &this_type, "id", &this_id, NULL);
         if (this_type == type && this_id == id) {
@@ -574,11 +573,10 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
 // reds_client_disconnect
 static void reds_disconnect(RedsState *reds)
 {
-    GListIter iter;
     RedClient *client;
 
     spice_debug("trace");
-    GLIST_FOREACH(reds->clients, iter, RedClient, client) {
+    GLIST_FOREACH(reds->clients, RedClient, client) {
         reds_client_disconnect(reds, client);
     }
     reds_mig_cleanup(reds);
@@ -605,7 +603,6 @@ int reds_get_mouse_mode(RedsState *reds)
 
 static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
 {
-    GListIter it;
     QXLInstance *qxl;
 
     if (reds->mouse_mode == mode) {
@@ -613,7 +610,7 @@ static void reds_set_mouse_mode(RedsState *reds, uint32_t mode)
     }
     reds->mouse_mode = mode;
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         red_qxl_set_mouse_mode(qxl, mode);
     }
 
@@ -957,11 +954,10 @@ static bool channel_supports_multiple_clients(RedChannel *channel)
 
 static void reds_fill_channels(RedsState *reds, SpiceMsgChannels *channels_info)
 {
-    GListIter it;
     RedChannel *channel;
     int used_channels = 0;
 
-    GLIST_FOREACH(reds->channels, it, RedChannel, channel) {
+    GLIST_FOREACH(reds->channels, RedChannel, channel) {
         uint32_t type, id;
         if (g_list_length(reds->clients) > 1 &&
             !channel_supports_multiple_clients(channel)) {
@@ -1689,20 +1685,18 @@ static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mi
 
 static void reds_mig_target_client_disconnect_all(RedsState *reds)
 {
-    GListIter it;
     RedsMigTargetClient *mig_client;
 
-    GLIST_FOREACH(reds->mig_target_clients, it, RedsMigTargetClient, mig_client) {
+    GLIST_FOREACH(reds->mig_target_clients, RedsMigTargetClient, mig_client) {
         reds_client_disconnect(reds, mig_client->client);
     }
 }
 
 static bool reds_find_client(RedsState *reds, RedClient *client)
 {
-    GListIter iter;
     RedClient *list_client;
 
-    GLIST_FOREACH(reds->clients, iter, RedClient, list_client) {
+    GLIST_FOREACH(reds->clients, RedClient, list_client) {
         if (list_client == client) {
             return TRUE;
         }
@@ -2964,13 +2958,12 @@ static void reds_mig_started(RedsState *reds)
 
 static void reds_mig_fill_wait_disconnect(RedsState *reds)
 {
-    GListIter iter;
     RedClient *client;
 
     spice_assert(reds->clients != NULL);
     /* tracking the clients, in order to ignore disconnection
      * of clients that got connected to the src after migration completion.*/
-    GLIST_FOREACH(reds->clients, iter, RedClient, client) {
+    GLIST_FOREACH(reds->clients, RedClient, client) {
         reds->mig_wait_disconnect_clients = g_list_append(reds->mig_wait_disconnect_clients, client);
     }
     reds->mig_wait_connect = FALSE;
@@ -4355,11 +4348,10 @@ void reds_update_client_mouse_allowed(RedsState *reds)
     int num_active_workers = g_list_length(reds->qxl_instances);
 
     if (num_active_workers > 0) {
-        GListIter it;
         QXLInstance *qxl;
 
         allow_now = TRUE;
-        FOREACH_QXL_INSTANCE(reds, it, qxl) {
+        FOREACH_QXL_INSTANCE(reds, qxl) {
             if (red_qxl_get_primary_active(qxl)) {
                 allow_now = red_qxl_get_allow_client_mouse(qxl, &x_res, &y_res);
                 break;
@@ -4380,14 +4372,13 @@ void reds_update_client_mouse_allowed(RedsState *reds)
 
 static gboolean reds_use_client_monitors_config(RedsState *reds)
 {
-    GListIter it;
     QXLInstance *qxl;
 
     if (reds->qxl_instances == NULL) {
         return FALSE;
     }
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         if (!red_qxl_use_client_monitors_config(qxl))
             return FALSE;
     }
@@ -4396,10 +4387,9 @@ static gboolean reds_use_client_monitors_config(RedsState *reds)
 
 static void reds_client_monitors_config(RedsState *reds, VDAgentMonitorsConfig *monitors_config)
 {
-    GListIter it;
     QXLInstance *qxl;
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         if (!red_qxl_client_monitors_config(qxl, monitors_config)) {
             /* this is a normal condition, some qemu devices might not implement it */
             spice_debug("QXLInterface::client_monitors_config failed\n");
@@ -4422,10 +4412,9 @@ static int calc_compression_level(RedsState *reds)
 void reds_on_ic_change(RedsState *reds)
 {
     int compression_level = calc_compression_level(reds);
-    GListIter it;
     QXLInstance *qxl;
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         red_qxl_set_compression_level(qxl, compression_level);
         red_qxl_on_ic_change(qxl, spice_server_get_image_compression(reds));
     }
@@ -4434,10 +4423,9 @@ void reds_on_ic_change(RedsState *reds)
 void reds_on_sv_change(RedsState *reds)
 {
     int compression_level = calc_compression_level(reds);
-    GListIter it;
     QXLInstance *qxl;
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         red_qxl_set_compression_level(qxl, compression_level);
         red_qxl_on_sv_change(qxl, reds_get_streaming_video(reds));
     }
@@ -4445,30 +4433,27 @@ void reds_on_sv_change(RedsState *reds)
 
 void reds_on_vc_change(RedsState *reds)
 {
-    GListIter it;
     QXLInstance *qxl;
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         red_qxl_on_vc_change(qxl, reds_get_video_codecs(reds));
     }
 }
 
 void reds_on_vm_stop(RedsState *reds)
 {
-    GListIter it;
     QXLInstance *qxl;
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         red_qxl_stop(qxl);
     }
 }
 
 void reds_on_vm_start(RedsState *reds)
 {
-    GListIter it;
     QXLInstance *qxl;
 
-    FOREACH_QXL_INSTANCE(reds, it, qxl) {
+    FOREACH_QXL_INSTANCE(reds, qxl) {
         red_qxl_start(qxl);
     }
 }
