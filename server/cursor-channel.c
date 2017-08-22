@@ -335,6 +335,7 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
         break;
     default:
         spice_warning("invalid cursor command %u", cursor_cmd->type);
+        cursor_item_unref(cursor_item);
         return;
     }
 
