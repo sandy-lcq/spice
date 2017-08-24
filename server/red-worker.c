@@ -724,14 +724,13 @@ static void handle_dev_display_connect(void *opaque, void *payload)
 
     dcc = dcc_new(display, msg->client, msg->stream, msg->migration, &msg->caps,
                   worker->image_compression, worker->jpeg_state, worker->zlib_glz_state);
+    red_channel_capabilities_reset(&msg->caps);
     if (!dcc) {
         return;
     }
     display_channel_update_compression(display, dcc);
     guest_set_client_capabilities(worker);
     dcc_start(dcc);
-
-    red_channel_capabilities_reset(&msg->caps);
 }
 
 static void handle_dev_display_disconnect(void *opaque, void *payload)
