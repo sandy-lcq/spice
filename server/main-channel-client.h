@@ -122,11 +122,14 @@ enum {
     RED_PIPE_ITEM_TYPE_MAIN_NAME,
     RED_PIPE_ITEM_TYPE_MAIN_UUID,
     RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS,
+    RED_PIPE_ITEM_TYPE_MAIN_REGISTERED_CHANNEL,
 };
 
 RedPipeItem *main_mouse_mode_item_new(SpiceMouseMode current_mode, int is_client_mouse_allowed);
 
 RedPipeItem *main_multi_media_time_item_new(uint32_t mm_time);
+
+RedPipeItem *registered_channel_item_new(RedChannel *channel);
 
 G_END_DECLS
 

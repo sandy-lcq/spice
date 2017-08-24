@@ -387,6 +387,8 @@ void reds_register_channel(RedsState *reds, RedChannel *channel)
 {
     spice_assert(reds);
     reds->channels = g_list_prepend(reds->channels, channel);
+    // create new channel in the client if possible
+    main_channel_registered_new_channel(reds->main_channel, channel);
 }
 
 void reds_unregister_channel(RedsState *reds, RedChannel *channel)

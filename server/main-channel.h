@@ -66,6 +66,9 @@ void main_channel_push_mouse_mode(MainChannel *main_chan, SpiceMouseMode current
 void main_channel_push_agent_connected(MainChannel *main_chan);
 void main_channel_push_agent_disconnected(MainChannel *main_chan);
 void main_channel_push_multi_media_time(MainChannel *main_chan, uint32_t time);
+/* tell MainChannel we have a new channel ready */
+void main_channel_registered_new_channel(MainChannel *main_chan,
+                                         RedChannel *channel);
 
 int main_channel_is_connected(MainChannel *main_chan);
 

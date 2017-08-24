@@ -149,6 +149,12 @@ static void main_channel_fill_mig_target(MainChannel *main_channel, RedsMigSpice
     main_channel->mig_target.sport = mig_target->sport;
 }
 
+void
+main_channel_registered_new_channel(MainChannel *main_chan, RedChannel *channel)
+{
+    red_channel_pipes_add(RED_CHANNEL(main_chan), registered_channel_item_new(channel));
+}
+
 void main_channel_migrate_switch(MainChannel *main_chan, RedsMigSpice *mig_target)
 {
     main_channel_fill_mig_target(main_chan, mig_target);

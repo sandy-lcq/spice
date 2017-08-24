@@ -62,6 +62,7 @@ struct MainChannelClientPrivate {
     int mig_wait_prev_try_seamless;
     int init_sent;
     int seamless_mig_dst;
+    bool initial_channels_list_sent;
     uint8_t recv_buf[MAIN_CHANNEL_RECEIVE_BUF_SIZE];
 };
 
@@ -118,6 +119,12 @@ typedef struct RedMultiMediaTimePipeItem {
     RedPipeItem base;
     uint32_t time;
 } RedMultiMediaTimePipeItem;
+
+typedef struct RedRegisteredChannelPipeItem {
+    RedPipeItem base;
+    uint32_t channel_type;
+    uint32_t channel_id;
+} RedRegisteredChannelPipeItem;
 
 #define ZERO_BUF_SIZE 4096
 
@@ -443,6 +450,20 @@ RedPipeItem *main_multi_media_time_item_new(uint32_t mm_time)
     item = g_new(RedMultiMediaTimePipeItem, 1);
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME);
     item->time = mm_time;
+    return &item->base;
+}
+
+RedPipeItem *registered_channel_item_new(RedChannel *channel)
+{
+    RedRegisteredChannelPipeItem *item;
+
+    item = g_new0(RedRegisteredChannelPipeItem, 1);
+    red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_REGISTERED_CHANNEL);
+
+    uint32_t type, id;
+    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
+    item->channel_type = type;
+    item->channel_id = id;
     return &item->base;
 }
 
@@ -927,6 +948,25 @@ static void main_channel_marshall_agent_connected(SpiceMarshaller *m,
     spice_marshall_msg_main_agent_connected_tokens(m, &connected);
 }
 
+static void main_channel_marshall_registered_channel(RedChannelClient *rcc,
+                                                     SpiceMarshaller *m,
+                                                     RedRegisteredChannelPipeItem *item)
+{
+    struct {
+        SpiceMsgChannels info;
+        SpiceChannelId ids[1];
+    } channels_info_buffer;
+    SpiceMsgChannels* channels_info = &channels_info_buffer.info;
+
+    red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_CHANNELS_LIST);
+
+    channels_info->channels[0].type = item->channel_type;
+    channels_info->channels[0].id = item->channel_id;
+    channels_info->num_of_channels = 1;
+
+    spice_marshall_msg_main_channels_list(m, channels_info);
+}
+
 void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
 {
     MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
@@ -947,6 +987,7 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
     switch (base->type) {
         case RED_PIPE_ITEM_TYPE_MAIN_CHANNELS_LIST:
             main_channel_marshall_channels(rcc, m, base);
+            mcc->priv->initial_channels_list_sent = true;
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_PING:
             main_channel_marshall_ping(rcc, m,
@@ -1002,6 +1043,16 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
             break;
         case RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS:
             main_channel_marshall_agent_connected(m, rcc, base);
+            break;
+        case RED_PIPE_ITEM_TYPE_MAIN_REGISTERED_CHANNEL:
+            /* The spice protocol requires that the server receive a ATTACH_CHANNELS
+             * message from the client before sending any CHANNEL_LIST message. If
+             * we've already sent our initial CHANNELS_LIST message, then it should be
+             * safe to send new ones for newly-registered channels. */
+            if (mcc->priv->initial_channels_list_sent) {
+                main_channel_marshall_registered_channel(rcc, m,
+                    SPICE_UPCAST(RedRegisteredChannelPipeItem, base));
+            }
             break;
         default:
             break;
