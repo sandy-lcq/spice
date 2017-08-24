@@ -72,7 +72,7 @@ stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *si
     int n;
     bool handled = false;
 
-    if (dev->has_error) {
+    if (dev->has_error || !dev->stream_channel) {
         return NULL;
     }
 
@@ -238,11 +238,7 @@ stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     SpiceCharDeviceInterface *sif;
 
-    StreamChannel *stream_channel = stream_channel_new(reds, 1); // TODO id
-
     StreamDevice *dev = stream_device_new(sin, reds);
-    dev->stream_channel = stream_channel;
-    stream_channel_register_start_cb(stream_channel, stream_device_stream_start, dev);
 
     sif = spice_char_device_get_interface(sin);
     if (sif->state) {
@@ -265,6 +261,33 @@ stream_device_dispose(GObject *object)
 }
 
 static void
+allocate_channels(StreamDevice *dev)
+{
+    if (dev->stream_channel) {
+        return;
+    }
+
+    SpiceServer* reds = red_char_device_get_server(RED_CHAR_DEVICE(dev));
+
+    int id = reds_get_free_channel_id(reds, SPICE_CHANNEL_DISPLAY);
+    g_return_if_fail(id >= 0);
+
+    StreamChannel *stream_channel = stream_channel_new(reds, id);
+
+    dev->stream_channel = stream_channel;
+
+    stream_channel_register_start_cb(stream_channel, stream_device_stream_start, dev);
+}
+
+static void
+reset_channels(StreamDevice *dev)
+{
+    if (dev->stream_channel) {
+        stream_channel_reset(dev->stream_channel);
+    }
+}
+
+static void
 stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
 {
     if (event != SPICE_PORT_EVENT_OPENED && event != SPICE_PORT_EVENT_CLOSED) {
@@ -275,10 +298,13 @@ stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
 
     // reset device and channel on close/open
     dev->opened = (event == SPICE_PORT_EVENT_OPENED);
+    if (dev->opened) {
+        allocate_channels(dev);
+    }
     dev->hdr_pos = 0;
     dev->has_error = false;
     red_char_device_reset(char_dev);
-    stream_channel_reset(dev->stream_channel);
+    reset_channels(dev);
 }
 
 static void
