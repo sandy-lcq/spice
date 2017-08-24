@@ -729,6 +729,7 @@ static void handle_dev_display_connect(void *opaque, void *payload)
 
     dcc = dcc_new(display, msg->client, msg->stream, msg->migration, &msg->caps,
                   worker->image_compression, worker->jpeg_state, worker->zlib_glz_state);
+    g_object_unref(msg->client);
     red_channel_capabilities_reset(&msg->caps);
     if (!dcc) {
         return;
@@ -821,6 +822,7 @@ static void handle_dev_cursor_connect(void *opaque, void *payload)
     cursor_channel_connect(worker->cursor_channel,
                            msg->client, msg->stream, msg->migration,
                            &msg->caps);
+    g_object_unref(msg->client);
     red_channel_capabilities_reset(&msg->caps);
 }
 

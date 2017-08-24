@@ -83,7 +83,9 @@ static void red_qxl_set_display_peer(RedChannel *channel, RedClient *client,
 
     spice_debug("%s", "");
     dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
-    payload.client = client;
+    // get a reference potentially the main channel can be destroyed in
+    // the main thread causing RedClient to be destroyed before using it
+    payload.client = g_object_ref(client);
     payload.stream = stream;
     payload.migration = migration;
     red_channel_capabilities_init(&payload.caps, caps);
@@ -141,7 +143,9 @@ static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, Reds
     RedWorkerMessageCursorConnect payload = {0,};
     Dispatcher *dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
     spice_printerr("");
-    payload.client = client;
+    // get a reference potentially the main channel can be destroyed in
+    // the main thread causing RedClient to be destroyed before using it
+    payload.client = g_object_ref(client);
     payload.stream = stream;
     payload.migration = migration;
     red_channel_capabilities_init(&payload.caps, caps);
