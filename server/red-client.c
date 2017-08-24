@@ -202,6 +202,7 @@ void red_client_destroy(RedClient *client)
                       client->thread_id,
                       pthread_self());
     }
+    red_client_set_disconnecting(client);
     FOREACH_CHANNEL_CLIENT(client, rcc) {
         RedChannel *channel;
         // some channels may be in other threads, so disconnection
@@ -254,6 +255,16 @@ gboolean red_client_add_channel(RedClient *client, RedChannelClient *rcc, GError
     pthread_mutex_lock(&client->lock);
 
     g_object_get(channel, "channel-type", &type, "id", &id, NULL);
+    if (client->disconnecting) {
+        g_set_error(error,
+                    SPICE_SERVER_ERROR,
+                    SPICE_SERVER_ERROR_FAILED,
+                    "Client %p got disconnected while connecting channel type %d id %d",
+                    client, type, id);
+        result = FALSE;
+        goto cleanup;
+    }
+
     if (red_client_get_channel(client, type, id)) {
         g_set_error(error,
                     SPICE_SERVER_ERROR,
@@ -347,12 +358,18 @@ gboolean red_client_seamless_migration_done_for_channel(RedClient *client)
 
 gboolean red_client_is_disconnecting(RedClient *client)
 {
-    return client->disconnecting;
+    gboolean ret;
+    pthread_mutex_lock(&client->lock);
+    ret =  client->disconnecting;
+    pthread_mutex_unlock(&client->lock);
+    return ret;
 }
 
 void red_client_set_disconnecting(RedClient *client)
 {
+    pthread_mutex_lock(&client->lock);
     client->disconnecting = TRUE;
+    pthread_mutex_unlock(&client->lock);
 }
 
 RedsState *red_client_get_server(RedClient *client)
