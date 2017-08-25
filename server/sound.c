@@ -1331,7 +1331,7 @@ playback_channel_constructed(GObject *object)
 
     client_cbs.connect = snd_set_playback_peer;
     client_cbs.migrate = snd_migrate_channel_client;
-    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, self);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
 
     if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY)) {
         red_channel_set_cap(RED_CHANNEL(self), SPICE_PLAYBACK_CAP_CELT_0_5_1);
@@ -1381,7 +1381,7 @@ record_channel_constructed(GObject *object)
 
     client_cbs.connect = snd_set_record_peer;
     client_cbs.migrate = snd_migrate_channel_client;
-    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, self);
+    red_channel_register_client_cbs(RED_CHANNEL(self), &client_cbs, NULL);
 
     if (snd_codec_is_capable(SPICE_AUDIO_DATA_MODE_CELT_0_5_1, SND_CODEC_ANY_FREQUENCY)) {
         red_channel_set_cap(RED_CHANNEL(self), SPICE_RECORD_CAP_CELT_0_5_1);
