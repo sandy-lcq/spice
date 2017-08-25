@@ -297,7 +297,7 @@ void dcc_create_surface(DisplayChannelClient *dcc, int surface_id)
     }
 
     display = DCC_TO_DC(dcc);
-    flags = is_primary_surface(DCC_TO_DC(dcc), surface_id) ? SPICE_SURFACE_FLAGS_PRIMARY : 0;
+    flags = is_primary_surface(display, surface_id) ? SPICE_SURFACE_FLAGS_PRIMARY : 0;
 
     /* don't send redundant create surface commands to client */
     if (!dcc ||
