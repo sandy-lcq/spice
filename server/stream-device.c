@@ -23,6 +23,7 @@
 
 #include "char-device.h"
 #include "stream-channel.h"
+#include "cursor-channel.h"
 #include "reds.h"
 
 #define TYPE_STREAM_DEVICE stream_device_get_type()
@@ -45,13 +46,16 @@ struct StreamDevice {
     union {
         StreamMsgFormat format;
         StreamMsgCapabilities capabilities;
+        StreamMsgCursorSet cursor_set;
         uint8_t buf[STREAM_MSG_CAPABILITIES_MAX_BYTES];
-    } msg;
+    } *msg;
     uint32_t msg_pos;
+    uint32_t msg_len;
     bool has_error;
     bool opened;
     bool flow_stopped;
     StreamChannel *stream_channel;
+    CursorChannel *cursor_channel;
 };
 
 struct StreamDeviceClass {
@@ -66,7 +70,7 @@ G_DEFINE_TYPE(StreamDevice, stream_device, RED_TYPE_CHAR_DEVICE)
 typedef bool StreamMsgHandler(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     SPICE_GNUC_WARN_UNUSED_RESULT;
 
-static StreamMsgHandler handle_msg_format, handle_msg_data;
+static StreamMsgHandler handle_msg_format, handle_msg_data, handle_msg_cursor_set;
 
 static bool handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin,
                                const char *error_msg) SPICE_GNUC_WARN_UNUSED_RESULT;
@@ -109,6 +113,9 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     case STREAM_TYPE_DATA:
         handled = handle_msg_data(dev, sin);
         break;
+    case STREAM_TYPE_CURSOR_SET:
+        handled = handle_msg_cursor_set(dev, sin);
+        break;
     case STREAM_TYPE_CAPABILITIES:
         /* FIXME */
     default:
@@ -120,6 +127,14 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
      * the next message */
     if (handled) {
         dev->hdr_pos = 0;
+
+        // Reallocate message buffer to the minimum.
+        // Currently the only message that requires resizing is the cursor shape,
+        // which is not expected to be sent so often.
+        if (dev->msg_len > sizeof(*dev->msg)) {
+            dev->msg = g_realloc(dev->msg, sizeof(*dev->msg));
+            dev->msg_len = sizeof(*dev->msg);
+        }
     }
 
     if (handled || dev->has_error) {
@@ -192,7 +207,7 @@ handle_msg_format(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         spice_assert(dev->hdr.type == STREAM_TYPE_FORMAT);
     }
 
-    int n = sif->read(sin, dev->msg.buf + dev->msg_pos, sizeof(StreamMsgFormat) - dev->msg_pos);
+    int n = sif->read(sin, dev->msg->buf + dev->msg_pos, sizeof(StreamMsgFormat) - dev->msg_pos);
     if (n < 0) {
         return handle_msg_invalid(dev, sin, NULL);
     }
@@ -203,9 +218,9 @@ handle_msg_format(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         return false;
     }
 
-    dev->msg.format.width = GUINT32_FROM_LE(dev->msg.format.width);
-    dev->msg.format.height = GUINT32_FROM_LE(dev->msg.format.height);
-    stream_channel_change_format(dev->stream_channel, &dev->msg.format);
+    dev->msg->format.width = GUINT32_FROM_LE(dev->msg->format.width);
+    dev->msg->format.height = GUINT32_FROM_LE(dev->msg->format.height);
+    stream_channel_change_format(dev->stream_channel, &dev->msg->format);
     return true;
 }
 
@@ -234,6 +249,116 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     }
 
     return dev->hdr.size == 0;
+}
+
+/*
+ * Returns number of bits required for a pixel of a given cursor type.
+ *
+ * Take into account mask bits.
+ * Returns 0 on error.
+ */
+static unsigned int
+get_cursor_type_bits(unsigned int cursor_type)
+{
+    switch (cursor_type) {
+    case SPICE_CURSOR_TYPE_ALPHA:
+        // RGBA
+        return 32;
+    case SPICE_CURSOR_TYPE_COLOR24:
+        // RGB + bitmask
+        return 24 + 1;
+    case SPICE_CURSOR_TYPE_COLOR32:
+        // RGBx + bitmask
+        return 32 + 1;
+    default:
+        return 0;
+    }
+}
+
+static RedCursorCmd *
+stream_msg_cursor_set_to_cursor_cmd(const StreamMsgCursorSet *msg, size_t msg_size)
+{
+    RedCursorCmd *cmd = g_new0(RedCursorCmd, 1);
+    cmd->type = QXL_CURSOR_SET;
+    cmd->u.set.position.x = 0; // TODO
+    cmd->u.set.position.y = 0; // TODO
+    cmd->u.set.visible = 1; // TODO
+    SpiceCursor *cursor = &cmd->u.set.shape;
+    cursor->header.unique = 0;
+    cursor->header.type = msg->type;
+    cursor->header.width = GUINT16_FROM_LE(msg->width);
+    cursor->header.height = GUINT16_FROM_LE(msg->height);
+    cursor->header.hot_spot_x = GUINT16_FROM_LE(msg->hot_spot_x);
+    cursor->header.hot_spot_y = GUINT16_FROM_LE(msg->hot_spot_y);
+
+    /* Limit cursor size to prevent DoS */
+    if (cursor->header.width > STREAM_MSG_CURSOR_SET_MAX_WIDTH ||
+        cursor->header.height > STREAM_MSG_CURSOR_SET_MAX_HEIGHT) {
+        g_free(cmd);
+        return NULL;
+    }
+
+    const unsigned int cursor_bits = get_cursor_type_bits(cursor->header.type);
+    if (cursor_bits == 0) {
+        g_free(cmd);
+        return NULL;
+    }
+
+    /* Check that enough data has been sent for the cursor.
+     * Note that these computations can't overflow due to sizes checks
+     * above. */
+    size_t size_required = cursor->header.width * cursor->header.height;
+    size_required = SPICE_ALIGN(size_required * cursor_bits, 8) / 8u;
+    if (msg_size < sizeof(StreamMsgCursorSet) + size_required) {
+        g_free(cmd);
+        return NULL;
+    }
+    cursor->data_size = size_required;
+    cursor->data = spice_memdup(msg->data, size_required);
+    return cmd;
+}
+
+static bool
+handle_msg_cursor_set(StreamDevice *dev, SpiceCharDeviceInstance *sin)
+{
+    // Calculate the maximum size required to send the pixel data for a cursor that is the
+    // maximum size using the format that requires the largest number of bits per pixel
+    // (SPICE_CURSOR_TYPE_COLOR32 requires 33 bits per pixel, see get_cursor_type_bits())
+    const unsigned int max_cursor_set_size =
+        sizeof(StreamMsgCursorSet) +
+        (STREAM_MSG_CURSOR_SET_MAX_WIDTH * 4 + (STREAM_MSG_CURSOR_SET_MAX_WIDTH + 7)/8)
+        * STREAM_MSG_CURSOR_SET_MAX_HEIGHT;
+
+    SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
+
+    if (dev->hdr.size < sizeof(StreamMsgCursorSet) || dev->hdr.size > max_cursor_set_size) {
+        // we could skip the message but on the other hand the guest
+        // is buggy in any case
+        return handle_msg_invalid(dev, sin, "Cursor size is invalid");
+    }
+
+    // read part of the message till we get all
+    if (dev->msg_len < dev->hdr.size) {
+        dev->msg = g_realloc(dev->msg, dev->hdr.size);
+        dev->msg_len = dev->hdr.size;
+    }
+    int n = sif->read(sin, dev->msg->buf + dev->msg_pos, dev->hdr.size - dev->msg_pos);
+    if (n <= 0) {
+        return false;
+    }
+    dev->msg_pos += n;
+    if (dev->msg_pos != dev->hdr.size) {
+        return false;
+    }
+
+    // transform the message to a cursor command and process it
+    RedCursorCmd *cmd = stream_msg_cursor_set_to_cursor_cmd(&dev->msg->cursor_set, dev->msg_pos);
+    if (!cmd) {
+        return handle_msg_invalid(dev, sin, NULL);
+    }
+    cursor_channel_process_cmd(dev->cursor_channel, cmd);
+
+    return true;
 }
 
 static void
@@ -333,6 +458,22 @@ stream_device_dispose(GObject *object)
         red_channel_destroy(RED_CHANNEL(dev->stream_channel));
         dev->stream_channel = NULL;
     }
+    if (dev->cursor_channel) {
+        // close all current connections and drop the reference
+        red_channel_destroy(RED_CHANNEL(dev->cursor_channel));
+        dev->cursor_channel = NULL;
+    }
+}
+
+static void
+stream_device_finalize(GObject *object)
+{
+    StreamDevice *dev = STREAM_DEVICE(object);
+
+    g_free(dev->msg);
+    dev->msg = NULL;
+    dev->msg_len = 0;
+    dev->msg_pos = 0;
 }
 
 static void
@@ -343,13 +484,22 @@ allocate_channels(StreamDevice *dev)
     }
 
     SpiceServer* reds = red_char_device_get_server(RED_CHAR_DEVICE(dev));
+    SpiceCoreInterfaceInternal* core = reds_get_core_interface(reds);
 
     int id = reds_get_free_channel_id(reds, SPICE_CHANNEL_DISPLAY);
     g_return_if_fail(id >= 0);
 
     StreamChannel *stream_channel = stream_channel_new(reds, id);
 
+    CursorChannel *cursor_channel = cursor_channel_new(reds, id, core);
+    ClientCbs client_cbs = { NULL, };
+    client_cbs.connect = (channel_client_connect_proc) cursor_channel_connect;
+    client_cbs.migrate = cursor_channel_client_migrate;
+    red_channel_register_client_cbs(RED_CHANNEL(cursor_channel), &client_cbs, NULL);
+    reds_register_channel(reds, RED_CHANNEL(cursor_channel));
+
     dev->stream_channel = stream_channel;
+    dev->cursor_channel = cursor_channel;
 
     stream_channel_register_start_cb(stream_channel, stream_device_stream_start, dev);
     stream_channel_register_queue_stat_cb(stream_channel, stream_device_stream_queue_stat, dev);
@@ -392,6 +542,7 @@ stream_device_class_init(StreamDeviceClass *klass)
     RedCharDeviceClass *char_dev_class = RED_CHAR_DEVICE_CLASS(klass);
 
     object_class->dispose = stream_device_dispose;
+    object_class->finalize = stream_device_finalize;
 
     char_dev_class->read_one_msg_from_device = stream_device_read_msg_from_dev;
     char_dev_class->send_msg_to_client = stream_device_send_msg_to_client;
@@ -401,8 +552,10 @@ stream_device_class_init(StreamDeviceClass *klass)
 }
 
 static void
-stream_device_init(StreamDevice *self)
+stream_device_init(StreamDevice *dev)
 {
+    dev->msg = g_malloc(sizeof(*dev->msg));
+    dev->msg_len = sizeof(*dev->msg);
 }
 
 static StreamDevice *
