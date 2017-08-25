@@ -924,14 +924,9 @@ void reds_handle_agent_mouse_event(RedsState *reds, const VDAgentMouseState *mou
     red_char_device_write_buffer_add(RED_CHAR_DEVICE(reds->agent_dev), char_dev_buf);
 }
 
-static int reds_get_n_clients(RedsState *reds)
-{
-    return reds ? g_list_length(reds->clients) : 0;
-}
-
 SPICE_GNUC_VISIBLE int spice_server_get_num_clients(SpiceServer *reds)
 {
-    return reds_get_n_clients(reds);
+    return reds ? g_list_length(reds->clients) : 0;
 }
 
 static bool channel_supports_multiple_clients(RedChannel *channel)
