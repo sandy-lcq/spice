@@ -441,28 +441,18 @@ void red_channel_pipes_add(RedChannel *channel, RedPipeItem *item)
     red_pipe_item_unref(item);
 }
 
-static void red_channel_client_pipe_add_type_proxy(gpointer data, gpointer user_data)
-{
-    int type = GPOINTER_TO_INT(user_data);
-    red_channel_client_pipe_add_type(data, type);
-}
-
 void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type)
 {
-    g_list_foreach(channel->priv->clients, red_channel_client_pipe_add_type_proxy,
-                   GINT_TO_POINTER(pipe_item_type));
-}
+    RedPipeItem *item = spice_new(RedPipeItem, 1);
 
-static void red_channel_client_pipe_add_empty_msg_proxy(gpointer data, gpointer user_data)
-{
-    int type = GPOINTER_TO_INT(user_data);
-    red_channel_client_pipe_add_empty_msg(data, type);
+    red_pipe_item_init(item, pipe_item_type);
+
+    red_channel_pipes_add(channel, item);
 }
 
 void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type)
 {
-    g_list_foreach(channel->priv->clients, red_channel_client_pipe_add_empty_msg_proxy,
-                   GINT_TO_POINTER(msg_type));
+    red_channel_pipes_add(channel, red_channel_client_new_empty_msg(msg_type));
 }
 
 int red_channel_is_connected(RedChannel *channel)

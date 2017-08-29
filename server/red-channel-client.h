@@ -99,6 +99,7 @@ void red_channel_client_pipe_add_tail(RedChannelClient *rcc, RedPipeItem *item);
 void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, RedPipeItem *item);
 /* for types that use this routine -> the pipe item should be freed */
 void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type);
+RedPipeItem *red_channel_client_new_empty_msg(int msg_type);
 void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type);
 gboolean red_channel_client_pipe_is_empty(RedChannelClient *rcc);
 uint32_t red_channel_client_get_pipe_size(RedChannelClient *rcc);
