@@ -116,7 +116,7 @@ typedef struct RedMouseModePipeItem {
 
 typedef struct RedMultiMediaTimePipeItem {
     RedPipeItem base;
-    int time;
+    uint32_t time;
 } RedMultiMediaTimePipeItem;
 
 #define ZERO_BUF_SIZE 4096

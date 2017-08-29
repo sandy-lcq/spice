@@ -65,7 +65,7 @@ void main_channel_push_mouse_mode(MainChannel *main_chan, SpiceMouseMode current
                                   int is_client_mouse_allowed);
 void main_channel_push_agent_connected(MainChannel *main_chan);
 void main_channel_push_agent_disconnected(MainChannel *main_chan);
-void main_channel_push_multi_media_time(MainChannel *main_chan, int time);
+void main_channel_push_multi_media_time(MainChannel *main_chan, uint32_t time);
 
 int main_channel_is_connected(MainChannel *main_chan);
 

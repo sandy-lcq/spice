@@ -145,7 +145,7 @@ static bool main_channel_handle_migrate_data(RedChannelClient *rcc,
                                     size);
 }
 
-void main_channel_push_multi_media_time(MainChannel *main_chan, int time)
+void main_channel_push_multi_media_time(MainChannel *main_chan, uint32_t time)
 {
     MainMultiMediaTimeItemInfo info = {
         .time = time,

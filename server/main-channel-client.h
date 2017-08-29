@@ -132,7 +132,7 @@ typedef struct MainMouseModeItemInfo {
 RedPipeItem *main_mouse_mode_item_new(RedChannelClient *rcc, void *data, int num);
 
 typedef struct MainMultiMediaTimeItemInfo {
-    int time;
+    uint32_t time;
 } MainMultiMediaTimeItemInfo;
 
 RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
