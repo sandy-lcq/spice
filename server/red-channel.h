@@ -172,6 +172,12 @@ void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type);
 
 void red_channel_pipes_add_empty_msg(RedChannel *channel, int msg_type);
 
+/* Add an item to all the clients connected.
+ * The same item is shared between all clients.
+ * Function will take ownership of the item.
+ */
+void red_channel_pipes_add(RedChannel *channel, RedPipeItem *item);
+
 /* return TRUE if all of the connected clients to this channel are blocked */
 bool red_channel_all_blocked(RedChannel *channel);
 

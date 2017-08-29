@@ -429,6 +429,18 @@ void red_channel_init_outgoing_messages_window(RedChannel *channel)
                    (GFunc)red_channel_client_init_outgoing_messages_window, NULL);
 }
 
+void red_channel_pipes_add(RedChannel *channel, RedPipeItem *item)
+{
+    RedChannelClient *rcc;
+
+    FOREACH_CLIENT(channel, rcc) {
+        red_pipe_item_ref(item);
+        red_channel_client_pipe_add(rcc, item);
+    }
+
+    red_pipe_item_unref(item);
+}
+
 static void red_channel_client_pipe_add_type_proxy(gpointer data, gpointer user_data)
 {
     int type = GPOINTER_TO_INT(user_data);
