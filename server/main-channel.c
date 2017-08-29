@@ -76,13 +76,8 @@ static void main_channel_push_channels(MainChannelClient *mcc)
 void main_channel_push_mouse_mode(MainChannel *main_chan, SpiceMouseMode current_mode,
                                   int is_client_mouse_allowed)
 {
-    MainMouseModeItemInfo info = {
-        .current_mode=current_mode,
-        .is_client_mouse_allowed=is_client_mouse_allowed,
-    };
-
-    red_channel_pipes_new_add(RED_CHANNEL(main_chan),
-        main_mouse_mode_item_new, &info);
+    red_channel_pipes_add(RED_CHANNEL(main_chan),
+                          main_mouse_mode_item_new(current_mode, is_client_mouse_allowed));
 }
 
 void main_channel_push_agent_connected(MainChannel *main_chan)
@@ -136,12 +131,7 @@ static bool main_channel_handle_migrate_data(RedChannelClient *rcc,
 
 void main_channel_push_multi_media_time(MainChannel *main_chan, uint32_t time)
 {
-    MainMultiMediaTimeItemInfo info = {
-        .time = time,
-    };
-
-    red_channel_pipes_new_add(RED_CHANNEL(main_chan),
-        main_multi_media_time_item_new, &info);
+    red_channel_pipes_add(RED_CHANNEL(main_chan), main_multi_media_time_item_new(time));
 }
 
 static void main_channel_fill_mig_target(MainChannel *main_channel, RedsMigSpice *mig_target)

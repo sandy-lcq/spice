@@ -110,13 +110,13 @@ static void cursor_channel_set_item(CursorChannel *cursor, CursorItem *item)
     cursor->item = item ? cursor_item_ref(item) : NULL;
 }
 
-static RedPipeItem *new_cursor_pipe_item(RedChannelClient *rcc, void *data, int num)
+static RedPipeItem *new_cursor_pipe_item(CursorItem *cursor_item)
 {
     RedCursorPipeItem *item = spice_malloc0(sizeof(RedCursorPipeItem));
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_CURSOR,
                             cursor_pipe_item_free);
-    item->cursor_item = data;
+    item->cursor_item = cursor_item;
     item->cursor_item->refs++;
     return &item->base;
 }
@@ -333,8 +333,7 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
         (cursor->mouse_mode == SPICE_MOUSE_MODE_SERVER
          || cursor_cmd->type != QXL_CURSOR_MOVE
          || cursor_show)) {
-        red_channel_pipes_new_add(RED_CHANNEL(cursor),
-                                  new_cursor_pipe_item, cursor_item);
+        red_channel_pipes_add(RED_CHANNEL(cursor), new_cursor_pipe_item(cursor_item));
     }
 
     cursor_item_unref(cursor_item);

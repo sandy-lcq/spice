@@ -124,19 +124,9 @@ enum {
     RED_PIPE_ITEM_TYPE_MAIN_AGENT_CONNECTED_TOKENS,
 };
 
-typedef struct MainMouseModeItemInfo {
-    SpiceMouseMode current_mode;
-    int is_client_mouse_allowed;
-} MainMouseModeItemInfo;
+RedPipeItem *main_mouse_mode_item_new(SpiceMouseMode current_mode, int is_client_mouse_allowed);
 
-RedPipeItem *main_mouse_mode_item_new(RedChannelClient *rcc, void *data, int num);
-
-typedef struct MainMultiMediaTimeItemInfo {
-    uint32_t time;
-} MainMultiMediaTimeItemInfo;
-
-RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
-                                            void *data, int num);
+RedPipeItem *main_multi_media_time_item_new(uint32_t mm_time);
 
 G_END_DECLS
 

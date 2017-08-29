@@ -194,13 +194,12 @@ static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
     return sif->get_leds(sin);
 }
 
-static RedPipeItem *red_inputs_key_modifiers_item_new(
-    RedChannelClient *rcc, void *data, int num)
+static RedPipeItem *red_inputs_key_modifiers_item_new(uint8_t modifiers)
 {
     RedKeyModifiersPipeItem *item = spice_malloc(sizeof(RedKeyModifiersPipeItem));
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_KEY_MODIFIERS);
-    item->modifiers = *(uint8_t *)data;
+    item->modifiers = modifiers;
     return &item->base;
 }
 
@@ -476,8 +475,8 @@ static void inputs_channel_push_keyboard_modifiers(InputsChannel *inputs, uint8_
         inputs->src_during_migrate) {
         return;
     }
-    red_channel_pipes_new_add_push(RED_CHANNEL(inputs),
-        red_inputs_key_modifiers_item_new, (void*)&modifiers);
+    red_channel_pipes_add(RED_CHANNEL(inputs),
+                          red_inputs_key_modifiers_item_new(modifiers));
 }
 
 void inputs_channel_on_keyboard_leds_change(InputsChannel *inputs, uint8_t leds)

@@ -426,26 +426,23 @@ void main_channel_client_push_notify(MainChannelClient *mcc, const char *msg)
     red_channel_client_pipe_add_push(RED_CHANNEL_CLIENT(mcc), item);
 }
 
-RedPipeItem *main_mouse_mode_item_new(RedChannelClient *rcc, void *data, int num)
+RedPipeItem *main_mouse_mode_item_new(SpiceMouseMode current_mode, int is_client_mouse_allowed)
 {
     RedMouseModePipeItem *item = spice_malloc(sizeof(RedMouseModePipeItem));
-    MainMouseModeItemInfo *info = data;
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MOUSE_MODE);
-    item->current_mode = info->current_mode;
-    item->is_client_mouse_allowed = info->is_client_mouse_allowed;
+    item->current_mode = current_mode;
+    item->is_client_mouse_allowed = is_client_mouse_allowed;
     return &item->base;
 }
 
-RedPipeItem *main_multi_media_time_item_new(RedChannelClient *rcc,
-                                            void *data, int num)
+RedPipeItem *main_multi_media_time_item_new(uint32_t mm_time)
 {
-    MainMultiMediaTimeItemInfo *info = data;
     RedMultiMediaTimePipeItem *item;
 
     item = spice_malloc(sizeof(RedMultiMediaTimePipeItem));
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME);
-    item->time = info->time;
+    item->time = mm_time;
     return &item->base;
 }
 
