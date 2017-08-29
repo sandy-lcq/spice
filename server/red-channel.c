@@ -596,20 +596,11 @@ static int red_channel_pipes_create_batch(RedChannel *channel,
     return n;
 }
 
-int red_channel_pipes_new_add_push(RedChannel *channel,
-                                   new_pipe_item_t creator, void *data)
+int red_channel_pipes_new_add(RedChannel *channel,
+                              new_pipe_item_t creator, void *data)
 {
-    int n = red_channel_pipes_create_batch(channel, creator, data,
-                                           red_channel_client_pipe_add);
-    red_channel_push(channel);
-
-    return n;
-}
-
-void red_channel_pipes_new_add(RedChannel *channel, new_pipe_item_t creator, void *data)
-{
-    red_channel_pipes_create_batch(channel, creator, data,
-                                     red_channel_client_pipe_add);
+    return red_channel_pipes_create_batch(channel, creator, data,
+                                          red_channel_client_pipe_add);
 }
 
 uint32_t red_channel_max_pipe_size(RedChannel *channel)

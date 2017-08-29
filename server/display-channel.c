@@ -2376,7 +2376,7 @@ void display_channel_update_compression(DisplayChannel *display, DisplayChannelC
 
 void display_channel_gl_scanout(DisplayChannel *display)
 {
-    red_channel_pipes_new_add_push(RED_CHANNEL(display), dcc_gl_scanout_item_new, NULL);
+    red_channel_pipes_new_add(RED_CHANNEL(display), dcc_gl_scanout_item_new, NULL);
 }
 
 static void set_gl_draw_async_count(DisplayChannel *display, int num)
@@ -2396,7 +2396,7 @@ void display_channel_gl_draw(DisplayChannel *display, SpiceMsgDisplayGlDraw *dra
 
     spice_return_if_fail(display->priv->gl_draw_async_count == 0);
 
-    num = red_channel_pipes_new_add_push(RED_CHANNEL(display), dcc_gl_draw_item_new, draw);
+    num = red_channel_pipes_new_add(RED_CHANNEL(display), dcc_gl_draw_item_new, draw);
     set_gl_draw_async_count(display, num);
 }
 
