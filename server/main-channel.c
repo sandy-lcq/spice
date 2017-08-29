@@ -81,7 +81,7 @@ void main_channel_push_mouse_mode(MainChannel *main_chan, SpiceMouseMode current
         .is_client_mouse_allowed=is_client_mouse_allowed,
     };
 
-    red_channel_pipes_new_add_push(RED_CHANNEL(main_chan),
+    red_channel_pipes_new_add(RED_CHANNEL(main_chan),
         main_mouse_mode_item_new, &info);
 }
 
@@ -140,7 +140,7 @@ void main_channel_push_multi_media_time(MainChannel *main_chan, uint32_t time)
         .time = time,
     };
 
-    red_channel_pipes_new_add_push(RED_CHANNEL(main_chan),
+    red_channel_pipes_new_add(RED_CHANNEL(main_chan),
         main_multi_media_time_item_new, &info);
 }
 

@@ -1590,7 +1590,6 @@ void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
 
     red_pipe_item_init(item, pipe_item_type);
     red_channel_client_pipe_add(rcc, item);
-    red_channel_client_push(rcc);
 }
 
 void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
@@ -1600,7 +1599,6 @@ void red_channel_client_pipe_add_empty_msg(RedChannelClient *rcc, int msg_type)
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_EMPTY_MSG);
     item->msg = msg_type;
     red_channel_client_pipe_add(rcc, &item->base);
-    red_channel_client_push(rcc);
 }
 
 gboolean red_channel_client_pipe_is_empty(RedChannelClient *rcc)
