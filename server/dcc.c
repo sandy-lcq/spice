@@ -518,7 +518,9 @@ DisplayChannelClient *dcc_new(DisplayChannel *display,
                          NULL);
     spice_debug("New display (client %p) dcc %p stream %p", client, dcc, stream);
     common_graphics_channel_set_during_target_migrate(COMMON_GRAPHICS_CHANNEL(display), mig_target);
-    dcc->priv->id = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display))->id;
+    if (dcc) {
+        dcc->priv->id = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display))->id;
+    }
 
     return dcc;
 }
