@@ -654,6 +654,7 @@ bool red_channel_wait_all_sent(RedChannel *channel,
     if (max_pipe_size || blocked) {
         spice_warning("timeout: pending out messages exist (pipe-size %u, blocked %d)",
                       max_pipe_size, blocked);
+        red_channel_apply_clients(channel, red_channel_client_disconnect_if_pending_send);
         return FALSE;
     } else {
         spice_assert(red_channel_no_item_being_sent(channel));

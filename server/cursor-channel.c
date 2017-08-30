@@ -305,11 +305,7 @@ void cursor_channel_reset(CursorChannel *cursor)
         if (!common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(cursor))) {
             red_channel_pipes_add_empty_msg(channel, SPICE_MSG_CURSOR_RESET);
         }
-        if (!red_channel_wait_all_sent(channel,
-                                       COMMON_CLIENT_TIMEOUT)) {
-            red_channel_apply_clients(channel,
-                                      red_channel_client_disconnect_if_pending_send);
-        }
+        red_channel_wait_all_sent(channel, COMMON_CLIENT_TIMEOUT);
     }
 }
 

@@ -226,6 +226,11 @@ const RedChannelCapabilities* red_channel_get_local_capabilities(RedChannel *sel
  *
  * timeout is in nano sec. -1 for no timeout.
  *
+ * This method tries for up to @timeout nanoseconds to send all the
+ * items which are currently queued. If the timeout elapses,
+ * the RedChannelClient which are too slow (those which still have pending
+ * items) will be disconnected.
+ *
  * Return: TRUE if waiting succeeded. FALSE if timeout expired.
  */
 
