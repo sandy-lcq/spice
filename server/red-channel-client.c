@@ -1669,7 +1669,9 @@ static void red_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
 
-    klass->on_disconnect(rcc);
+    if (klass->on_disconnect != NULL) {
+        klass->on_disconnect(rcc);
+    }
 }
 
 void red_channel_client_disconnect(RedChannelClient *rcc)

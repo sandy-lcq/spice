@@ -789,10 +789,6 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
     return true;
 }
 
-static void snd_channel_client_on_disconnect(RedChannelClient *rcc)
-{
-}
-
 static uint8_t*
 snd_channel_client_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint32_t size)
 {
@@ -1475,7 +1471,6 @@ snd_channel_client_class_init(SndChannelClientClass *klass)
     client_class->config_socket = snd_channel_client_config_socket;
     client_class->alloc_recv_buf = snd_channel_client_alloc_recv_buf;
     client_class->release_recv_buf = snd_channel_client_release_recv_buf;
-    client_class->on_disconnect = snd_channel_client_on_disconnect;
 }
 
 static void
