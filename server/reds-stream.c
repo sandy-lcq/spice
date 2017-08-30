@@ -98,6 +98,7 @@ struct RedsStreamPrivate {
     ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
 
     RedsState *reds;
+    SpiceCoreInterfaceInternal *core;
 };
 
 static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
@@ -170,7 +171,7 @@ static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
 void reds_stream_remove_watch(RedsStream* s)
 {
     if (s->watch) {
-        reds_core_watch_remove(s->priv->reds, s->watch);
+        s->priv->core->watch_remove(s->priv->core, s->watch);
         s->watch = NULL;
     }
 }
@@ -418,6 +419,7 @@ RedsStream *reds_stream_new(RedsState *reds, int socket)
     stream->priv = (RedsStreamPrivate *)(stream+1);
     stream->priv->info = spice_new0(SpiceChannelEventInfo, 1);
     stream->priv->reds = reds;
+    stream->priv->core = reds_get_core_interface(reds);
     reds_stream_set_socket(stream, socket);
 
     stream->priv->read = stream_read_cb;
@@ -425,6 +427,12 @@ RedsStream *reds_stream_new(RedsState *reds, int socket)
     stream->priv->writev = stream_writev_cb;
 
     return stream;
+}
+
+void reds_stream_set_core_interface(RedsStream *stream, SpiceCoreInterfaceInternal *core)
+{
+    reds_stream_remove_watch(stream);
+    stream->priv->core = core;
 }
 
 bool reds_stream_is_ssl(RedsStream *stream)
@@ -511,7 +519,7 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
 {
     AsyncRead *async = (AsyncRead *)data;
     RedsStream *stream = async->stream;
-    RedsState *reds = stream->priv->reds;
+    SpiceCoreInterfaceInternal *core = stream->priv->core;
 
     for (;;) {
         int n = async->end - async->now;
@@ -523,9 +531,9 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
             switch (err) {
             case EAGAIN:
                 if (!stream->watch) {
-                    stream->watch = reds_core_watch_add(reds, stream->socket,
-                                                        SPICE_WATCH_EVENT_READ,
-                                                        async_read_handler, async);
+                    stream->watch = core->watch_add(core, stream->socket,
+                                                    SPICE_WATCH_EVENT_READ,
+                                                    async_read_handler, async);
                 }
                 return;
             case EINTR:

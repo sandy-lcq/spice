@@ -67,6 +67,7 @@ void reds_stream_remove_watch(RedsStream* s);
 void reds_stream_set_channel(RedsStream *stream, int connection_id,
                              int channel_type, int channel_id);
 RedsStream *reds_stream_new(RedsState *reds, int socket);
+void reds_stream_set_core_interface(RedsStream *stream, SpiceCoreInterfaceInternal *core);
 bool reds_stream_is_ssl(RedsStream *stream);
 RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream);
 int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx);
