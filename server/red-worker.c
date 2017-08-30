@@ -284,17 +284,6 @@ static bool red_process_is_blocked(RedWorker *worker)
            red_channel_max_pipe_size(RED_CHANNEL(worker->display_channel)) > MAX_PIPE_SIZE;
 }
 
-static void red_disconnect_display(RedWorker *worker)
-{
-    spice_warning("update timeout");
-
-    // TODO: we need to record the client that actually causes the timeout. So
-    // we need to check the locations of the various pipe heads when counting,
-    // and disconnect only those/that.
-    red_channel_apply_clients(RED_CHANNEL(worker->display_channel),
-                              red_channel_client_disconnect);
-}
-
 static void red_migrate_display(DisplayChannel *display, RedChannelClient *rcc)
 {
     /* We need to stop the streams, and to send upgrade_items to the client.
@@ -314,10 +303,8 @@ static void red_migrate_display(DisplayChannel *display, RedChannelClient *rcc)
 }
 
 typedef int (*red_process_t)(RedWorker *worker, int *ring_is_empty);
-typedef void (*red_disconnect_t)(RedWorker *worker);
-
 static void flush_commands(RedWorker *worker, RedChannel *red_channel,
-                           red_process_t process, red_disconnect_t disconnect)
+                           red_process_t process)
 {
     for (;;) {
         uint64_t end_time;
@@ -346,7 +333,11 @@ static void flush_commands(RedWorker *worker, RedChannel *red_channel,
             // TODO: MC: the whole timeout will break since it takes lowest timeout, should
             // do it client by client.
             if (spice_get_monotonic_time_ns() >= end_time) {
-                disconnect(worker);
+                // TODO: we need to record the client that actually causes the timeout.
+                // So we need to check the locations of the various pipe heads when counting,
+                // and disconnect only those/that.
+                spice_warning("flush timeout");
+                red_channel_disconnect(red_channel);
             } else {
                 usleep(DISPLAY_CLIENT_RETRY_INTERVAL);
             }
@@ -357,19 +348,13 @@ static void flush_commands(RedWorker *worker, RedChannel *red_channel,
 static void flush_display_commands(RedWorker *worker)
 {
     flush_commands(worker, RED_CHANNEL(worker->display_channel),
-                   red_process_display, red_disconnect_display);
-}
-
-static void red_disconnect_cursor(RedWorker *worker)
-{
-    spice_warning("flush cursor timeout");
-    red_channel_disconnect(RED_CHANNEL(worker->cursor_channel));
+                   red_process_display);
 }
 
 static void flush_cursor_commands(RedWorker *worker)
 {
     flush_commands(worker, RED_CHANNEL(worker->cursor_channel),
-                   red_process_cursor, red_disconnect_cursor);
+                   red_process_cursor);
 }
 
 // TODO: on timeout, don't disconnect all channels immediatly - try to disconnect the slowest ones
