@@ -45,7 +45,6 @@ typedef struct MainChannelClient MainChannelClient;
 
 typedef bool (*channel_handle_message_proc)(RedChannelClient *rcc, uint16_t type,
                                             uint32_t size, void *msg);
-typedef void (*channel_disconnect_proc)(RedChannelClient *rcc);
 typedef bool (*channel_configure_socket_proc)(RedChannelClient *rcc);
 typedef void (*channel_send_pipe_item_proc)(RedChannelClient *rcc, RedPipeItem *item);
 
@@ -115,7 +114,6 @@ struct RedChannelClass
      * callbacks that are triggered from channel client stream events.
      * They are called from the thread that listen to the stream events.
      */
-    channel_disconnect_proc on_disconnect;
     channel_send_pipe_item_proc send_item;
     channel_handle_migrate_flush_mark_proc handle_migrate_flush_mark;
     channel_handle_migrate_data_proc handle_migrate_data;
@@ -217,7 +215,6 @@ struct RedsState* red_channel_get_server(RedChannel *channel);
 SpiceCoreInterfaceInternal* red_channel_get_core_interface(RedChannel *channel);
 
 /* channel callback function */
-void red_channel_on_disconnect(RedChannel *self, RedChannelClient *rcc);
 void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem *item);
 void red_channel_reset_thread_id(RedChannel *self);
 const RedStatNode *red_channel_get_stat_node(RedChannel *channel);

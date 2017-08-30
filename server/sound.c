@@ -789,7 +789,7 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
     return true;
 }
 
-static void snd_channel_on_disconnect(RedChannelClient *rcc)
+static void snd_channel_client_on_disconnect(RedChannelClient *rcc)
 {
 }
 
@@ -1316,11 +1316,8 @@ static void
 snd_channel_class_init(SndChannelClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
-    RedChannelClass *channel_class = RED_CHANNEL_CLASS(klass);
 
     object_class->finalize = snd_channel_finalize;
-
-    channel_class->on_disconnect = snd_channel_on_disconnect;
 }
 
 static void
@@ -1478,6 +1475,7 @@ snd_channel_client_class_init(SndChannelClientClass *klass)
     client_class->config_socket = snd_channel_client_config_socket;
     client_class->alloc_recv_buf = snd_channel_client_alloc_recv_buf;
     client_class->release_recv_buf = snd_channel_client_release_recv_buf;
+    client_class->on_disconnect = snd_channel_client_on_disconnect;
 }
 
 static void

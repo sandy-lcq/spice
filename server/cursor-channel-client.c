@@ -48,10 +48,16 @@ struct CursorChannelClientPrivate
     uint32_t cursor_cache_items;
 };
 
+static void cursor_channel_client_on_disconnect(RedChannelClient *rcc);
+
 static void
 cursor_channel_client_class_init(CursorChannelClientClass *klass)
 {
+    RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
+
     g_type_class_add_private(klass, sizeof(CursorChannelClientPrivate));
+
+    client_class->on_disconnect = cursor_channel_client_on_disconnect;
 }
 
 static void
@@ -75,7 +81,7 @@ void cursor_channel_client_reset_cursor_cache(RedChannelClient *rcc)
     red_cursor_cache_reset(CURSOR_CHANNEL_CLIENT(rcc), CLIENT_CURSOR_CACHE_SIZE);
 }
 
-void cursor_channel_client_on_disconnect(RedChannelClient *rcc)
+static void cursor_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     if (!rcc) {
         return;

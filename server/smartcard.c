@@ -574,7 +574,6 @@ red_smartcard_channel_class_init(RedSmartcardChannelClass *klass)
 
     channel_class->handle_message = smartcard_channel_client_handle_message,
 
-    channel_class->on_disconnect = smartcard_channel_client_on_disconnect;
     channel_class->send_item = smartcard_channel_send_item;
     channel_class->handle_migrate_flush_mark = smartcard_channel_client_handle_migrate_flush_mark;
     channel_class->handle_migrate_data = smartcard_channel_client_handle_migrate_data;

@@ -2189,26 +2189,6 @@ void display_channel_create_surface(DisplayChannel *display, uint32_t surface_id
         send_create_surface(display, surface_id, data_is_valid);
 }
 
-static void on_disconnect(RedChannelClient *rcc)
-{
-    DisplayChannel *display;
-    DisplayChannelClient *dcc;
-
-    spice_debug("trace");
-    spice_return_if_fail(rcc != NULL);
-
-    dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    display = DCC_TO_DC(dcc);
-
-    dcc_stop(dcc); // TODO: start/stop -> connect/disconnect?
-    display_channel_compress_stats_print(display);
-
-    // this was the last channel client
-    spice_debug("#draw=%d, #glz_draw=%d",
-                display->priv->drawable_count,
-                display->priv->encoder_shared_data.glz_drawable_count);
-}
-
 static bool handle_migrate_flush_mark(RedChannelClient *rcc)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
@@ -2510,7 +2490,6 @@ display_channel_class_init(DisplayChannelClass *klass)
     channel_class->parser = spice_get_client_channel_parser(SPICE_CHANNEL_DISPLAY, NULL);
     channel_class->handle_message = dcc_handle_message;
 
-    channel_class->on_disconnect = on_disconnect;
     channel_class->send_item = dcc_send_item;
     channel_class->handle_migrate_flush_mark = handle_migrate_flush_mark;
     channel_class->handle_migrate_data = handle_migrate_data;

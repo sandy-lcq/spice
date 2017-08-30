@@ -48,6 +48,7 @@ smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc, uint16_t type,
 static void
 smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc, uint16_t type,
                                              uint32_t size, uint8_t *msg);
+static void smartcard_channel_client_on_disconnect(RedChannelClient *rcc);
 
 static void smart_card_channel_client_get_property(GObject *object,
                                                    guint property_id,
@@ -92,6 +93,7 @@ static void smart_card_channel_client_class_init(SmartCardChannelClientClass *kl
     RedChannelClientClass *client_class = RED_CHANNEL_CLIENT_CLASS(klass);
     client_class->alloc_recv_buf = smartcard_channel_client_alloc_msg_rcv_buf;
     client_class->release_recv_buf = smartcard_channel_client_release_msg_rcv_buf;
+    client_class->on_disconnect = smartcard_channel_client_on_disconnect;
 
     object_class->get_property = smart_card_channel_client_get_property;
     object_class->set_property = smart_card_channel_client_set_property;
@@ -176,7 +178,7 @@ smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
     }
 }
 
-void smartcard_channel_client_on_disconnect(RedChannelClient *rcc)
+static void smartcard_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     SmartCardChannelClient *scc = SMARTCARD_CHANNEL_CLIENT(rcc);
     RedCharDeviceSmartcard *device = scc->priv->smartcard;

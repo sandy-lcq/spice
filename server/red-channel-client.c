@@ -1665,6 +1665,13 @@ void red_channel_client_push_set_ack(RedChannelClient *rcc)
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SET_ACK);
 }
 
+static void red_channel_client_on_disconnect(RedChannelClient *rcc)
+{
+    RedChannelClientClass *klass = RED_CHANNEL_CLIENT_GET_CLASS(rcc);
+
+    klass->on_disconnect(rcc);
+}
+
 void red_channel_client_disconnect(RedChannelClient *rcc)
 {
     RedChannel *channel = rcc->priv->channel;
@@ -1691,7 +1698,7 @@ void red_channel_client_disconnect(RedChannelClient *rcc)
         rcc->priv->connectivity_monitor.timer = NULL;
     }
     red_channel_remove_client(channel, rcc);
-    red_channel_on_disconnect(channel, rcc);
+    red_channel_client_on_disconnect(rcc);
 }
 
 gboolean red_channel_client_is_blocked(RedChannelClient *rcc)

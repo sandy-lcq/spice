@@ -763,7 +763,6 @@ red_vmc_channel_class_init(RedVmcChannelClass *klass)
 
     channel_class->handle_message = spicevmc_red_channel_client_handle_message;
 
-    channel_class->on_disconnect = spicevmc_red_channel_client_on_disconnect;
     channel_class->send_item = spicevmc_red_channel_send_item;
     channel_class->handle_migrate_flush_mark = spicevmc_channel_client_handle_migrate_flush_mark;
     channel_class->handle_migrate_data = spicevmc_channel_client_handle_migrate_data;
@@ -986,6 +985,7 @@ vmc_channel_client_class_init(VmcChannelClientClass *klass)
 
     client_class->alloc_recv_buf = spicevmc_red_channel_alloc_msg_rcv_buf;
     client_class->release_recv_buf = spicevmc_red_channel_release_msg_rcv_buf;
+    client_class->on_disconnect = spicevmc_red_channel_client_on_disconnect;
 }
 
 static RedChannelClient *

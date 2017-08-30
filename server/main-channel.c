@@ -49,17 +49,6 @@ int main_channel_is_connected(MainChannel *main_chan)
     return red_channel_is_connected(RED_CHANNEL(main_chan));
 }
 
-/*
- * When the main channel is disconnected, disconnect the entire client.
- */
-static void main_channel_client_on_disconnect(RedChannelClient *rcc)
-{
-    RedsState *reds = red_channel_get_server(red_channel_client_get_channel(rcc));
-    spice_printerr("rcc=%p", rcc);
-    main_dispatcher_client_disconnect(reds_get_main_dispatcher(reds),
-                                      red_channel_client_get_client(rcc));
-}
-
 RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t connection_id)
 {
     RedChannelClient *rcc;
@@ -315,7 +304,6 @@ main_channel_class_init(MainChannelClass *klass)
     channel_class->handle_message = main_channel_handle_message;
 
     /* channel callbacks */
-    channel_class->on_disconnect = main_channel_client_on_disconnect;
     channel_class->send_item = main_channel_client_send_item;
     channel_class->handle_migrate_flush_mark = main_channel_handle_migrate_flush_mark;
     channel_class->handle_migrate_data = main_channel_handle_migrate_data;

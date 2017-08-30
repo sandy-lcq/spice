@@ -198,7 +198,6 @@ red_channel_constructed(GObject *object)
 
     G_OBJECT_CLASS(red_channel_parent_class)->constructed(object);
 
-    spice_assert(klass->on_disconnect);
     spice_assert(klass->handle_migrate_data ||
                  !(self->priv->migration_flags & SPICE_MIGRATE_NEED_DATA_TRANSFER));
 }
@@ -690,13 +689,6 @@ RedsState* red_channel_get_server(RedChannel *channel)
 SpiceCoreInterfaceInternal* red_channel_get_core_interface(RedChannel *channel)
 {
     return channel->priv->core;
-}
-
-void red_channel_on_disconnect(RedChannel *self, RedChannelClient *rcc)
-{
-    RedChannelClass *klass = RED_CHANNEL_GET_CLASS(self);
-
-    klass->on_disconnect(rcc);
 }
 
 void red_channel_send_item(RedChannel *self, RedChannelClient *rcc, RedPipeItem *item)

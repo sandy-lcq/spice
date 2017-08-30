@@ -61,8 +61,6 @@ SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
 
 bool smartcard_channel_client_handle_migrate_flush_mark(RedChannelClient *rcc);
 
-void smartcard_channel_client_on_disconnect(RedChannelClient *rcc);
-
 void smartcard_channel_client_send_data(RedChannelClient *rcc,
                                         SpiceMarshaller *m,
                                         RedPipeItem *item,

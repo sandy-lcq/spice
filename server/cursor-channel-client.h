@@ -66,7 +66,6 @@ CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
                                                RedChannelCapabilities *caps);
 
 void cursor_channel_client_reset_cursor_cache(RedChannelClient *rcc);
-void cursor_channel_client_on_disconnect(RedChannelClient *rcc);
 RedCacheItem* cursor_channel_client_cache_find(CursorChannelClient *ccc, uint64_t id);
 int cursor_channel_client_cache_add(CursorChannelClient *ccc, uint64_t id, size_t size);
 

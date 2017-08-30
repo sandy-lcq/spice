@@ -405,7 +405,7 @@ static bool inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
     return TRUE;
 }
 
-static void inputs_release_keys(InputsChannel *inputs)
+void inputs_release_keys(InputsChannel *inputs)
 {
     int i;
     SpiceKbdState *st;
@@ -432,14 +432,6 @@ static void inputs_release_keys(InputsChannel *inputs)
         kbd_push_scan(keyboard, 0xe0);
         kbd_push_scan(keyboard, i | SCAN_CODE_RELEASE);
     }
-}
-
-static void inputs_channel_on_disconnect(RedChannelClient *rcc)
-{
-    if (!rcc) {
-        return;
-    }
-    inputs_release_keys(INPUTS_CHANNEL(red_channel_client_get_channel(rcc)));
 }
 
 static void inputs_pipe_add_init(RedChannelClient *rcc)
@@ -594,7 +586,6 @@ inputs_channel_class_init(InputsChannelClass *klass)
     channel_class->handle_message = inputs_channel_handle_message;
 
     /* channel callbacks */
-    channel_class->on_disconnect = inputs_channel_on_disconnect;
     channel_class->send_item = inputs_channel_send_item;
     channel_class->handle_migrate_data = inputs_channel_handle_migrate_data;
     channel_class->handle_migrate_flush_mark = inputs_channel_handle_migrate_flush_mark;

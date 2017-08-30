@@ -63,6 +63,14 @@ inputs_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
 {
 }
 
+static void inputs_channel_client_on_disconnect(RedChannelClient *rcc)
+{
+    if (!rcc) {
+        return;
+    }
+    inputs_release_keys(INPUTS_CHANNEL(red_channel_client_get_channel(rcc)));
+}
+
 static void
 inputs_channel_client_class_init(InputsChannelClientClass *klass)
 {
@@ -72,6 +80,7 @@ inputs_channel_client_class_init(InputsChannelClientClass *klass)
 
     client_class->alloc_recv_buf = inputs_channel_client_alloc_msg_rcv_buf;
     client_class->release_recv_buf = inputs_channel_client_release_msg_rcv_buf;
+    client_class->on_disconnect = inputs_channel_client_on_disconnect;
 }
 
 static void

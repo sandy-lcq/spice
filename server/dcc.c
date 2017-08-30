@@ -42,6 +42,7 @@ enum
 
 static void on_display_video_codecs_update(GObject *gobject, GParamSpec *pspec, gpointer user_data);
 static bool dcc_config_socket(RedChannelClient *rcc);
+static void dcc_on_disconnect(RedChannelClient *rcc);
 
 static void
 display_channel_client_get_property(GObject *object,
@@ -133,6 +134,7 @@ display_channel_client_class_init(DisplayChannelClientClass *klass)
     object_class->finalize = display_channel_client_finalize;
 
     client_class->config_socket = dcc_config_socket;
+    client_class->on_disconnect = dcc_on_disconnect;
 
     g_object_class_install_property(object_class,
                                     PROP_IMAGE_COMPRESSION,
@@ -1427,6 +1429,26 @@ static bool dcc_config_socket(RedChannelClient *rcc)
     DISPLAY_CHANNEL_CLIENT(rcc)->is_low_bandwidth = main_channel_client_is_low_bandwidth(mcc);
 
     return common_channel_client_config_socket(rcc);
+}
+
+static void dcc_on_disconnect(RedChannelClient *rcc)
+{
+    DisplayChannel *display;
+    DisplayChannelClient *dcc;
+
+    spice_debug("trace");
+    spice_return_if_fail(rcc != NULL);
+
+    dcc = DISPLAY_CHANNEL_CLIENT(rcc);
+    display = DCC_TO_DC(dcc);
+
+    dcc_stop(dcc); // TODO: start/stop -> connect/disconnect?
+    display_channel_compress_stats_print(display);
+
+    // this was the last channel client
+    spice_debug("#draw=%d, #glz_draw=%d",
+                display->priv->drawable_count,
+                display->priv->encoder_shared_data.glz_drawable_count);
 }
 
 gboolean dcc_is_low_bandwidth(DisplayChannelClient *dcc)

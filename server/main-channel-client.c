@@ -189,6 +189,17 @@ main_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
     }
 }
 
+/*
+ * When the main channel is disconnected, disconnect the entire client.
+ */
+static void main_channel_client_on_disconnect(RedChannelClient *rcc)
+{
+    RedsState *reds = red_channel_get_server(red_channel_client_get_channel(rcc));
+    spice_printerr("rcc=%p", rcc);
+    main_dispatcher_client_disconnect(reds_get_main_dispatcher(reds),
+                                      red_channel_client_get_client(rcc));
+}
+
 static void main_channel_client_class_init(MainChannelClientClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
@@ -201,6 +212,7 @@ static void main_channel_client_class_init(MainChannelClientClass *klass)
 
     client_class->alloc_recv_buf = main_channel_client_alloc_msg_rcv_buf;
     client_class->release_recv_buf = main_channel_client_release_msg_rcv_buf;
+    client_class->on_disconnect = main_channel_client_on_disconnect;
 
     g_object_class_install_property(object_class,
                                     PROP_CONNECTION_ID,
