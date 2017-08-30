@@ -339,6 +339,16 @@ red_channel_client_finalize(GObject *object)
 {
     RedChannelClient *self = RED_CHANNEL_CLIENT(object);
 
+    SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(self->priv->channel);
+    if (self->priv->latency_monitor.timer) {
+        core->timer_remove(core, self->priv->latency_monitor.timer);
+        self->priv->latency_monitor.timer = NULL;
+    }
+    if (self->priv->connectivity_monitor.timer) {
+        core->timer_remove(core, self->priv->connectivity_monitor.timer);
+        self->priv->connectivity_monitor.timer = NULL;
+    }
+
     reds_stream_free(self->priv->stream);
     self->priv->stream = NULL;
 
@@ -921,12 +931,14 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     }
 
     core = red_channel_get_core_interface(self->priv->channel);
-    if (self->priv->stream)
+    if (self->priv->stream) {
+        reds_stream_set_core_interface(self->priv->stream, core);
         self->priv->stream->watch =
             core->watch_add(core, self->priv->stream->socket,
                             SPICE_WATCH_EVENT_READ,
                             red_channel_client_event,
                             self);
+    }
 
     if (self->priv->monitor_latency
         && reds_stream_get_family(self->priv->stream) != AF_UNIX) {
