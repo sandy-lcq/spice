@@ -363,7 +363,7 @@ static void flush_display_commands(RedWorker *worker)
 static void red_disconnect_cursor(RedWorker *worker)
 {
     spice_warning("flush cursor timeout");
-    cursor_channel_disconnect(worker->cursor_channel);
+    red_channel_disconnect(RED_CHANNEL(worker->cursor_channel));
 }
 
 static void flush_cursor_commands(RedWorker *worker)

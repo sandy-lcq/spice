@@ -158,17 +158,6 @@ static void cursor_fill(CursorChannelClient *ccc, CursorItem *cursor,
     }
 }
 
-void cursor_channel_disconnect(CursorChannel *cursor_channel)
-{
-    RedChannel *channel = RED_CHANNEL(cursor_channel);
-
-    if (!channel || !red_channel_is_connected(channel)) {
-        return;
-    }
-    red_channel_apply_clients(channel, cursor_channel_client_reset_cursor_cache);
-    red_channel_disconnect(channel);
-}
-
 static void cursor_pipe_item_free(RedPipeItem *base)
 {
     spice_return_if_fail(base);

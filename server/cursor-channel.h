@@ -59,10 +59,6 @@ GType cursor_channel_get_type(void) G_GNUC_CONST;
 CursorChannel*       cursor_channel_new         (RedsState *server, QXLInstance *qxl,
                                                  const SpiceCoreInterfaceInternal *core);
 
-/**
- * Cause the channel to disconnect all clients
- */
-void                 cursor_channel_disconnect  (CursorChannel *cursor);
 void                 cursor_channel_reset       (CursorChannel *cursor);
 void                 cursor_channel_do_init     (CursorChannel *cursor);
 void                 cursor_channel_process_cmd (CursorChannel *cursor, RedCursorCmd *cursor_cmd);
