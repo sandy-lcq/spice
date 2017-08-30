@@ -203,12 +203,6 @@ uint32_t red_channel_max_pipe_size(RedChannel *channel);
 /* return the max size of all the rcc pipe */
 uint32_t red_channel_sum_pipes_size(RedChannel *channel);
 
-/* apply given function to all connected clients */
-typedef void (*channel_client_callback)(RedChannelClient *rcc);
-typedef void (*channel_client_callback_data)(RedChannelClient *rcc, void *data);
-void red_channel_apply_clients(RedChannel *channel, channel_client_callback v);
-void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback_data v,
-                                    void *data);
 GList *red_channel_get_clients(RedChannel *channel);
 guint red_channel_get_n_clients(RedChannel *channel);
 struct RedsState* red_channel_get_server(RedChannel *channel);

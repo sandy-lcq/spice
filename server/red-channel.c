@@ -493,16 +493,6 @@ void red_channel_connect(RedChannel *channel, RedClient *client,
     channel->priv->client_cbs.connect(channel, client, stream, migration, caps);
 }
 
-void red_channel_apply_clients(RedChannel *channel, channel_client_callback cb)
-{
-    g_list_foreach(channel->priv->clients, (GFunc)cb, NULL);
-}
-
-void red_channel_apply_clients_data(RedChannel *channel, channel_client_callback_data cb, void *data)
-{
-    g_list_foreach(channel->priv->clients, (GFunc)cb, data);
-}
-
 GList *red_channel_get_clients(RedChannel *channel)
 {
     return channel->priv->clients;
