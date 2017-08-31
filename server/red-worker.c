@@ -747,6 +747,7 @@ static void handle_dev_display_migrate(void *opaque, void *payload)
     spice_debug("migrate display client");
     spice_assert(rcc);
     red_migrate_display(worker->display_channel, rcc);
+    g_object_unref(rcc);
 }
 
 static inline uint32_t qxl_monitors_config_size(uint32_t heads)
@@ -828,6 +829,7 @@ static void handle_dev_cursor_migrate(void *opaque, void *payload)
 
     spice_debug("migrate cursor client");
     cursor_channel_client_migrate(rcc);
+    g_object_unref(rcc);
 }
 
 static void handle_dev_set_compression(void *opaque, void *payload)
