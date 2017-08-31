@@ -1,0 +1,74 @@
+How does SPICE handle threading
+-------------------------------
+
+Lots of code run in a single thread.
+
+Qemu usually calls SPICE from its main thread except on callbacks to code
+already running in different threads.
+
+Channels (RedChannel/RedChannelClient code) run mostly on a single
+thread except RedChannels on creation and destruction which MUST be
+done in the main thread.
+Lots of channels run in the main thread but currently CursorChannel and
+DisplayChannel are run from within a thread created by RedWorker.
+Note that different CursorChannel/DisplayChannel (they differ by id) run in
+separate RedWorker threads (currently a single RedWorker thread runs a pair
+of CursorChannel and DisplayChannel).
+
+RedChannelClient runs in the RedChannel thread. Creation is done in the same
+thread while destruction can happen in different threads.
+
+A RedClient instance groups the various RedChannelClient connected to
+the same remote SPICE client.
+These RedChannelClient instances can run in separate threads:
+MainChannelClient and most of the other RedChannelClient will be
+running in the main thread, while the CursorChannelClient and the
+DisplayChannelClient usually will be running from a different thread.
+
+Another important aspect of dealing with multiple threads are the dispatchers.
+Dispatchers are used to send messages/request from one thread to another.
+The main dispatcher is used to send requests to the main thread.
+The Qxl uses a dispatcher to send requests to the RedWorker which will forward
+to DisplayChannel/CursorChannel.
+
+RedClient may call some RedChannelClient functions using some callbacks
+registered inside ClientCbs. Usually these callbacks are functions that do the
+job directly if the RedChannel is running in the main thread or they use a
+dispatcher to do the job in the right thread. Currently there are 3 callbacks:
+connect, disconnect and migrate. Connect and migrate are asynchronous (the job
+is done while the current thread is doing something else) while disconnect is
+synchronous (the main thread will wait for termination).
+
+Reference counting and ownership
+--------------------------------
+->  pointer
+
+=>  pointer with owning (mostly GObject ref counting)
+
+RedChannelClient::client -> RedClient
+
+RedClient::channels => RedChannelClient
+
+RedClient::mcc -> MainChannelClient
+
+RedChannelClient::channel => RedChannel
+
+RedChannel::clients -> RedChannelClient
+
+The RedClient represents a connection from a remote SPICE client,
+RedClient::channels corresponding to the connections for the individual
+channels. Their lifetime is tied to the TCP connection to this remote client.
+When a disconnection is detected, the corresponding RedChannelClient are
+removed from RedClient::channels and RedChannel::clients (the main owner of
+RedChannelClient is RedClient).
+When MainChannelClient is disconnected, all RedChannelClients connected to the
+same RedClient are automatically disconnected.
+
+Who owns RedClient? RedClient is released when the MainChannelClient attached
+to it is disconnected. In this case a request is scheduled in the main thread
+(even if MainChannelClient runs on the main thread too) and
+red_client_disconnect is called which calls red_client_destroy which uses
+g_object_unref to free the object.
+
+Where is the MainChannelClient freed? On disconnection like other channel
+clients, currently before RedClient which will have a dangling pointer.
