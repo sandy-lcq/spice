@@ -1848,15 +1848,6 @@ bool red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
     }
 }
 
-void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc)
-{
-    if (red_channel_client_is_blocked(rcc) || !g_queue_is_empty(&rcc->priv->pipe)) {
-        red_channel_client_disconnect(rcc);
-    } else {
-        spice_assert(red_channel_client_no_item_being_sent(rcc));
-    }
-}
-
 gboolean red_channel_client_no_item_being_sent(RedChannelClient *rcc)
 {
     return !rcc || (rcc->priv->send_data.size == 0);

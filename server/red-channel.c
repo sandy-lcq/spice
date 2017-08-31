@@ -627,6 +627,19 @@ uint32_t red_channel_sum_pipes_size(RedChannel *channel)
     return sum;
 }
 
+static void red_channel_disconnect_if_pending_send(RedChannel *channel)
+{
+    RedChannelClient *rcc;
+
+    FOREACH_CLIENT(channel, rcc) {
+        if (red_channel_client_is_blocked(rcc) || !red_channel_client_pipe_is_empty(rcc)) {
+            red_channel_client_disconnect(rcc);
+        } else {
+            spice_assert(red_channel_client_no_item_being_sent(rcc));
+        }
+    }
+}
+
 bool red_channel_wait_all_sent(RedChannel *channel,
                                int64_t timeout)
 {
@@ -654,7 +667,7 @@ bool red_channel_wait_all_sent(RedChannel *channel,
     if (max_pipe_size || blocked) {
         spice_warning("timeout: pending out messages exist (pipe-size %u, blocked %d)",
                       max_pipe_size, blocked);
-        red_channel_apply_clients(channel, red_channel_client_disconnect_if_pending_send);
+        red_channel_disconnect_if_pending_send(channel);
         return FALSE;
     } else {
         spice_assert(red_channel_no_item_being_sent(channel));

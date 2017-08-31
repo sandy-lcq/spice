@@ -143,7 +143,6 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
                                             int64_t timeout);
 bool red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
                                            int64_t timeout);
-void red_channel_client_disconnect_if_pending_send(RedChannelClient *rcc);
 
 RedChannel* red_channel_client_get_channel(RedChannelClient *rcc);
 
