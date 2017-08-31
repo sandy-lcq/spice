@@ -24,9 +24,7 @@
 #ifndef RED_WORKER_H_
 #define RED_WORKER_H_
 
-#include "red-common.h"
 #include "red-qxl.h"
-#include "red-parse-qxl.h"
 #include "red-channel.h"
 
 typedef struct AsyncCommand AsyncCommand;
