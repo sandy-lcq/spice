@@ -15,8 +15,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef RED_DISPATCHER_H_
-#define RED_DISPATCHER_H_
+#ifndef RED_QXL_H_
+#define RED_QXL_H_
 
 #include "red-channel.h"
 #include "spice-qxl.h"
@@ -303,4 +303,4 @@ enum {
 
 void red_qxl_clear_pending(QXLState *qxl_state, int pending);
 
-#endif /* RED_DISPATCHER_H_ */
+#endif /* RED_QXL_H_ */
