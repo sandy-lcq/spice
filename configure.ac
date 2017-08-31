@@ -116,7 +116,7 @@ AS_IF([test x"$missing_gstreamer_elements" = xyes],
     [SPICE_WARNING([The GStreamer video encoder can be built but may not work.])
 ])
 
-if test "x$have_gstreamer_0_10" = "xyes" -o "x$have_gstreamer_1_0" = "xyes"; then
+if test "x$have_gstreamer_0_10" = "xyes" || test "x$have_gstreamer_1_0" = "xyes"; then
     PKG_CHECK_MODULES(ORC, orc-0.4)
     AC_SUBST(ORC_CFLAGS)
     AC_SUBST(ORC_LIBS)
