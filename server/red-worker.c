@@ -19,6 +19,7 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -1397,6 +1398,7 @@ bool red_worker_run(RedWorker *worker)
         spice_error("create thread failed %d", r);
     }
     pthread_sigmask(SIG_SETMASK, &curr_sig_mask, NULL);
+    pthread_setname_np(worker->thread, "SPICE Worker");
 
     return r == 0;
 }
