@@ -64,13 +64,6 @@ typedef void (*dispatcher_handle_async_done)(void *opaque,
                                              void *payload);
 
 
-typedef struct DispatcherMessage {
-    size_t size;
-    int ack;
-    dispatcher_handle_message handler;
-} DispatcherMessage;
-
-
 /*
  * dispatcher_send_message
  * @message_type: message type

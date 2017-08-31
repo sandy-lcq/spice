@@ -38,6 +38,13 @@
 static void setup_dummy_signal_handler(void);
 #endif
 
+typedef struct DispatcherMessage {
+    size_t size;
+    int ack;
+    dispatcher_handle_message handler;
+} DispatcherMessage;
+
+
 G_DEFINE_TYPE(Dispatcher, dispatcher, G_TYPE_OBJECT)
 
 #define DISPATCHER_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_DISPATCHER, DispatcherPrivate))
