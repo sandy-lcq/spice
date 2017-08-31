@@ -26,6 +26,7 @@
 
 #include "reds.h"
 #include "red-qxl.h"
+#include "red-worker.h"
 #include "red-common.h"
 #include "memslot.h"
 #include "red-parse-qxl.h"
