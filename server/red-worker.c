@@ -357,7 +357,7 @@ static void flush_cursor_commands(RedWorker *worker)
                    red_process_cursor);
 }
 
-// TODO: on timeout, don't disconnect all channels immediatly - try to disconnect the slowest ones
+// TODO: on timeout, don't disconnect all channels immediately - try to disconnect the slowest ones
 // first and maybe turn timeouts to several timeouts in order to disconnect channels gradually.
 // Should use disconnect or shutdown?
 static void flush_all_qxl_commands(RedWorker *worker)
