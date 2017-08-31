@@ -1,7 +1,7 @@
 image: fedora:latest
 
 before_script:
-  - dnf install 'dnf-command(copr)' git libtool make libasan -y
+  - dnf install 'dnf-command(copr)' git libtool make libasan orc-devel -y
   - dnf copr enable @spice/nightly -y
   - dnf builddep spice -y
 
