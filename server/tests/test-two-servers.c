@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include "test-display-base.h"
 
-SpiceCoreInterface *core;
+static SpiceCoreInterface *core;
 
 static const int simple_commands[] = {
     //SIMPLE_CREATE_SURFACE,

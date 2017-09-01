@@ -27,10 +27,10 @@
 #include <stdlib.h>
 #include "test-display-base.h"
 
-SpiceCoreInterface *core;
-SpiceTimer *ping_timer;
+static SpiceCoreInterface *core;
+static SpiceTimer *ping_timer;
 
-int ping_ms = 100;
+static int ping_ms = 100;
 
 static void pinger(SPICE_GNUC_UNUSED void *opaque)
 {

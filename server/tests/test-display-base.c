@@ -404,7 +404,7 @@ static void create_primary_surface(Test *test, uint32_t width,
     spice_qxl_create_primary_surface(&test->qxl_instance, 0, &surface);
 }
 
-QXLDevMemSlot slot = {
+static QXLDevMemSlot slot = {
 .slot_group_id = MEM_SLOT_GROUP_ID,
 .slot_id = 0,
 .generation = 0,
@@ -464,9 +464,9 @@ static void get_init_info(SPICE_GNUC_UNUSED QXLInstance *qin,
 // which cannot be done from red_worker context (not via dispatcher,
 // since you get a deadlock, and it isn't designed to be done
 // any other way, so no point testing that).
-int commands_end = 0;
-int commands_start = 0;
-struct QXLCommandExt* commands[1024];
+static int commands_end = 0;
+static int commands_start = 0;
+static struct QXLCommandExt* commands[1024];
 
 #define COMMANDS_SIZE G_N_ELEMENTS(commands)
 
@@ -786,7 +786,7 @@ static void set_client_capabilities(QXLInstance *qin,
     }
 }
 
-QXLInterface display_sif = {
+static QXLInterface display_sif = {
     .base = {
         .type = SPICE_INTERFACE_QXL,
         .description = "test",
@@ -852,7 +852,7 @@ static SpiceCharDeviceInterface vdagent_sif = {
 
 };
 
-SpiceCharDeviceInstance vdagent_sin = {
+static SpiceCharDeviceInstance vdagent_sin = {
     .base = {
         .sif = &vdagent_sif.base,
     },

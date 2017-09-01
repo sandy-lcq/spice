@@ -24,9 +24,9 @@
 #include <stdlib.h>
 #include "test-display-base.h"
 
-SpiceTimer *ping_timer;
+static SpiceTimer *ping_timer;
 
-int ping_ms = 100;
+static int ping_ms = 100;
 
 static void pinger(void *opaque)
 {

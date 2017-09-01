@@ -34,7 +34,7 @@
  * it has actual merit. Also possibly to simulate network effects?)
  * */
 
-SpicePlaybackInstance playback_instance;
+static SpicePlaybackInstance playback_instance;
 
 static const SpicePlaybackInterface playback_sif = {
     .base = {
@@ -45,11 +45,11 @@ static const SpicePlaybackInterface playback_sif = {
     }
 };
 
-uint32_t *frame;
-uint32_t num_samples;
-SpiceTimer *playback_timer;
-int playback_timer_ms;
-SpiceCoreInterface *core;
+static uint32_t *frame;
+static uint32_t num_samples;
+static SpiceTimer *playback_timer;
+static int playback_timer_ms;
+static SpiceCoreInterface *core;
 
 static void get_frame(void)
 {
