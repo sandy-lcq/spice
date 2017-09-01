@@ -42,7 +42,7 @@ static void pinger(SPICE_GNUC_UNUSED void *opaque)
     core->timer_start(ping_timer, ping_ms);
 }
 
-int simple_commands[] = {
+static const int simple_commands[] = {
     //SIMPLE_CREATE_SURFACE,
     //SIMPLE_DRAW,
     //SIMPLE_DESTROY_SURFACE,

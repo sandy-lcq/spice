@@ -864,7 +864,7 @@ void test_add_agent_interface(SpiceServer *server)
     spice_server_add_interface(server, &vdagent_sin.base);
 }
 
-void test_set_simple_command_list(Test *test, int *simple_commands, int num_commands)
+void test_set_simple_command_list(Test *test, const int *simple_commands, int num_commands)
 {
     int i;
 
