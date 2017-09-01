@@ -29,11 +29,6 @@
 #include "test-display-base.h"
 #include "test-glib-compat.h"
 
-SpiceCoreInterface *core;
-SpiceTimer *ping_timer;
-
-int ping_ms = 100;
-
 #ifndef MIN
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 #endif
