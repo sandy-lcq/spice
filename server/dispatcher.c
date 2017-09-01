@@ -285,6 +285,10 @@ static int dispatcher_handle_single_read(Dispatcher *dispatcher)
         /* no messsage */
         return 0;
     }
+    if (type >= dispatcher->priv->max_message_type) {
+        spice_error("Invalid message type for this dispatcher: %u", type);
+        return 0;
+    }
     msg = &dispatcher->priv->messages[type];
     if (read_safe(dispatcher->priv->recv_fd, payload, msg->size, 1) == -1) {
         spice_printerr("error reading from dispatcher: %d", errno);
