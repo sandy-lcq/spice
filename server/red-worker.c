@@ -437,13 +437,17 @@ static void handle_dev_update(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
     RedWorkerMessageUpdate *msg = payload;
+    QXLRect *qxl_dirty_rects = msg->qxl_dirty_rects;
 
     spice_return_if_fail(worker->running);
 
     flush_display_commands(worker);
     display_channel_update(worker->display_channel,
                            msg->surface_id, msg->qxl_area, msg->clear_dirty_region,
-                           &msg->qxl_dirty_rects, &msg->num_dirty_rects);
+                           &qxl_dirty_rects, &msg->num_dirty_rects);
+    if (msg->qxl_dirty_rects == NULL) {
+        free(qxl_dirty_rects);
+    }
 }
 
 static void handle_dev_del_memslot(void *opaque, void *payload)
