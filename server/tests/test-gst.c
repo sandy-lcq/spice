@@ -368,11 +368,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if (!encoder_name) {
-        g_printerr("Encoder name option missing\n");
-        exit(1);
-    }
-
     const EncoderInfo *encoder = get_encoder_info(encoder_name);
     if (!encoder) {
         g_printerr("Encoder name unsupported: %s\n", encoder_name);
