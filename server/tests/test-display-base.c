@@ -868,7 +868,7 @@ void test_set_simple_command_list(Test *test, const int *simple_commands, int nu
 {
     int i;
 
-    /* FIXME: leaks */
+    free(test->commands);
     test->commands = malloc(sizeof(*test->commands) * num_commands);
     memset(test->commands, 0, sizeof(*test->commands) * num_commands);
     test->num_commands = num_commands;
@@ -914,6 +914,7 @@ void test_destroy(Test *test)
 {
     test->core->timer_remove(test->wakeup_timer);
     spice_server_destroy(test->server);
+    free(test->commands);
     free(test);
 }
 
