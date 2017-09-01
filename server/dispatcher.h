@@ -35,6 +35,18 @@ typedef struct Dispatcher Dispatcher;
 typedef struct DispatcherClass DispatcherClass;
 typedef struct DispatcherPrivate DispatcherPrivate;
 
+/* A Dispatcher provides inter-thread communication by serializing messages.
+ * Currently the Dispatcher uses a unix socket (socketpair) for dispatching the
+ * messages.
+ *
+ * Message types are identified by a unique integer value and must first be
+ * registered with the class (see dispatcher_register_handler()) before they
+ * can be sent. Sending threads can send a message using the
+ * dispatcher_send_message() function. The receiving thread can monitor the
+ * dispatcher's 'receive' file descriptor (see dispatcher_get_recv_fd()) for
+ * activity and should call dispatcher_handle_recv_read() to process incoming
+ * messages.
+ */
 struct Dispatcher
 {
     GObject parent;
@@ -49,26 +61,52 @@ struct DispatcherClass
 
 GType dispatcher_get_type(void) G_GNUC_CONST;
 
+/* dispatcher_new
+ *
+ * Create a new Dispatcher object
+ *
+ * @max_message_type:   indicates the number of unique message types that can
+ *                      be handled by this dispatcher. Each message type is
+ *                      identified by an integer value between 0 and
+ *                      max_message_type-1.
+ */
 Dispatcher *dispatcher_new(size_t max_message_type);
 
 
+/* The function signature for handlers of a specific message type */
 typedef void (*dispatcher_handle_message)(void *opaque,
                                           void *payload);
 
+/* The signature for a function that handles all messages (see
+ * dispatcher_register_universal_handler()) */
 typedef void (*dispatcher_handle_any_message)(void *opaque,
                                               uint32_t message_type,
                                               void *payload);
 
-/*
- * dispatcher_send_message
+/* dispatcher_send_message
+ *
+ * Sends a message to the receiving thread. The message type must have been
+ * registered first (see dispatcher_register_handler()).  @payload must be a
+ * buffer of the same size as the size registered for @message_type
+ *
+ * If the sent message is a message type requires an ACK, this function will
+ * block until it receives an ACK from the receiving thread.
+ *
  * @message_type: message type
  * @payload:      payload
  */
 void dispatcher_send_message(Dispatcher *dispatcher, uint32_t message_type,
                              void *payload);
 
-/*
- * dispatcher_register_handler
+/* dispatcher_register_handler
+ *
+ * This function registers a message type with the dispatcher, and registers
+ * @handler as the function that will handle incoming messages of this type.
+ * If @ack is true, the dispatcher will also send an ACK in response to the
+ * message after the message has been passed to the handler. You can only
+ * register a given message type once. For example, you cannot register two
+ * different handlers for the same message type with different @ack values.
+ *
  * @dispatcher:     dispatcher
  * @messsage_type:  message type
  * @handler:        message handler
@@ -79,32 +117,59 @@ void dispatcher_register_handler(Dispatcher *dispatcher, uint32_t message_type,
                                  dispatcher_handle_message handler, size_t size,
                                  bool ack);
 
-/*
- * Hack to allow red_record to see the message being sent so it can record
- * it to file.
+/* dispatcher_register_universal_handler
+ *
+ * Register a universal handler that will be called when *any* message is
+ * received by the dispatcher. When a message is received, this handler will be
+ * called first. If the received message type was registered via
+ * dispatcher_register_handler(), the message-specific handler will then be
+ * called. Only one universal handler can be registered. This feature can be
+ * used to record all messages to a file for replay and debugging.
+ *
+ * @dispatcher:     dispatcher
+ * @handler:        a handler function
  */
 void dispatcher_register_universal_handler(Dispatcher *dispatcher,
                                     dispatcher_handle_any_message handler);
 
-/*
- *  dispatcher_handle_recv_read
- *  @dispatcher: Dispatcher instance
+/* dispatcher_handle_recv_read
+ *
+ * A convenience function that is intended to be called by the receiving thread
+ * to handle all incoming messages and execute any handlers for those messages.
+ * This function will handle all incoming messages until there is no more data
+ * to read, so multiple handlers may be executed from a single call to
+ * dispatcher_handle_recv_read().
+ *
+ * @dispatcher: Dispatcher instance
  */
 void dispatcher_handle_recv_read(Dispatcher *);
 
-/*
- *  dispatcher_get_recv_fd
- *  @return: receive file descriptor of the dispatcher
+/* dispatcher_get_recv_fd
+ *
+ * This function returns the file descriptor that is used by the receiving
+ * thread to listen for incoming messages. You should not read or write
+ * directly to this fd, but should only use it to watch for read events. When
+ * there is a read event, you should use dispatcher_handle_recv_read() to
+ * handle the incoming messages.
+ *
+ * @return: receive file descriptor of the dispatcher
  */
 int dispatcher_get_recv_fd(Dispatcher *);
 
-/*
- * dispatcher_set_opaque
+/* dispatcher_set_opaque
+ *
+ * This @opaque pointer is user-defined data that will be passed as the first
+ * argument to all handler functions.
+ *
  * @dispatcher: Dispatcher instance
  * @opaque: opaque to use for callbacks
  */
 void dispatcher_set_opaque(Dispatcher *dispatcher, void *opaque);
 
+/* dispatcher_get_thread_id
+ *
+ * Returns the id of the thread that created this Dispatcher object
+ */
 pthread_t dispatcher_get_thread_id(Dispatcher *self);
 
 #endif /* DISPATCHER_H_ */
