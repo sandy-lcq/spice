@@ -62,6 +62,7 @@ int main(void)
     core->timer_start(ping_timer, ping_ms);
 
     basic_event_loop_mainloop();
+    test_destroy(test);
 
     return 0;
 }

@@ -248,6 +248,6 @@ int main(int argc, char **argv)
     get_commands(&commands, &num_commands);
     test_set_command_list(test, commands, num_commands);
     basic_event_loop_mainloop();
-    free(commands);
+    test_destroy(test);
     return 0;
 }

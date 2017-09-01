@@ -50,5 +50,7 @@ int main(void)
     test_set_simple_command_list(t2, simple_commands, G_N_ELEMENTS(simple_commands));
 
     basic_event_loop_mainloop();
+    test_destroy(t1);
+    test_destroy(t2);
     return 0;
 }
