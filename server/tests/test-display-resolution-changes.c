@@ -75,7 +75,7 @@ int main(void)
     test = test_new(core);
     //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESSION_OFF);
     test_add_display_interface(test);
-    test_set_command_list(test, commands, COUNT(commands));
+    test_set_command_list(test, commands, G_N_ELEMENTS(commands));
 
     ping_timer = core->timer_add(pinger, test);
     core->timer_start(ping_timer, ping_ms);

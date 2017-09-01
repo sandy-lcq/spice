@@ -21,8 +21,6 @@
 #include <spice.h>
 #include "basic-event-loop.h"
 
-#define COUNT(x) ((sizeof(x)/sizeof(x[0])))
-
 /*
  * simple queue for commands.
  * each command can have up to two parameters (grow as needed)

@@ -468,7 +468,7 @@ int commands_end = 0;
 int commands_start = 0;
 struct QXLCommandExt* commands[1024];
 
-#define COMMANDS_SIZE COUNT(commands)
+#define COMMANDS_SIZE G_N_ELEMENTS(commands)
 
 static void push_command(QXLCommandExt *ext)
 {

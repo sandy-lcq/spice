@@ -98,7 +98,7 @@ static Command commands[] = {
 
 static void on_client_connected(Test *test)
 {
-    test_set_command_list(test, commands, COUNT(commands));
+    test_set_command_list(test, commands, G_N_ELEMENTS(commands));
 }
 
 int main(void)

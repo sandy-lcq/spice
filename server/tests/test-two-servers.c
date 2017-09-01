@@ -46,8 +46,8 @@ int main(void)
     //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESSION_OFF);
     test_add_display_interface(t1);
     test_add_display_interface(t2);
-    test_set_simple_command_list(t1, simple_commands, COUNT(simple_commands));
-    test_set_simple_command_list(t2, simple_commands, COUNT(simple_commands));
+    test_set_simple_command_list(t1, simple_commands, G_N_ELEMENTS(simple_commands));
+    test_set_simple_command_list(t2, simple_commands, G_N_ELEMENTS(simple_commands));
 
     basic_event_loop_mainloop();
     return 0;
