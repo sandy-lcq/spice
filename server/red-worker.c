@@ -640,6 +640,7 @@ static void handle_dev_start(void *opaque, void *payload)
         display_channel_wait_for_migrate_data(worker->display_channel);
     }
     worker->running = TRUE;
+    worker->event_timeout = 0;
     guest_set_client_capabilities(worker);
 }
 
