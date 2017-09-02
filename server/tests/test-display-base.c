@@ -694,7 +694,7 @@ static void release_resource(SPICE_GNUC_UNUSED QXLInstance *qin,
 
 static struct {
     QXLCursor cursor;
-    uint8_t data[CURSOR_WIDTH * CURSOR_HEIGHT * 4]; // 32bit per pixel
+    uint8_t data[CURSOR_WIDTH * CURSOR_HEIGHT * 4 + 128]; // 32bit per pixel
 } cursor;
 
 static void cursor_init(void)
