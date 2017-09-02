@@ -464,8 +464,8 @@ static void get_init_info(SPICE_GNUC_UNUSED QXLInstance *qin,
 // which cannot be done from red_worker context (not via dispatcher,
 // since you get a deadlock, and it isn't designed to be done
 // any other way, so no point testing that).
-static int commands_end = 0;
-static int commands_start = 0;
+static unsigned int commands_end = 0;
+static unsigned int commands_start = 0;
 static struct QXLCommandExt* commands[1024];
 
 #define COMMANDS_SIZE G_N_ELEMENTS(commands)
