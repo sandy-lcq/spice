@@ -26,6 +26,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <getopt.h>
+#include <pthread.h>
 
 #include "spice.h"
 #include <spice/qxl_dev.h>
@@ -467,22 +468,17 @@ static void get_init_info(SPICE_GNUC_UNUSED QXLInstance *qin,
 static unsigned int commands_end = 0;
 static unsigned int commands_start = 0;
 static struct QXLCommandExt* commands[1024];
+static pthread_mutex_t command_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define COMMANDS_SIZE G_N_ELEMENTS(commands)
 
 static void push_command(QXLCommandExt *ext)
 {
-    spice_assert(commands_end - commands_start < (int) COMMANDS_SIZE);
+    pthread_mutex_lock(&command_mutex);
+    spice_assert(commands_end - commands_start < COMMANDS_SIZE);
     commands[commands_end % COMMANDS_SIZE] = ext;
     commands_end++;
-}
-
-static struct QXLCommandExt *get_simple_command(void)
-{
-    struct QXLCommandExt *ret = commands[commands_start % COMMANDS_SIZE];
-    spice_assert(commands_start < commands_end);
-    commands_start++;
-    return ret;
+    pthread_mutex_unlock(&command_mutex);
 }
 
 static int get_num_commands(void)
@@ -490,14 +486,27 @@ static int get_num_commands(void)
     return commands_end - commands_start;
 }
 
+static struct QXLCommandExt *get_simple_command(void)
+{
+    pthread_mutex_lock(&command_mutex);
+    struct QXLCommandExt *ret = NULL;
+    if (get_num_commands() > 0) {
+        ret = commands[commands_start % COMMANDS_SIZE];
+        commands_start++;
+    }
+    pthread_mutex_unlock(&command_mutex);
+    return ret;
+}
+
 // called from spice_server thread (i.e. red_worker thread)
 static int get_command(SPICE_GNUC_UNUSED QXLInstance *qin,
                        struct QXLCommandExt *ext)
 {
-    if (get_num_commands() == 0) {
+    struct QXLCommandExt *cmd = get_simple_command();
+    if (!cmd) {
         return FALSE;
     }
-    *ext = *get_simple_command();
+    *ext = *cmd;
     return TRUE;
 }
 
