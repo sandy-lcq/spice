@@ -25,5 +25,6 @@ GMainContext *basic_event_loop_get_context(void);
 SpiceCoreInterface *basic_event_loop_init(void);
 void basic_event_loop_destroy(void);
 void basic_event_loop_mainloop(void);
+void basic_event_loop_quit(void);
 
 #endif // __BASIC_EVENT_LOOP_H__

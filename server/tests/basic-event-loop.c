@@ -38,6 +38,7 @@ int debug = 0;
 
 static SpiceCoreInterfaceInternal base_core_interface;
 static GMainContext *main_context = NULL;
+static GMainLoop *loop = NULL;
 
 GMainContext *basic_event_loop_get_context(void)
 {
@@ -52,10 +53,18 @@ static void event_loop_channel_event(int event, SpiceChannelEventInfo *info)
 
 void basic_event_loop_mainloop(void)
 {
-    GMainLoop *loop = g_main_loop_new(main_context, FALSE);
+    loop = g_main_loop_new(main_context, FALSE);
 
     g_main_loop_run(loop);
     g_main_loop_unref(loop);
+    loop = NULL;
+}
+
+void basic_event_loop_quit(void)
+{
+    if (loop) {
+        g_main_loop_quit(loop);
+    }
 }
 
 static void ignore_sigpipe(void)
