@@ -921,8 +921,10 @@ Test *test_new(SpiceCoreInterface *core)
 
 void test_destroy(Test *test)
 {
-    test->core->timer_remove(test->wakeup_timer);
     spice_server_destroy(test->server);
+    // this timer is used by spice server so
+    // avoid to free it while is running
+    test->core->timer_remove(test->wakeup_timer);
     free(test->commands);
     free(test);
 }
