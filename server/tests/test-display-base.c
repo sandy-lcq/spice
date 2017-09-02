@@ -84,6 +84,10 @@ static int control = 3; //used to know when we can take a screenshot
 static int rects = 16; //number of rects that will be draw
 static int has_automated_tests = 0; //automated test flag
 
+// SPICE implementation is not designed to have a timer shared
+// between multiple threads so use a mutex
+static pthread_mutex_t timer_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 __attribute__((noreturn))
 static void sigchld_handler(SPICE_GNUC_UNUSED int signal_num) // wait for the child process and exit
 {
@@ -637,7 +641,9 @@ static int req_cmd_notification(QXLInstance *qin)
 {
     Test *test = SPICE_CONTAINEROF(qin, Test, qxl_instance);
 
+    pthread_mutex_lock(&timer_mutex);
     test->core->timer_start(test->wakeup_timer, test->wakeup_ms);
+    pthread_mutex_unlock(&timer_mutex);
     return TRUE;
 }
 
@@ -651,7 +657,9 @@ static void do_wakeup(void *opaque)
         produce_command(test);
     }
 
+    pthread_mutex_lock(&timer_mutex);
     test->core->timer_start(test->wakeup_timer, test->wakeup_ms);
+    pthread_mutex_unlock(&timer_mutex);
     spice_qxl_wakeup(&test->qxl_instance);
 }
 
