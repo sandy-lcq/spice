@@ -24,10 +24,6 @@ AM_CPPFLAGS =					\
 	$(WARN_CFLAGS)				\
 	$(NULL)
 
-if HAVE_AUTOMATED_TESTS
-AM_CPPFLAGS += -DAUTOMATED_TESTS
-endif
-
 noinst_LIBRARIES = libtest.a
 
 libtest_a_SOURCES =				\

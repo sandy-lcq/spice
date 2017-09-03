@@ -948,11 +948,7 @@ static void init_automated(void)
 static __attribute__((noreturn))
 void usage(const char *argv0, const int exitcode)
 {
-#ifdef AUTOMATED_TESTS
     const char *autoopt=" [--automated-tests]";
-#else
-    const char *autoopt="";
-#endif
 
     printf("usage: %s%s\n", argv0, autoopt);
     exit(exitcode);
@@ -961,9 +957,7 @@ void usage(const char *argv0, const int exitcode)
 void spice_test_config_parse_args(int argc, char **argv)
 {
     struct option options[] = {
-#ifdef AUTOMATED_TESTS
         {"automated-tests", no_argument, &has_automated_tests, 1},
-#endif
         {NULL, 0, NULL, 0},
     };
     int option_index;

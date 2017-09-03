@@ -122,12 +122,6 @@ if test "x$have_gstreamer_0_10" = "xyes" || test "x$have_gstreamer_1_0" = "xyes"
     AC_SUBST(ORC_LIBS)
 fi
 
-AC_ARG_ENABLE([automated_tests],
-              AS_HELP_STRING([--enable-automated-tests], [Enable automated tests using spicy-screenshot (part of spice-gtk)]),,
-              [enable_automated_tests="no"])
-AS_IF([test x"$enable_automated_tests" != "xno"], [enable_automated_tests="yes"])
-AM_CONDITIONAL(HAVE_AUTOMATED_TESTS, test "x$enable_automated_tests" != "xno")
-
 dnl Check for the presence of Valgrind and do the plumbing to allow
 dnl the running of "make check-valgrind".
 AX_VALGRIND_DFLT(memcheck, on)
@@ -213,16 +207,6 @@ AC_SUBST(JPEG_LIBS)
 
 AC_CHECK_LIB(z, deflate, Z_LIBS='-lz', AC_MSG_ERROR([zlib not found]))
 AC_SUBST(Z_LIBS)
-
-if test "x$enable_automated_tests" = "xyes"; then
-    AC_MSG_CHECKING([for spicy-screenshot])
-    spicy-screenshot --help >/dev/null 2>&1
-    if test $? -ne 0 ; then
-        AC_MSG_RESULT([not found])
-        AC_MSG_ERROR([spicy-screenshot was not found, this module is part of spice-gtk and is required to compile this package])
-    fi
-    AC_MSG_RESULT([found])
-fi
 
 
 AC_ARG_ENABLE([manual],
@@ -327,7 +311,6 @@ AC_MSG_NOTICE([
         Smartcard:                ${have_smartcard}
         GStreamer:                ${enable_gstreamer}
         SASL support:             ${have_sasl}
-        Automated tests:          ${enable_automated_tests}
         Manual:                   ${have_asciidoc}
 
         Now type 'make' to build $PACKAGE
