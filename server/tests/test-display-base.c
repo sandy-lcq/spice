@@ -666,7 +666,7 @@ static void do_wakeup(void *opaque)
 static void release_resource(SPICE_GNUC_UNUSED QXLInstance *qin,
                              struct QXLReleaseInfoExt release_info)
 {
-    QXLCommandExt *ext = (QXLCommandExt*)(unsigned long)release_info.info->id;
+    QXLCommandExt *ext = (QXLCommandExt*)(uintptr_t)release_info.info->id;
     //printf("%s\n", __func__);
     spice_assert(release_info.group_id == MEM_SLOT_GROUP_ID);
     switch (ext->cmd.type) {
@@ -677,7 +677,7 @@ static void release_resource(SPICE_GNUC_UNUSED QXLInstance *qin,
             free(ext);
             break;
         case QXL_CMD_CURSOR: {
-            QXLCursorCmd *cmd = (QXLCursorCmd *)(unsigned long)ext->cmd.data;
+            QXLCursorCmd *cmd = (QXLCursorCmd *)(uintptr_t)ext->cmd.data;
             if (cmd->type == QXL_CURSOR_SET || cmd->type == QXL_CURSOR_MOVE) {
                 free(cmd);
             }
@@ -733,14 +733,14 @@ static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *ext)
     cmd = spice_new0(QXLCommandExt, 1);
     cursor_cmd = spice_new0(QXLCursorCmd, 1);
 
-    cursor_cmd->release_info.id = (unsigned long)cmd;
+    cursor_cmd->release_info.id = (uintptr_t)cmd;
 
     if (set) {
         cursor_cmd->type = QXL_CURSOR_SET;
         cursor_cmd->u.set.position.x = 0;
         cursor_cmd->u.set.position.y = 0;
         cursor_cmd->u.set.visible = TRUE;
-        cursor_cmd->u.set.shape = (unsigned long)&cursor;
+        cursor_cmd->u.set.shape = (uintptr_t)&cursor;
         // Only a white rect (32x32) as cursor
         memset(cursor.data, 255, sizeof(cursor.data));
         set = 0;
@@ -750,7 +750,7 @@ static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *ext)
         cursor_cmd->u.position.y = y++ % test->primary_height;
     }
 
-    cmd->cmd.data = (unsigned long)cursor_cmd;
+    cmd->cmd.data = (uintptr_t)cursor_cmd;
     cmd->cmd.type = QXL_CMD_CURSOR;
     cmd->group_id = MEM_SLOT_GROUP_ID;
     cmd->flags    = 0;
