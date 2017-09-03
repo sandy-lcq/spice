@@ -18,13 +18,27 @@
 #include <config.h>
 #include <spice.h>
 
-int main(void)
+#include "test-glib-compat.h"
+
+static SpiceCoreInterface core;
+
+static void empty_core(void)
 {
     SpiceServer *server = spice_server_new();
-    SpiceCoreInterface core;
 
-    spice_server_init(server, &core);
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+                          "*bad core interface*");
+    int result = spice_server_init(server, &core);
+    g_assert_cmpint(result, ==, -1);
     spice_server_set_port(server, 5911);
+    spice_server_destroy(server);
+}
 
-    return 0;
+int main(int argc, char *argv[])
+{
+    g_test_init(&argc, &argv, NULL);
+
+    g_test_add_func("/server/empty core", empty_core);
+
+    return g_test_run();
 }

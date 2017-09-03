@@ -55,13 +55,13 @@ check_PROGRAMS =				\
 	test-stat-file				\
 	test-leaks				\
 	test-vdagent				\
+	test-fail-on-null-core-interface	\
 	$(NULL)
 
 noinst_PROGRAMS =				\
 	test-display-no-ssl			\
 	test-display-streaming			\
 	test-empty-success			\
-	test-fail-on-null-core-interface	\
 	test-just-sockets-no-ssl		\
 	test-playback				\
 	test-display-resolution-changes		\
@@ -137,6 +137,7 @@ test_vdagent_CPPFLAGS =			\
 	$(NULL)
 test_codecs_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
 test_qxl_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
+test_fail_on_null_core_interface_CPPFLAGS = $(test_vdagent_CPPFLAGS)
 
 if HAVE_GSTREAMER
 test_gst_SOURCES = test-gst.c \
