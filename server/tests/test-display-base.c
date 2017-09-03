@@ -185,7 +185,7 @@ test_spice_create_update_from_bitmap(uint32_t surface_id,
     bh = bbox.bottom - bbox.top;
     bw = bbox.right - bbox.left;
 
-    update   = calloc(sizeof(*update), 1);
+    update   = spice_new0(SimpleSpiceUpdate, 1);
     update->bitmap = bitmap;
     drawable = &update->drawable;
     image    = &update->image;
@@ -198,7 +198,7 @@ test_spice_create_update_from_bitmap(uint32_t surface_id,
     } else {
         QXLClipRects *cmd_clip;
 
-        cmd_clip = calloc(sizeof(QXLClipRects) + num_clip_rects*sizeof(QXLRect), 1);
+        cmd_clip = spice_malloc0(sizeof(QXLClipRects) + num_clip_rects*sizeof(QXLRect));
         cmd_clip->num_rects = num_clip_rects;
         cmd_clip->chunk.data_size = num_clip_rects*sizeof(QXLRect);
         cmd_clip->chunk.prev_chunk = cmd_clip->chunk.next_chunk = 0;
@@ -247,7 +247,7 @@ static SimpleSpiceUpdate *test_spice_create_update_solid(uint32_t surface_id, QX
     bw = bbox.right - bbox.left;
     bh = bbox.bottom - bbox.top;
 
-    bitmap = malloc(bw * bh * 4);
+    bitmap = spice_malloc(bw * bh * 4);
     dst = (uint32_t *)bitmap;
 
     for (i = 0 ; i < bh * bw ; ++i, ++dst) {
@@ -282,7 +282,7 @@ static SimpleSpiceUpdate *test_spice_create_update_draw(Test *test, uint32_t sur
     bw       = test->primary_width/SINGLE_PART;
     bh       = 48;
 
-    bitmap = dst = malloc(bw * bh * 4);
+    bitmap = dst = spice_malloc(bw * bh * 4);
     //printf("allocated %p\n", dst);
 
     for (i = 0 ; i < bh * bw ; ++i, dst+=4) {
@@ -307,7 +307,7 @@ static SimpleSpiceUpdate *test_spice_create_update_copy_bits(Test *test, uint32_
         .top = 0,
     };
 
-    update   = calloc(sizeof(*update), 1);
+    update   = spice_new0(SimpleSpiceUpdate, 1);
     drawable = &update->drawable;
 
     bw       = test->primary_width/SINGLE_PART;
@@ -352,7 +352,7 @@ static int format_to_bpp(int format)
 
 static SimpleSurfaceCmd *create_surface(int surface_id, int format, int width, int height, uint8_t *data)
 {
-    SimpleSurfaceCmd *simple_cmd = calloc(sizeof(SimpleSurfaceCmd), 1);
+    SimpleSurfaceCmd *simple_cmd = spice_new0(SimpleSurfaceCmd, 1);
     QXLSurfaceCmd *surface_cmd = &simple_cmd->surface_cmd;
     int bpp = format_to_bpp(format);
 
@@ -371,7 +371,7 @@ static SimpleSurfaceCmd *create_surface(int surface_id, int format, int width, i
 
 static SimpleSurfaceCmd *destroy_surface(int surface_id)
 {
-    SimpleSurfaceCmd *simple_cmd = calloc(sizeof(SimpleSurfaceCmd), 1);
+    SimpleSurfaceCmd *simple_cmd = spice_new0(SimpleSurfaceCmd, 1);
     QXLSurfaceCmd *surface_cmd = &simple_cmd->surface_cmd;
 
     set_cmd(&simple_cmd->ext, QXL_CMD_SURFACE, (intptr_t)surface_cmd);
@@ -730,8 +730,8 @@ static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *ext)
     }
 
     test->cursor_notify--;
-    cmd = calloc(sizeof(QXLCommandExt), 1);
-    cursor_cmd = calloc(sizeof(QXLCursorCmd), 1);
+    cmd = spice_new0(QXLCommandExt, 1);
+    cursor_cmd = spice_new0(QXLCursorCmd, 1);
 
     cursor_cmd->release_info.id = (unsigned long)cmd;
 
@@ -886,8 +886,7 @@ void test_set_simple_command_list(Test *test, const int *simple_commands, int nu
     int i;
 
     free(test->commands);
-    test->commands = malloc(sizeof(*test->commands) * num_commands);
-    memset(test->commands, 0, sizeof(*test->commands) * num_commands);
+    test->commands = spice_new0(Command, num_commands);
     test->num_commands = num_commands;
     for (i = 0 ; i < num_commands; ++i) {
         test->commands[i].command = simple_commands[i];
