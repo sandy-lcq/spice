@@ -678,7 +678,7 @@ static void release_resource(SPICE_GNUC_UNUSED QXLInstance *qin,
             break;
         case QXL_CMD_CURSOR: {
             QXLCursorCmd *cmd = (QXLCursorCmd *)(unsigned long)ext->cmd.data;
-            if (cmd->type == QXL_CURSOR_SET) {
+            if (cmd->type == QXL_CURSOR_SET || cmd->type == QXL_CURSOR_MOVE) {
                 free(cmd);
             }
             free(ext);
