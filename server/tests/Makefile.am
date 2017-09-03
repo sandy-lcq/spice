@@ -56,12 +56,12 @@ check_PROGRAMS =				\
 	test-leaks				\
 	test-vdagent				\
 	test-fail-on-null-core-interface	\
+	test-empty-success			\
 	$(NULL)
 
 noinst_PROGRAMS =				\
 	test-display-no-ssl			\
 	test-display-streaming			\
-	test-empty-success			\
 	test-just-sockets-no-ssl		\
 	test-playback				\
 	test-display-resolution-changes		\
