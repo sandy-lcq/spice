@@ -900,9 +900,8 @@ void test_set_command_list(Test *test, Command *commands, int num_commands)
 }
 
 
-Test *test_new(SpiceCoreInterface *core)
+Test* test_new_with_port(SpiceCoreInterface* core, int port)
 {
-    int port = 5912;
     Test *test = spice_new0(Test, 1);
     SpiceServer* server = spice_server_new();
 
@@ -924,6 +923,11 @@ Test *test_new(SpiceCoreInterface *core)
     test->has_secondary = 0;
     test->wakeup_timer = core->timer_add(do_wakeup, test);
     return test;
+}
+
+Test *test_new(SpiceCoreInterface *core)
+{
+    return test_new_with_port(core, 5912);
 }
 
 void test_destroy(Test *test)
