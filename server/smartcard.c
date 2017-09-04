@@ -49,21 +49,8 @@
 // Maximal length of APDU
 #define APDUBufSize 270
 
+SPICE_DECLARE_TYPE(RedSmartcardChannel, red_smartcard_channel, SMARTCARD_CHANNEL);
 #define RED_TYPE_SMARTCARD_CHANNEL red_smartcard_channel_get_type()
-
-#define RED_SMARTCARD_CHANNEL(obj) \
-    (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_SMARTCARD_CHANNEL, RedSmartcardChannel))
-#define RED_SMARTCARD_CHANNEL_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_SMARTCARD_CHANNEL, RedSmartcardChannelClass))
-#define RED_IS_SMARTCARD_CHANNEL(obj) \
-    (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_SMARTCARD_CHANNEL))
-#define RED_IS_SMARTCARD_CHANNEL_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_SMARTCARD_CHANNEL))
-#define RED_SMARTCARD_CHANNEL_GET_CLASS(obj) \
-    (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_SMARTCARD_CHANNEL, RedSmartcardChannelClass))
-
-typedef struct RedSmartcardChannel RedSmartcardChannel;
-typedef struct RedSmartcardChannelClass RedSmartcardChannelClass;
 
 struct RedSmartcardChannel
 {
@@ -74,8 +61,6 @@ struct RedSmartcardChannelClass
 {
     RedChannelClass parent_class;
 };
-
-GType red_smartcard_channel_get_type(void) G_GNUC_CONST;
 
 G_DEFINE_TYPE(RedSmartcardChannel, red_smartcard_channel, RED_TYPE_CHANNEL)
 

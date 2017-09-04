@@ -38,7 +38,9 @@
 
 G_BEGIN_DECLS
 
-typedef struct RedChannel RedChannel;
+SPICE_DECLARE_TYPE(RedChannel, red_channel, CHANNEL);
+#define RED_TYPE_CHANNEL red_channel_get_type()
+
 typedef struct RedChannelClient RedChannelClient;
 typedef struct RedClient RedClient;
 typedef struct MainChannelClient MainChannelClient;
@@ -76,19 +78,6 @@ static inline gboolean test_capability(const uint32_t *caps, int num_caps, uint3
     return VD_AGENT_HAS_CAPABILITY(caps, num_caps, cap);
 }
 
-#define RED_TYPE_CHANNEL red_channel_get_type()
-
-#define RED_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHANNEL, RedChannel))
-#define RED_CHANNEL_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_CHANNEL, RedChannelClass))
-#define RED_IS_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_CHANNEL))
-#define RED_IS_CHANNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_CHANNEL))
-#define RED_CHANNEL_GET_CLASS(obj) \
-    (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHANNEL, RedChannelClass))
-
-typedef struct RedChannelClass RedChannelClass;
-typedef struct RedChannelPrivate RedChannelPrivate;
-
 struct RedChannel
 {
     GObject parent;
@@ -125,8 +114,6 @@ struct RedChannelClass
                   RedChannelClient, _data)
 
 /* Red Channel interface */
-
-GType red_channel_get_type(void) G_GNUC_CONST;
 
 const char *red_channel_get_name(RedChannel *channel);
 

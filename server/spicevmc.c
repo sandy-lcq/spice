@@ -44,8 +44,23 @@
 #define BUF_SIZE (64 * 1024 + 32)
 #define COMPRESS_THRESHOLD 1000
 
-typedef struct RedVmcChannel RedVmcChannel;
-typedef struct RedVmcChannelClass RedVmcChannelClass;
+SPICE_DECLARE_TYPE(RedCharDeviceSpiceVmc, red_char_device_spicevmc, CHAR_DEVICE_SPICEVMC);
+#define RED_TYPE_CHAR_DEVICE_SPICEVMC red_char_device_spicevmc_get_type()
+
+SPICE_DECLARE_TYPE(RedVmcChannel, red_vmc_channel, VMC_CHANNEL);
+#define RED_TYPE_VMC_CHANNEL red_vmc_channel_get_type()
+
+SPICE_DECLARE_TYPE(RedVmcChannelPort, red_vmc_channel_port, VMC_CHANNEL_PORT);
+#define RED_TYPE_VMC_CHANNEL_PORT red_vmc_channel_port_get_type()
+
+SPICE_DECLARE_TYPE(VmcChannelClient, vmc_channel_client, VMC_CHANNEL_CLIENT);
+#define TYPE_VMC_CHANNEL_CLIENT vmc_channel_client_get_type()
+
+SPICE_DECLARE_TYPE(RedVmcChannelUsbredir, red_vmc_channel_usbredir, VMC_CHANNEL_USBREDIR);
+#define RED_TYPE_VMC_CHANNEL_USBREDIR red_vmc_channel_usbredir_get_type()
+
+SPICE_DECLARE_TYPE(RedVmcChannelWebdav, red_vmc_channel_webdav, VMC_CHANNEL_WEBDAV);
+#define RED_TYPE_VMC_CHANNEL_WEBDAV red_vmc_channel_webdav_get_type()
 
 typedef struct RedVmcPipeItem {
     RedPipeItem base;
@@ -57,22 +72,6 @@ typedef struct RedVmcPipeItem {
     uint32_t buf_used;
 } RedVmcPipeItem;
 
-#define RED_TYPE_CHAR_DEVICE_SPICEVMC red_char_device_spicevmc_get_type()
-
-#define RED_CHAR_DEVICE_SPICEVMC(obj) \
-    (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_CHAR_DEVICE_SPICEVMC, RedCharDeviceSpiceVmc))
-#define RED_CHAR_DEVICE_SPICEVMC_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_CHAR_DEVICE_SPICEVMC, RedCharDeviceSpiceVmcClass))
-#define RED_IS_CHAR_DEVICE_SPICEVMC(obj) \
-    (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_CHAR_DEVICE_SPICEVMC))
-#define RED_IS_CHAR_DEVICE_SPICEVMC_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_CHAR_DEVICE_SPICEVMC))
-#define RED_CHAR_DEVICE_SPICEVMC_GET_CLASS(obj) \
-    (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_CHAR_DEVICE_SPICEVMC, RedCharDeviceSpiceVmcClass))
-
-typedef struct RedCharDeviceSpiceVmc RedCharDeviceSpiceVmc;
-typedef struct RedCharDeviceSpiceVmcClass RedCharDeviceSpiceVmcClass;
-
 struct RedCharDeviceSpiceVmc {
     RedCharDevice parent;
     RedVmcChannel *channel;
@@ -83,23 +82,11 @@ struct RedCharDeviceSpiceVmcClass
     RedCharDeviceClass parent_class;
 };
 
-static GType red_char_device_spicevmc_get_type(void) G_GNUC_CONST;
 static RedCharDevice *red_char_device_spicevmc_new(SpiceCharDeviceInstance *sin,
                                                    RedsState *reds,
                                                    RedVmcChannel *channel);
 
 G_DEFINE_TYPE(RedCharDeviceSpiceVmc, red_char_device_spicevmc, RED_TYPE_CHAR_DEVICE)
-
-#define RED_TYPE_VMC_CHANNEL red_vmc_channel_get_type()
-
-#define RED_VMC_CHANNEL(obj) \
-    (G_TYPE_CHECK_INSTANCE_CAST((obj), RED_TYPE_VMC_CHANNEL, RedVmcChannel))
-#define RED_VMC_CHANNEL_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_CAST((klass), RED_TYPE_VMC_CHANNEL, RedVmcChannelClass))
-#define RED_IS_VMC_CHANNEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), RED_TYPE_VMC_CHANNEL))
-#define RED_IS_VMC_CHANNEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), RED_TYPE_VMC_CHANNEL))
-#define RED_VMC_CHANNEL_GET_CLASS(obj) \
-    (G_TYPE_INSTANCE_GET_CLASS((obj), RED_TYPE_VMC_CHANNEL, RedVmcChannelClass))
 
 struct RedVmcChannel
 {
@@ -124,80 +111,55 @@ struct RedVmcChannelClass
     RedChannelClass parent_class;
 };
 
-GType red_vmc_channel_get_type(void) G_GNUC_CONST;
-
 G_DEFINE_TYPE(RedVmcChannel, red_vmc_channel, RED_TYPE_CHANNEL)
 
-#define RED_TYPE_VMC_CHANNEL_USBREDIR red_vmc_channel_usbredir_get_type()
-typedef struct
+struct RedVmcChannelUsbredir
 {
     RedVmcChannel parent;
-} RedVmcChannelUsbredir;
+};
 
-typedef struct
+struct RedVmcChannelUsbredirClass
 {
     RedVmcChannelClass parent_class;
-} RedVmcChannelUsbredirClass;
+};
 
-GType red_vmc_channel_usbredir_get_type(void) G_GNUC_CONST;
 static void red_vmc_channel_usbredir_init(RedVmcChannelUsbredir *self)
 {
 }
 G_DEFINE_TYPE(RedVmcChannelUsbredir, red_vmc_channel_usbredir, RED_TYPE_VMC_CHANNEL)
 
 
-#define RED_TYPE_VMC_CHANNEL_WEBDAV red_vmc_channel_webdav_get_type()
-typedef struct
+struct RedVmcChannelWebdav
 {
     RedVmcChannel parent;
-} RedVmcChannelWebdav;
+};
 
-typedef struct
+struct RedVmcChannelWebdavClass
 {
     RedVmcChannelClass parent_class;
-} RedVmcChannelWebdavClass;
+};
 
-GType red_vmc_channel_webdav_get_type(void) G_GNUC_CONST;
 static void red_vmc_channel_webdav_init(RedVmcChannelWebdav *self)
 {
 }
 G_DEFINE_TYPE(RedVmcChannelWebdav, red_vmc_channel_webdav, RED_TYPE_VMC_CHANNEL)
 
 
-#define RED_TYPE_VMC_CHANNEL_PORT red_vmc_channel_port_get_type()
-typedef struct
+struct RedVmcChannelPort
 {
     RedVmcChannel parent;
-} RedVmcChannelPort;
+};
 
-typedef struct
+struct RedVmcChannelPortClass
 {
     RedVmcChannelClass parent_class;
-} RedVmcChannelPortClass;
+};
 
-GType red_vmc_channel_port_get_type(void) G_GNUC_CONST;
 static void red_vmc_channel_port_init(RedVmcChannelPort *self)
 {
 }
 G_DEFINE_TYPE(RedVmcChannelPort, red_vmc_channel_port, RED_TYPE_VMC_CHANNEL)
 
-
-#define TYPE_VMC_CHANNEL_CLIENT vmc_channel_client_get_type()
-
-#define VMC_CHANNEL_CLIENT(obj) \
-    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_VMC_CHANNEL_CLIENT, VmcChannelClient))
-#define VMC_CHANNEL_CLIENT_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_VMC_CHANNEL_CLIENT, VmcChannelClientClass))
-#define COMMON_IS_GRAPHICS_CHANNEL_CLIENT(obj) \
-    (G_TYPE_CHECK_INSTANCE_TYPE((obj), TYPE_VMC_CHANNEL_CLIENT))
-#define COMMON_IS_GRAPHICS_CHANNEL_CLIENT_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_VMC_CHANNEL_CLIENT))
-#define VMC_CHANNEL_CLIENT_GET_CLASS(obj) \
-    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_VMC_CHANNEL_CLIENT, VmcChannelClientClass))
-
-typedef struct VmcChannelClient VmcChannelClient;
-typedef struct VmcChannelClientClass VmcChannelClientClass;
-typedef struct VmcChannelClientPrivate VmcChannelClientPrivate;
 
 struct VmcChannelClient {
     RedChannelClient parent;
@@ -206,8 +168,6 @@ struct VmcChannelClient {
 struct VmcChannelClientClass {
     RedChannelClientClass parent_class;
 };
-
-GType vmc_channel_client_get_type(void) G_GNUC_CONST;
 
 G_DEFINE_TYPE(VmcChannelClient, vmc_channel_client, RED_TYPE_CHANNEL_CLIENT)
 

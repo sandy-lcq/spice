@@ -25,19 +25,8 @@
 
 G_BEGIN_DECLS
 
+SPICE_DECLARE_TYPE(RedClient, red_client, CLIENT);
 #define RED_TYPE_CLIENT red_client_get_type()
-
-#define RED_CLIENT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), RED_TYPE_CLIENT, RedClient))
-#define RED_CLIENT_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), RED_TYPE_CLIENT, RedClientClass))
-#define RED_IS_CLIENT(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), RED_TYPE_CLIENT))
-#define RED_IS_CLIENT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), RED_TYPE_CLIENT))
-#define RED_CLIENT_GET_CLASS(obj) \
-    (G_TYPE_INSTANCE_GET_CLASS ((obj), RED_TYPE_CLIENT, RedClientClass))
-
-typedef struct RedClient RedClient;
-typedef struct RedClientClass RedClientClass;
-
-GType red_client_get_type (void) G_GNUC_CONST;
 
 RedClient *red_client_new(RedsState *reds, int migrated);
 
