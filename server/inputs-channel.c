@@ -162,9 +162,10 @@ const VDAgentMouseState *inputs_channel_get_mouse_state(InputsChannel *inputs)
      ((state & SPICE_MOUSE_BUTTON_MASK_MIDDLE) ? VD_AGENT_MBUTTON_MASK : 0) |    \
      ((state & SPICE_MOUSE_BUTTON_MASK_RIGHT) ? VD_AGENT_RBUTTON_MASK : 0))
 
-static void activate_modifiers_watch(InputsChannel *inputs, RedsState *reds)
+static void activate_modifiers_watch(InputsChannel *inputs)
 {
-    reds_core_timer_start(reds, inputs->key_modifiers_timer, KEY_MODIFIERS_TTL);
+    SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(RED_CHANNEL(inputs));
+    core->timer_start(core, inputs->key_modifiers_timer, KEY_MODIFIERS_TTL);
 }
 
 static void kbd_push_scan(SpiceKbdInstance *sin, uint8_t scan)
@@ -263,7 +264,7 @@ static bool inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
         if (key_down->code == CAPS_LOCK_SCAN_CODE ||
             key_down->code == NUM_LOCK_SCAN_CODE ||
             key_down->code == SCROLL_LOCK_SCAN_CODE) {
-            activate_modifiers_watch(inputs_channel, reds);
+            activate_modifiers_watch(inputs_channel);
         }
     }
         /* fallthrough */
@@ -400,7 +401,7 @@ static bool inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
             kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE);
             kbd_push_scan(keyboard, CAPS_LOCK_SCAN_CODE | SCAN_CODE_RELEASE);
         }
-        activate_modifiers_watch(inputs_channel, reds);
+        activate_modifiers_watch(inputs_channel);
         break;
     }
     case SPICE_MSGC_DISCONNECTING:
@@ -551,6 +552,7 @@ inputs_channel_constructed(GObject *object)
     ClientCbs client_cbs = { NULL, };
     InputsChannel *self = INPUTS_CHANNEL(object);
     RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
+    SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(RED_CHANNEL(self));
 
     G_OBJECT_CLASS(inputs_channel_parent_class)->constructed(object);
 
@@ -561,7 +563,7 @@ inputs_channel_constructed(GObject *object)
     red_channel_set_cap(RED_CHANNEL(self), SPICE_INPUTS_CAP_KEY_SCANCODE);
     reds_register_channel(reds, RED_CHANNEL(self));
 
-    self->key_modifiers_timer = reds_core_timer_add(reds, key_modifiers_sender, self);
+    self->key_modifiers_timer = core->timer_add(core, key_modifiers_sender, self);
     if (!self->key_modifiers_timer) {
         spice_error("key modifiers timer create failed");
     }
@@ -571,10 +573,10 @@ static void
 inputs_channel_finalize(GObject *object)
 {
     InputsChannel *self = INPUTS_CHANNEL(object);
-    RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
+    SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(RED_CHANNEL(self));
 
     inputs_channel_detach_tablet(self, self->tablet);
-    reds_core_timer_remove(reds, self->key_modifiers_timer);
+    core->timer_remove(core, self->key_modifiers_timer);
 
     G_OBJECT_CLASS(inputs_channel_parent_class)->finalize(object);
 }
