@@ -37,7 +37,6 @@ void red_qxl_start(QXLInstance *qxl);
 uint32_t red_qxl_get_ram_size(QXLInstance *qxl);
 void red_qxl_async_complete(QXLInstance *qxl, AsyncCommand *async_command);
 struct Dispatcher *red_qxl_get_dispatcher(QXLInstance *qxl);
-gboolean red_qxl_use_client_monitors_config(QXLInstance *qxl);
 gboolean red_qxl_client_monitors_config(QXLInstance *qxl, VDAgentMonitorsConfig *monitors_config);
 gboolean red_qxl_get_primary_active(QXLInstance *qxl);
 gboolean red_qxl_get_allow_client_mouse(QXLInstance *qxl, gint *x_res, gint *y_res);

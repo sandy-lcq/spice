@@ -195,17 +195,11 @@ static void red_qxl_update_area(QXLState *qxl_state, uint32_t surface_id,
                             &payload);
 }
 
-gboolean red_qxl_use_client_monitors_config(QXLInstance *qxl)
-{
-    return (red_qxl_check_qxl_version(qxl, 3, 3) &&
-        qxl_get_interface(qxl)->client_monitors_config &&
-        qxl_get_interface(qxl)->client_monitors_config(qxl, NULL));
-}
-
 gboolean red_qxl_client_monitors_config(QXLInstance *qxl,
                                         VDAgentMonitorsConfig *monitors_config)
 {
-    return (qxl_get_interface(qxl)->client_monitors_config &&
+    return (red_qxl_check_qxl_version(qxl, 3, 3) &&
+        qxl_get_interface(qxl)->client_monitors_config &&
         qxl_get_interface(qxl)->client_monitors_config(qxl, monitors_config));
 }
 
