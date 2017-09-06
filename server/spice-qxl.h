@@ -197,12 +197,14 @@ struct QXLInterface {
     void (*update_area_complete)(QXLInstance *qin, uint32_t surface_id,
                                  struct QXLRect *updated_rects,
                                  uint32_t num_updated_rects);
+    /* Available since version 3.2 */
     void (*set_client_capabilities)(QXLInstance *qin,
                                     uint8_t client_present,
                                     uint8_t caps[SPICE_CAPABILITIES_SIZE]);
-    /* returns 1 if the interface is supported, 0 otherwise.
+    /* Returns 1 if the interface is supported, 0 otherwise.
      * if monitors_config is NULL nothing is done except reporting the
-     * return code. */
+     * return code.
+     * Available since version 3.3 */
     int (*client_monitors_config)(QXLInstance *qin,
                                   VDAgentMonitorsConfig *monitors_config);
 };
