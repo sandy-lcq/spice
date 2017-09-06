@@ -62,8 +62,10 @@ struct QXLState {
 
     pthread_mutex_t scanout_mutex;
     SpiceMsgDisplayGlScanoutUnix scanout;
-    struct AsyncCommand *gl_draw_async;
+    uint64_t gl_draw_cookie;
 };
+
+#define GL_DRAW_COOKIE_INVALID (~((uint64_t) 0))
 
 int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor)
 {
@@ -833,7 +835,7 @@ void spice_qxl_gl_scanout(QXLInstance *qxl,
     spice_return_if_fail(qxl != NULL);
 
     QXLState *qxl_state = qxl->st;
-    spice_return_if_fail(qxl_state->gl_draw_async == NULL);
+    spice_return_if_fail(qxl_state->gl_draw_cookie == GL_DRAW_COOKIE_INVALID);
 
     pthread_mutex_lock(&qxl_state->scanout_mutex);
 
@@ -877,13 +879,15 @@ void spice_qxl_gl_draw_async(QXLInstance *qxl,
     spice_return_if_fail(qxl != NULL);
     qxl_state = qxl->st;
     if (qxl_state->scanout.drm_dma_buf_fd == -1) {
+        QXLInterface *interface = qxl_get_interface(qxl);
+
         spice_warning("called spice_qxl_gl_draw_async without a buffer");
-        red_qxl_async_complete(qxl, async_command_alloc(qxl_state, message, cookie));
+        interface->async_complete(qxl, cookie);
         return;
     }
-    spice_return_if_fail(qxl_state->gl_draw_async == NULL);
+    spice_return_if_fail(qxl_state->gl_draw_cookie == GL_DRAW_COOKIE_INVALID);
 
-    qxl_state->gl_draw_async = async_command_alloc(qxl_state, message, cookie);
+    qxl_state->gl_draw_cookie = cookie;
     dispatcher_send_message(qxl_state->dispatcher, message, &draw);
 }
 
@@ -899,7 +903,6 @@ void red_qxl_async_complete(QXLInstance *qxl, AsyncCommand *async_command)
     case RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT_ASYNC:
     case RED_WORKER_MESSAGE_FLUSH_SURFACES_ASYNC:
     case RED_WORKER_MESSAGE_MONITORS_CONFIG_ASYNC:
-    case RED_WORKER_MESSAGE_GL_DRAW_ASYNC:
         break;
     case RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC:
         red_qxl_create_primary_surface_complete(qxl->st);
@@ -916,10 +919,11 @@ void red_qxl_async_complete(QXLInstance *qxl, AsyncCommand *async_command)
 
 void red_qxl_gl_draw_async_complete(QXLInstance *qxl)
 {
+    QXLInterface *interface = qxl_get_interface(qxl);
     /* this reset before usage prevent a possible race condition */
-    struct AsyncCommand *async = qxl->st->gl_draw_async;
-    qxl->st->gl_draw_async = NULL;
-    red_qxl_async_complete(qxl, async);
+    uint64_t cookie = qxl->st->gl_draw_cookie;
+    qxl->st->gl_draw_cookie = GL_DRAW_COOKIE_INVALID;
+    interface->async_complete(qxl, cookie);
 }
 
 void red_qxl_init(RedsState *reds, QXLInstance *qxl)
@@ -935,6 +939,7 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     qxl_state->qxl = qxl;
     pthread_mutex_init(&qxl_state->scanout_mutex, NULL);
     qxl_state->scanout.drm_dma_buf_fd = -1;
+    qxl_state->gl_draw_cookie = GL_DRAW_COOKIE_INVALID;
     qxl_state->dispatcher = dispatcher_new(RED_WORKER_MESSAGE_COUNT, NULL);
     qxl_state->qxl_worker.major_version = SPICE_INTERFACE_QXL_MAJOR;
     qxl_state->qxl_worker.minor_version = SPICE_INTERFACE_QXL_MINOR;
