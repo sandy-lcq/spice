@@ -2324,7 +2324,7 @@ static void marshall_gl_scanout(RedChannelClient *rcc,
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     DisplayChannel *display_channel = DCC_TO_DC(dcc);
-    QXLInstance* qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display_channel));
+    QXLInstance* qxl = display_channel->priv->qxl;
 
     SpiceMsgDisplayGlScanoutUnix *scanout = red_qxl_get_gl_scanout(qxl);
     if (scanout != NULL) {

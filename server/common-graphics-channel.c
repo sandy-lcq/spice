@@ -38,7 +38,6 @@ G_DEFINE_TYPE(CommonGraphicsChannelClient, common_graphics_channel_client, RED_T
 
 struct CommonGraphicsChannelPrivate
 {
-    QXLInstance *qxl;
     int during_target_migrate; /* TRUE when the client that is associated with the channel
                                   is during migration. Turned off when the vm is started.
                                   The flag is used to avoid sending messages that are artifacts
@@ -75,48 +74,6 @@ static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
     }
 }
 
-
-enum {
-    PROP0,
-    PROP_QXL
-};
-
-static void
-common_graphics_channel_get_property(GObject *object,
-                                   guint property_id,
-                                   GValue *value,
-                                   GParamSpec *pspec)
-{
-    CommonGraphicsChannel *self = COMMON_GRAPHICS_CHANNEL(object);
-
-    switch (property_id)
-    {
-        case PROP_QXL:
-            g_value_set_pointer(value, self->priv->qxl);
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-    }
-}
-
-static void
-common_graphics_channel_set_property(GObject *object,
-                                   guint property_id,
-                                   const GValue *value,
-                                   GParamSpec *pspec)
-{
-    CommonGraphicsChannel *self = COMMON_GRAPHICS_CHANNEL(object);
-
-    switch (property_id)
-    {
-        case PROP_QXL:
-            self->priv->qxl = g_value_get_pointer(value);
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
-    }
-}
-
 bool common_channel_client_config_socket(RedChannelClient *rcc)
 {
     RedClient *client = red_channel_client_get_client(rcc);
@@ -145,21 +102,7 @@ bool common_channel_client_config_socket(RedChannelClient *rcc)
 static void
 common_graphics_channel_class_init(CommonGraphicsChannelClass *klass)
 {
-    GObjectClass *object_class = G_OBJECT_CLASS(klass);
-
     g_type_class_add_private(klass, sizeof(CommonGraphicsChannelPrivate));
-
-    object_class->get_property = common_graphics_channel_get_property;
-    object_class->set_property = common_graphics_channel_set_property;
-
-    g_object_class_install_property(object_class,
-                                    PROP_QXL,
-                                    g_param_spec_pointer("qxl",
-                                                         "qxl",
-                                                         "QXLInstance for this channel",
-                                                         G_PARAM_READWRITE |
-                                                         G_PARAM_CONSTRUCT_ONLY |
-                                                         G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -176,11 +119,6 @@ void common_graphics_channel_set_during_target_migrate(CommonGraphicsChannel *se
 gboolean common_graphics_channel_get_during_target_migrate(CommonGraphicsChannel *self)
 {
     return self->priv->during_target_migrate;
-}
-
-QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self)
-{
-    return self->priv->qxl;
 }
 
 static void

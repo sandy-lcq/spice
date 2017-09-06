@@ -28,7 +28,8 @@ G_DEFINE_TYPE(DisplayChannel, display_channel, TYPE_COMMON_GRAPHICS_CHANNEL)
 enum {
     PROP0,
     PROP_N_SURFACES,
-    PROP_VIDEO_CODECS
+    PROP_VIDEO_CODECS,
+    PROP_QXL
 };
 
 static void
@@ -46,6 +47,9 @@ display_channel_get_property(GObject *object,
             break;
         case PROP_VIDEO_CODECS:
             g_value_set_static_boxed(value, self->priv->video_codecs);
+            break;
+        case PROP_QXL:
+            g_value_set_pointer(value, self->priv->qxl);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -67,6 +71,9 @@ display_channel_set_property(GObject *object,
             break;
         case PROP_VIDEO_CODECS:
             display_channel_set_video_codecs(self, g_value_get_boxed(value));
+            break;
+        case PROP_QXL:
+            self->priv->qxl = g_value_get_pointer(value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -278,7 +285,7 @@ static void stop_streams(DisplayChannel *display)
 void display_channel_surface_unref(DisplayChannel *display, uint32_t surface_id)
 {
     RedSurface *surface = &display->priv->surfaces[surface_id];
-    QXLInstance *qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display));
+    QXLInstance *qxl = display->priv->qxl;
     DisplayChannelClient *dcc;
 
     if (--surface->refs != 0) {
@@ -2381,12 +2388,10 @@ void display_channel_gl_scanout(DisplayChannel *display)
 
 static void set_gl_draw_async_count(DisplayChannel *display, int num)
 {
-    QXLInstance *qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(display));
-
     display->priv->gl_draw_async_count = num;
 
     if (num == 0) {
-        red_qxl_gl_draw_async_complete(qxl);
+        red_qxl_gl_draw_async_complete(display->priv->qxl);
     }
 }
 
@@ -2514,6 +2519,14 @@ display_channel_class_init(DisplayChannelClass *klass)
                                                        G_PARAM_CONSTRUCT_ONLY |
                                                        G_PARAM_READWRITE |
                                                        G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(object_class,
+                                    PROP_QXL,
+                                    g_param_spec_pointer("qxl",
+                                                         "qxl",
+                                                         "QXLInstance for this channel",
+                                                         G_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT_ONLY |
+                                                         G_PARAM_STATIC_STRINGS));
 }
 
 void display_channel_debug_oom(DisplayChannel *display, const char *msg)

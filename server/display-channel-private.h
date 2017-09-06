@@ -75,6 +75,8 @@ struct DisplayChannelPrivate
 {
     DisplayChannel *pub;
 
+    QXLInstance *qxl;
+
     uint32_t bits_unique;
 
     MonitorsConfig *monitors_config;

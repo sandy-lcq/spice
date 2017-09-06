@@ -62,7 +62,6 @@ GType common_graphics_channel_get_type(void) G_GNUC_CONST;
 
 void common_graphics_channel_set_during_target_migrate(CommonGraphicsChannel *self, gboolean value);
 gboolean common_graphics_channel_get_during_target_migrate(CommonGraphicsChannel *self);
-QXLInstance* common_graphics_channel_get_qxl(CommonGraphicsChannel *self);
 
 enum {
     RED_PIPE_ITEM_TYPE_INVAL_ONE = RED_PIPE_ITEM_TYPE_CHANNEL_BASE,
