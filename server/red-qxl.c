@@ -638,18 +638,6 @@ static void qxl_worker_loadvm_commands(QXLWorker *qxl_worker,
     red_qxl_loadvm_commands(qxl_state, ext, count);
 }
 
-void red_qxl_attach_worker(QXLInstance *qxl)
-{
-    QXLInterface *interface = qxl_get_interface(qxl);
-    interface->attache_worker(qxl, &qxl->st->qxl_worker);
-}
-
-void red_qxl_set_compression_level(QXLInstance *qxl, int level)
-{
-    QXLInterface *interface = qxl_get_interface(qxl);
-    interface->set_compression_level(qxl, level);
-}
-
 uint32_t red_qxl_get_ram_size(QXLInstance *qxl)
 {
     QXLDevInitInfo qxl_info;
@@ -1071,6 +1059,18 @@ void red_qxl_set_mouse_mode(QXLInstance *qxl, uint32_t mode)
 RedsState* red_qxl_get_server(QXLState *qxl_state)
 {
     return qxl_state->reds;
+}
+
+void red_qxl_attach_worker(QXLInstance *qxl)
+{
+    QXLInterface *interface = qxl_get_interface(qxl);
+    interface->attache_worker(qxl, &qxl->st->qxl_worker);
+}
+
+void red_qxl_set_compression_level(QXLInstance *qxl, int level)
+{
+    QXLInterface *interface = qxl_get_interface(qxl);
+    interface->set_compression_level(qxl, level);
 }
 
 void red_qxl_get_init_info(QXLInstance *qxl, QXLDevInitInfo *info)
