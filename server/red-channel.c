@@ -616,19 +616,6 @@ uint32_t red_channel_max_pipe_size(RedChannel *channel)
     return pipe_size;
 }
 
-uint32_t red_channel_min_pipe_size(RedChannel *channel)
-{
-    RedChannelClient *rcc;
-    uint32_t pipe_size = ~0;
-
-    FOREACH_CLIENT(channel, rcc) {
-        uint32_t new_size;
-        new_size = red_channel_client_get_pipe_size(rcc);
-        pipe_size = MIN(pipe_size, new_size);
-    }
-    return pipe_size == ~0 ? 0 : pipe_size;
-}
-
 uint32_t red_channel_sum_pipes_size(RedChannel *channel)
 {
     RedChannelClient *rcc;

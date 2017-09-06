@@ -203,8 +203,6 @@ void red_channel_connect(RedChannel *channel, RedClient *client,
 
 /* return the sum of all the rcc pipe size */
 uint32_t red_channel_max_pipe_size(RedChannel *channel);
-/* return the min size of all the rcc pipe */
-uint32_t red_channel_min_pipe_size(RedChannel *channel);
 /* return the max size of all the rcc pipe */
 uint32_t red_channel_sum_pipes_size(RedChannel *channel);
 
