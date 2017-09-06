@@ -30,7 +30,6 @@
 
 typedef struct RedCursorPipeItem {
     RedPipeItem base;
-    QXLInstance *qxl;
     RedCursorCmd *red_cursor;
 } RedCursorPipeItem;
 
@@ -55,7 +54,7 @@ G_DEFINE_TYPE(CursorChannel, cursor_channel, TYPE_COMMON_GRAPHICS_CHANNEL)
 
 static void cursor_pipe_item_free(RedPipeItem *pipe_item);
 
-static RedCursorPipeItem *cursor_pipe_item_new(QXLInstance *qxl, RedCursorCmd *cmd)
+static RedCursorPipeItem *cursor_pipe_item_new(RedCursorCmd *cmd)
 {
     RedCursorPipeItem *item = g_new0(RedCursorPipeItem, 1);
 
@@ -63,7 +62,6 @@ static RedCursorPipeItem *cursor_pipe_item_new(QXLInstance *qxl, RedCursorCmd *c
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_CURSOR,
                             cursor_pipe_item_free);
-    item->qxl = qxl;
     item->red_cursor = cmd;
 
     return item;
@@ -253,13 +251,11 @@ void cursor_channel_process_cmd(CursorChannel *cursor, RedCursorCmd *cursor_cmd)
 {
     RedCursorPipeItem *cursor_pipe_item;
     bool cursor_show = false;
-    QXLInstance *qxl;
 
     spice_return_if_fail(cursor);
     spice_return_if_fail(cursor_cmd);
 
-    qxl = common_graphics_channel_get_qxl(COMMON_GRAPHICS_CHANNEL(cursor));
-    cursor_pipe_item = cursor_pipe_item_new(qxl, cursor_cmd);
+    cursor_pipe_item = cursor_pipe_item_new(cursor_cmd);
 
     switch (cursor_cmd->type) {
     case QXL_CURSOR_SET:
