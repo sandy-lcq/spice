@@ -56,8 +56,8 @@ GType cursor_channel_get_type(void) G_GNUC_CONST;
  * provided as helper functions and should only be called from the
  * CursorChannel thread.
  */
-CursorChannel*       cursor_channel_new         (RedsState *server, QXLInstance *qxl,
-                                                 const SpiceCoreInterfaceInternal *core);
+CursorChannel* cursor_channel_new(RedsState *server, int id,
+                                  const SpiceCoreInterfaceInternal *core);
 
 void                 cursor_channel_reset       (CursorChannel *cursor);
 void                 cursor_channel_do_init     (CursorChannel *cursor);

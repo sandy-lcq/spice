@@ -1343,7 +1343,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
 
     worker->event_timeout = INF_EVENT_WAIT;
 
-    worker->cursor_channel = cursor_channel_new(reds, qxl,
+    worker->cursor_channel = cursor_channel_new(reds, qxl->id,
                                                 &worker->core);
     channel = RED_CHANNEL(worker->cursor_channel);
     red_channel_init_stat_node(channel, &worker->stat, "cursor_channel");

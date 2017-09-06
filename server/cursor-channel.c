@@ -232,7 +232,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
     red_channel_client_begin_send_message(rcc);
 }
 
-CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
+CursorChannel* cursor_channel_new(RedsState *server, int id,
                                   const SpiceCoreInterfaceInternal *core)
 {
     spice_debug("create cursor channel");
@@ -240,9 +240,8 @@ CursorChannel* cursor_channel_new(RedsState *server, QXLInstance *qxl,
                         "spice-server", server,
                         "core-interface", core,
                         "channel-type", SPICE_CHANNEL_CURSOR,
-                        "id", qxl->id,
+                        "id", id,
                         "migration-flags", 0,
-                        "qxl", qxl,
                         "handle-acks", TRUE,
                         NULL);
 }
