@@ -59,11 +59,6 @@ typedef void (*dispatcher_handle_any_message)(void *opaque,
                                               uint32_t message_type,
                                               void *payload);
 
-typedef void (*dispatcher_handle_async_done)(void *opaque,
-                                             uint32_t message_type,
-                                             void *payload);
-
-
 /*
  * dispatcher_send_message
  * @message_type: message type
@@ -72,38 +67,17 @@ typedef void (*dispatcher_handle_async_done)(void *opaque,
 void dispatcher_send_message(Dispatcher *dispatcher, uint32_t message_type,
                              void *payload);
 
-enum {
-    DISPATCHER_NONE = 0,
-    DISPATCHER_ACK,
-    DISPATCHER_ASYNC
-};
-
 /*
  * dispatcher_register_handler
  * @dispatcher:     dispatcher
  * @messsage_type:  message type
  * @handler:        message handler
  * @size:           message size. Each type has a fixed associated size.
- * @ack:            One of DISPATCHER_NONE, DISPATCHER_ACK, DISPATCHER_ASYNC.
- *                  DISPATCHER_NONE - only send the message
- *                  DISPATCHER_ACK - send an ack after the message
- *                  DISPATCHER_ASYNC - call send an ack. This is per message type - you can't send the
- *                  same message type with and without. Register two different
- *                  messages if that is what you want.
+ * @ack:            whether the dispatcher should send an ACK to the sender
  */
 void dispatcher_register_handler(Dispatcher *dispatcher, uint32_t message_type,
                                  dispatcher_handle_message handler, size_t size,
-                                 int ack);
-
-/*
- * dispatcher_register_async_done_callback
- * @dispatcher:     dispatcher
- * @handler:        callback on the receiver side called *after* the
- *                  message callback in case ack == DISPATCHER_ASYNC.
- */
-void dispatcher_register_async_done_callback(
-                                    Dispatcher *dispatcher,
-                                    dispatcher_handle_async_done handler);
+                                 bool ack);
 
 /*
  * Hack to allow red_record to see the message being sent so it can record

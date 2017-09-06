@@ -40,7 +40,7 @@ static void setup_dummy_signal_handler(void);
 
 typedef struct DispatcherMessage {
     size_t size;
-    int ack;
+    bool ack;
     dispatcher_handle_message handler;
 } DispatcherMessage;
 
@@ -60,7 +60,6 @@ struct DispatcherPrivate {
     void *payload; /* allocated as max of message sizes */
     size_t payload_size; /* used to track realloc calls */
     void *opaque;
-    dispatcher_handle_async_done handle_async_done;
     dispatcher_handle_any_message any_handler;
 };
 
@@ -286,14 +285,12 @@ static int dispatcher_handle_single_read(Dispatcher *dispatcher)
     } else {
         spice_printerr("error: no handler for message type %d", type);
     }
-    if (msg->ack == DISPATCHER_ACK) {
+    if (msg->ack) {
         if (write_safe(dispatcher->priv->recv_fd,
                        (uint8_t*)&ack, sizeof(ack)) == -1) {
             spice_printerr("error writing ack for message %d", type);
             /* TODO: close socketpair? */
         }
-    } else if (msg->ack == DISPATCHER_ASYNC && dispatcher->priv->handle_async_done) {
-        dispatcher->priv->handle_async_done(dispatcher->priv->opaque, type, payload);
     }
     return 1;
 }
@@ -329,7 +326,7 @@ void dispatcher_send_message(Dispatcher *dispatcher, uint32_t message_type,
                    message_type);
         goto unlock;
     }
-    if (msg->ack == DISPATCHER_ACK) {
+    if (msg->ack) {
         if (read_safe(send_fd, (uint8_t*)&ack, sizeof(ack), 1) == -1) {
             spice_printerr("error: failed to read ack");
         } else if (ack != ACK) {
@@ -342,17 +339,9 @@ unlock:
     pthread_mutex_unlock(&dispatcher->priv->lock);
 }
 
-void dispatcher_register_async_done_callback(
-                                        Dispatcher *dispatcher,
-                                        dispatcher_handle_async_done handler)
-{
-    assert(dispatcher->priv->handle_async_done == NULL);
-    dispatcher->priv->handle_async_done = handler;
-}
-
 void dispatcher_register_handler(Dispatcher *dispatcher, uint32_t message_type,
                                  dispatcher_handle_message handler,
-                                 size_t size, int ack)
+                                 size_t size, bool ack)
 {
     DispatcherMessage *msg;
 

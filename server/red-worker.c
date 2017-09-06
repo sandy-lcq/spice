@@ -432,6 +432,7 @@ static void handle_dev_update_async(void *opaque, void *payload)
     red_qxl_update_area_complete(worker->qxl, msg->surface_id,
                                  qxl_dirty_rects, num_dirty_rects);
     free(qxl_dirty_rects);
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 static void handle_dev_update(void *opaque, void *payload)
@@ -582,14 +583,17 @@ static void handle_dev_destroy_primary_surface_async(void *opaque, void *payload
     uint32_t surface_id = msg->surface_id;
 
     destroy_primary_surface(worker, surface_id);
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 static void handle_dev_flush_surfaces_async(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
+    RedWorkerMessageFlushSurfacesAsync *msg = payload;
 
     flush_all_qxl_commands(worker);
     display_channel_flush_all_surfaces(worker->display_channel);
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 static void handle_dev_stop(void *opaque, void *payload)
@@ -689,15 +693,18 @@ static void handle_dev_destroy_surface_wait_async(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     display_channel_destroy_surface_wait(worker->display_channel, msg->surface_id);
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 static void handle_dev_destroy_surfaces_async(void *opaque, void *payload)
 {
     RedWorker *worker = opaque;
+    RedWorkerMessageDestroySurfacesAsync *msg = payload;
 
     flush_all_qxl_commands(worker);
     display_channel_destroy_surfaces(worker->display_channel);
     cursor_channel_reset(worker->cursor_channel);
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 static void handle_dev_create_primary_surface_async(void *opaque, void *payload)
@@ -706,6 +713,7 @@ static void handle_dev_create_primary_surface_async(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     dev_create_primary_surface(worker, msg->surface_id, msg->surface);
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 static void handle_dev_display_connect(void *opaque, void *payload)
@@ -774,21 +782,21 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
 
     if (error) {
         /* TODO: raise guest bug (requires added QXL interface) */
-        return;
+        goto async_complete;
     }
     worker->driver_cap_monitors_config = 1;
     count = dev_monitors_config->count;
     max_allowed = dev_monitors_config->max_allowed;
     if (count == 0) {
         spice_warning("ignoring an empty monitors config message from driver");
-        return;
+        goto async_complete;
     }
     if (count > max_allowed) {
         spice_warning("ignoring malformed monitors_config from driver, "
                       "count > max_allowed %d > %d",
                       count,
                       max_allowed);
-        return;
+        goto async_complete;
     }
     /* get pointer again to check virtual size */
     dev_monitors_config =
@@ -797,11 +805,13 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
                                              msg->group_id, &error);
     if (error) {
         /* TODO: raise guest bug (requires added QXL interface) */
-        return;
+        goto async_complete;
     }
     display_channel_update_monitors_config(worker->display_channel, dev_monitors_config,
                                            MIN(count, msg->max_monitors),
                                            MIN(max_allowed, msg->max_monitors));
+async_complete:
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 /* TODO: special, perhaps use another dispatcher? */
@@ -928,6 +938,7 @@ static void handle_dev_add_memslot_async(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     dev_add_memslot(worker, msg->mem_slot);
+    red_qxl_async_complete(worker->qxl, msg->base.cmd);
 }
 
 static void handle_dev_reset_memslots(void *opaque, void *payload)
@@ -1000,17 +1011,6 @@ static void handle_dev_loadvm_commands(void *opaque, void *payload)
     }
 }
 
-static void worker_handle_dispatcher_async_done(void *opaque,
-                                                uint32_t message_type,
-                                                void *payload)
-{
-    RedWorker *worker = opaque;
-    RedWorkerMessageAsync *msg_async = payload;
-
-    spice_debug("trace");
-    red_qxl_async_complete(worker->qxl, msg_async->cmd);
-}
-
 static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *payload)
 {
     RedWorker *worker = opaque;
@@ -1020,196 +1020,192 @@ static void worker_dispatcher_record(void *opaque, uint32_t message_type, void *
 
 static void register_callbacks(Dispatcher *dispatcher)
 {
-    dispatcher_register_async_done_callback(
-                                    dispatcher,
-                                    worker_handle_dispatcher_async_done);
-
     /* TODO: register cursor & display specific msg in respective channel files */
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DISPLAY_CONNECT,
                                 handle_dev_display_connect,
                                 sizeof(RedWorkerMessageDisplayConnect),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DISPLAY_DISCONNECT,
                                 handle_dev_display_disconnect,
                                 sizeof(RedWorkerMessageDisplayDisconnect),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DISPLAY_MIGRATE,
                                 handle_dev_display_migrate,
                                 sizeof(RedWorkerMessageDisplayMigrate),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_CURSOR_CONNECT,
                                 handle_dev_cursor_connect,
                                 sizeof(RedWorkerMessageCursorConnect),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_CURSOR_DISCONNECT,
                                 handle_dev_cursor_disconnect,
                                 sizeof(RedWorkerMessageCursorDisconnect),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_CURSOR_MIGRATE,
                                 handle_dev_cursor_migrate,
                                 sizeof(RedWorkerMessageCursorMigrate),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_UPDATE,
                                 handle_dev_update,
                                 sizeof(RedWorkerMessageUpdate),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_UPDATE_ASYNC,
                                 handle_dev_update_async,
                                 sizeof(RedWorkerMessageUpdateAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_ADD_MEMSLOT,
                                 handle_dev_add_memslot,
                                 sizeof(RedWorkerMessageAddMemslot),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_ADD_MEMSLOT_ASYNC,
                                 handle_dev_add_memslot_async,
                                 sizeof(RedWorkerMessageAddMemslotAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DEL_MEMSLOT,
                                 handle_dev_del_memslot,
                                 sizeof(RedWorkerMessageDelMemslot),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DESTROY_SURFACES,
                                 handle_dev_destroy_surfaces,
                                 sizeof(RedWorkerMessageDestroySurfaces),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DESTROY_SURFACES_ASYNC,
                                 handle_dev_destroy_surfaces_async,
                                 sizeof(RedWorkerMessageDestroySurfacesAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE,
                                 handle_dev_destroy_primary_surface,
                                 sizeof(RedWorkerMessageDestroyPrimarySurface),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE_ASYNC,
                                 handle_dev_destroy_primary_surface_async,
                                 sizeof(RedWorkerMessageDestroyPrimarySurfaceAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC,
                                 handle_dev_create_primary_surface_async,
                                 sizeof(RedWorkerMessageCreatePrimarySurfaceAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE,
                                 handle_dev_create_primary_surface,
                                 sizeof(RedWorkerMessageCreatePrimarySurface),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_RESET_IMAGE_CACHE,
                                 handle_dev_reset_image_cache,
                                 sizeof(RedWorkerMessageResetImageCache),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_RESET_CURSOR,
                                 handle_dev_reset_cursor,
                                 sizeof(RedWorkerMessageResetCursor),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_WAKEUP,
                                 handle_dev_wakeup,
                                 sizeof(RedWorkerMessageWakeup),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_OOM,
                                 handle_dev_oom,
                                 sizeof(RedWorkerMessageOom),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_START,
                                 handle_dev_start,
                                 sizeof(RedWorkerMessageStart),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_FLUSH_SURFACES_ASYNC,
                                 handle_dev_flush_surfaces_async,
                                 sizeof(RedWorkerMessageFlushSurfacesAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_STOP,
                                 handle_dev_stop,
                                 sizeof(RedWorkerMessageStop),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_LOADVM_COMMANDS,
                                 handle_dev_loadvm_commands,
                                 sizeof(RedWorkerMessageLoadvmCommands),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_SET_COMPRESSION,
                                 handle_dev_set_compression,
                                 sizeof(RedWorkerMessageSetCompression),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_SET_STREAMING_VIDEO,
                                 handle_dev_set_streaming_video,
                                 sizeof(RedWorkerMessageSetStreamingVideo),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_SET_VIDEO_CODECS,
                                 handle_dev_set_video_codecs,
                                 sizeof(RedWorkerMessageSetVideoCodecs),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_SET_MOUSE_MODE,
                                 handle_dev_set_mouse_mode,
                                 sizeof(RedWorkerMessageSetMouseMode),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT,
                                 handle_dev_destroy_surface_wait,
                                 sizeof(RedWorkerMessageDestroySurfaceWait),
-                                DISPATCHER_ACK);
+                                true);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT_ASYNC,
                                 handle_dev_destroy_surface_wait_async,
                                 sizeof(RedWorkerMessageDestroySurfaceWaitAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_RESET_MEMSLOTS,
                                 handle_dev_reset_memslots,
                                 sizeof(RedWorkerMessageResetMemslots),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_MONITORS_CONFIG_ASYNC,
                                 handle_dev_monitors_config_async,
                                 sizeof(RedWorkerMessageMonitorsConfigAsync),
-                                DISPATCHER_ASYNC);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_DRIVER_UNLOAD,
                                 handle_dev_driver_unload,
                                 sizeof(RedWorkerMessageDriverUnload),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_GL_SCANOUT,
                                 handle_dev_gl_scanout,
                                 sizeof(RedWorkerMessageGlScanout),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_GL_DRAW_ASYNC,
                                 handle_dev_gl_draw_async,
                                 sizeof(RedWorkerMessageGlDraw),
-                                DISPATCHER_NONE);
+                                false);
     dispatcher_register_handler(dispatcher,
                                 RED_WORKER_MESSAGE_CLOSE_WORKER,
                                 handle_dev_close,
                                 sizeof(RedWorkerMessageClose),
-                                DISPATCHER_NONE);
+                                false);
 }
 
 
