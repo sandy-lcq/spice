@@ -841,6 +841,8 @@ void spice_qxl_gl_scanout(QXLInstance *qxl,
     /* FIXME: find a way to coallesce all pending SCANOUTs */
     dispatcher_send_message(qxl_state->dispatcher,
                             RED_WORKER_MESSAGE_GL_SCANOUT, &payload);
+
+    reds_update_client_mouse_allowed(qxl_state->reds);
 }
 
 SPICE_GNUC_VISIBLE
@@ -964,20 +966,29 @@ void red_qxl_clear_pending(QXLState *qxl_state, int pending)
     clear_bit(pending, &qxl_state->pending);
 }
 
-gboolean red_qxl_get_primary_active(QXLInstance *qxl)
+bool red_qxl_get_allow_client_mouse(QXLInstance *qxl, int *x_res, int *y_res, int *allow_now)
 {
-    return qxl->st->primary_active;
-}
-
-gboolean red_qxl_get_allow_client_mouse(QXLInstance *qxl, gint *x_res, gint *y_res)
-{
-    if (qxl->st->use_hardware_cursor) {
-        if (x_res)
-            *x_res = qxl->st->x_res;
-        if (y_res)
-            *y_res = qxl->st->y_res;
+    // try to get resolution when 3D enabled, since qemu did not create QXL primary surface
+    SpiceMsgDisplayGlScanoutUnix *gl;
+    if ((gl = red_qxl_get_gl_scanout(qxl))) {
+        *x_res = gl->width;
+        *y_res = gl->height;
+        *allow_now = TRUE;
+        red_qxl_put_gl_scanout(qxl, gl);
+        return true;
     }
-    return qxl->st->use_hardware_cursor;
+
+    // check for 2D
+    if (!qxl->st->primary_active) {
+        return false;
+    }
+
+    if (qxl->st->use_hardware_cursor) {
+        *x_res = qxl->st->x_res;
+        *y_res = qxl->st->y_res;
+    }
+    *allow_now = qxl->st->use_hardware_cursor;
+    return true;
 }
 
 void red_qxl_on_ic_change(QXLInstance *qxl, SpiceImageCompression ic)

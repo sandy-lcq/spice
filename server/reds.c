@@ -4376,8 +4376,7 @@ void reds_update_client_mouse_allowed(RedsState *reds)
 
         allow_now = TRUE;
         FOREACH_QXL_INSTANCE(reds, qxl) {
-            if (red_qxl_get_primary_active(qxl)) {
-                allow_now = red_qxl_get_allow_client_mouse(qxl, &x_res, &y_res);
+            if (red_qxl_get_allow_client_mouse(qxl, &x_res, &y_res, &allow_now)) {
                 break;
             }
         }
