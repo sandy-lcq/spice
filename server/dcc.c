@@ -611,7 +611,7 @@ static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
     }
 }
 
-void dcc_stop(DisplayChannelClient *dcc)
+static void dcc_stop(DisplayChannelClient *dcc)
 {
     DisplayChannel *dc = DCC_TO_DC(dcc);
 
