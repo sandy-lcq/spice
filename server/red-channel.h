@@ -160,9 +160,6 @@ bool red_channel_test_remote_cap(RedChannel *channel, uint32_t cap);
 /* should be called when a new channel is ready to send messages */
 void red_channel_init_outgoing_messages_window(RedChannel *channel);
 
-// TODO: add back the channel_pipe_add functionality - by adding reference counting
-// to the RedPipeItem.
-
 // helper to push a new item to all channels
 typedef RedPipeItem *(*new_pipe_item_t)(RedChannelClient *rcc, void *data, int num);
 int red_channel_pipes_new_add(RedChannel *channel, new_pipe_item_t creator, void *data);
