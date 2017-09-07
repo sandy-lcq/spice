@@ -51,6 +51,7 @@ int red_qxl_get_cursor_command(QXLInstance *qxl, struct QXLCommandExt *cmd);
 int red_qxl_req_cursor_notification(QXLInstance *qxl);
 void red_qxl_notify_update(QXLInstance *qxl, uint32_t update_id);
 int red_qxl_flush_resources(QXLInstance *qxl);
+void red_qxl_async_complete(QXLInstance *qxl, uint64_t cookie);
 void red_qxl_update_area_complete(QXLInstance *qxl, uint32_t surface_id,
                                   struct QXLRect *updated_rects,
                                   uint32_t num_updated_rects);

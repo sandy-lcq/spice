@@ -432,7 +432,7 @@ static void handle_dev_update_async(void *opaque, void *payload)
     red_qxl_update_area_complete(worker->qxl, msg->surface_id,
                                  qxl_dirty_rects, num_dirty_rects);
     free(qxl_dirty_rects);
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 static void handle_dev_update(void *opaque, void *payload)
@@ -583,7 +583,8 @@ static void handle_dev_destroy_primary_surface_async(void *opaque, void *payload
     uint32_t surface_id = msg->surface_id;
 
     destroy_primary_surface(worker, surface_id);
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_destroy_primary_surface_complete(worker->qxl->st);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 static void handle_dev_flush_surfaces_async(void *opaque, void *payload)
@@ -593,7 +594,7 @@ static void handle_dev_flush_surfaces_async(void *opaque, void *payload)
 
     flush_all_qxl_commands(worker);
     display_channel_flush_all_surfaces(worker->display_channel);
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 static void handle_dev_stop(void *opaque, void *payload)
@@ -686,7 +687,7 @@ static void handle_dev_destroy_surface_wait_async(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     display_channel_destroy_surface_wait(worker->display_channel, msg->surface_id);
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 static void handle_dev_destroy_surfaces_async(void *opaque, void *payload)
@@ -697,7 +698,7 @@ static void handle_dev_destroy_surfaces_async(void *opaque, void *payload)
     flush_all_qxl_commands(worker);
     display_channel_destroy_surfaces(worker->display_channel);
     cursor_channel_reset(worker->cursor_channel);
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 static void handle_dev_create_primary_surface_async(void *opaque, void *payload)
@@ -706,7 +707,8 @@ static void handle_dev_create_primary_surface_async(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     dev_create_primary_surface(worker, msg->surface_id, msg->surface);
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_create_primary_surface_complete(worker->qxl->st);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 static void handle_dev_display_connect(void *opaque, void *payload)
@@ -804,7 +806,7 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
                                            MIN(count, msg->max_monitors),
                                            MIN(max_allowed, msg->max_monitors));
 async_complete:
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 /* TODO: special, perhaps use another dispatcher? */
@@ -931,7 +933,7 @@ static void handle_dev_add_memslot_async(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     dev_add_memslot(worker, msg->mem_slot);
-    red_qxl_async_complete(worker->qxl, msg->base.cmd);
+    red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
 static void handle_dev_reset_memslots(void *opaque, void *payload)

@@ -41,11 +41,6 @@
 #include "red-qxl.h"
 
 
-struct AsyncCommand {
-    RedWorkerMessage message;
-    uint64_t cookie;
-};
-
 struct QXLState {
     QXLWorker qxl_worker;
     QXLInstance *qxl;
@@ -205,19 +200,6 @@ gboolean red_qxl_client_monitors_config(QXLInstance *qxl,
         qxl_get_interface(qxl)->client_monitors_config(qxl, monitors_config));
 }
 
-static AsyncCommand *async_command_alloc(QXLState *qxl_state,
-                                         RedWorkerMessage message,
-                                         uint64_t cookie)
-{
-    AsyncCommand *async_command = spice_new0(AsyncCommand, 1);
-
-    async_command->cookie = cookie;
-    async_command->message = message;
-
-    spice_debug("%p", async_command);
-    return async_command;
-}
-
 static void red_qxl_update_area_async(QXLState *qxl_state,
                                       uint32_t surface_id,
                                       QXLRect *qxl_area,
@@ -227,7 +209,7 @@ static void red_qxl_update_area_async(QXLState *qxl_state,
     RedWorkerMessage message = RED_WORKER_MESSAGE_UPDATE_ASYNC;
     RedWorkerMessageUpdateAsync payload;
 
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     payload.surface_id = surface_id;
     payload.qxl_area = *qxl_area;
     payload.clear_dirty_region = clear_dirty_region;
@@ -266,7 +248,7 @@ static void red_qxl_add_memslot_async(QXLState *qxl_state, QXLDevMemSlot *mem_sl
     RedWorkerMessageAddMemslotAsync payload;
     RedWorkerMessage message = RED_WORKER_MESSAGE_ADD_MEMSLOT_ASYNC;
 
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     payload.mem_slot = *mem_slot;
     dispatcher_send_message(qxl_state->dispatcher, message, &payload);
 }
@@ -307,11 +289,12 @@ static void red_qxl_destroy_surfaces_async(QXLState *qxl_state, uint64_t cookie)
     RedWorkerMessageDestroySurfacesAsync payload;
     RedWorkerMessage message = RED_WORKER_MESSAGE_DESTROY_SURFACES_ASYNC;
 
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     dispatcher_send_message(qxl_state->dispatcher, message, &payload);
 }
 
-static void red_qxl_destroy_primary_surface_complete(QXLState *qxl_state)
+/* used by RedWorker */
+void red_qxl_destroy_primary_surface_complete(QXLState *qxl_state)
 {
     qxl_state->x_res = 0;
     qxl_state->y_res = 0;
@@ -340,7 +323,7 @@ red_qxl_destroy_primary_surface_async(QXLState *qxl_state,
     RedWorkerMessageDestroyPrimarySurfaceAsync payload;
     RedWorkerMessage message = RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE_ASYNC;
 
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     payload.surface_id = surface_id;
     dispatcher_send_message(qxl_state->dispatcher, message, &payload);
 }
@@ -362,7 +345,8 @@ static void qxl_worker_destroy_primary_surface(QXLWorker *qxl_worker, uint32_t s
     red_qxl_destroy_primary_surface(qxl_state, surface_id, 0, 0);
 }
 
-static void red_qxl_create_primary_surface_complete(QXLState *qxl_state)
+/* used by RedWorker */
+void red_qxl_create_primary_surface_complete(QXLState *qxl_state)
 {
     QXLDevSurfaceCreate *surface = &qxl_state->surface_create;
 
@@ -383,7 +367,7 @@ red_qxl_create_primary_surface_async(QXLState *qxl_state, uint32_t surface_id,
     RedWorkerMessage message = RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC;
 
     qxl_state->surface_create = *surface;
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     payload.surface_id = surface_id;
     payload.surface = *surface;
     dispatcher_send_message(qxl_state->dispatcher, message, &payload);
@@ -470,7 +454,7 @@ static void red_qxl_destroy_surface_wait_async(QXLState *qxl_state,
     RedWorkerMessageDestroySurfaceWaitAsync payload;
     RedWorkerMessage message = RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT_ASYNC;
 
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     payload.surface_id = surface_id;
     dispatcher_send_message(qxl_state->dispatcher, message, &payload);
 }
@@ -574,7 +558,7 @@ static void red_qxl_flush_surfaces_async(QXLState *qxl_state, uint64_t cookie)
     RedWorkerMessageFlushSurfacesAsync payload;
     RedWorkerMessage message = RED_WORKER_MESSAGE_FLUSH_SURFACES_ASYNC;
 
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     dispatcher_send_message(qxl_state->dispatcher, message, &payload);
 }
 
@@ -586,7 +570,7 @@ static void red_qxl_monitors_config_async(QXLState *qxl_state,
     RedWorkerMessageMonitorsConfigAsync payload;
     RedWorkerMessage message = RED_WORKER_MESSAGE_MONITORS_CONFIG_ASYNC;
 
-    payload.base.cmd = async_command_alloc(qxl_state, message, cookie);
+    payload.base.cookie = cookie;
     payload.monitors_config = monitors_config;
     payload.group_id = group_id;
     payload.max_monitors = qxl_state->max_monitors;
@@ -891,32 +875,6 @@ void spice_qxl_gl_draw_async(QXLInstance *qxl,
     dispatcher_send_message(qxl_state->dispatcher, message, &draw);
 }
 
-void red_qxl_async_complete(QXLInstance *qxl, AsyncCommand *async_command)
-{
-    QXLInterface *interface = qxl_get_interface(qxl);
-
-    spice_debug("%p: cookie %" PRId64, async_command, async_command->cookie);
-    switch (async_command->message) {
-    case RED_WORKER_MESSAGE_UPDATE_ASYNC:
-    case RED_WORKER_MESSAGE_ADD_MEMSLOT_ASYNC:
-    case RED_WORKER_MESSAGE_DESTROY_SURFACES_ASYNC:
-    case RED_WORKER_MESSAGE_DESTROY_SURFACE_WAIT_ASYNC:
-    case RED_WORKER_MESSAGE_FLUSH_SURFACES_ASYNC:
-    case RED_WORKER_MESSAGE_MONITORS_CONFIG_ASYNC:
-        break;
-    case RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC:
-        red_qxl_create_primary_surface_complete(qxl->st);
-        break;
-    case RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE_ASYNC:
-        red_qxl_destroy_primary_surface_complete(qxl->st);
-        break;
-    default:
-        spice_warning("unexpected message %d", async_command->message);
-    }
-    interface->async_complete(qxl, async_command->cookie);
-    free(async_command);
-}
-
 void red_qxl_gl_draw_async_complete(QXLInstance *qxl)
 {
     QXLInterface *interface = qxl_get_interface(qxl);
@@ -1150,4 +1108,11 @@ void red_qxl_set_client_capabilities(QXLInstance *qxl,
     QXLInterface *interface = qxl_get_interface(qxl);
 
     interface->set_client_capabilities(qxl, client_present, caps);
+}
+
+void red_qxl_async_complete(QXLInstance *qxl, uint64_t cookie)
+{
+    QXLInterface *interface = qxl_get_interface(qxl);
+
+    interface->async_complete(qxl, cookie);
 }

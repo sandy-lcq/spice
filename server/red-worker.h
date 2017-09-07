@@ -36,8 +36,9 @@ RedWorker* red_worker_new(QXLInstance *qxl,
 bool       red_worker_run(RedWorker *worker);
 void red_worker_free(RedWorker *worker);
 
-void red_qxl_async_complete(QXLInstance *qxl, AsyncCommand *async_command);
 struct Dispatcher *red_qxl_get_dispatcher(QXLInstance *qxl);
+void red_qxl_destroy_primary_surface_complete(QXLState *qxl_state);
+void red_qxl_create_primary_surface_complete(QXLState *qxl_state);
 
 typedef uint32_t RedWorkerMessage;
 
@@ -137,7 +138,7 @@ typedef struct RedWorkerMessageUpdate {
 } RedWorkerMessageUpdate;
 
 typedef struct RedWorkerMessageAsync {
-    AsyncCommand *cmd;
+    uint64_t cookie;
 } RedWorkerMessageAsync;
 
 typedef struct RedWorkerMessageUpdateAsync {
