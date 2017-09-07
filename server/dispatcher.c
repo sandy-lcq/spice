@@ -66,8 +66,7 @@ struct DispatcherPrivate {
 
 enum {
     PROP_0,
-    PROP_MAX_MESSAGE_TYPE,
-    PROP_OPAQUE
+    PROP_MAX_MESSAGE_TYPE
 };
 
 static void
@@ -82,9 +81,6 @@ dispatcher_get_property(GObject    *object,
     {
         case PROP_MAX_MESSAGE_TYPE:
             g_value_set_uint(value, self->priv->max_message_type);
-            break;
-        case PROP_OPAQUE:
-            g_value_set_pointer(value, self->priv->opaque);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -103,9 +99,6 @@ dispatcher_set_property(GObject      *object,
     {
         case PROP_MAX_MESSAGE_TYPE:
             self->priv->max_message_type = g_value_get_uint(value);
-            break;
-        case PROP_OPAQUE:
-            dispatcher_set_opaque(self, g_value_get_pointer(value));
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -168,15 +161,6 @@ dispatcher_class_init(DispatcherClass *klass)
                                                       G_PARAM_STATIC_STRINGS |
                                                       G_PARAM_READWRITE |
                                                       G_PARAM_CONSTRUCT_ONLY));
-    g_object_class_install_property(object_class,
-                                    PROP_OPAQUE,
-                                    g_param_spec_pointer("opaque",
-                                                         "opaque",
-                                                         "User data to pass to callbacks",
-                                                         G_PARAM_STATIC_STRINGS |
-                                                         G_PARAM_READWRITE |
-                                                         G_PARAM_CONSTRUCT));
-
 }
 
 static void
@@ -186,11 +170,10 @@ dispatcher_init(Dispatcher *self)
 }
 
 Dispatcher *
-dispatcher_new(size_t max_message_type, void *opaque)
+dispatcher_new(size_t max_message_type)
 {
     return g_object_new(TYPE_DISPATCHER,
                         "max-message-type", (guint) max_message_type,
-                        "opaque", opaque,
                         NULL);
 }
 
@@ -419,7 +402,6 @@ static void setup_dummy_signal_handler(void)
 void dispatcher_set_opaque(Dispatcher *self, void *opaque)
 {
     self->priv->opaque = opaque;
-    g_object_notify(G_OBJECT(self), "opaque");
 }
 
 int dispatcher_get_recv_fd(Dispatcher *dispatcher)

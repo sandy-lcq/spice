@@ -49,7 +49,7 @@ struct DispatcherClass
 
 GType dispatcher_get_type(void) G_GNUC_CONST;
 
-Dispatcher *dispatcher_new(size_t max_message_type, void *opaque);
+Dispatcher *dispatcher_new(size_t max_message_type);
 
 
 typedef void (*dispatcher_handle_message)(void *opaque,

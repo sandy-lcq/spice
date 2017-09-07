@@ -940,7 +940,7 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
     pthread_mutex_init(&qxl_state->scanout_mutex, NULL);
     qxl_state->scanout.drm_dma_buf_fd = -1;
     qxl_state->gl_draw_cookie = GL_DRAW_COOKIE_INVALID;
-    qxl_state->dispatcher = dispatcher_new(RED_WORKER_MESSAGE_COUNT, NULL);
+    qxl_state->dispatcher = dispatcher_new(RED_WORKER_MESSAGE_COUNT);
     qxl_state->qxl_worker.major_version = SPICE_INTERFACE_QXL_MAJOR;
     qxl_state->qxl_worker.minor_version = SPICE_INTERFACE_QXL_MINOR;
     qxl_state->qxl_worker.wakeup = qxl_worker_wakeup;
