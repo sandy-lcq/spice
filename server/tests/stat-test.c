@@ -34,6 +34,8 @@
 
 #include <unistd.h>
 #include <glib.h>
+#include <common/macros.h>
+
 #include "../stat.h"
 
 #ifndef TEST_NAME
@@ -49,8 +51,8 @@ void TEST_NAME(void)
     stat_start_time_t start_time;
 
 #if !defined(COMPRESS_STAT) && !defined(RED_WORKER_STAT)
-    G_STATIC_ASSERT(sizeof(start_time) == 0);
-    G_STATIC_ASSERT(sizeof(info) == 0);
+    SPICE_VERIFY(sizeof(start_time) == 0);
+    SPICE_VERIFY(sizeof(info) == 0);
 #endif
 
     stat_init(&info, "test", CLOCK_MONOTONIC);

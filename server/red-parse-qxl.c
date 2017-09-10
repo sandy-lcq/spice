@@ -35,7 +35,7 @@
  */
 #define MAX_DATA_CHUNK 0x7ffffffflu
 
-G_STATIC_ASSERT(MAX_DATA_CHUNK <= G_MAXINT32);
+verify(MAX_DATA_CHUNK <= G_MAXINT32);
 
 /* Limit number of chunks.
  * The guest can attempt to make host allocate too much memory
@@ -350,7 +350,7 @@ static SpiceClipRects *red_get_clip_rects(RedMemSlotInfo *slots, int group_id,
      * by red_get_data_chunks_ptr checks.
      */
     spice_assert((uint64_t) num_rects * sizeof(QXLRect) == size);
-    G_STATIC_ASSERT(sizeof(SpiceRect) == sizeof(QXLRect));
+    SPICE_VERIFY(sizeof(SpiceRect) == sizeof(QXLRect));
     red = g_malloc(sizeof(*red) + num_rects * sizeof(SpiceRect));
     red->num_rects = num_rects;
 

@@ -24,7 +24,7 @@
 #if !GLIB_CHECK_VERSION(2,34,0)
 #define g_clear_pointer(pp, destroy) \
   G_STMT_START {                                                               \
-    G_STATIC_ASSERT (sizeof *(pp) == sizeof (gpointer));                       \
+    SPICE_VERIFY (sizeof *(pp) == sizeof (gpointer));                          \
     /* Only one access, please */                                              \
     gpointer *_pp = (gpointer *) (pp);                                         \
     gpointer _p;                                                               \

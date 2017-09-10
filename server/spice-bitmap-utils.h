@@ -36,7 +36,7 @@ typedef struct {
     uint8_t pad;
 } rgb32_pixel_t;
 
-G_STATIC_ASSERT(sizeof(rgb32_pixel_t) == 4);
+verify(sizeof(rgb32_pixel_t) == 4);
 
 typedef struct {
     uint8_t b;
@@ -44,7 +44,7 @@ typedef struct {
     uint8_t r;
 } rgb24_pixel_t;
 
-G_STATIC_ASSERT(sizeof(rgb24_pixel_t) == 3);
+verify(sizeof(rgb24_pixel_t) == 3);
 
 typedef uint16_t rgb16_pixel_t;
 
