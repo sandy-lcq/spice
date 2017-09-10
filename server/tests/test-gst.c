@@ -172,6 +172,7 @@ static TestFrame *gst_to_spice_frame(GstSample *sample);
 static void bitmap_free(SpiceBitmap *bitmap);
 static void frame_ref(TestFrame *frame);
 static void frame_unref(TestFrame *frame);
+static void pipeline_free(TestPipeline *pipeline);
 static void pipeline_send_raw_data(TestPipeline *pipeline, VideoBuffer *buffer);
 static void pipeline_wait_eos(TestPipeline *pipeline);
 static void create_input_pipeline(const char *input_pipeline,
@@ -438,6 +439,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    pipeline_free(input_pipeline);
+    pipeline_free(output_pipeline);
+
     g_free(encoder_name);
     g_free(image_format);
     g_free(input_pipeline_desc);
@@ -616,6 +620,17 @@ create_pipeline(const char *desc, SampleProc sample_proc, void *param)
     }
 
     return pipeline;
+}
+
+static void
+pipeline_free(TestPipeline *pipeline)
+{
+    if (pipeline->appsrc) {
+        gst_object_unref(pipeline->appsrc);
+    }
+    gst_object_unref(pipeline->appsink);
+    gst_object_unref(pipeline->gst_pipeline);
+    free(pipeline);
 }
 
 static void
