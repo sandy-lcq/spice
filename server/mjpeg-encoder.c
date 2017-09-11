@@ -278,14 +278,10 @@ static boolean empty_mem_output_buffer(j_compress_ptr cinfo)
 
   /* Try to allocate new buffer with double size */
   nextsize = dest->bufsize * 2;
-  nextbuffer = malloc(nextsize);
+  nextbuffer = realloc(dest->buffer, nextsize);
 
   if (nextbuffer == NULL)
     ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 10);
-
-  memcpy(nextbuffer, dest->buffer, dest->bufsize);
-
-  free(dest->buffer);
 
   dest->pub.next_output_byte = nextbuffer + dest->bufsize;
   dest->pub.free_in_buffer = dest->bufsize;
