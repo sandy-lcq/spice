@@ -922,6 +922,14 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     SpiceCoreInterfaceInternal *core;
     RedChannelClient *self = RED_CHANNEL_CLIENT(initable);
 
+    if (!self->priv->stream) {
+        g_set_error_literal(&local_error,
+                            SPICE_SERVER_ERROR,
+                            SPICE_SERVER_ERROR_FAILED,
+                            "Socket not available");
+        goto cleanup;
+    }
+
     if (!red_channel_client_config_socket(self)) {
         g_set_error_literal(&local_error,
                             SPICE_SERVER_ERROR,
@@ -931,14 +939,12 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     }
 
     core = red_channel_get_core_interface(self->priv->channel);
-    if (self->priv->stream) {
-        reds_stream_set_core_interface(self->priv->stream, core);
-        self->priv->stream->watch =
-            core->watch_add(core, self->priv->stream->socket,
-                            SPICE_WATCH_EVENT_READ,
-                            red_channel_client_event,
-                            self);
-    }
+    reds_stream_set_core_interface(self->priv->stream, core);
+    self->priv->stream->watch =
+        core->watch_add(core, self->priv->stream->socket,
+                        SPICE_WATCH_EVENT_READ,
+                        red_channel_client_event,
+                        self);
 
     if (self->priv->monitor_latency
         && reds_stream_get_family(self->priv->stream) != AF_UNIX) {
