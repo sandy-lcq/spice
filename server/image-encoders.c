@@ -164,32 +164,32 @@ glz_usr_warn(GlzEncoderUsrContext *usr, const char *fmt, ...)
 
 static void *quic_usr_malloc(QuicUsrContext *usr, int size)
 {
-    return spice_malloc(size);
+    return g_malloc(size);
 }
 
 static void *lz_usr_malloc(LzUsrContext *usr, int size)
 {
-    return spice_malloc(size);
+    return g_malloc(size);
 }
 
 static void *glz_usr_malloc(GlzEncoderUsrContext *usr, int size)
 {
-    return spice_malloc(size);
+    return g_malloc(size);
 }
 
 static void quic_usr_free(QuicUsrContext *usr, void *ptr)
 {
-    free(ptr);
+    g_free(ptr);
 }
 
 static void lz_usr_free(LzUsrContext *usr, void *ptr)
 {
-    free(ptr);
+    g_free(ptr);
 }
 
 static void glz_usr_free(GlzEncoderUsrContext *usr, void *ptr)
 {
-    free(ptr);
+    g_free(ptr);
 }
 
 static void encoder_data_init(EncoderData *data)
@@ -527,7 +527,7 @@ static void glz_drawable_instance_item_free(GlzDrawableInstanceItem *instance)
         if (ring_item_is_linked(&glz_drawable->link)) {
             ring_remove(&glz_drawable->link);
         }
-        free(glz_drawable);
+        g_free(glz_drawable);
     }
 }
 
@@ -686,7 +686,7 @@ static GlzSharedDictionary *glz_shared_dictionary_new(RedClient *client, uint8_t
 {
     spice_return_val_if_fail(dict != NULL, NULL);
 
-    GlzSharedDictionary *shared_dict = spice_new0(GlzSharedDictionary, 1);
+    GlzSharedDictionary *shared_dict = g_new0(GlzSharedDictionary, 1);
 
     shared_dict->dict = dict;
     shared_dict->id = id;
@@ -824,7 +824,7 @@ static void image_encoders_release_glz(ImageEncoders *enc)
     pthread_mutex_unlock(&glz_dictionary_list_lock);
     glz_enc_dictionary_destroy(shared_dict->dict, &enc->glz_data.usr);
     pthread_rwlock_destroy(&shared_dict->encode_lock);
-    free(shared_dict);
+    g_free(shared_dict);
 }
 
 bool image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
@@ -1172,7 +1172,7 @@ static RedGlzDrawable *get_glz_drawable(ImageEncoders *enc, RedDrawable *red_dra
         }
     }
 
-    ret = spice_new(RedGlzDrawable, 1);
+    ret = g_new(RedGlzDrawable, 1);
 
     ret->encoders = enc;
     ret->red_drawable = red_drawable_ref(red_drawable);
