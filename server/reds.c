@@ -345,7 +345,7 @@ static void reds_link_free(RedLinkInfo *link)
         link->tiTicketing.rsa = NULL;
     }
 
-    free(link);
+    g_free(link);
 }
 
 #ifdef RED_STATISTICS
@@ -2455,7 +2455,7 @@ static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
 
     red_socket_set_keepalive(socket, TRUE, KEEPALIVE_TIMEOUT);
 
-    link = spice_new0(RedLinkInfo, 1);
+    link = g_new0(RedLinkInfo, 1);
     link->reds = reds;
     link->stream = reds_stream_new(reds, socket);
 
