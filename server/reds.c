@@ -2051,7 +2051,7 @@ static void reds_handle_ticket(void *opaque)
                       RSA_size(link->tiTicketing.rsa), SPICE_MAX_PASSWORD_LENGTH);
     }
 
-    password = spice_malloc0(RSA_size(link->tiTicketing.rsa) + 1);
+    password = g_new0(char, RSA_size(link->tiTicketing.rsa) + 1);
     password_size = RSA_private_decrypt(link->tiTicketing.rsa_size,
                                         link->tiTicketing.encrypted_ticket.encrypted_data,
                                         (unsigned char *)password,
@@ -2092,7 +2092,7 @@ error:
     reds_link_free(link);
 
 end:
-    free(password);
+    g_free(password);
 }
 
 static void reds_get_spice_ticket(RedLinkInfo *link)
@@ -3500,7 +3500,7 @@ static const char default_video_codecs[] = "spice:mjpeg;" GSTREAMER_CODECS;
 SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
 {
     const char *record_filename;
-    RedsState *reds = spice_new0(RedsState, 1);
+    RedsState *reds = g_new0(RedsState, 1);
 
     reds->config = spice_new0(RedServerConfig, 1);
     reds->config->default_channel_security =
@@ -3672,6 +3672,7 @@ static void reds_set_video_codecs_from_string(RedsState *reds, const char *codec
             g_array_append_val(video_codecs, new_codec);
         }
 
+        /* these are allocated by sscanf, do not use g_free */
         free(encoder_name);
         free(codec_name);
         codecs = c;
@@ -3710,9 +3711,9 @@ static void reds_config_free(RedServerConfig *config)
         free(curr);
     }
 #if HAVE_SASL
-    free(config->sasl_appname);
+    g_free(config->sasl_appname);
 #endif
-    free(config->spice_name);
+    g_free(config->spice_name);
     g_array_unref(config->renderers);
     g_array_unref(config->video_codecs);
     free(config);
@@ -3761,7 +3762,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
 #endif
 
     reds_config_free(reds->config);
-    free(reds);
+    g_free(reds);
 }
 
 SPICE_GNUC_VISIBLE spice_compat_version_t spice_get_current_compat_version(void)
@@ -3840,8 +3841,8 @@ SPICE_GNUC_VISIBLE int spice_server_set_sasl(SpiceServer *s, int enabled)
 SPICE_GNUC_VISIBLE int spice_server_set_sasl_appname(SpiceServer *s, const char *appname)
 {
 #if HAVE_SASL
-    free(s->config->sasl_appname);
-    s->config->sasl_appname = spice_strdup(appname);
+    g_free(s->config->sasl_appname);
+    s->config->sasl_appname = g_strdup(appname);
     return 0;
 #else
     return -1;
@@ -3850,8 +3851,8 @@ SPICE_GNUC_VISIBLE int spice_server_set_sasl_appname(SpiceServer *s, const char 
 
 SPICE_GNUC_VISIBLE void spice_server_set_name(SpiceServer *s, const char *name)
 {
-    free(s->config->spice_name);
-    s->config->spice_name = spice_strdup(name);
+    g_free(s->config->spice_name);
+    s->config->spice_name = g_strdup(name);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_set_uuid(SpiceServer *s, const uint8_t uuid[16])
