@@ -2963,7 +2963,7 @@ static void reds_set_one_channel_security(RedsState *reds, int id, uint32_t secu
 static void reds_mig_release(RedServerConfig *config)
 {
     if (config->mig_spice) {
-        free(config->mig_spice->cert_subject);
+        g_free(config->mig_spice->cert_subject);
         g_free(config->mig_spice->host);
         g_free(config->mig_spice);
         config->mig_spice = NULL;
@@ -4119,7 +4119,7 @@ static int reds_set_migration_dest_info(RedsState *reds,
     spice_migration->sport = secure_port;
     spice_migration->host = g_strdup(dest);
     if (cert_subject) {
-        spice_migration->cert_subject = spice_strdup(cert_subject);
+        spice_migration->cert_subject = g_strdup(cert_subject);
     }
 
     reds->config->mig_spice = spice_migration;
