@@ -135,7 +135,7 @@ smartcard_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
      * differenc channels */
     if (!scc->priv->smartcard) {
         scc->priv->msg_in_write_buf = FALSE;
-        return spice_malloc(size);
+        return g_malloc(size);
     } else {
         RedCharDeviceSmartcard *smartcard;
 
@@ -168,7 +168,7 @@ smartcard_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
 
     if (!scc->priv->msg_in_write_buf) {
         spice_assert(!scc->priv->write_buf);
-        free(msg);
+        g_free(msg);
     } else {
         if (scc->priv->write_buf) { /* msg hasn't been pushed to the guest */
             spice_assert(scc->priv->write_buf->buf == msg);

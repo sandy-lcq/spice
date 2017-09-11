@@ -29,7 +29,6 @@
 #include <sys/mman.h>
 #include <spice/stats.h>
 #include <common/log.h>
-#include <common/mem.h>
 
 #include "stat-file.h"
 
@@ -47,7 +46,7 @@ RedStatFile *stat_file_new(unsigned int max_nodes)
 {
     int fd;
     size_t shm_size = STAT_SHM_SIZE(max_nodes);
-    RedStatFile *stat_file = spice_new0(RedStatFile, 1);
+    RedStatFile *stat_file = g_new0(RedStatFile, 1);
 
     stat_file->max_nodes = max_nodes;
     stat_file->shm_name = g_strdup_printf(SPICE_STAT_SHM_NAME, getpid());
@@ -78,7 +77,7 @@ RedStatFile *stat_file_new(unsigned int max_nodes)
     return stat_file;
 
 cleanup:
-    free(stat_file);
+    g_free(stat_file);
     return NULL;
 }
 
@@ -96,7 +95,7 @@ void stat_file_free(RedStatFile *stat_file)
 #endif
 
     pthread_mutex_destroy(&stat_file->lock);
-    free(stat_file);
+    g_free(stat_file);
 }
 
 const char *stat_file_get_shm_name(RedStatFile *stat_file)

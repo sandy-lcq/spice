@@ -68,12 +68,12 @@ static void stream_create_destroy_item_release(RedPipeItem *base)
     StreamCreateDestroyItem *item = SPICE_UPCAST(StreamCreateDestroyItem, base);
     DisplayChannel *display = DCC_TO_DC(item->agent->dcc);
     stream_agent_unref(display, item->agent);
-    free(item);
+    g_free(item);
 }
 
 static RedPipeItem *stream_create_destroy_item_new(StreamAgent *agent, gint type)
 {
-    StreamCreateDestroyItem *item = spice_new0(StreamCreateDestroyItem, 1);
+    StreamCreateDestroyItem *item = g_new0(StreamCreateDestroyItem, 1);
 
     red_pipe_item_init_full(&item->base, type,
                             stream_create_destroy_item_release);
@@ -170,12 +170,12 @@ static void red_stream_clip_item_free(RedPipeItem *base)
 
     stream_agent_unref(display, item->stream_agent);
     free(item->rects);
-    free(item);
+    g_free(item);
 }
 
 RedStreamClipItem *red_stream_clip_item_new(StreamAgent *agent)
 {
-    RedStreamClipItem *item = spice_new(RedStreamClipItem, 1);
+    RedStreamClipItem *item = g_new(RedStreamClipItem, 1);
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_STREAM_CLIP,
                             red_stream_clip_item_free);
 
@@ -778,7 +778,7 @@ static void red_upgrade_item_free(RedPipeItem *base)
 
     drawable_unref(item->drawable);
     free(item->rects);
-    free(item);
+    g_free(item);
 }
 
 /*
@@ -819,7 +819,7 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
         spice_debug("stream %d: upgrade by drawable. box ==>", stream_id);
         rect_debug(&stream->current->red_drawable->bbox);
         rcc = RED_CHANNEL_CLIENT(dcc);
-        upgrade_item = spice_new(RedUpgradeItem, 1);
+        upgrade_item = g_new(RedUpgradeItem, 1);
         red_pipe_item_init_full(&upgrade_item->base, RED_PIPE_ITEM_TYPE_UPGRADE,
                                 red_upgrade_item_free);
         upgrade_item->drawable = stream->current;

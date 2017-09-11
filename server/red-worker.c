@@ -431,7 +431,7 @@ static void handle_dev_update_async(void *opaque, void *payload)
 
     red_qxl_update_area_complete(worker->qxl, msg->surface_id,
                                  qxl_dirty_rects, num_dirty_rects);
-    free(qxl_dirty_rects);
+    g_free(qxl_dirty_rects);
     red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
@@ -448,7 +448,7 @@ static void handle_dev_update(void *opaque, void *payload)
                            msg->surface_id, msg->qxl_area, msg->clear_dirty_region,
                            &qxl_dirty_rects, &msg->num_dirty_rects);
     if (msg->qxl_dirty_rects == NULL) {
-        free(qxl_dirty_rects);
+        g_free(qxl_dirty_rects);
     }
 }
 
@@ -1289,7 +1289,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
 
     red_qxl_get_init_info(qxl, &init_info);
 
-    worker = spice_new0(RedWorker, 1);
+    worker = g_new0(RedWorker, 1);
     worker->core = event_loop_core;
     worker->core.main_context = g_main_context_new();
 
@@ -1429,5 +1429,5 @@ void red_worker_free(RedWorker *worker)
         red_record_unref(worker->record);
     }
     memslot_info_destroy(&worker->mem_slots);
-    free(worker);
+    g_free(worker);
 }

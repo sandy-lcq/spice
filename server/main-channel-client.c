@@ -238,17 +238,17 @@ static bool main_channel_client_push_ping(MainChannelClient *mcc, int size);
 static void main_notify_item_free(RedPipeItem *base)
 {
     RedNotifyPipeItem *data = SPICE_UPCAST(RedNotifyPipeItem, base);
-    free(data->msg);
-    free(data);
+    g_free(data->msg);
+    g_free(data);
 }
 
 static RedPipeItem *main_notify_item_new(const char *msg, int num)
 {
-    RedNotifyPipeItem *item = spice_malloc(sizeof(RedNotifyPipeItem));
+    RedNotifyPipeItem *item = g_new(RedNotifyPipeItem, 1);
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NOTIFY,
                             main_notify_item_free);
-    item->msg = spice_strdup(msg);
+    item->msg = g_strdup(msg);
     return &item->base;
 }
 
@@ -314,14 +314,14 @@ static void main_agent_data_item_free(RedPipeItem *base)
 {
     RedAgentDataPipeItem *item = SPICE_UPCAST(RedAgentDataPipeItem, base);
     item->free_data(item->data, item->opaque);
-    free(item);
+    g_free(item);
 }
 
 static RedPipeItem *main_agent_data_item_new(uint8_t* data, size_t len,
                                              spice_marshaller_item_free_func free_data,
                                              void *opaque)
 {
-    RedAgentDataPipeItem *item = spice_malloc(sizeof(RedAgentDataPipeItem));
+    RedAgentDataPipeItem *item = g_new(RedAgentDataPipeItem, 1);
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_DATA,
                             main_agent_data_item_free);
@@ -722,7 +722,7 @@ static void main_channel_marshall_channels(RedChannelClient *rcc,
     red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_CHANNELS_LIST);
     channels_info = reds_msg_channels_new(red_channel_get_server(channel));
     spice_marshall_msg_main_channels_list(m, channels_info);
-    free(channels_info);
+    g_free(channels_info);
 }
 
 static void main_channel_marshall_ping(RedChannelClient *rcc,

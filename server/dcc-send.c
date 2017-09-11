@@ -2280,7 +2280,7 @@ static void marshall_monitors_config(RedChannelClient *rcc, SpiceMarshaller *bas
 {
     int heads_size = sizeof(SpiceHead) * monitors_config->count;
     int i;
-    SpiceMsgDisplayMonitorsConfig *msg = spice_malloc0(sizeof(*msg) + heads_size);
+    SpiceMsgDisplayMonitorsConfig *msg = g_malloc0(sizeof(*msg) + heads_size);
     int count = 0; // ignore monitors_config->count, it may contain zero width monitors, remove them now
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_MONITORS_CONFIG);
@@ -2299,7 +2299,7 @@ static void marshall_monitors_config(RedChannelClient *rcc, SpiceMarshaller *bas
     msg->count = count;
     msg->max_allowed = monitors_config->max_allowed;
     spice_marshall_msg_display_monitors_config(base_marshaller, msg);
-    free(msg);
+    g_free(msg);
 }
 
 static void marshall_stream_activate_report(RedChannelClient *rcc,

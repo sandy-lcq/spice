@@ -40,7 +40,7 @@ ZlibEncoder* zlib_encoder_create(ZlibEncoderUsrContext *usr, int level)
         return NULL;
     }
 
-    enc = spice_new0(ZlibEncoder, 1);
+    enc = g_new0(ZlibEncoder, 1);
 
     enc->usr = usr;
 
@@ -52,7 +52,7 @@ ZlibEncoder* zlib_encoder_create(ZlibEncoderUsrContext *usr, int level)
     enc->last_level = level;
     if (z_ret != Z_OK) {
         spice_printerr("zlib error");
-        free(enc);
+        g_free(enc);
         return NULL;
     }
 
@@ -62,7 +62,7 @@ ZlibEncoder* zlib_encoder_create(ZlibEncoderUsrContext *usr, int level)
 void zlib_encoder_destroy(ZlibEncoder *encoder)
 {
     deflateEnd(&encoder->strm);
-    free(encoder);
+    g_free(encoder);
 }
 
 /* returns the total size of the encoded data */

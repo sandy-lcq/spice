@@ -1004,7 +1004,7 @@ SpiceMsgChannels *reds_msg_channels_new(RedsState *reds)
 
     spice_assert(reds != NULL);
 
-    channels_info = (SpiceMsgChannels *)spice_malloc(sizeof(SpiceMsgChannels)
+    channels_info = (SpiceMsgChannels *)g_malloc(sizeof(SpiceMsgChannels)
                             + g_list_length(reds->channels) * sizeof(SpiceChannelId));
 
     reds_fill_channels(reds, channels_info);
@@ -1749,14 +1749,14 @@ red_channel_capabilities_init_from_link_message(RedChannelCapabilities *caps,
     caps->num_common_caps = link_mess->num_common_caps;
     caps->common_caps = NULL;
     if (caps->num_common_caps) {
-        caps->common_caps = spice_memdup(raw_caps,
-                                         link_mess->num_common_caps * sizeof(uint32_t));
+        caps->common_caps = g_memdup(raw_caps,
+                                     link_mess->num_common_caps * sizeof(uint32_t));
     }
     caps->num_caps = link_mess->num_channel_caps;
     caps->caps = NULL;
     if (link_mess->num_channel_caps) {
-        caps->caps = spice_memdup(raw_caps + link_mess->num_common_caps,
-                                  link_mess->num_channel_caps * sizeof(uint32_t));
+        caps->caps = g_memdup(raw_caps + link_mess->num_common_caps,
+                              link_mess->num_channel_caps * sizeof(uint32_t));
     }
 }
 

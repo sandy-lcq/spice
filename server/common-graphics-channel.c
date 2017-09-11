@@ -56,7 +56,7 @@ static uint8_t *common_alloc_recv_buf(RedChannelClient *rcc, uint16_t type, uint
 
     /* SPICE_MSGC_MIGRATE_DATA is the only client message whose size is dynamic */
     if (type == SPICE_MSGC_MIGRATE_DATA) {
-        return spice_malloc(size);
+        return g_malloc(size);
     }
 
     if (size > CHANNEL_RECEIVE_BUF_SIZE) {
@@ -70,7 +70,7 @@ static void common_release_recv_buf(RedChannelClient *rcc, uint16_t type, uint32
                                     uint8_t* msg)
 {
     if (type == SPICE_MSGC_MIGRATE_DATA) {
-        free(msg);
+        g_free(msg);
     }
 }
 

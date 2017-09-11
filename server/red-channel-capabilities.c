@@ -31,24 +31,24 @@ void red_channel_capabilities_init(RedChannelCapabilities *dest,
 {
     *dest = *caps;
     if (caps->common_caps) {
-        dest->common_caps = spice_memdup(caps->common_caps,
-                                         caps->num_common_caps * sizeof(uint32_t));
+        dest->common_caps = g_memdup(caps->common_caps,
+                                     caps->num_common_caps * sizeof(uint32_t));
     }
     if (caps->num_caps) {
-        dest->caps = spice_memdup(caps->caps, caps->num_caps * sizeof(uint32_t));
+        dest->caps = g_memdup(caps->caps, caps->num_caps * sizeof(uint32_t));
     }
 }
 
 void red_channel_capabilities_reset(RedChannelCapabilities *caps)
 {
-    free(caps->common_caps);
-    free(caps->caps);
+    g_free(caps->common_caps);
+    g_free(caps->caps);
     memset(caps, 0, sizeof(*caps));
 }
 
 static RedChannelCapabilities *red_channel_capabilities_dup(const RedChannelCapabilities *caps)
 {
-    RedChannelCapabilities *res = spice_new(RedChannelCapabilities, 1);
+    RedChannelCapabilities *res = g_new(RedChannelCapabilities, 1);
     red_channel_capabilities_init(res, caps);
     return res;
 }
@@ -56,7 +56,7 @@ static RedChannelCapabilities *red_channel_capabilities_dup(const RedChannelCapa
 static void red_channel_capabilities_free(RedChannelCapabilities *caps)
 {
     red_channel_capabilities_reset(caps);
-    free(caps);
+    g_free(caps);
 }
 
 SPICE_CONSTRUCTOR_FUNC(red_channel_capabilities_construct)

@@ -889,7 +889,7 @@ void red_qxl_init(RedsState *reds, QXLInstance *qxl)
 
     spice_return_if_fail(qxl != NULL);
 
-    qxl_state = spice_new0(QXLState, 1);
+    qxl_state = g_new0(QXLState, 1);
     qxl_state->reds = reds;
     qxl_state->qxl = qxl;
     pthread_mutex_init(&qxl_state->scanout_mutex, NULL);
@@ -949,7 +949,7 @@ void red_qxl_destroy(QXLInstance *qxl)
     /* this must be done after calling red_worker_free */
     qxl->st = NULL;
     pthread_mutex_destroy(&qxl_state->scanout_mutex);
-    free(qxl_state);
+    g_free(qxl_state);
 }
 
 Dispatcher *red_qxl_get_dispatcher(QXLInstance *qxl)

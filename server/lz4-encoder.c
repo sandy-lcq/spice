@@ -34,7 +34,7 @@ Lz4EncoderContext* lz4_encoder_create(Lz4EncoderUsrContext *usr)
         return NULL;
     }
 
-    enc = spice_new0(Lz4Encoder, 1);
+    enc = g_new0(Lz4Encoder, 1);
     enc->usr = usr;
 
     return (Lz4EncoderContext*)enc;
@@ -42,7 +42,7 @@ Lz4EncoderContext* lz4_encoder_create(Lz4EncoderUsrContext *usr)
 
 void lz4_encoder_destroy(Lz4EncoderContext* encoder)
 {
-    free(encoder);
+    g_free(encoder);
 }
 
 int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,

@@ -152,10 +152,10 @@ void memslot_info_init(RedMemSlotInfo *info,
     info->mem_slot_bits = id_bits;
     info->internal_groupslot_id = internal_groupslot_id;
 
-    info->mem_slots = spice_new(MemSlot *, num_groups);
+    info->mem_slots = g_new(MemSlot *, num_groups);
 
     for (i = 0; i < num_groups; ++i) {
-        info->mem_slots[i] = spice_new0(MemSlot, num_slots);
+        info->mem_slots[i] = g_new0(MemSlot, num_slots);
     }
 
     /* TODO: use QXLPHYSICAL_BITS */
@@ -171,9 +171,9 @@ void memslot_info_destroy(RedMemSlotInfo *info)
     uint32_t i;
 
     for (i = 0; i < info->num_memslots_groups; ++i) {
-        free(info->mem_slots[i]);
+        g_free(info->mem_slots[i]);
     }
-    free(info->mem_slots);
+    g_free(info->mem_slots);
 }
 
 void memslot_info_add_slot(RedMemSlotInfo *info, uint32_t slot_group_id, uint32_t slot_id,

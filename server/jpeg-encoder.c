@@ -84,7 +84,7 @@ JpegEncoderContext* jpeg_encoder_create(JpegEncoderUsrContext *usr)
         return NULL;
     }
 
-    enc = spice_new0(JpegEncoder, 1);
+    enc = g_new0(JpegEncoder, 1);
 
     enc->usr = usr;
 
@@ -103,7 +103,7 @@ JpegEncoderContext* jpeg_encoder_create(JpegEncoderUsrContext *usr)
 void jpeg_encoder_destroy(JpegEncoderContext* encoder)
 {
     jpeg_destroy_compress(&((JpegEncoder*)encoder)->cinfo);
-    free(encoder);
+    g_free(encoder);
 }
 
 static void convert_RGB16_to_RGB24(void *line, int width, uint8_t **out_line)
@@ -185,7 +185,7 @@ static void do_jpeg_encode(JpegEncoder *jpeg, uint8_t *lines, unsigned int num_l
     stride = jpeg->cur_image.stride;
 
     if (jpeg->cur_image.type != JPEG_IMAGE_TYPE_RGB24) {
-        RGB24_line = (uint8_t *)spice_malloc(width*3);
+        RGB24_line = g_new(uint8_t, width*3);
     }
 
     lines_end = lines + (stride * num_lines);
@@ -198,7 +198,7 @@ static void do_jpeg_encode(JpegEncoder *jpeg, uint8_t *lines, unsigned int num_l
     }
 
     if (jpeg->cur_image.type != JPEG_IMAGE_TYPE_RGB24) {
-        free(RGB24_line);
+        g_free(RGB24_line);
     }
 }
 

@@ -2014,7 +2014,7 @@ static void region_to_qxlrects(QRegion *region, QXLRect *qxl_rects, uint32_t num
     SpiceRect *rects;
     int i;
 
-    rects = spice_new0(SpiceRect, num_rects);
+    rects = g_new0(SpiceRect, num_rects);
     region_ret_rects(region, rects, num_rects);
     for (i = 0; i < num_rects; i++) {
         qxl_rects[i].top    = rects[i].top;
@@ -2022,7 +2022,7 @@ static void region_to_qxlrects(QRegion *region, QXLRect *qxl_rects, uint32_t num
         qxl_rects[i].bottom = rects[i].bottom;
         qxl_rects[i].right  = rects[i].right;
     }
-    free(rects);
+    g_free(rects);
 }
 
 void display_channel_update(DisplayChannel *display,
@@ -2040,7 +2040,7 @@ void display_channel_update(DisplayChannel *display,
     surface = &display->priv->surfaces[surface_id];
     if (*qxl_dirty_rects == NULL) {
         *num_dirty_rects = pixman_region32_n_rects(&surface->draw_dirty_region);
-        *qxl_dirty_rects = spice_new0(QXLRect, *num_dirty_rects);
+        *qxl_dirty_rects = g_new0(QXLRect, *num_dirty_rects);
     }
 
     region_to_qxlrects(&surface->draw_dirty_region, *qxl_dirty_rects, *num_dirty_rects);
