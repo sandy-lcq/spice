@@ -74,7 +74,7 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
         in_size = stride * num_lines;
         lines += in_size;
         int bound_size = LZ4_compressBound(in_size);
-        compressed_lines = (uint8_t *) malloc(bound_size + 4);
+        compressed_lines = g_new(uint8_t, bound_size + 4);
 #ifdef HAVE_LZ4_COMPRESS_FAST_CONTINUE
         enc_size = LZ4_compress_fast_continue(stream, (const char *) in_buf,
                                               (char *) compressed_lines + 4, in_size,
@@ -85,7 +85,7 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
 #endif
         if (enc_size <= 0) {
             spice_error("compress failed!");
-            free(compressed_lines);
+            g_free(compressed_lines);
             LZ4_freeStream(stream);
             return 0;
         }
@@ -100,7 +100,7 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
             num_io_bytes = enc->usr->more_space(enc->usr, &io_ptr);
             if (num_io_bytes <= 0) {
                 spice_error("more space failed");
-                free(compressed_lines);
+                g_free(compressed_lines);
                 LZ4_freeStream(stream);
                 return 0;
             }
@@ -110,7 +110,7 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
         out_buf += enc_size;
         num_io_bytes -= enc_size;
 
-        free(compressed_lines);
+        g_free(compressed_lines);
         total_lines += num_lines;
     } while (total_lines < height);
 
