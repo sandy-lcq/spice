@@ -1327,7 +1327,8 @@ void red_channel_client_push(RedChannelClient *rcc)
     while ((pipe_item = red_channel_client_pipe_item_get(rcc))) {
         red_channel_client_send_item(rcc, pipe_item);
     }
-    if (red_channel_client_no_item_being_sent(rcc) && g_queue_is_empty(&rcc->priv->pipe)) {
+    if ((red_channel_client_no_item_being_sent(rcc) && g_queue_is_empty(&rcc->priv->pipe)) ||
+        red_channel_client_waiting_for_ack(rcc)) {
         red_channel_client_watch_update_mask(rcc, SPICE_WATCH_EVENT_READ);
     }
     rcc->priv->during_send = FALSE;
@@ -1452,6 +1453,8 @@ bool red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
     case SPICE_MSGC_ACK:
         if (rcc->priv->ack_data.client_generation == rcc->priv->ack_data.generation) {
             rcc->priv->ack_data.messages_window -= rcc->priv->ack_data.client_window;
+            red_channel_client_watch_update_mask(rcc,
+                                                 SPICE_WATCH_EVENT_READ|SPICE_WATCH_EVENT_WRITE);
             red_channel_client_push(rcc);
         }
         break;
