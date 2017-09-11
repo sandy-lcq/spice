@@ -3502,7 +3502,7 @@ SPICE_GNUC_VISIBLE SpiceServer *spice_server_new(void)
     const char *record_filename;
     RedsState *reds = g_new0(RedsState, 1);
 
-    reds->config = spice_new0(RedServerConfig, 1);
+    reds->config = g_new0(RedServerConfig, 1);
     reds->config->default_channel_security =
         SPICE_CHANNEL_SECURITY_NONE | SPICE_CHANNEL_SECURITY_SSL;
     reds->config->renderers = g_array_sized_new(FALSE, TRUE, sizeof(uint32_t), RED_RENDERER_LAST);
@@ -3716,7 +3716,7 @@ static void reds_config_free(RedServerConfig *config)
     g_free(config->spice_name);
     g_array_unref(config->renderers);
     g_array_unref(config->video_codecs);
-    free(config);
+    g_free(config);
 }
 
 SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
