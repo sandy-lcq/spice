@@ -355,8 +355,8 @@ void reds_stream_free(RedsStream *s)
         s->priv->sasl.len = 0;
         s->priv->sasl.encodedLength = s->priv->sasl.encodedOffset = 0;
         s->priv->sasl.encoded = NULL;
-        free(s->priv->sasl.mechlist);
-        free(s->priv->sasl.mechname);
+        g_free(s->priv->sasl.mechlist);
+        g_free(s->priv->sasl.mechname);
         s->priv->sasl.mechlist = NULL;
         sasl_dispose(&s->priv->sasl.conn);
         s->priv->sasl.conn = NULL;
@@ -371,7 +371,7 @@ void reds_stream_free(RedsStream *s)
     spice_debug("close socket fd %d", s->socket);
     close(s->socket);
 
-    free(s);
+    g_free(s);
 }
 
 void reds_stream_push_channel_event(RedsStream *s, int event)
@@ -415,7 +415,7 @@ RedsStream *reds_stream_new(RedsState *reds, int socket)
 {
     RedsStream *stream;
 
-    stream = spice_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
+    stream = g_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
     stream->priv = (RedsStreamPrivate *)(stream+1);
     stream->priv->info = spice_new0(SpiceChannelEventInfo, 1);
     stream->priv->reds = reds;
@@ -674,11 +674,9 @@ static char *addr_to_string(const char *format,
                             struct sockaddr_storage *sa,
                             socklen_t salen)
 {
-    char *addr;
     char host[NI_MAXHOST];
     char serv[NI_MAXSERV];
     int err;
-    size_t addrlen;
 
     if ((err = getnameinfo((struct sockaddr *)sa, salen,
                            host, sizeof(host),
@@ -689,14 +687,7 @@ static char *addr_to_string(const char *format,
         return NULL;
     }
 
-    /* Enough for the existing format + the 2 vars we're
-     * substituting in. */
-    addrlen = strlen(format) + strlen(host) + strlen(serv);
-    addr = spice_malloc(addrlen + 1);
-    snprintf(addr, addrlen, format, host, serv);
-    addr[addrlen] = '\0';
-
-    return addr;
+    return g_strdup_printf(format, host, serv);
 }
 
 static char *reds_stream_get_local_address(RedsStream *stream)
@@ -855,7 +846,7 @@ RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone re
          * treatment */
         return REDS_SASL_ERROR_OK;
     } else {
-        sasl->data = spice_realloc(sasl->data, sasl->len);
+        sasl->data = g_realloc(sasl->data, sasl->len);
         reds_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
                                read_cb, opaque);
         return REDS_SASL_ERROR_OK;
@@ -974,7 +965,7 @@ RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone r
         return REDS_SASL_ERROR_RETRY;
     }
 
-    sasl->data = spice_realloc(sasl->data, sasl->len);
+    sasl->data = g_realloc(sasl->data, sasl->len);
     reds_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
                            read_cb, opaque);
 
@@ -1009,8 +1000,8 @@ bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, v
         }
     }
 
-    free(sasl->mechlist);
-    sasl->mechlist = spice_strdup(sasl->mechname);
+    g_free(sasl->mechlist);
+    sasl->mechlist = g_strdup(sasl->mechname);
 
     spice_debug("Validated mechname '%s'", sasl->mechname);
 
@@ -1029,7 +1020,7 @@ bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, vo
         return false;
     }
 
-    sasl->mechname = spice_malloc(sasl->len + 1);
+    sasl->mechname = g_malloc(sasl->len + 1);
 
     spice_debug("Wait for client mechname");
     reds_stream_async_read(stream, (uint8_t *)sasl->mechname, sasl->len,
@@ -1052,7 +1043,7 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
     }
 
     if (!(remoteAddr = reds_stream_get_remote_address(stream))) {
-        free(localAddr);
+        g_free(localAddr);
         goto error;
     }
 
@@ -1064,8 +1055,8 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
                           NULL, /* Callbacks, not needed */
                           SASL_SUCCESS_DATA,
                           &sasl->conn);
-    free(localAddr);
-    free(remoteAddr);
+    g_free(localAddr);
+    g_free(remoteAddr);
     localAddr = remoteAddr = NULL;
 
     if (err != SASL_OK) {
@@ -1131,7 +1122,7 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
 
     spice_debug("Available mechanisms for client: '%s'", mechlist);
 
-    sasl->mechlist = spice_strdup(mechlist);
+    sasl->mechlist = g_strdup(mechlist);
 
     mechlistlen = strlen(mechlist);
     if (!reds_stream_write_all(stream, &mechlistlen, sizeof(uint32_t))
