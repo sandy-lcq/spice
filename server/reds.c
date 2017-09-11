@@ -2503,9 +2503,10 @@ static RedLinkInfo *reds_init_client_ssl_connection(RedsState *reds, int socket)
     return link;
 
 error:
-    free(link->stream);
-    BN_free(link->tiTicketing.bn);
-    free(link);
+    /* close the stream but do not close the socket, this API is
+     * supposed to not close it if it fails */
+    link->stream->socket = -1;
+    reds_link_free(link);
     return NULL;
 }
 
