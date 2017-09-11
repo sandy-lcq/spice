@@ -137,8 +137,8 @@ void main_channel_push_multi_media_time(MainChannel *main_chan, uint32_t time)
 static void main_channel_fill_mig_target(MainChannel *main_channel, RedsMigSpice *mig_target)
 {
     spice_assert(mig_target);
-    free(main_channel->mig_target.host);
-    main_channel->mig_target.host = spice_strdup(mig_target->host);
+    g_free(main_channel->mig_target.host);
+    main_channel->mig_target.host = g_strdup(mig_target->host);
     free(main_channel->mig_target.cert_subject);
     if (mig_target->cert_subject) {
         main_channel->mig_target.cert_subject = spice_strdup(mig_target->cert_subject);
