@@ -1014,12 +1014,11 @@ void red_channel_client_destroy(RedChannelClient *rcc)
 
 void red_channel_client_shutdown(RedChannelClient *rcc)
 {
-    if (rcc->priv->stream && !rcc->priv->stream->shutdown) {
+    if (rcc->priv->stream && rcc->priv->stream->watch) {
         SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(rcc->priv->channel);
         core->watch_remove(core, rcc->priv->stream->watch);
         rcc->priv->stream->watch = NULL;
         shutdown(rcc->priv->stream->socket, SHUT_RDWR);
-        rcc->priv->stream->shutdown = TRUE;
     }
 }
 
@@ -1110,7 +1109,11 @@ static int red_peer_receive(RedsStream *stream, uint8_t *buf, uint32_t size)
     uint8_t *pos = buf;
     while (size) {
         int now;
-        if (stream->shutdown) {
+        /* if we don't have a watch it means socket has been shutdown
+         * shutdown read doesn't work as accepted - receive may return data afterward.
+         * check the flag before calling receive
+         */
+        if (!stream->watch) {
             return -1;
         }
         now = reds_stream_read(stream, pos, size);
