@@ -128,18 +128,6 @@ libtest_stat4_a_CPPFLAGS = $(AM_CPPFLAGS) -DTEST_COMPRESS_STAT=1 -DTEST_RED_WORK
 
 test_qxl_parsing_LDADD = ../libserver.la $(LDADD)
 
-# Fallback implementations are provided for older glibs for the recent glib
-# methods this test is using, so no need to warn about them
-test_vdagent_CPPFLAGS =			\
-	$(AM_CPPFLAGS)			\
-	-UGLIB_VERSION_MIN_REQUIRED	\
-	-UGLIB_VERSION_MAX_ALLOWED	\
-	$(NULL)
-test_codecs_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
-test_qxl_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
-test_fail_on_null_core_interface_CPPFLAGS = $(test_vdagent_CPPFLAGS)
-test_leaks_CPPFLAGS = $(test_vdagent_CPPFLAGS)
-
 if HAVE_GSTREAMER
 test_gst_SOURCES = test-gst.c \
 	$(NULL)

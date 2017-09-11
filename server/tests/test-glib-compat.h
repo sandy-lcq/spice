@@ -29,6 +29,28 @@ void g_test_assert_expected_messages_internal(const char *domain,
     g_test_assert_expected_messages_internal (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC)
 void g_test_expect_message(const gchar *log_domain, GLogLevelFlags log_level,
                            const gchar *pattern);
+#else
+/* this avoids deprecation warning */
+static inline void
+g_test_expect_message_no_warnings(const gchar *log_domain, GLogLevelFlags log_level,
+                                  const gchar *pattern)
+{
+    G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+    g_test_expect_message(log_domain, log_level, pattern);
+    G_GNUC_END_IGNORE_DEPRECATIONS
+}
+static inline void
+g_test_assert_expected_messages_internal_no_warnings(const char *domain,
+                                                     const char *file, int line, const char *func)
+{
+    G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+    g_test_assert_expected_messages_internal(domain, file, line, func);
+    G_GNUC_END_IGNORE_DEPRECATIONS
+}
+#define g_test_expect_message g_test_expect_message_no_warnings
+#define g_test_assert_expected_messages_internal g_test_assert_expected_messages_internal_no_warnings
+/* g_test_assert_expected_messages defined above is already defined for
+ * Glib >= 2.34 so we don't need to define it here */
 #endif
 
 /* GLIB_CHECK_VERSION(2, 40, 0) */
