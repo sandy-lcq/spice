@@ -971,6 +971,19 @@ cleanup:
     return local_error == NULL;
 }
 
+static void
+red_channel_client_watch_update_mask(RedChannelClient *rcc, int event_mask)
+{
+    SpiceCoreInterfaceInternal *core;
+
+    if (!rcc->priv->stream->watch) {
+        return;
+    }
+
+    core = red_channel_get_core_interface(rcc->priv->channel);
+    core->watch_update_mask(core, rcc->priv->stream->watch, event_mask);
+}
+
 static void red_channel_client_seamless_migration_done(RedChannelClient *rcc)
 {
     rcc->priv->wait_migrate_data = FALSE;
@@ -1314,12 +1327,8 @@ void red_channel_client_push(RedChannelClient *rcc)
     while ((pipe_item = red_channel_client_pipe_item_get(rcc))) {
         red_channel_client_send_item(rcc, pipe_item);
     }
-    if (red_channel_client_no_item_being_sent(rcc) && g_queue_is_empty(&rcc->priv->pipe)
-        && rcc->priv->stream->watch) {
-        SpiceCoreInterfaceInternal *core;
-        core = red_channel_get_core_interface(rcc->priv->channel);
-        core->watch_update_mask(core, rcc->priv->stream->watch,
-                                SPICE_WATCH_EVENT_READ);
+    if (red_channel_client_no_item_being_sent(rcc) && g_queue_is_empty(&rcc->priv->pipe)) {
+        red_channel_client_watch_update_mask(rcc, SPICE_WATCH_EVENT_READ);
     }
     rcc->priv->during_send = FALSE;
     g_object_unref(rcc);
@@ -1532,11 +1541,9 @@ static inline gboolean prepare_pipe_add(RedChannelClient *rcc, RedPipeItem *item
         red_pipe_item_unref(item);
         return FALSE;
     }
-    if (g_queue_is_empty(&rcc->priv->pipe) && rcc->priv->stream->watch) {
-        SpiceCoreInterfaceInternal *core;
-        core = red_channel_get_core_interface(rcc->priv->channel);
-        core->watch_update_mask(core, rcc->priv->stream->watch,
-                                SPICE_WATCH_EVENT_READ | SPICE_WATCH_EVENT_WRITE);
+    if (g_queue_is_empty(&rcc->priv->pipe)) {
+        red_channel_client_watch_update_mask(rcc,
+                                             SPICE_WATCH_EVENT_READ | SPICE_WATCH_EVENT_WRITE);
     }
     return TRUE;
 }
