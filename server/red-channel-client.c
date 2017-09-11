@@ -1574,6 +1574,19 @@ void red_channel_client_pipe_add_after_pos(RedChannelClient *rcc,
     g_queue_insert_after(&rcc->priv->pipe, pipe_item_pos, item);
 }
 
+static void
+red_channel_client_pipe_add_before_pos(RedChannelClient *rcc,
+                                       RedPipeItem *item,
+                                       GList *pipe_item_pos)
+{
+    spice_assert(pipe_item_pos);
+    if (!prepare_pipe_add(rcc, item)) {
+        return;
+    }
+
+    g_queue_insert_before(&rcc->priv->pipe, pipe_item_pos, item);
+}
+
 void red_channel_client_pipe_add_after(RedChannelClient *rcc,
                                        RedPipeItem *item,
                                        RedPipeItem *pos)
@@ -1774,7 +1787,7 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     red_pipe_item_init(&mark_item->base, RED_PIPE_ITEM_TYPE_MARKER);
     mark_item->item_in_pipe = true;
     red_pipe_item_ref(&mark_item->base);
-    red_channel_client_pipe_add_after_pos(rcc, &mark_item->base, item_pos);
+    red_channel_client_pipe_add_before_pos(rcc, &mark_item->base, item_pos);
 
     for (;;) {
         red_channel_client_receive(rcc);
@@ -1793,10 +1806,8 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         // still on the queue
         spice_warning("timeout");
         return FALSE;
-    } else {
-        return red_channel_client_wait_outgoing_item(rcc,
-                                                     timeout == -1 ? -1 : end_time - spice_get_monotonic_time_ns());
     }
+    return TRUE;
 }
 
 bool red_channel_client_wait_outgoing_item(RedChannelClient *rcc,
