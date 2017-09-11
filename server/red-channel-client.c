@@ -1776,18 +1776,14 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     red_pipe_item_ref(&mark_item->base);
     red_channel_client_pipe_add_after_pos(rcc, &mark_item->base, item_pos);
 
-    if (red_channel_client_is_blocked(rcc)) {
+    for (;;) {
         red_channel_client_receive(rcc);
-        red_channel_client_send(rcc);
-    }
-    red_channel_client_push(rcc);
-
-    while (mark_item->item_in_pipe &&
-           (timeout == -1 || spice_get_monotonic_time_ns() < end_time)) {
-        usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
-        red_channel_client_receive(rcc);
-        red_channel_client_send(rcc);
         red_channel_client_push(rcc);
+        if (!mark_item->item_in_pipe ||
+            (timeout != -1 && spice_get_monotonic_time_ns() >= end_time)) {
+            break;
+        }
+        usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
     }
 
     item_in_pipe = mark_item->item_in_pipe;
