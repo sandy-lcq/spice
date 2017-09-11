@@ -590,7 +590,7 @@ void reds_client_disconnect(RedsState *reds, RedClient *client)
          *  messages read from the agent */
         reds->agent_dev->priv->read_filter.result = AGENT_MSG_FILTER_DISCARD;
         reds->agent_dev->priv->read_filter.discard_all = TRUE;
-        free(reds->agent_dev->priv->mig_data);
+        g_free(reds->agent_dev->priv->mig_data);
         reds->agent_dev->priv->mig_data = NULL;
 
         reds_mig_cleanup(reds);
@@ -1085,7 +1085,7 @@ uint8_t *reds_get_agent_data_buffer(RedsState *reds, MainChannelClient *mcc, siz
          * In such case, we will receive and discard the msgs (reds_reset_vdp takes care
          * of setting dev->write_filter.result = AGENT_MSG_FILTER_DISCARD).
          */
-        return spice_malloc(size);
+        return g_malloc(size);
     }
 
     spice_assert(dev->priv->recv_from_client_buf == NULL);
@@ -1107,7 +1107,7 @@ void reds_release_agent_data_buffer(RedsState *reds, uint8_t *buf)
     RedCharDeviceVDIPort *dev = reds->agent_dev;
 
     if (!dev->priv->recv_from_client_buf) {
-        free(buf);
+        g_free(buf);
         return;
     }
 
@@ -1478,7 +1478,7 @@ bool reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
             /* restore agent starte when the agent gets attached */
             spice_debug("saving mig_data");
             spice_assert(agent_dev->priv->plug_generation == 0);
-            agent_dev->priv->mig_data = spice_memdup(mig_data, size);
+            agent_dev->priv->mig_data = g_memdup(mig_data, size);
         }
     } else {
         spice_debug("agent was not attached on the source host");
@@ -1665,7 +1665,7 @@ static void reds_mig_target_client_add(RedsState *reds, RedClient *client)
 
     g_return_if_fail(reds);
     spice_debug("trace");
-    mig_client = spice_new0(RedsMigTargetClient, 1);
+    mig_client = g_new0(RedsMigTargetClient, 1);
     mig_client->client = client;
     mig_client->reds = reds;
     reds->mig_target_clients = g_list_append(reds->mig_target_clients, mig_client);
@@ -1692,7 +1692,7 @@ static void reds_mig_target_client_add_pending_link(RedsMigTargetClient *client,
     RedsMigPendingLink *mig_link;
 
     spice_assert(client);
-    mig_link = spice_new0(RedsMigPendingLink, 1);
+    mig_link = g_new0(RedsMigPendingLink, 1);
     mig_link->link_msg = link_msg;
     mig_link->stream = stream;
 
@@ -1703,7 +1703,7 @@ static void reds_mig_target_client_free(RedsState *reds, RedsMigTargetClient *mi
 {
     reds->mig_target_clients = g_list_remove(reds->mig_target_clients, mig_client);
     g_list_free_full(mig_client->pending_links, g_free);
-    free(mig_client);
+    g_free(mig_client);
 }
 
 static void reds_mig_target_client_disconnect_all(RedsState *reds)
@@ -3136,7 +3136,7 @@ static RedCharDevice *attach_to_red_agent(RedsState *reds, SpiceCharDeviceInstan
             spice_debug("restoring dev from stored migration data");
             spice_assert(dev->priv->plug_generation == 1);
             reds_agent_state_restore(reds, dev->priv->mig_data);
-            free(dev->priv->mig_data);
+            g_free(dev->priv->mig_data);
             dev->priv->mig_data = NULL;
         }
         else {
@@ -4545,7 +4545,7 @@ red_char_device_vdi_port_finalize(GObject *object)
 {
     RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(object);
 
-   free(dev->priv->mig_data);
+    g_free(dev->priv->mig_data);
    /* FIXME: need to free the RedVDIReadBuf allocated previously */
 
     G_OBJECT_CLASS(red_char_device_vdi_port_parent_class)->finalize(object);
