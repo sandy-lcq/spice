@@ -138,6 +138,7 @@ test_vdagent_CPPFLAGS =			\
 test_codecs_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
 test_qxl_parsing_CPPFLAGS = $(test_vdagent_CPPFLAGS)
 test_fail_on_null_core_interface_CPPFLAGS = $(test_vdagent_CPPFLAGS)
+test_leaks_CPPFLAGS = $(test_vdagent_CPPFLAGS)
 
 if HAVE_GSTREAMER
 test_gst_SOURCES = test-gst.c \
