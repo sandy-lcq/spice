@@ -1596,15 +1596,6 @@ void red_channel_client_pipe_add_tail(RedChannelClient *rcc,
     g_queue_push_tail(&rcc->priv->pipe, item);
 }
 
-void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, RedPipeItem *item)
-{
-    if (!prepare_pipe_add(rcc, item)) {
-        return;
-    }
-    g_queue_push_tail(&rcc->priv->pipe, item);
-    red_channel_client_push(rcc);
-}
-
 void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
 {
     RedPipeItem *item = spice_new(RedPipeItem, 1);

@@ -96,7 +96,6 @@ int red_channel_client_pipe_item_is_linked(RedChannelClient *rcc, RedPipeItem *i
 void red_channel_client_pipe_remove_and_release(RedChannelClient *rcc, RedPipeItem *item);
 void red_channel_client_pipe_remove_and_release_pos(RedChannelClient *rcc, GList *item_pos);
 void red_channel_client_pipe_add_tail(RedChannelClient *rcc, RedPipeItem *item);
-void red_channel_client_pipe_add_tail_and_push(RedChannelClient *rcc, RedPipeItem *item);
 /* for types that use this routine -> the pipe item should be freed */
 void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type);
 RedPipeItem *red_channel_client_new_empty_msg(int msg_type);
