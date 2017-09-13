@@ -25,6 +25,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <glob.h>
 #include <sys/stat.h>
 #include <spice/stats.h>
 #include <common/verify.h>
@@ -60,10 +61,29 @@ static void print_stat_tree(int32_t node_index, int depth)
     }
 }
 
+// look for a single file /dev/shm/spice.XXX and extract XXX pid
+static pid_t search_pid(void)
+{
+    pid_t pid = 0;
+    glob_t globbuf;
+
+    if (glob("/dev/shm/spice.*", 0, NULL, &globbuf)) {
+        return pid;
+    }
+    if (globbuf.gl_pathc == 1) {
+        const char *p = strchr(globbuf.gl_pathv[0], '.');
+        if (p) {
+            pid = atoi(p+1);
+        }
+    }
+    globfree(&globbuf);
+    return pid;
+}
+
 int main(int argc, char **argv)
 {
     char *shm_name;
-    pid_t kvm_pid;
+    pid_t kvm_pid = 0;
     uint32_t num_of_nodes = 0;
     size_t shm_size;
     size_t shm_old_size;
@@ -74,11 +94,17 @@ int main(int argc, char **argv)
     unsigned header_size = sizeof(SpiceStat);
     SpiceStat *reds_stat = (SpiceStat *)MAP_FAILED;
 
-    if (argc != 2 || !(kvm_pid = atoi(argv[1]))) {
+    if (argc == 2) {
+        kvm_pid = atoi(argv[1]);
+    } else if (argc == 1) {
+        kvm_pid = search_pid();
+    }
+
+    if (argc > 2 || !kvm_pid) {
         printf("usage: reds_stat [qemu_pid] (e.g. `pgrep qemu`)\n");
         return -1;
     }
-    shm_name_len = strlen(SPICE_STAT_SHM_NAME) + strlen(argv[1]);
+    shm_name_len = strlen(SPICE_STAT_SHM_NAME) + 64;
     if (!(shm_name = (char *)malloc(shm_name_len))) {
         perror("malloc");
         return -1;
