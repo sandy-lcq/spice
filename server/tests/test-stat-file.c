@@ -38,7 +38,7 @@ static void stat_file(void)
 
     g_assert_nonnull(stat_file);
     g_assert_nonnull(stat_file_get_shm_name(stat_file));
-    filename = strdup(stat_file_get_shm_name(stat_file));
+    filename = g_strdup(stat_file_get_shm_name(stat_file));
     g_assert(access(filename, R_OK));
 
     /* fill all nodes */
@@ -84,7 +84,7 @@ static void stat_file(void)
     stat_file_unlink(stat_file);
     g_assert_null(stat_file_get_shm_name(stat_file));
     g_assert_cmpint(access(filename, F_OK),==,-1);
-    free(filename);
+    g_free(filename);
 
     stat_file_free(stat_file);
 }

@@ -151,7 +151,7 @@ static void create_clipped_frame(Test *test, Command *command, int clipping_fact
         cmd->num_clip_rects = 0;
     } else {
         cmd->num_clip_rects = 2;
-        cmd->clip_rects = calloc(sizeof(QXLRect), 2);
+        cmd->clip_rects = g_new0(QXLRect, 2);
         cmd->clip_rects[0].left = OVERLAY_WIDTH;
         cmd->clip_rects[0].top = cmd->bbox.top;
         cmd->clip_rects[0].right = cmd->bbox.right - clipping_factor;

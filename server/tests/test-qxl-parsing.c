@@ -48,7 +48,7 @@ from_physical(QXLPHYSICAL physical)
 static void*
 create_chunk(size_t prefix, uint32_t size, QXLDataChunk* prev, int fill)
 {
-    uint8_t *ptr = spice_malloc0(prefix + sizeof(QXLDataChunk) + size);
+    uint8_t *ptr = g_malloc0(prefix + sizeof(QXLDataChunk) + size);
     QXLDataChunk *qxl = (QXLDataChunk *) (ptr + prefix);
     memset(&qxl->data[0], fill, size);
     qxl->data_size = size;
@@ -76,13 +76,13 @@ static void init_qxl_surface(QXLSurfaceCmd *qxl)
     qxl->u.surface_create.width = 128;
     qxl->u.surface_create.stride = 512;
     qxl->u.surface_create.height = 128;
-    surface_mem = malloc(0x10000);
+    surface_mem = g_malloc(0x10000);
     qxl->u.surface_create.data = to_physical(surface_mem);
 }
 
 static void deinit_qxl_surface(QXLSurfaceCmd *qxl)
 {
-    free(from_physical(qxl->u.surface_create.data));
+    g_free(from_physical(qxl->u.surface_create.data));
 }
 
 static void test_no_issues(void)
@@ -168,8 +168,8 @@ static void test_cursor_command(void)
     cursor_cmd.u.set.shape = to_physical(cursor);
 
     g_assert_true(red_get_cursor_cmd(&mem_info, 0, &red_cursor_cmd, to_physical(&cursor_cmd)));
-    free(red_cursor_cmd.u.set.shape.data);
-    free(cursor);
+    g_free(red_cursor_cmd.u.set.shape.data);
+    g_free(cursor);
     memslot_info_destroy(&mem_info);
 }
 
@@ -210,8 +210,8 @@ static void test_circular_empty_chunks(void)
     }
     g_test_assert_expected_messages();
 
-    free(cursor);
-    free(chunks[0]);
+    g_free(cursor);
+    g_free(chunks[0]);
     memslot_info_destroy(&mem_info);
 }
 
@@ -252,8 +252,8 @@ static void test_circular_small_chunks(void)
     }
     g_test_assert_expected_messages();
 
-    free(cursor);
-    free(chunks[0]);
+    g_free(cursor);
+    g_free(chunks[0]);
     memslot_info_destroy(&mem_info);
 }
 

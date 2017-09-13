@@ -65,10 +65,10 @@ static void test_spice_destroy_update(SimpleSpiceUpdate *update)
     }
     if (update->drawable.clip.type != SPICE_CLIP_TYPE_NONE) {
         uint8_t *ptr = (uint8_t*)update->drawable.clip.data;
-        free(ptr);
+        g_free(ptr);
     }
-    free(update->bitmap);
-    free(update);
+    g_free(update->bitmap);
+    g_free(update);
 }
 
 #define DEFAULT_WIDTH 640
@@ -186,7 +186,7 @@ test_spice_create_update_from_bitmap(uint32_t surface_id,
     bh = bbox.bottom - bbox.top;
     bw = bbox.right - bbox.left;
 
-    update   = spice_new0(SimpleSpiceUpdate, 1);
+    update   = g_new0(SimpleSpiceUpdate, 1);
     update->bitmap = bitmap;
     drawable = &update->drawable;
     image    = &update->image;
@@ -199,7 +199,7 @@ test_spice_create_update_from_bitmap(uint32_t surface_id,
     } else {
         QXLClipRects *cmd_clip;
 
-        cmd_clip = spice_malloc0(sizeof(QXLClipRects) + num_clip_rects*sizeof(QXLRect));
+        cmd_clip = g_malloc0(sizeof(QXLClipRects) + num_clip_rects*sizeof(QXLRect));
         cmd_clip->num_rects = num_clip_rects;
         cmd_clip->chunk.data_size = num_clip_rects*sizeof(QXLRect);
         cmd_clip->chunk.prev_chunk = cmd_clip->chunk.next_chunk = 0;
@@ -208,7 +208,7 @@ test_spice_create_update_from_bitmap(uint32_t surface_id,
         drawable->clip.type = SPICE_CLIP_TYPE_RECTS;
         drawable->clip.data = (intptr_t)cmd_clip;
 
-        free(clip_rects);
+        g_free(clip_rects);
     }
     drawable->effect          = QXL_EFFECT_OPAQUE;
     simple_set_release_info(&drawable->release_info, (intptr_t)update);
@@ -248,7 +248,7 @@ static SimpleSpiceUpdate *test_spice_create_update_solid(uint32_t surface_id, QX
     bw = bbox.right - bbox.left;
     bh = bbox.bottom - bbox.top;
 
-    bitmap = spice_malloc(bw * bh * 4);
+    bitmap = g_malloc(bw * bh * 4);
     dst = (uint32_t *)bitmap;
 
     for (i = 0 ; i < bh * bw ; ++i, ++dst) {
@@ -283,7 +283,7 @@ static SimpleSpiceUpdate *test_spice_create_update_draw(Test *test, uint32_t sur
     bw       = test->primary_width/SINGLE_PART;
     bh       = 48;
 
-    bitmap = dst = spice_malloc(bw * bh * 4);
+    bitmap = dst = g_malloc(bw * bh * 4);
     //printf("allocated %p\n", dst);
 
     for (i = 0 ; i < bh * bw ; ++i, dst+=4) {
@@ -308,7 +308,7 @@ static SimpleSpiceUpdate *test_spice_create_update_copy_bits(Test *test, uint32_
         .top = 0,
     };
 
-    update   = spice_new0(SimpleSpiceUpdate, 1);
+    update   = g_new0(SimpleSpiceUpdate, 1);
     drawable = &update->drawable;
 
     bw       = test->primary_width/SINGLE_PART;
@@ -353,7 +353,7 @@ static int format_to_bpp(int format)
 
 static SimpleSurfaceCmd *create_surface(int surface_id, int format, int width, int height, uint8_t *data)
 {
-    SimpleSurfaceCmd *simple_cmd = spice_new0(SimpleSurfaceCmd, 1);
+    SimpleSurfaceCmd *simple_cmd = g_new0(SimpleSurfaceCmd, 1);
     QXLSurfaceCmd *surface_cmd = &simple_cmd->surface_cmd;
     int bpp = format_to_bpp(format);
 
@@ -372,7 +372,7 @@ static SimpleSurfaceCmd *create_surface(int surface_id, int format, int width, i
 
 static SimpleSurfaceCmd *destroy_surface(int surface_id)
 {
-    SimpleSurfaceCmd *simple_cmd = spice_new0(SimpleSurfaceCmd, 1);
+    SimpleSurfaceCmd *simple_cmd = g_new0(SimpleSurfaceCmd, 1);
     QXLSurfaceCmd *surface_cmd = &simple_cmd->surface_cmd;
 
     set_cmd(&simple_cmd->ext, QXL_CMD_SURFACE, (intptr_t)surface_cmd);
@@ -675,14 +675,14 @@ static void release_resource(SPICE_GNUC_UNUSED QXLInstance *qin,
             test_spice_destroy_update((void*)ext);
             break;
         case QXL_CMD_SURFACE:
-            free(ext);
+            g_free(ext);
             break;
         case QXL_CMD_CURSOR: {
             QXLCursorCmd *cmd = (QXLCursorCmd *)(uintptr_t)ext->cmd.data;
             if (cmd->type == QXL_CURSOR_SET || cmd->type == QXL_CURSOR_MOVE) {
-                free(cmd);
+                g_free(cmd);
             }
-            free(ext);
+            g_free(ext);
             break;
         }
         default:
@@ -731,8 +731,8 @@ static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *ext)
     }
 
     test->cursor_notify--;
-    cmd = spice_new0(QXLCommandExt, 1);
-    cursor_cmd = spice_new0(QXLCursorCmd, 1);
+    cmd = g_new0(QXLCommandExt, 1);
+    cursor_cmd = g_new0(QXLCursorCmd, 1);
 
     cursor_cmd->release_info.id = (uintptr_t)cmd;
 
@@ -886,8 +886,8 @@ void test_set_simple_command_list(Test *test, const int *simple_commands, int nu
 {
     int i;
 
-    free(test->commands);
-    test->commands = spice_new0(Command, num_commands);
+    g_free(test->commands);
+    test->commands = g_new0(Command, num_commands);
     test->num_commands = num_commands;
     for (i = 0 ; i < num_commands; ++i) {
         test->commands[i].command = simple_commands[i];
@@ -923,7 +923,7 @@ static gboolean ignore_bind_failures(const gchar *log_domain,
 
 Test* test_new(SpiceCoreInterface* core)
 {
-    Test *test = spice_new0(Test, 1);
+    Test *test = g_new0(Test, 1);
     int port = -1;
 
     test->qxl_instance.base.sif = &display_sif.base;
@@ -965,8 +965,8 @@ void test_destroy(Test *test)
     // this timer is used by spice server so
     // avoid to free it while is running
     test->core->timer_remove(test->wakeup_timer);
-    free(test->commands);
-    free(test);
+    g_free(test->commands);
+    g_free(test);
 }
 
 static void init_automated(void)

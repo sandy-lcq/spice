@@ -64,7 +64,7 @@ set_surface_params(SPICE_GNUC_UNUSED Test *test, Command *command)
     create->format = SPICE_SURFACE_FMT_8_A;
     create->width = 128;
     create->height = 128;
-    g_surface_data = realloc(g_surface_data, create->width * create->height * 1);
+    g_surface_data = g_realloc(g_surface_data, create->width * create->height * 1);
     create->surface_id = g_surface_id;
     create->data = g_surface_data;
 }
@@ -73,7 +73,7 @@ static void
 set_destroy_parameters(SPICE_GNUC_UNUSED Test *test, SPICE_GNUC_UNUSED Command *command)
 {
     if (g_surface_data) {
-        free(g_surface_data);
+        g_free(g_surface_data);
         g_surface_data = NULL;
     }
 }
