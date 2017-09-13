@@ -194,7 +194,7 @@ static RedSurfaceCreateItem *red_surface_create_item_new(RedChannel* channel,
 {
     RedSurfaceCreateItem *create;
 
-    create = spice_new(RedSurfaceCreateItem, 1);
+    create = g_new(RedSurfaceCreateItem, 1);
 
     create->surface_create.surface_id = surface_id;
     create->surface_create.width = width;
@@ -340,7 +340,7 @@ RedImageItem *dcc_add_surface_area_image(DisplayChannelClient *dcc,
     bpp = SPICE_SURFACE_FMT_DEPTH(surface->context.format) / 8;
     stride = width * bpp;
 
-    item = (RedImageItem *)spice_malloc_n_m(height, stride, sizeof(RedImageItem));
+    item = (RedImageItem *)g_malloc(height * stride + sizeof(RedImageItem));
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_IMAGE);
 
@@ -689,7 +689,7 @@ static RedSurfaceDestroyItem *red_surface_destroy_item_new(RedChannel *channel,
 {
     RedSurfaceDestroyItem *destroy;
 
-    destroy = spice_new(RedSurfaceDestroyItem, 1);
+    destroy = g_new(RedSurfaceDestroyItem, 1);
     destroy->surface_destroy.surface_id = surface_id;
     red_pipe_item_init(&destroy->pipe_item, RED_PIPE_ITEM_TYPE_DESTROY_SURFACE);
 
@@ -708,7 +708,7 @@ RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
         return NULL;
     }
 
-    item = spice_new(RedGlScanoutUnixItem, 1);
+    item = g_new(RedGlScanoutUnixItem, 1);
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_GL_SCANOUT);
 
     return &item->base;
@@ -728,7 +728,7 @@ RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
     }
 
     dcc->priv->gl_draw_ongoing = TRUE;
-    item = spice_new(RedGlDrawItem, 1);
+    item = g_new(RedGlDrawItem, 1);
     item->draw = *draw;
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_GL_DRAW);
 

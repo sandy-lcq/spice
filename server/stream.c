@@ -741,7 +741,7 @@ void dcc_create_stream(DisplayChannelClient *dcc, Stream *stream)
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), stream_create_item_new(agent));
 
     if (red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(dcc), SPICE_DISPLAY_CAP_STREAM_REPORT)) {
-        RedStreamActivateReportItem *report_pipe_item = spice_malloc0(sizeof(*report_pipe_item));
+        RedStreamActivateReportItem *report_pipe_item = g_new0(RedStreamActivateReportItem, 1);
 
         agent->report_id = rand();
         red_pipe_item_init(&report_pipe_item->pipe_item,

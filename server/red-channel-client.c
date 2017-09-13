@@ -1612,7 +1612,7 @@ void red_channel_client_pipe_add_tail(RedChannelClient *rcc,
 
 void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
 {
-    RedPipeItem *item = spice_new(RedPipeItem, 1);
+    RedPipeItem *item = g_new(RedPipeItem, 1);
 
     red_pipe_item_init(item, pipe_item_type);
     red_channel_client_pipe_add(rcc, item);
@@ -1620,7 +1620,7 @@ void red_channel_client_pipe_add_type(RedChannelClient *rcc, int pipe_item_type)
 
 RedPipeItem *red_channel_client_new_empty_msg(int msg_type)
 {
-    RedEmptyMsgPipeItem *item = spice_new(RedEmptyMsgPipeItem, 1);
+    RedEmptyMsgPipeItem *item = g_new(RedEmptyMsgPipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_EMPTY_MSG);
     item->msg = msg_type;
@@ -1771,7 +1771,7 @@ static void marker_pipe_item_free(RedPipeItem *base)
     if (item->item_in_pipe) {
         *item->item_in_pipe = FALSE;
     }
-    free(item);
+    g_free(item);
 }
 
 /* TODO: more evil sync stuff. anything with the word wait in it's name. */
@@ -1790,7 +1790,7 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
         end_time = UINT64_MAX;
     }
 
-    MarkerPipeItem *mark_item = spice_new0(MarkerPipeItem, 1);
+    MarkerPipeItem *mark_item = g_new0(MarkerPipeItem, 1);
 
     red_pipe_item_init_full(&mark_item->base, RED_PIPE_ITEM_TYPE_MARKER,
                             marker_pipe_item_free);

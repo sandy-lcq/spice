@@ -86,7 +86,7 @@ static int FUNC_NAME(add)(CHANNELCLIENT *channel_client, uint64_t id, size_t siz
     RedCacheItem *item;
     int key;
 
-    item = spice_new(RedCacheItem, 1);
+    item = g_new(RedCacheItem, 1);
 
     channel_client->priv->VAR_NAME(available) -= size;
     SPICE_VERIFY(SPICE_OFFSETOF(RedCacheItem, u.cache_data.lru_link) == 0);
@@ -94,7 +94,7 @@ static int FUNC_NAME(add)(CHANNELCLIENT *channel_client, uint64_t id, size_t siz
         RedCacheItem *tail = (RedCacheItem *)ring_get_tail(&channel_client->priv->VAR_NAME(lru));
         if (!tail) {
             channel_client->priv->VAR_NAME(available) += size;
-            free(item);
+            g_free(item);
             return FALSE;
         }
         FUNC_NAME(remove)(channel_client, tail);
@@ -117,7 +117,7 @@ static void FUNC_NAME(reset)(CHANNELCLIENT *channel_client, long size)
         while (channel_client->priv->CACHE_NAME[i]) {
             RedCacheItem *item = channel_client->priv->CACHE_NAME[i];
             channel_client->priv->CACHE_NAME[i] = item->u.cache_data.next;
-            free(item);
+            g_free(item);
         }
     }
     ring_init(&channel_client->priv->VAR_NAME(lru));

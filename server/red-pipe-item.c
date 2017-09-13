@@ -44,7 +44,7 @@ void red_pipe_item_init_full(RedPipeItem *item,
 {
     item->type = type;
     item->refcount = 1;
-    item->free_func = free_func ? free_func : (red_pipe_item_free_t *)free;
+    item->free_func = free_func ? free_func : (red_pipe_item_free_t *)g_free;
 }
 
 void marshaller_unref_pipe_item(uint8_t *data G_GNUC_UNUSED, void *opaque)

@@ -215,7 +215,7 @@ static void smartcard_channel_client_push_error(RedChannelClient *rcc,
                                                 uint32_t reader_id,
                                                 VSCErrorCode error)
 {
-    RedErrorItem *error_item = spice_new0(RedErrorItem, 1);
+    RedErrorItem *error_item = g_new0(RedErrorItem, 1);
 
     red_pipe_item_init(&error_item->base, RED_PIPE_ITEM_TYPE_ERROR);
 

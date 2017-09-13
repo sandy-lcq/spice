@@ -443,7 +443,7 @@ void red_channel_pipes_add(RedChannel *channel, RedPipeItem *item)
 
 void red_channel_pipes_add_type(RedChannel *channel, int pipe_item_type)
 {
-    RedPipeItem *item = spice_new(RedPipeItem, 1);
+    RedPipeItem *item = g_new(RedPipeItem, 1);
 
     red_pipe_item_init(item, pipe_item_type);
 

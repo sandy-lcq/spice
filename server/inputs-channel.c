@@ -196,7 +196,7 @@ static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
 
 static RedPipeItem *red_inputs_key_modifiers_item_new(uint8_t modifiers)
 {
-    RedKeyModifiersPipeItem *item = spice_malloc(sizeof(RedKeyModifiersPipeItem));
+    RedKeyModifiersPipeItem *item = g_new(RedKeyModifiersPipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_KEY_MODIFIERS);
     item->modifiers = modifiers;
@@ -435,7 +435,7 @@ void inputs_release_keys(InputsChannel *inputs)
 
 static void inputs_pipe_add_init(RedChannelClient *rcc)
 {
-    RedInputsInitPipeItem *item = spice_malloc(sizeof(RedInputsInitPipeItem));
+    RedInputsInitPipeItem *item = g_new(RedInputsInitPipeItem, 1);
     InputsChannel *inputs = INPUTS_CHANNEL(red_channel_client_get_channel(rcc));
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_INPUTS_INIT);

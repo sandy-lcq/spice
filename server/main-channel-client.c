@@ -274,7 +274,7 @@ void main_channel_client_start_net_test(MainChannelClient *mcc, int test_rate)
 
 static RedPipeItem *red_ping_item_new(int size)
 {
-    RedPingPipeItem *item = spice_malloc(sizeof(RedPingPipeItem));
+    RedPingPipeItem *item = g_new(RedPingPipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_PING);
     item->size = size;
@@ -295,7 +295,7 @@ static bool main_channel_client_push_ping(MainChannelClient *mcc, int size)
 
 static RedPipeItem *main_agent_tokens_item_new(uint32_t num_tokens)
 {
-    RedTokensPipeItem *item = spice_malloc(sizeof(RedTokensPipeItem));
+    RedTokensPipeItem *item = g_new(RedTokensPipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_AGENT_TOKEN);
     item->tokens = num_tokens;
@@ -348,7 +348,7 @@ static RedPipeItem *main_init_item_new(int connection_id,
                                        int multi_media_time,
                                        int ram_hint)
 {
-    RedInitPipeItem *item = spice_malloc(sizeof(RedInitPipeItem));
+    RedInitPipeItem *item = g_new(RedInitPipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_INIT);
     item->connection_id = connection_id;
@@ -377,7 +377,7 @@ void main_channel_client_push_init(MainChannelClient *mcc,
 
 static RedPipeItem *main_name_item_new(const char *name)
 {
-    RedNamePipeItem *item = spice_malloc(sizeof(RedNamePipeItem) + strlen(name) + 1);
+    RedNamePipeItem *item = g_malloc(sizeof(RedNamePipeItem) + strlen(name) + 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_NAME);
     item->msg.name_len = strlen(name) + 1;
@@ -400,7 +400,7 @@ void main_channel_client_push_name(MainChannelClient *mcc, const char *name)
 
 static RedPipeItem *main_uuid_item_new(const uint8_t uuid[16])
 {
-    RedUuidPipeItem *item = spice_malloc(sizeof(RedUuidPipeItem));
+    RedUuidPipeItem *item = g_new(RedUuidPipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_UUID);
     memcpy(item->msg.uuid, uuid, sizeof(item->msg.uuid));
@@ -428,7 +428,7 @@ void main_channel_client_push_notify(MainChannelClient *mcc, const char *msg)
 
 RedPipeItem *main_mouse_mode_item_new(SpiceMouseMode current_mode, int is_client_mouse_allowed)
 {
-    RedMouseModePipeItem *item = spice_malloc(sizeof(RedMouseModePipeItem));
+    RedMouseModePipeItem *item = g_new(RedMouseModePipeItem, 1);
 
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MOUSE_MODE);
     item->current_mode = current_mode;
@@ -440,7 +440,7 @@ RedPipeItem *main_multi_media_time_item_new(uint32_t mm_time)
 {
     RedMultiMediaTimePipeItem *item;
 
-    item = spice_malloc(sizeof(RedMultiMediaTimePipeItem));
+    item = g_new(RedMultiMediaTimePipeItem, 1);
     red_pipe_item_init(&item->base, RED_PIPE_ITEM_TYPE_MAIN_MULTI_MEDIA_TIME);
     item->time = mm_time;
     return &item->base;
