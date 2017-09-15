@@ -57,6 +57,7 @@ check_PROGRAMS =				\
 	test-vdagent				\
 	test-fail-on-null-core-interface	\
 	test-empty-success			\
+	test-channel				\
 	$(NULL)
 
 noinst_PROGRAMS =				\
