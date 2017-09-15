@@ -24,3 +24,5 @@ test-two-servers
 test-vdagent
 test-gst
 test-leaks
+/test-*.log
+/test-*.trs
