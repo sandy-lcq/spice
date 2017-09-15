@@ -101,7 +101,7 @@ noinst_LIBRARIES += \
 	libtest-stat4.a \
 	$(NULL)
 
-test_stat_SOURCES = stat-main.c
+test_stat_SOURCES = test-stat.c
 test_stat_LDADD = \
 	libtest-stat1.a \
 	libtest-stat2.a \
