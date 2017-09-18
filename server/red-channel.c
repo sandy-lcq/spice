@@ -477,7 +477,7 @@ void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc)
     link = g_list_find(channel->priv->clients, rcc);
     spice_return_if_fail(link != NULL);
 
-    channel->priv->clients = g_list_remove_link(channel->priv->clients, link);
+    channel->priv->clients = g_list_delete_link(channel->priv->clients, link);
     // TODO: should we set rcc->channel to NULL???
 }
 
