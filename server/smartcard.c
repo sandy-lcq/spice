@@ -490,7 +490,7 @@ void smartcard_channel_write_to_reader(RedCharDeviceWriteBuffer *write_buf)
     dev = RED_CHAR_DEVICE_SMARTCARD(sin->st);
     spice_assert(!dev->priv->scc ||
                  dev == smartcard_channel_client_get_char_device(dev->priv->scc));
-    /* protocol requires messages to be in network endianess */
+    /* protocol requires messages to be in network endianness */
     vheader->type = htonl(vheader->type);
     vheader->length = htonl(vheader->length);
     vheader->reader_id = htonl(vheader->reader_id);
