@@ -3378,7 +3378,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *reds,
             return -1;
         }
         reds->migration_interface = SPICE_CONTAINEROF(sin, SpiceMigrateInstance, base);
-        reds->migration_interface->st = spice_new0(SpiceMigrateState, 1);
+        reds->migration_interface->st = (SpiceMigrateState *)(intptr_t)1; // dummy pointer
     }
 
     return 0;

@@ -35,10 +35,6 @@ static inline QXLInterface * qxl_get_interface(QXLInstance *qxl)
     return SPICE_CONTAINEROF(qxl->base.sif, QXLInterface, base);
 }
 
-struct SpiceMigrateState {
-    int dummy;
-};
-
 /* main thread only */
 void reds_handle_channel_event(RedsState *reds, int event, SpiceChannelEventInfo *info);
 
