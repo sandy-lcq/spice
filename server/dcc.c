@@ -959,7 +959,7 @@ bool dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
 
     spice_assert(size > 0);
 
-    item = spice_new(NewCacheItem, 1);
+    item = g_new(NewCacheItem, 1);
     serial = red_channel_client_get_message_serial(RED_CHANNEL_CLIENT(dcc));
 
     if (cache->generation != dcc->priv->pixmap_cache_generation) {
@@ -968,7 +968,7 @@ bool dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
                                              RED_CHANNEL_CLIENT(dcc), RED_PIPE_ITEM_TYPE_PIXMAP_SYNC);
             dcc->priv->pending_pixmaps_sync = TRUE;
         }
-        free(item);
+        g_free(item);
         return FALSE;
     }
 
@@ -981,7 +981,7 @@ bool dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
         if (!(tail = (NewCacheItem *)ring_get_tail(&cache->lru)) ||
                                                    tail->sync[dcc->priv->id] == serial) {
             cache->available += size;
-            free(item);
+            g_free(item);
             return FALSE;
         }
 
@@ -999,7 +999,7 @@ bool dcc_pixmap_cache_unlocked_add(DisplayChannelClient *dcc, uint64_t id,
         cache->available += tail->size;
         cache->sync[dcc->priv->id] = serial;
         dcc_push_release(dcc, SPICE_RES_TYPE_PIXMAP, tail->id, tail->sync);
-        free(tail);
+        g_free(tail);
     }
     ++cache->items;
     item->next = cache->hash_table[(key = BITS_CACHE_HASH_KEY(id))];

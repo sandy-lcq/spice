@@ -49,7 +49,7 @@ void pixmap_cache_clear(PixmapCache *cache)
     SPICE_VERIFY(SPICE_OFFSETOF(NewCacheItem, lru_link) == 0);
     while ((item = (NewCacheItem *)ring_get_head(&cache->lru))) {
         ring_remove(&item->lru_link);
-        free(item);
+        g_free(item);
     }
     memset(cache->hash_table, 0, sizeof(*cache->hash_table) * BITS_CACHE_HASH_SIZE);
 
@@ -92,7 +92,7 @@ static Ring pixmap_cache_list = {&pixmap_cache_list, &pixmap_cache_list};
 
 static PixmapCache *pixmap_cache_new(RedClient *client, uint8_t id, int64_t size)
 {
-    PixmapCache *cache = spice_new0(PixmapCache, 1);
+    PixmapCache *cache = g_new0(PixmapCache, 1);
 
     ring_item_init(&cache->base);
     pthread_mutex_init(&cache->lock, NULL);
@@ -143,5 +143,5 @@ void pixmap_cache_unref(PixmapCache *cache)
     ring_remove(&cache->base);
     pthread_mutex_unlock(&cache_lock);
     pixmap_cache_destroy(cache);
-    free(cache);
+    g_free(cache);
 }
