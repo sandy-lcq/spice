@@ -37,7 +37,7 @@ struct SpiceTimer {
 static SpiceTimer* timer_add(const SpiceCoreInterfaceInternal *iface,
                              SpiceTimerFunc func, void *opaque)
 {
-    SpiceTimer *timer = spice_malloc0(sizeof(SpiceTimer));
+    SpiceTimer *timer = g_new0(SpiceTimer, 1);
 
     timer->context = iface->main_context;
     timer->func = func;
@@ -84,7 +84,7 @@ static void timer_remove(const SpiceCoreInterfaceInternal *iface,
 {
     timer_cancel(iface, timer);
     spice_assert(timer->source == NULL);
-    free(timer);
+    g_free(timer);
 }
 
 struct SpiceWatch {
@@ -155,7 +155,7 @@ static SpiceWatch *watch_add(const SpiceCoreInterfaceInternal *iface,
     spice_return_val_if_fail(fd != -1, NULL);
     spice_return_val_if_fail(func != NULL, NULL);
 
-    watch = spice_malloc0(sizeof(SpiceWatch));
+    watch = g_new0(SpiceWatch, 1);
     watch->context = iface->main_context;
     watch->channel = g_io_channel_unix_new(fd);
     watch->func = func;
@@ -173,7 +173,7 @@ static void watch_remove(const SpiceCoreInterfaceInternal *iface,
     spice_assert(watch->source == NULL);
 
     g_io_channel_unref(watch->channel);
-    free(watch);
+    g_free(watch);
 }
 
 const SpiceCoreInterfaceInternal event_loop_core = {
