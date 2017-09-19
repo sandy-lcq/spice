@@ -635,7 +635,7 @@ void dcc_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
     item->clip_type = SPICE_CLIP_TYPE_RECTS;
 
     n_rects = pixman_region32_n_rects(&agent->clip);
-    item->rects = spice_malloc_n_m(n_rects, sizeof(SpiceRect), sizeof(SpiceClipRects));
+    item->rects = g_malloc(sizeof(SpiceClipRects) + n_rects * sizeof(SpiceRect));
     item->rects->num_rects = n_rects;
     region_ret_rects(&agent->clip, item->rects->rects, n_rects);
 

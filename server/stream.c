@@ -169,7 +169,7 @@ static void red_stream_clip_item_free(RedPipeItem *base)
     g_return_if_fail(item->base.refcount == 0);
 
     stream_agent_unref(display, item->stream_agent);
-    free(item->rects);
+    g_free(item->rects);
     g_free(item);
 }
 
@@ -777,7 +777,7 @@ static void red_upgrade_item_free(RedPipeItem *base)
     g_return_if_fail(item->base.refcount == 0);
 
     drawable_unref(item->drawable);
-    free(item->rects);
+    g_free(item->rects);
     g_free(item);
 }
 
@@ -825,7 +825,7 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
         upgrade_item->drawable = stream->current;
         upgrade_item->drawable->refs++;
         n_rects = pixman_region32_n_rects(&upgrade_item->drawable->tree_item.base.rgn);
-        upgrade_item->rects = spice_malloc_n_m(n_rects, sizeof(SpiceRect), sizeof(SpiceClipRects));
+        upgrade_item->rects = g_malloc(sizeof(SpiceClipRects) + n_rects * sizeof(SpiceRect));
         upgrade_item->rects->num_rects = n_rects;
         region_ret_rects(&upgrade_item->drawable->tree_item.base.rgn,
                          upgrade_item->rects->rects, n_rects);
