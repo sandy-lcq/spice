@@ -314,12 +314,12 @@ static void spice_gst_video_buffer_free(VideoBuffer *video_buffer)
 #endif
         gst_buffer_unref(buffer->gst_buffer);
     }
-    free(buffer);
+    g_free(buffer);
 }
 
 static SpiceGstVideoBuffer* create_gst_video_buffer(void)
 {
-    SpiceGstVideoBuffer *buffer = spice_new0(SpiceGstVideoBuffer, 1);
+    SpiceGstVideoBuffer *buffer = g_new0(SpiceGstVideoBuffer, 1);
     buffer->base.free = spice_gst_video_buffer_free;
     return buffer;
 }
@@ -1161,7 +1161,7 @@ static void clear_zero_copy_queue(SpiceGstEncoder *encoder, gboolean unref_queue
 
 static BitmapWrapper *bitmap_wrapper_new(SpiceGstEncoder *encoder, gpointer bitmap_opaque)
 {
-    BitmapWrapper *wrapper = spice_new(BitmapWrapper, 1);
+    BitmapWrapper *wrapper = g_new(BitmapWrapper, 1);
     wrapper->refs = 1;
     wrapper->encoder = encoder;
     wrapper->opaque = bitmap_opaque;
@@ -1174,7 +1174,7 @@ static void bitmap_wrapper_unref(gpointer data)
     BitmapWrapper *wrapper = data;
     if (g_atomic_int_dec_and_test(&wrapper->refs)) {
         g_async_queue_push(wrapper->encoder->unused_bitmap_opaques, wrapper->opaque);
-        free(wrapper);
+        g_free(wrapper);
     }
 }
 
@@ -1460,7 +1460,7 @@ static void spice_gst_encoder_destroy(VideoEncoder *video_encoder)
     /* Unref any lingering bitmap opaque structures from past frames */
     clear_zero_copy_queue(encoder, TRUE);
 
-    free(encoder);
+    g_free(encoder);
 }
 
 static int spice_gst_encoder_encode_frame(VideoEncoder *video_encoder,
@@ -1751,7 +1751,7 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
         return NULL;
     }
 
-    SpiceGstEncoder *encoder = spice_new0(SpiceGstEncoder, 1);
+    SpiceGstEncoder *encoder = g_new0(SpiceGstEncoder, 1);
     encoder->base.destroy = spice_gst_encoder_destroy;
     encoder->base.encode_frame = spice_gst_encoder_encode_frame;
     encoder->base.client_stream_report = spice_gst_encoder_client_stream_report;
@@ -1771,13 +1771,13 @@ VideoEncoder *gstreamer_encoder_new(SpiceVideoCodecType codec_type,
     pthread_mutex_init(&encoder->outbuf_mutex, NULL);
     pthread_cond_init(&encoder->outbuf_cond, NULL);
 
-    /* All the other fields are initialized to zero by spice_new0(). */
+    /* All the other fields are initialized to zero by g_new0(). */
 
     if (!create_pipeline(encoder)) {
         /* Some GStreamer dependency is probably missing */
         pthread_cond_destroy(&encoder->outbuf_cond);
         pthread_mutex_destroy(&encoder->outbuf_mutex);
-        free(encoder);
+        g_free(encoder);
         encoder = NULL;
     }
     return (VideoEncoder*)encoder;
