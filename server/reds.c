@@ -334,7 +334,7 @@ static void reds_link_free(RedLinkInfo *link)
     reds_stream_free(link->stream);
     link->stream = NULL;
 
-    free(link->link_mess);
+    g_free(link->link_mess);
     link->link_mess = NULL;
 
     BN_free(link->tiTicketing.bn);
@@ -1811,7 +1811,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
                             &caps);
     red_channel_capabilities_reset(&caps);
     spice_debug("NEW Client %p mcc %p connect-id %d", client, mcc, connection_id);
-    free(link_mess);
+    g_free(link_mess);
     red_client_set_main(client, mcc);
 
     if (reds->vdagent) {
@@ -2019,7 +2019,7 @@ static void reds_handle_other_links(RedsState *reds, RedLinkInfo *link)
     } else {
         spice_assert(!mig_client);
         reds_channel_do_link(channel, client, link_mess, link->stream);
-        free(link_mess);
+        g_free(link_mess);
     }
     link->stream = NULL;
     link->link_mess = NULL;
@@ -2378,7 +2378,7 @@ static void reds_handle_read_header_done(void *opaque)
         return;
     }
 
-    link->link_mess = spice_malloc(header->size);
+    link->link_mess = g_malloc(header->size);
 
     reds_stream_async_read(link->stream,
                            (uint8_t *)link->link_mess,
