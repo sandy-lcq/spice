@@ -150,8 +150,8 @@ static void red_char_device_write_buffer_free(RedCharDeviceWriteBuffer *buf)
     if (buf == NULL)
         return;
 
-    free(buf->buf);
-    free(buf);
+    g_free(buf->buf);
+    g_free(buf);
 }
 
 static void write_buffers_queue_free(GQueue *write_queue)
@@ -210,7 +210,7 @@ static void red_char_device_client_free(RedCharDevice *dev,
     }
 
     dev->priv->clients = g_list_remove(dev->priv->clients, dev_client);
-    free(dev_client);
+    g_free(dev_client);
 }
 
 static void red_char_device_handle_client_overflow(RedCharDeviceClient *dev_client)
@@ -550,7 +550,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
             RedCharDeviceWriteBuffer buffer;
             RedCharDeviceWriteBufferPrivate priv;
         } *write_buf;
-        write_buf = spice_new0(struct RedCharDeviceWriteBufferFull, 1);
+        write_buf = g_new0(struct RedCharDeviceWriteBufferFull, 1);
         ret = &write_buf->buffer;
         ret->priv = &write_buf->priv;
     }
@@ -558,7 +558,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
     spice_assert(!ret->buf_used);
 
     if (ret->buf_size < size) {
-        ret->buf = spice_realloc(ret->buf, size);
+        ret->buf = g_realloc(ret->buf, size);
         ret->buf_size = size;
     }
     ret->priv->origin = origin;
@@ -709,7 +709,7 @@ static RedCharDeviceClient *red_char_device_client_new(RedClient *client,
 {
     RedCharDeviceClient *dev_client;
 
-    dev_client = spice_new0(RedCharDeviceClient, 1);
+    dev_client = g_new0(RedCharDeviceClient, 1);
     dev_client->client = client;
     dev_client->send_queue = g_queue_new();
     dev_client->max_send_queue_size = max_send_queue_size;
