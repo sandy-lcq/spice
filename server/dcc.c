@@ -180,8 +180,8 @@ static void display_channel_client_init(DisplayChannelClient *self)
     self->priv->encoders.jpeg_quality = 85;
 
     self->priv->send_data.free_list.res =
-        spice_malloc(sizeof(SpiceResourceList) +
-                     DISPLAY_FREE_LIST_DEFAULT_SIZE * sizeof(SpiceResourceID));
+        g_malloc(sizeof(SpiceResourceList) +
+                 DISPLAY_FREE_LIST_DEFAULT_SIZE * sizeof(SpiceResourceID));
     self->priv->send_data.free_list.res_size = DISPLAY_FREE_LIST_DEFAULT_SIZE;
 }
 
@@ -439,7 +439,7 @@ static void red_drawable_pipe_item_free(RedPipeItem *item)
 
     dpi->drawable->pipes = g_list_remove(dpi->drawable->pipes, dpi);
     drawable_unref(dpi->drawable);
-    free(dpi);
+    g_free(dpi);
 }
 
 static RedDrawablePipeItem *red_drawable_pipe_item_new(DisplayChannelClient *dcc,
@@ -447,7 +447,7 @@ static RedDrawablePipeItem *red_drawable_pipe_item_new(DisplayChannelClient *dcc
 {
     RedDrawablePipeItem *dpi;
 
-    dpi = spice_malloc0(sizeof(*dpi));
+    dpi = g_new0(RedDrawablePipeItem, 1);
     dpi->drawable = drawable;
     dpi->dcc = dcc;
     drawable->pipes = g_list_prepend(drawable->pipes, dpi);
@@ -618,7 +618,7 @@ static void dcc_stop(DisplayChannelClient *dcc)
     pixmap_cache_unref(dcc->priv->pixmap_cache);
     dcc->priv->pixmap_cache = NULL;
     dcc_palette_cache_reset(dcc);
-    free(dcc->priv->send_data.free_list.res);
+    g_free(dcc->priv->send_data.free_list.res);
     dcc_destroy_stream_agents(dcc);
     image_encoders_free(&dcc->priv->encoders);
 
@@ -647,7 +647,7 @@ static void red_monitors_config_item_free(RedPipeItem *base)
     RedMonitorsConfigItem *item = SPICE_CONTAINEROF(base, RedMonitorsConfigItem, pipe_item);
 
     monitors_config_unref(item->monitors_config);
-    free(item);
+    g_free(item);
 }
 
 static RedMonitorsConfigItem *red_monitors_config_item_new(RedChannel* channel,
@@ -655,7 +655,7 @@ static RedMonitorsConfigItem *red_monitors_config_item_new(RedChannel* channel,
 {
     RedMonitorsConfigItem *mci;
 
-    mci = spice_new(RedMonitorsConfigItem, 1);
+    mci = g_new(RedMonitorsConfigItem, 1);
     mci->monitors_config = monitors_config_ref(monitors_config);
 
     red_pipe_item_init_full(&mci->pipe_item, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
@@ -940,9 +940,9 @@ static void dcc_push_release(DisplayChannelClient *dcc, uint8_t type, uint64_t i
     }
 
     if (free_list->res->count == free_list->res_size) {
-        free_list->res = spice_realloc(free_list->res,
-                                       sizeof(*free_list->res) +
-                                       free_list->res_size * sizeof(SpiceResourceID) * 2);
+        free_list->res = g_realloc(free_list->res,
+                                   sizeof(*free_list->res) +
+                                   free_list->res_size * sizeof(SpiceResourceID) * 2);
         free_list->res_size *= 2;
     }
     free_list->res->resources[free_list->res->count].type = type;
