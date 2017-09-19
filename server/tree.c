@@ -195,7 +195,7 @@ Shadow* shadow_new(DrawItem *item, const SpicePoint *delta)
         return NULL;
     }
 
-    Shadow *shadow = spice_new(Shadow, 1);
+    Shadow *shadow = g_new(Shadow, 1);
 
     shadow->base.type = TREE_ITEM_TYPE_SHADOW;
     shadow->base.container = NULL;
@@ -215,7 +215,7 @@ Shadow* shadow_new(DrawItem *item, const SpicePoint *delta)
  * container */
 Container* container_new(DrawItem *item)
 {
-    Container *container = spice_new(Container, 1);
+    Container *container = g_new(Container, 1);
 
     container->base.type = TREE_ITEM_TYPE_CONTAINER;
     container->base.container = item->base.container;
@@ -237,7 +237,7 @@ void container_free(Container *container)
 
     ring_remove(&container->base.siblings_link);
     region_destroy(&container->base.rgn);
-    free(container);
+    g_free(container);
 }
 
 void container_cleanup(Container *container)
@@ -308,5 +308,5 @@ void draw_item_remove_shadow(DrawItem *item)
     ring_remove(&shadow->base.siblings_link);
     region_destroy(&shadow->base.rgn);
     region_destroy(&shadow->on_hold);
-    free(shadow);
+    g_free(shadow);
 }
