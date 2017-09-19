@@ -64,7 +64,7 @@ static void image_cache_remove(ImageCache *cache, ImageCacheItem *item)
     }
     ring_remove(&item->lru_link);
     pixman_image_unref(item->image);
-    free(item);
+    g_free(item);
 #ifndef IMAGE_CACHE_AGE
     cache->num_items--;
 #endif
@@ -86,7 +86,7 @@ static void image_cache_put(SpiceImageCache *spice_cache, uint64_t id, pixman_im
     }
 #endif
 
-    item = spice_new(ImageCacheItem, 1);
+    item = g_new(ImageCacheItem, 1);
     item->id = id;
 #ifdef IMAGE_CACHE_AGE
     item->age = cache->age;
