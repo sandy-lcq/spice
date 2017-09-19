@@ -143,12 +143,48 @@ static void vmc_leaks(void)
     basic_event_loop_destroy();
 }
 
+static void migrate_cb(SpiceMigrateInstance *sin)
+{
+}
+
+static const SpiceMigrateInterface migrate_interface = {
+    .base = {
+        .type          = SPICE_INTERFACE_MIGRATION,
+        .description   = "migration",
+        .major_version = SPICE_INTERFACE_MIGRATION_MAJOR,
+        .minor_version = SPICE_INTERFACE_MIGRATION_MINOR,
+    },
+    .migrate_connect_complete = migrate_cb,
+    .migrate_end_complete = migrate_cb,
+};
+
+static void migration_leaks(void)
+{
+    SpiceCoreInterface *core;
+    SpiceServer *server = spice_server_new();
+    SpiceMigrateInstance migrate;
+
+    g_assert_nonnull(server);
+
+    core = basic_event_loop_init();
+    g_assert_nonnull(core);
+
+    g_assert_cmpint(spice_server_init(server, core), ==, 0);
+
+    migrate.base.sif = &migrate_interface.base;
+    spice_server_add_interface(server, &migrate.base);
+
+    spice_server_destroy(server);
+    basic_event_loop_destroy();
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/server/server leaks", server_leaks);
     g_test_add_func("/server/vmc leaks", vmc_leaks);
+    g_test_add_func("/server/migration leaks", migration_leaks);
 
     return g_test_run();
 }
