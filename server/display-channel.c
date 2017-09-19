@@ -170,7 +170,7 @@ void monitors_config_unref(MonitorsConfig *monitors_config)
     }
 
     spice_debug("freeing monitors config");
-    free(monitors_config);
+    g_free(monitors_config);
 }
 
 static void monitors_config_debug(MonitorsConfig *mc)
@@ -188,7 +188,7 @@ static MonitorsConfig* monitors_config_new(QXLHead *heads, ssize_t nheads, ssize
 {
     MonitorsConfig *mc;
 
-    mc = spice_malloc(sizeof(MonitorsConfig) + nheads * sizeof(QXLHead));
+    mc = g_malloc(sizeof(MonitorsConfig) + nheads * sizeof(QXLHead));
     mc->refs = 1;
     mc->count = nheads;
     mc->max_allowed = max;
