@@ -144,7 +144,7 @@ static void smartcard_read_buf_prepare(RedCharDeviceSmartcard *dev, VSCMsgHeader
     msg_len = ntohl(vheader->length);
     if (msg_len > dev->priv->buf_size) {
         dev->priv->buf_size = MAX(dev->priv->buf_size * 2, msg_len + sizeof(VSCMsgHeader));
-        dev->priv->buf = spice_realloc(dev->priv->buf, dev->priv->buf_size);
+        dev->priv->buf = g_realloc(dev->priv->buf, dev->priv->buf_size);
     }
 }
 
@@ -239,7 +239,7 @@ RedMsgItem *smartcard_char_device_on_message_from_device(RedCharDeviceSmartcard 
         spice_printerr("error: reader_id not assigned for message of type %d", vheader->type);
     }
     if (dev->priv->scc) {
-        sent_header = spice_memdup(vheader, sizeof(*vheader) + vheader->length);
+        sent_header = g_memdup(vheader, sizeof(*vheader) + vheader->length);
         /* We patch the reader_id, since the device only knows about itself, and
          * we know about the sum of readers. */
         sent_header->reader_id = dev->priv->reader_id;
@@ -460,14 +460,14 @@ static void smartcard_channel_send_item(RedChannelClient *rcc, RedPipeItem *item
 static void smartcard_free_vsc_msg_item(RedPipeItem *base)
 {
     RedMsgItem *item = SPICE_UPCAST(RedMsgItem, base);
-    free(item->vheader);
-    free(item);
+    g_free(item->vheader);
+    g_free(item);
 }
 
 static RedMsgItem *smartcard_get_vsc_msg_item(RedChannelClient *rcc,
                                               VSCMsgHeader *vheader)
 {
-    RedMsgItem *msg_item = spice_new0(RedMsgItem, 1);
+    RedMsgItem *msg_item = g_new0(RedMsgItem, 1);
 
     red_pipe_item_init_full(&msg_item->base, RED_PIPE_ITEM_TYPE_SMARTCARD_DATA,
                             smartcard_free_vsc_msg_item);
@@ -593,7 +593,7 @@ red_char_device_smartcard_finalize(GObject *object)
 {
     RedCharDeviceSmartcard *self = RED_CHAR_DEVICE_SMARTCARD(object);
 
-    free(self->priv->buf);
+    g_free(self->priv->buf);
 
     G_OBJECT_CLASS(red_char_device_smartcard_parent_class)->finalize(object);
 }
@@ -621,7 +621,7 @@ red_char_device_smartcard_init(RedCharDeviceSmartcard *self)
 
     self->priv->reader_id = VSCARD_UNDEFINED_READER_ID;
     self->priv->buf_size = APDUBufSize + sizeof(VSCMsgHeader);
-    self->priv->buf = spice_malloc(self->priv->buf_size);
+    self->priv->buf = g_malloc(self->priv->buf_size);
     self->priv->buf_pos = self->priv->buf;
 }
 
