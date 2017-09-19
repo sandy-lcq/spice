@@ -191,18 +191,18 @@ static uint32_t get_min_required_playback_delay(uint64_t frame_enc_size,
 static void mjpeg_video_buffer_free(VideoBuffer *video_buffer)
 {
     MJpegVideoBuffer *buffer = (MJpegVideoBuffer*)video_buffer;
-    free(buffer->base.data);
-    free(buffer);
+    g_free(buffer->base.data);
+    g_free(buffer);
 }
 
 static MJpegVideoBuffer* create_mjpeg_video_buffer(void)
 {
-    MJpegVideoBuffer *buffer = spice_new0(MJpegVideoBuffer, 1);
+    MJpegVideoBuffer *buffer = g_new0(MJpegVideoBuffer, 1);
     buffer->base.free = mjpeg_video_buffer_free;
     buffer->maxsize = MJPEG_INITIAL_BUFFER_SIZE;
-    buffer->base.data = malloc(buffer->maxsize);
+    buffer->base.data = g_try_malloc(buffer->maxsize);
     if (!buffer->base.data) {
-        free(buffer);
+        g_free(buffer);
         buffer = NULL;
     }
     return buffer;
@@ -211,10 +211,10 @@ static MJpegVideoBuffer* create_mjpeg_video_buffer(void)
 static void mjpeg_encoder_destroy(VideoEncoder *video_encoder)
 {
     MJpegEncoder *encoder = (MJpegEncoder*)video_encoder;
-    free(encoder->cinfo.dest);
+    g_free(encoder->cinfo.dest);
     jpeg_destroy_compress(&encoder->cinfo);
-    free(encoder->row);
-    free(encoder);
+    g_free(encoder->row);
+    g_free(encoder);
 }
 
 static uint8_t mjpeg_encoder_get_bytes_per_pixel(MJpegEncoder *encoder)
@@ -278,7 +278,7 @@ static boolean empty_mem_output_buffer(j_compress_ptr cinfo)
 
   /* Try to allocate new buffer with double size */
   nextsize = dest->bufsize * 2;
-  nextbuffer = realloc(dest->buffer, nextsize);
+  nextbuffer = g_try_realloc(dest->buffer, nextsize);
 
   if (nextbuffer == NULL)
     ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 10);
@@ -304,7 +304,7 @@ static void term_mem_destination(j_compress_ptr cinfo)
  * Prepare for output to a memory buffer.
  * The caller must supply its own initial buffer and size.
  * When the actual data output exceeds the given size, the library
- * will adapt the buffer size as necessary using the malloc()/free()
+ * will adapt the buffer size as necessary using the g_malloc()/g_free()
  * functions. The buffer is available to the application after the
  * compression and the application is then responsible for freeing it.
  */
@@ -323,7 +323,7 @@ spice_jpeg_mem_dest(j_compress_ptr cinfo,
    * can be written to the same buffer without re-executing jpeg_mem_dest.
    */
   if (cinfo->dest == NULL) { /* first time for this JPEG object? */
-    cinfo->dest = spice_malloc(sizeof(mem_destination_mgr));
+    cinfo->dest = g_malloc(sizeof(mem_destination_mgr));
   }
 
   dest = (mem_destination_mgr *) cinfo->dest;
@@ -700,7 +700,7 @@ static void mjpeg_encoder_adjust_fps(MJpegEncoder *encoder, uint64_t now)
 }
 
 /*
- * dest must be either NULL or allocated by malloc, since it might be freed
+ * dest must be either NULL or allocated by g_malloc, since it might be freed
  * during the encoding, if its size is too small.
  *
  * return:
@@ -790,7 +790,7 @@ static int mjpeg_encoder_start_frame(MJpegEncoder *encoder,
             return VIDEO_ENCODER_FRAME_UNSUPPORTED;
         }
         if (encoder->row_size < stride) {
-            encoder->row = spice_realloc(encoder->row, stride);
+            encoder->row = g_realloc(encoder->row, stride);
             encoder->row_size = stride;
         }
     }
@@ -1357,7 +1357,7 @@ VideoEncoder *mjpeg_encoder_new(SpiceVideoCodecType codec_type,
 
     spice_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG, NULL);
 
-    encoder = spice_new0(MJpegEncoder, 1);
+    encoder = g_new0(MJpegEncoder, 1);
     encoder->base.destroy = mjpeg_encoder_destroy;
     encoder->base.encode_frame = mjpeg_encoder_encode_frame;
     encoder->base.client_stream_report = mjpeg_encoder_client_stream_report;
