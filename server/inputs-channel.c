@@ -77,7 +77,7 @@ static SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs);
 
 static SpiceKbdState* spice_kbd_state_new(RedsState *reds)
 {
-    SpiceKbdState *st = spice_new0(SpiceKbdState, 1);
+    SpiceKbdState *st = g_new0(SpiceKbdState, 1);
     st->reds = reds;
     return st;
 }
@@ -93,7 +93,7 @@ struct SpiceMouseState {
 
 static SpiceMouseState* spice_mouse_state_new(void)
 {
-    return spice_new0(SpiceMouseState, 1);
+    return g_new0(SpiceMouseState, 1);
 }
 
 struct SpiceTabletState {
@@ -102,7 +102,7 @@ struct SpiceTabletState {
 
 static SpiceTabletState* spice_tablet_state_new(void)
 {
-    return spice_new0(SpiceTabletState, 1);
+    return g_new0(SpiceTabletState, 1);
 }
 
 RedsState* spice_tablet_state_get_server(SpiceTabletState *st)
