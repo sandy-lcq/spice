@@ -19,7 +19,6 @@
 #define RED_STREAM_H_
 
 #include <openssl/ssl.h>
-#include <common/mem.h>
 
 #include "spice.h"
 #include "red-common.h"

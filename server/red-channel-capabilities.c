@@ -19,7 +19,6 @@
 #endif
 
 #include <string.h>
-#include <common/mem.h>
 #include <common/macros.h>
 
 #include "red-channel-capabilities.h"

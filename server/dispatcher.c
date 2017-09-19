@@ -26,7 +26,6 @@
 #include <fcntl.h>
 #include <poll.h>
 
-#include <common/mem.h>
 #include <common/spice_common.h>
 #include "dispatcher.h"
 

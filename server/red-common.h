@@ -28,7 +28,6 @@
 #include <common/log.h>
 #include <common/lz_common.h>
 #include <common/marshaller.h>
-#include <common/mem.h>
 #include <common/messages.h>
 #include <common/ring.h>
 #include <common/spice_common.h>
