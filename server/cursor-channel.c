@@ -74,7 +74,7 @@ static void cursor_pipe_item_free(RedPipeItem *base)
 
     cursor_cmd = pipe_item->red_cursor;
     red_put_cursor_cmd(cursor_cmd);
-    free(cursor_cmd);
+    g_free(cursor_cmd);
 
     g_free(pipe_item);
 }

@@ -100,16 +100,16 @@ void red_drawable_unref(RedDrawable *red_drawable)
     }
     red_qxl_release_resource(red_drawable->qxl, red_drawable->release_info_ext);
     red_put_drawable(red_drawable);
-    free(red_drawable);
+    g_free(red_drawable);
 }
 
 static gboolean red_process_cursor_cmd(RedWorker *worker, const QXLCommandExt *ext)
 {
     RedCursorCmd *cursor_cmd;
 
-    cursor_cmd = spice_new0(RedCursorCmd, 1);
+    cursor_cmd = g_new0(RedCursorCmd, 1);
     if (!red_get_cursor_cmd(&worker->mem_slots, ext->group_id, cursor_cmd, ext->cmd.data)) {
-        free(cursor_cmd);
+        g_free(cursor_cmd);
         return FALSE;
     }
     red_qxl_release_resource(worker->qxl, cursor_cmd->release_info_ext);
@@ -161,7 +161,7 @@ static int red_process_cursor(RedWorker *worker, int *ring_is_empty)
 
 static RedDrawable *red_drawable_new(QXLInstance *qxl)
 {
-    RedDrawable * red = spice_new0(RedDrawable, 1);
+    RedDrawable * red = g_new0(RedDrawable, 1);
 
     red->refs = 1;
     red->qxl = qxl;
