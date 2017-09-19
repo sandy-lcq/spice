@@ -417,7 +417,7 @@ RedsStream *reds_stream_new(RedsState *reds, int socket)
 
     stream = g_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
     stream->priv = (RedsStreamPrivate *)(stream+1);
-    stream->priv->info = spice_new0(SpiceChannelEventInfo, 1);
+    stream->priv->info = g_new0(SpiceChannelEventInfo, 1);
     stream->priv->reds = reds;
     stream->priv->core = reds_get_core_interface(reds);
     reds_stream_set_socket(stream, socket);
