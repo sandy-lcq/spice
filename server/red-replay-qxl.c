@@ -96,7 +96,7 @@ static replay_t replay_fscanf_check(SpiceReplay *replay, const char *fmt, ...)
 
 static inline void *replay_malloc(SpiceReplay *replay, size_t size)
 {
-    void *mem = spice_malloc(size);
+    void *mem = g_malloc(size);
     replay->allocated = g_list_prepend(replay->allocated, mem);
     return mem;
 }
@@ -111,13 +111,13 @@ static inline void *replay_malloc0(SpiceReplay *replay, size_t size)
 static inline void replay_free(SpiceReplay *replay, void *mem)
 {
     replay->allocated = g_list_remove(replay->allocated, mem);
-    free(mem);
+    g_free(mem);
 }
 
 static inline void *replay_realloc(SpiceReplay *replay, void *mem, size_t n_bytes)
 {
     GList *elem = g_list_find(replay->allocated, mem);
-    elem->data = spice_realloc(mem, n_bytes);
+    elem->data = g_realloc(mem, n_bytes);
     return elem->data;
 }
 
@@ -335,11 +335,11 @@ static void red_replay_data_chunks_free(SpiceReplay *replay, void *data, size_t 
     cur = QXLPHYSICAL_TO_PTR(cur->next_chunk);
     while (cur) {
         QXLDataChunk *next = QXLPHYSICAL_TO_PTR(cur->next_chunk);
-        free(cur);
+        g_free(cur);
         cur = next;
     }
 
-    free(data);
+    g_free(data);
 }
 
 static void red_replay_point_ptr(SpiceReplay *replay, QXLPoint *qxl)
@@ -513,9 +513,9 @@ static void red_replay_image_free(SpiceReplay *replay, QXLPHYSICAL p, uint32_t f
 
     switch (qxl->descriptor.type) {
     case SPICE_IMAGE_TYPE_BITMAP:
-        free(QXLPHYSICAL_TO_PTR(qxl->bitmap.palette));
+        g_free(QXLPHYSICAL_TO_PTR(qxl->bitmap.palette));
         if (qxl->bitmap.flags & QXL_BITMAP_DIRECT) {
-            free(QXLPHYSICAL_TO_PTR(qxl->bitmap.data));
+            g_free(QXLPHYSICAL_TO_PTR(qxl->bitmap.data));
         } else {
             red_replay_data_chunks_free(replay, QXLPHYSICAL_TO_PTR(qxl->bitmap.data), 0);
         }
@@ -530,7 +530,7 @@ static void red_replay_image_free(SpiceReplay *replay, QXLPHYSICAL p, uint32_t f
         spice_warn_if_reached();
     }
 
-    free(qxl);
+    g_free(qxl);
 }
 
 static void red_replay_brush_ptr(SpiceReplay *replay, QXLBrush *qxl, uint32_t flags)
@@ -722,7 +722,7 @@ static void red_replay_stroke_free(SpiceReplay *replay, QXLStroke *qxl, uint32_t
 {
     red_replay_path_free(replay, qxl->path);
     if (qxl->attr.flags & SPICE_LINE_FLAGS_STYLED) {
-        free(QXLPHYSICAL_TO_PTR(qxl->attr.style));
+        g_free(QXLPHYSICAL_TO_PTR(qxl->attr.style));
     }
     red_replay_brush_free(replay, &qxl->brush, flags);
 }
@@ -860,9 +860,9 @@ static void red_replay_composite_ptr(SpiceReplay *replay, QXLComposite *qxl, uin
 static void red_replay_composite_free(SpiceReplay *replay, QXLComposite *qxl, uint32_t flags)
 {
     red_replay_image_free(replay, qxl->src, flags);
-    free(QXLPHYSICAL_TO_PTR(qxl->src_transform));
+    g_free(QXLPHYSICAL_TO_PTR(qxl->src_transform));
     red_replay_image_free(replay, qxl->mask, flags);
-    free(QXLPHYSICAL_TO_PTR(qxl->mask_transform));
+    g_free(QXLPHYSICAL_TO_PTR(qxl->mask_transform));
 
 }
 
@@ -1002,7 +1002,7 @@ static void red_replay_native_drawable_free(SpiceReplay *replay, QXLDrawable *qx
         break;
     };
 
-    free(qxl);
+    g_free(qxl);
 }
 
 static QXLCompatDrawable *red_replay_compat_drawable(SpiceReplay *replay, uint32_t flags)
@@ -1157,8 +1157,8 @@ static void red_replay_surface_cmd_free(SpiceReplay *replay, QXLSurfaceCmd *qxl)
         replay_id_free(replay, qxl->surface_id);
     }
 
-    free(QXLPHYSICAL_TO_PTR(qxl->u.surface_create.data));
-    free(qxl);
+    g_free(QXLPHYSICAL_TO_PTR(qxl->u.surface_create.data));
+    g_free(qxl);
 }
 
 static QXLCursor *red_replay_cursor(SpiceReplay *replay)
@@ -1230,7 +1230,7 @@ static void red_replay_cursor_cmd_free(SpiceReplay *replay, QXLCursorCmd *qxl)
         red_replay_data_chunks_free(replay, cursor, sizeof(*cursor));
     }
 
-    free(qxl);
+    g_free(qxl);
 }
 
 static void replay_handle_create_primary(QXLWorker *worker, SpiceReplay *replay)
@@ -1256,7 +1256,7 @@ static void replay_handle_create_primary(QXLWorker *worker, SpiceReplay *replay)
     }
     read_binary(replay, "data", &size, &mem, 0);
     surface.group_id = 0;
-    free(replay->primary_mem);
+    g_free(replay->primary_mem);
     replay->allocated = g_list_remove(replay->allocated, mem);
     replay->primary_mem = mem;
     surface.mem = QXLPHYSICAL_FROM_PTR(mem);
@@ -1274,7 +1274,7 @@ static void replay_handle_dev_input(QXLWorker *worker, SpiceReplay *replay,
     case RED_WORKER_MESSAGE_DESTROY_PRIMARY_SURFACE:
         replay->created_primary = FALSE;
         worker->destroy_primary_surface(worker, 0);
-        free(replay->primary_mem);
+        g_free(replay->primary_mem);
         replay->primary_mem = NULL;
         break;
     case RED_WORKER_MESSAGE_DESTROY_SURFACES:
@@ -1371,7 +1371,7 @@ error:
     /* if there were some allocation during the read free all
      * buffers allocated to avoid leaks */
     if (replay->allocated) {
-        g_list_free_full(replay->allocated, free);
+        g_list_free_full(replay->allocated, g_free);
         replay->allocated = NULL;
     }
     return NULL;
@@ -1392,7 +1392,7 @@ SPICE_GNUC_VISIBLE void spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt
     }
     case QXL_CMD_UPDATE: {
         QXLUpdateCmd *qxl = QXLPHYSICAL_TO_PTR(cmd->cmd.data);
-        free(qxl);
+        g_free(qxl);
         break;
     }
     case QXL_CMD_SURFACE: {
@@ -1409,7 +1409,7 @@ SPICE_GNUC_VISIBLE void spice_replay_free_cmd(SpiceReplay *replay, QXLCommandExt
         break;
     }
 
-    free(cmd);
+    g_free(cmd);
 }
 
 /* caller is incharge of closing the replay when done and releasing the SpiceReplay
@@ -1432,7 +1432,7 @@ SpiceReplay *spice_replay_new(FILE *file, int nsurfaces)
         return NULL;
     }
 
-    replay = spice_malloc0(sizeof(SpiceReplay));
+    replay = g_new0(SpiceReplay, 1);
 
     replay->error = FALSE;
     replay->fd = file;
@@ -1455,13 +1455,13 @@ SPICE_GNUC_VISIBLE void spice_replay_free(SpiceReplay *replay)
 {
     spice_return_if_fail(replay != NULL);
 
-    g_list_free_full(replay->allocated, free);
+    g_list_free_full(replay->allocated, g_free);
     pthread_mutex_destroy(&replay->mutex);
     pthread_cond_destroy(&replay->cond);
     g_array_free(replay->id_map, TRUE);
     g_array_free(replay->id_map_inv, TRUE);
     g_array_free(replay->id_free, TRUE);
-    free(replay->primary_mem);
+    g_free(replay->primary_mem);
     fclose(replay->fd);
-    free(replay);
+    g_free(replay);
 }
