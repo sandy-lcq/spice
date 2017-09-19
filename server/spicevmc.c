@@ -437,18 +437,18 @@ static void red_port_init_item_free(struct RedPipeItem *base)
 {
     RedPortInitPipeItem *item = SPICE_UPCAST(RedPortInitPipeItem, base);
 
-    free(item->name);
-    free(item);
+    g_free(item->name);
+    g_free(item);
 }
 
 static void spicevmc_port_send_init(RedChannelClient *rcc)
 {
     RedVmcChannel *channel = RED_VMC_CHANNEL(red_channel_client_get_channel(rcc));
     SpiceCharDeviceInstance *sin = channel->chardev_sin;
-    RedPortInitPipeItem *item = spice_new(RedPortInitPipeItem, 1);
+    RedPortInitPipeItem *item = g_new(RedPortInitPipeItem, 1);
 
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_PORT_INIT, red_port_init_item_free);
-    item->name = strdup(sin->portname);
+    item->name = g_strdup(sin->portname);
     item->opened = channel->port_opened;
     red_channel_client_pipe_add_push(rcc, &item->base);
 }
@@ -589,7 +589,7 @@ static bool spicevmc_red_channel_client_handle_message(RedChannelClient *rcc,
                                                        uint32_t size,
                                                        void *msg)
 {
-    /* NOTE: *msg free by free() (when cb to spicevmc_red_channel_release_msg_rcv_buf
+    /* NOTE: *msg free by g_free() (when cb to spicevmc_red_channel_release_msg_rcv_buf
      * with the compressed msg type) */
     RedVmcChannel *channel;
     SpiceCharDeviceInterface *sif;
@@ -646,7 +646,7 @@ static uint8_t *spicevmc_red_channel_alloc_msg_rcv_buf(RedChannelClient *rcc,
     }
 
     default:
-        return spice_malloc(size);
+        return g_malloc(size);
     }
 
 }
@@ -665,7 +665,7 @@ static void spicevmc_red_channel_release_msg_rcv_buf(RedChannelClient *rcc,
         break;
     }
     default:
-        free(msg);
+        g_free(msg);
     }
 }
 
