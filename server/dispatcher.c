@@ -112,7 +112,7 @@ dispatcher_finalize(GObject *object)
     close(self->priv->send_fd);
     close(self->priv->recv_fd);
     pthread_mutex_destroy(&self->priv->lock);
-    free(self->priv->payload);
+    g_free(self->priv->payload);
     G_OBJECT_CLASS(dispatcher_parent_class)->finalize(object);
 }
 
@@ -352,7 +352,7 @@ void dispatcher_register_handler(Dispatcher *dispatcher, uint32_t message_type,
     msg->size = size;
     msg->ack = ack;
     if (msg->size > dispatcher->priv->payload_size) {
-        dispatcher->priv->payload = realloc(dispatcher->priv->payload, msg->size);
+        dispatcher->priv->payload = g_realloc(dispatcher->priv->payload, msg->size);
         dispatcher->priv->payload_size = msg->size;
     }
 }
