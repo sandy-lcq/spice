@@ -2951,7 +2951,7 @@ static void reds_set_one_channel_security(RedsState *reds, int id, uint32_t secu
         security_options->options = security;
         return;
     }
-    security_options = spice_new(ChannelSecurityOptions, 1);
+    security_options = g_new(ChannelSecurityOptions, 1);
     security_options->channel_id = id;
     security_options->options = security;
     security_options->next = reds->config->channels_security;
@@ -3708,7 +3708,7 @@ static void reds_config_free(RedServerConfig *config)
     reds_mig_release(config);
     for (curr = config->channels_security; curr; curr = next) {
         next = curr->next;
-        free(curr);
+        g_free(curr);
     }
 #if HAVE_SASL
     g_free(config->sasl_appname);
