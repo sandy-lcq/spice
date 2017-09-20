@@ -4519,7 +4519,7 @@ red_char_device_vdi_port_init(RedCharDeviceVDIPort *self)
     self->priv->receive_len = sizeof(self->priv->vdi_chunk_header);
 
     for (i = 0; i < REDS_VDI_PORT_NUM_RECEIVE_BUFFS; i++) {
-        RedVDIReadBuf *buf = spice_new0(RedVDIReadBuf, 1);
+        RedVDIReadBuf *buf = g_new0(RedVDIReadBuf, 1);
         vdi_read_buf_init(buf);
         buf->dev = self;
         g_warn_if_fail(!self->priv->agent_attached);
