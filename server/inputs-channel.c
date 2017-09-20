@@ -566,6 +566,7 @@ inputs_channel_finalize(GObject *object)
     InputsChannel *self = INPUTS_CHANNEL(object);
     RedsState *reds = red_channel_get_server(RED_CHANNEL(self));
 
+    inputs_channel_detach_tablet(self, self->tablet);
     reds_core_timer_remove(reds, self->key_modifiers_timer);
 
     G_OBJECT_CLASS(inputs_channel_parent_class)->finalize(object);
@@ -652,6 +653,10 @@ int inputs_channel_has_tablet(InputsChannel *inputs)
 void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet)
 {
     spice_printerr("");
+    if (tablet != NULL && tablet == inputs->tablet) {
+        g_free(tablet->st);
+        tablet->st = NULL;
+    }
     inputs->tablet = NULL;
 }
 

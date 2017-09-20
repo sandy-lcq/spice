@@ -178,6 +178,71 @@ static void migration_leaks(void)
     basic_event_loop_destroy();
 }
 
+static void tablet_set_logical_size(SpiceTabletInstance* sin, int width, int height)
+{
+}
+
+static void tablet_position(SpiceTabletInstance* sin, int x, int y,
+                            uint32_t buttons_state)
+{
+}
+
+static void tablet_wheel(SpiceTabletInstance* sin, int wheel,
+                         uint32_t buttons_state)
+{
+}
+
+static void tablet_buttons(SpiceTabletInstance *sin,
+                           uint32_t buttons_state)
+{
+}
+
+static const SpiceTabletInterface tablet_interface = {
+    .base = {
+        .type          = SPICE_INTERFACE_TABLET,
+        .description   = "tablet",
+        .major_version = SPICE_INTERFACE_TABLET_MAJOR,
+        .minor_version = SPICE_INTERFACE_TABLET_MINOR,
+    },
+    .set_logical_size   = tablet_set_logical_size,
+    .position           = tablet_position,
+    .wheel              = tablet_wheel,
+    .buttons            = tablet_buttons,
+};
+
+static void tablet_leaks(void)
+{
+    SpiceCoreInterface *core;
+    SpiceServer *server;
+    SpiceTabletInstance tablet;
+
+    core = basic_event_loop_init();
+    g_assert_nonnull(core);
+
+    // test if leaks without spice_server_remove_interface
+    server = spice_server_new();
+    g_assert_nonnull(server);
+    g_assert_cmpint(spice_server_init(server, core), ==, 0);
+
+    tablet.base.sif = &tablet_interface.base;
+    spice_server_add_interface(server, &tablet.base);
+
+    spice_server_destroy(server);
+
+    // test if leaks with spice_server_remove_interface
+    server = spice_server_new();
+    g_assert_nonnull(server);
+    g_assert_cmpint(spice_server_init(server, core), ==, 0);
+
+    tablet.base.sif = &tablet_interface.base;
+    spice_server_add_interface(server, &tablet.base);
+    spice_server_remove_interface(&tablet.base);
+
+    spice_server_destroy(server);
+
+    basic_event_loop_destroy();
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -185,6 +250,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/server/server leaks", server_leaks);
     g_test_add_func("/server/vmc leaks", vmc_leaks);
     g_test_add_func("/server/migration leaks", migration_leaks);
+    g_test_add_func("/server/tablet leaks", tablet_leaks);
 
     return g_test_run();
 }
