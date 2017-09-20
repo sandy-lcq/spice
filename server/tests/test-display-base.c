@@ -32,6 +32,7 @@
 #include <spice/qxl_dev.h>
 
 #include "test-display-base.h"
+#include "test-glib-compat.h"
 #include "red-channel.h"
 
 #ifndef PATH_MAX
@@ -899,35 +900,63 @@ void test_set_command_list(Test *test, Command *commands, int num_commands)
     test->num_commands = num_commands;
 }
 
+static gboolean ignore_bind_failures(const gchar *log_domain,
+                                     GLogLevelFlags log_level,
+                                     const gchar *message,
+                                     gpointer user_data)
+{
+    if (!g_str_equal (log_domain, G_LOG_DOMAIN)) {
+        return true;
+    }
+    if ((log_level & G_LOG_LEVEL_WARNING) == 0)  {
+        return true;
+    }
+    if (strstr(message, "reds_init_socket: binding socket to ") == NULL) {
+        g_print("XXX [%s]\n", message);
+        return true;
+    }
 
-Test* test_new_with_port(SpiceCoreInterface* core, int port)
+    return false;
+}
+
+#define BASE_PORT 5912
+
+Test* test_new(SpiceCoreInterface* core)
 {
     Test *test = spice_new0(Test, 1);
-    SpiceServer* server = spice_server_new();
+    int port = -1;
 
     test->qxl_instance.base.sif = &display_sif.base;
     test->qxl_instance.id = 0;
 
     test->core = core;
-    test->server = server;
     test->wakeup_ms = 1;
     test->cursor_notify = NOTIFY_CURSOR_BATCH;
     // some common initialization for all display tests
+    port = BASE_PORT;
+
+    g_test_log_set_fatal_handler(ignore_bind_failures, NULL);
+    for (port = BASE_PORT; port < BASE_PORT + 10; port++) {
+        SpiceServer* server = spice_server_new();
+        spice_server_set_noauth(server);
+        spice_server_set_port(server, port);
+        if (spice_server_init(server, core) == 0) {
+            test->server = server;
+            break;
+        }
+        spice_server_destroy(server);
+    }
+
+    g_assert(test->server != NULL);
+
     printf("TESTER: listening on port %d (unsecure)\n", port);
-    spice_server_set_port(server, port);
-    spice_server_set_noauth(server);
-    spice_server_init(server, core);
+    g_test_log_set_fatal_handler(NULL, NULL);
 
     cursor_init();
     path_init(&path, 0, angle_parts);
     test->has_secondary = 0;
     test->wakeup_timer = core->timer_add(do_wakeup, test);
     return test;
-}
-
-Test *test_new(SpiceCoreInterface *core)
-{
-    return test_new_with_port(core, 5912);
 }
 
 void test_destroy(Test *test)

@@ -42,7 +42,7 @@ int main(void)
 
     core = basic_event_loop_init();
     t1 = test_new(core);
-    t2 = test_new_with_port(core, 5913);
+    t2 = test_new(core);
     //spice_server_set_image_compression(server, SPICE_IMAGE_COMPRESSION_OFF);
     test_add_display_interface(t1);
     test_add_display_interface(t2);
