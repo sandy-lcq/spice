@@ -100,7 +100,7 @@ static uint8_t *red_linearize_chunk(RedDataChunk *head, size_t size, bool *free_
         return head->data;
     }
 
-    ptr = data = spice_malloc(size);
+    ptr = data = g_malloc(size);
     *free_chunk = true;
     for (chunk = head; chunk != NULL && size > 0; chunk = chunk->next_chunk) {
         copy = MIN(chunk->data_size, size);
@@ -158,7 +158,7 @@ static size_t red_get_data_chunks_ptr(RedMemSlotInfo *slots, int group_id,
             continue;
 
         red_prev = red;
-        red = spice_new0(RedDataChunk, 1);
+        red = g_new0(RedDataChunk, 1);
         red->data_size = chunk_data_size;
         red->prev_chunk = red_prev;
         red->data = qxl->data;
@@ -180,7 +180,7 @@ static size_t red_get_data_chunks_ptr(RedMemSlotInfo *slots, int group_id,
 error:
     while (red->prev_chunk) {
         red_prev = red->prev_chunk;
-        free(red);
+        g_free(red);
         red = red_prev;
     }
     red->data_size = 0;
@@ -211,7 +211,7 @@ static void red_put_data_chunks(RedDataChunk *red)
     while (red) {
         tmp = red;
         red = red->next_chunk;
-        free(tmp);
+        g_free(tmp);
     }
 }
 
@@ -281,7 +281,7 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
         start = (QXLPathSeg*)(&start->points[count]);
     }
 
-    red = spice_malloc(mem_size);
+    red = g_malloc(mem_size);
     red->num_segments = n_segments;
 
     start = (QXLPathSeg*)data;
@@ -312,7 +312,7 @@ static SpicePath *red_get_path(RedMemSlotInfo *slots, int group_id,
     spice_assert(n_segments == red->num_segments);
 
     if (free_data) {
-        free(data);
+        g_free(data);
     }
     return red;
 }
@@ -351,7 +351,7 @@ static SpiceClipRects *red_get_clip_rects(RedMemSlotInfo *slots, int group_id,
      */
     spice_assert((uint64_t) num_rects * sizeof(QXLRect) == size);
     G_STATIC_ASSERT(sizeof(SpiceRect) == sizeof(QXLRect));
-    red = spice_malloc(sizeof(*red) + num_rects * sizeof(SpiceRect));
+    red = g_malloc(sizeof(*red) + num_rects * sizeof(SpiceRect));
     red->num_rects = num_rects;
 
     start = (QXLRect*)data;
@@ -360,7 +360,7 @@ static SpiceClipRects *red_get_clip_rects(RedMemSlotInfo *slots, int group_id,
     }
 
     if (free_data) {
-        free(data);
+        g_free(data);
     }
     return red;
 }
@@ -470,7 +470,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
     if (error) {
         return NULL;
     }
-    red = spice_new0(SpiceImage, 1);
+    red = g_new0(SpiceImage, 1);
     red->descriptor.id     = qxl->descriptor.id;
     red->descriptor.type   = qxl->descriptor.type;
     red->descriptor.flags = 0;
@@ -520,7 +520,7 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
                                        num_ents * sizeof(qp->ents[0]), group_id)) {
                 goto error;
             }
-            rp = spice_malloc_n_m(num_ents, sizeof(rp->ents[0]), sizeof(*rp));
+            rp = g_malloc(num_ents * sizeof(rp->ents[0]) + sizeof(*rp));
             rp->unique   = qp->unique;
             rp->num_ents = num_ents;
             if (flags & QXL_COMMAND_FLAG_COMPAT_16BPP) {
@@ -580,8 +580,8 @@ static SpiceImage *red_get_image(RedMemSlotInfo *slots, int group_id,
     }
     return red;
 error:
-    free(red);
-    free(rp);
+    g_free(red);
+    g_free(rp);
     return NULL;
 }
 
@@ -592,14 +592,14 @@ static void red_put_image(SpiceImage *red)
 
     switch (red->descriptor.type) {
     case SPICE_IMAGE_TYPE_BITMAP:
-        free(red->u.bitmap.palette);
+        g_free(red->u.bitmap.palette);
         spice_chunks_destroy(red->u.bitmap.data);
         break;
     case SPICE_IMAGE_TYPE_QUIC:
         spice_chunks_destroy(red->u.quic.data);
         break;
     }
-    free(red);
+    g_free(red);
 }
 
 static void red_get_brush_ptr(RedMemSlotInfo *slots, int group_id,
@@ -839,7 +839,7 @@ static bool red_get_stroke_ptr(RedMemSlotInfo *slots, int group_id,
         uint8_t *buf;
 
         style_nseg = qxl->attr.style_nseg;
-        red->attr.style = spice_malloc_n(style_nseg, sizeof(SPICE_FIXED28_4));
+        red->attr.style = g_malloc_n(style_nseg, sizeof(SPICE_FIXED28_4));
         red->attr.style_nseg  = style_nseg;
         spice_assert(qxl->attr.style);
         buf = (uint8_t *)memslot_get_virt(slots, qxl->attr.style,
@@ -861,9 +861,9 @@ static bool red_get_stroke_ptr(RedMemSlotInfo *slots, int group_id,
 static void red_put_stroke(SpiceStroke *red)
 {
     red_put_brush(&red->brush);
-    free(red->path);
+    g_free(red->path);
     if (red->attr.flags & SPICE_LINE_FLAGS_STYLED) {
-        free(red->attr.style);
+        g_free(red->attr.style);
     }
 }
 
@@ -930,7 +930,7 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
     spice_assert(start <= end);
     spice_assert(glyphs == qxl_length);
 
-    red = spice_malloc(red_size);
+    red = g_malloc(red_size);
     red->length = qxl_length;
     red->flags = qxl_flags;
 
@@ -955,7 +955,7 @@ static SpiceString *red_get_string(RedMemSlotInfo *slots, int group_id,
     }
 
     if (free_data) {
-        free(data);
+        g_free(data);
     }
     return red;
 }
@@ -973,7 +973,7 @@ static void red_get_text_ptr(RedMemSlotInfo *slots, int group_id,
 
 static void red_put_text_ptr(SpiceText *red)
 {
-    free(red->str);
+    g_free(red->str);
     red_put_brush(&red->fore_brush);
     red_put_brush(&red->back_brush);
 }
@@ -1026,7 +1026,7 @@ static void red_put_clip(SpiceClip *red)
 {
     switch (red->type) {
     case SPICE_CLIP_TYPE_RECTS:
-        free(red->rects);
+        g_free(red->rects);
         break;
     }
 }
@@ -1449,7 +1449,7 @@ static bool red_get_cursor(RedMemSlotInfo *slots, int group_id,
     if (free_data) {
         red->data = data;
     } else {
-        red->data = spice_malloc(size);
+        red->data = g_malloc(size);
         memcpy(red->data, data, size);
     }
     return true;
@@ -1457,7 +1457,7 @@ static bool red_get_cursor(RedMemSlotInfo *slots, int group_id,
 
 static void red_put_cursor(SpiceCursor *red)
 {
-    free(red->data);
+    g_free(red->data);
 }
 
 bool red_get_cursor_cmd(RedMemSlotInfo *slots, int group_id,

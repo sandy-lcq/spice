@@ -1218,7 +1218,7 @@ static void handle_self_bitmap(DisplayChannel *display, Drawable *drawable)
     height = red_drawable->self_bitmap_area.bottom - red_drawable->self_bitmap_area.top;
     dest_stride = SPICE_ALIGN(width * bpp, 4);
 
-    image = spice_new0(SpiceImage, 1);
+    image = g_new0(SpiceImage, 1);
     image->descriptor.type = SPICE_IMAGE_TYPE_BITMAP;
     image->descriptor.flags = 0;
 
