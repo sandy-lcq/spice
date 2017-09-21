@@ -1,3 +1,18 @@
+Major Changes in 0.13.91:
+=========================
+
+*** IMPORTANT ***
+0.13.91 is the first release candidate for the stable 0.14.x series. While some
+bugs might still be present, it should be stable.
+
+* set human-readable name on spice threads
+* leak fixes
+* robustness improvements (fix potential crashes in situation which should not
+  happen on normal use)
+* add sanity-checks for ORC library as it can abort spice-server when selinux
+  is in use
+* more code cleanups/improvements
+
 Major Changes in 0.13.90:
 =========================
 
