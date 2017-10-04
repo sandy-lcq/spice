@@ -240,7 +240,8 @@ population. I assume that you have a locally stored ISO of your
 favourite operating system so you can use it for installation.
 
 [source,sh]
-host$ qemu-kvm -boot order=dc -vga qxl \
+host$ qemu-kvm -machine vmport=off \
+        -boot order=dc -vga qxl \
         -spice port=3001,disable-ticketing -soundhw hda \
         -device virtio-serial -chardev spicevmc,id=vdagent,debug=0,name=vdagent \
         -device virtserialport,chardev=vdagent,name=com.redhat.spice.0 \
@@ -248,9 +249,11 @@ host$ qemu-kvm -boot order=dc -vga qxl \
 
 
 Let's take a brief look at the qemu options that were used. The option
-`-boot order=dc` specifies that the guest system should try to boot
-from the first cdrom and then fallback to the first disk, `-vga qxl`
-specifies that qemu uses a qxl graphics device.
+`-machine vmport=off` disables VMWare IO port emulation, which is
+necessary for server mode mouse to work properly with spice. The option `-boot
+order=dc` specifies that the guest system should try to boot from the first
+cdrom and then fallback to the first disk, `-vga qxl` specifies that qemu uses
+a qxl graphics device.
 
 The Spice `port` option defines what port will be used for
 communication with the client. The Spice option `disable-ticketing` is
