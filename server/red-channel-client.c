@@ -1327,6 +1327,10 @@ void red_channel_client_push(RedChannelClient *rcc)
     while ((pipe_item = red_channel_client_pipe_item_get(rcc))) {
         red_channel_client_send_item(rcc, pipe_item);
     }
+    /* prepare_pipe_add() will reenable WRITE events when the rcc->priv->pipe is empty
+     * red_channel_client_ack_zero_messages_window() will reenable WRITE events
+     * if we were waiting for acks to be received
+     */
     if ((red_channel_client_no_item_being_sent(rcc) && g_queue_is_empty(&rcc->priv->pipe)) ||
         red_channel_client_waiting_for_ack(rcc)) {
         red_channel_client_watch_update_mask(rcc, SPICE_WATCH_EVENT_READ);
@@ -1677,6 +1681,8 @@ static void red_channel_client_pipe_clear(RedChannelClient *rcc)
 
 void red_channel_client_ack_zero_messages_window(RedChannelClient *rcc)
 {
+    red_channel_client_watch_update_mask(rcc,
+                                         SPICE_WATCH_EVENT_READ|SPICE_WATCH_EVENT_WRITE);
     rcc->priv->ack_data.messages_window = 0;
 }
 
