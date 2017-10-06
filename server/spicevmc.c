@@ -246,8 +246,6 @@ red_vmc_channel_constructed(GObject *object)
     red_channel_set_cap(RED_CHANNEL(self), SPICE_SPICEVMC_CAP_DATA_COMPRESS_LZ4);
 #endif
 
-    red_channel_init_outgoing_messages_window(RED_CHANNEL(self));
-
     reds_register_channel(reds, RED_CHANNEL(self));
 }
 

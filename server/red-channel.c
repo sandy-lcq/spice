@@ -421,14 +421,6 @@ void red_channel_push(RedChannel *channel)
     g_list_foreach(channel->priv->clients, (GFunc)red_channel_client_push, NULL);
 }
 
-// TODO: this function doesn't make sense because the window should be client (WAN/LAN)
-// specific
-void red_channel_init_outgoing_messages_window(RedChannel *channel)
-{
-    g_list_foreach(channel->priv->clients,
-                   (GFunc)red_channel_client_init_outgoing_messages_window, NULL);
-}
-
 void red_channel_pipes_add(RedChannel *channel, RedPipeItem *item)
 {
     RedChannelClient *rcc;
