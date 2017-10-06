@@ -505,6 +505,11 @@ static bool inputs_channel_handle_migrate_data(RedChannelClient *rcc,
     SpiceMigrateDataHeader *header;
     SpiceMigrateDataInputs *mig_data;
 
+    if (size < sizeof(SpiceMigrateDataHeader) + sizeof(SpiceMigrateDataInputs)) {
+        spice_warning("bad message size %u", size);
+        return FALSE;
+    }
+
     header = (SpiceMigrateDataHeader *)message;
     mig_data = (SpiceMigrateDataInputs *)(header + 1);
 
