@@ -1,3 +1,12 @@
+Major Changes in 0.14.0:
+========================
+
+This is the first release in the new 0.14.x stable series. This release should
+be ready for production use.
+
+* fix client mouse with virgl
+* fix frozen display after seamless migration
+
 Major Changes in 0.13.91:
 =========================
 
