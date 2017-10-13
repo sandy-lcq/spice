@@ -50,7 +50,6 @@ struct QXLState {
     int x_res;
     int y_res;
     int use_hardware_cursor;
-    QXLDevSurfaceCreate surface_create;
     unsigned int max_monitors;
     RedsState *reds;
     RedWorker *worker;
@@ -346,17 +345,14 @@ static void qxl_worker_destroy_primary_surface(QXLWorker *qxl_worker, uint32_t s
 }
 
 /* used by RedWorker */
-void red_qxl_create_primary_surface_complete(QXLState *qxl_state)
+void red_qxl_create_primary_surface_complete(QXLState *qxl_state, const QXLDevSurfaceCreate *surface)
 {
-    QXLDevSurfaceCreate *surface = &qxl_state->surface_create;
-
     qxl_state->x_res = surface->width;
     qxl_state->y_res = surface->height;
     qxl_state->use_hardware_cursor = surface->mouse_mode;
     qxl_state->primary_active = TRUE;
 
     reds_update_client_mouse_allowed(qxl_state->reds);
-    memset(&qxl_state->surface_create, 0, sizeof(QXLDevSurfaceCreate));
 }
 
 static void
@@ -366,7 +362,6 @@ red_qxl_create_primary_surface_async(QXLState *qxl_state, uint32_t surface_id,
     RedWorkerMessageCreatePrimarySurfaceAsync payload;
     RedWorkerMessage message = RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE_ASYNC;
 
-    qxl_state->surface_create = *surface;
     payload.base.cookie = cookie;
     payload.surface_id = surface_id;
     payload.surface = *surface;
@@ -379,13 +374,12 @@ red_qxl_create_primary_surface_sync(QXLState *qxl_state, uint32_t surface_id,
 {
     RedWorkerMessageCreatePrimarySurface payload = {0,};
 
-    qxl_state->surface_create = *surface;
     payload.surface_id = surface_id;
     payload.surface = *surface;
     dispatcher_send_message(qxl_state->dispatcher,
                             RED_WORKER_MESSAGE_CREATE_PRIMARY_SURFACE,
                             &payload);
-    red_qxl_create_primary_surface_complete(qxl_state);
+    red_qxl_create_primary_surface_complete(qxl_state, surface);
 }
 
 static void

@@ -707,7 +707,7 @@ static void handle_dev_create_primary_surface_async(void *opaque, void *payload)
     RedWorker *worker = opaque;
 
     dev_create_primary_surface(worker, msg->surface_id, msg->surface);
-    red_qxl_create_primary_surface_complete(worker->qxl->st);
+    red_qxl_create_primary_surface_complete(worker->qxl->st, &msg->surface);
     red_qxl_async_complete(worker->qxl, msg->base.cookie);
 }
 
