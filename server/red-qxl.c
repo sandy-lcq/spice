@@ -349,7 +349,8 @@ void red_qxl_create_primary_surface_complete(QXLState *qxl_state, const QXLDevSu
 {
     qxl_state->x_res = surface->width;
     qxl_state->y_res = surface->height;
-    qxl_state->use_hardware_cursor = surface->mouse_mode;
+    // mouse_mode is a boolean value, enforce it
+    qxl_state->use_hardware_cursor = !!surface->mouse_mode;
     qxl_state->primary_active = TRUE;
 
     reds_update_client_mouse_allowed(qxl_state->reds);
