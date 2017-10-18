@@ -68,7 +68,6 @@ typedef struct RedsSASL {
 
     SpiceBuffer inbuffer;
 
-    char *username;
     char *mechlist;
     char *mechname;
 
