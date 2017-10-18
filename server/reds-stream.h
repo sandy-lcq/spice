@@ -53,9 +53,6 @@ void reds_stream_set_async_error_handler(RedsStream *stream,
 ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte);
 ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt);
 bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n);
-bool reds_stream_write_u8(RedsStream *s, uint8_t n);
-bool reds_stream_write_u32(RedsStream *s, uint32_t n);
-void reds_stream_disable_writev(RedsStream *stream);
 void reds_stream_free(RedsStream *s);
 
 void reds_stream_push_channel_event(RedsStream *s, int event);

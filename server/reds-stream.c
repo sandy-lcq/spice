@@ -438,7 +438,7 @@ bool reds_stream_is_ssl(RedsStream *stream)
     return (stream->priv->ssl != NULL);
 }
 
-void reds_stream_disable_writev(RedsStream *stream)
+static void reds_stream_disable_writev(RedsStream *stream)
 {
     stream->priv->writev = NULL;
 }
@@ -572,12 +572,12 @@ void reds_stream_async_read(RedsStream *stream,
 }
 
 #if HAVE_SASL
-bool reds_stream_write_u8(RedsStream *s, uint8_t n)
+static bool reds_stream_write_u8(RedsStream *s, uint8_t n)
 {
     return reds_stream_write_all(s, &n, sizeof(uint8_t));
 }
 
-bool reds_stream_write_u32(RedsStream *s, uint32_t n)
+static bool reds_stream_write_u32(RedsStream *s, uint32_t n)
 {
     return reds_stream_write_all(s, &n, sizeof(uint32_t));
 }
