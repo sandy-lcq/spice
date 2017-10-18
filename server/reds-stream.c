@@ -367,7 +367,6 @@ void reds_stream_free(RedsStream *s)
     }
 
     reds_stream_remove_watch(s);
-    spice_debug("close socket fd %d", s->socket);
     close(s->socket);
 
     g_free(s);
