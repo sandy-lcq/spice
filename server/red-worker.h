@@ -101,7 +101,7 @@ enum {
 
 typedef struct RedWorkerMessageDisplayConnect {
     RedClient * client;
-    RedsStream * stream;
+    RedStream * stream;
     RedChannelCapabilities caps;   // red_worker should reset
     int migration;
 } RedWorkerMessageDisplayConnect;
@@ -116,7 +116,7 @@ typedef struct RedWorkerMessageDisplayMigrate {
 
 typedef struct RedWorkerMessageCursorConnect {
     RedClient *client;
-    RedsStream *stream;
+    RedStream *stream;
     int migration;
     RedChannelCapabilities caps;   // red_worker should reset
 } RedWorkerMessageCursorConnect;

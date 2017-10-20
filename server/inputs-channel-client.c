@@ -91,7 +91,7 @@ inputs_channel_client_init(InputsChannelClient *self)
 
 RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                RedClient *client,
-                                               RedsStream *stream,
+                                               RedStream *stream,
                                                RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;

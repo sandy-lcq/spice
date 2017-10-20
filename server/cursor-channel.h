@@ -70,7 +70,7 @@ void                 cursor_channel_set_mouse_mode(CursorChannel *cursor, uint32
  * See comment on cursor_channel_new.
  */
 void                 cursor_channel_connect     (CursorChannel *cursor, RedClient *client,
-                                                 RedsStream *stream,
+                                                 RedStream *stream,
                                                  int migrate,
                                                  RedChannelCapabilities *caps);
 

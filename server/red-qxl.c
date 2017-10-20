@@ -71,7 +71,7 @@ int red_qxl_check_qxl_version(QXLInstance *qxl, int major, int minor)
 }
 
 static void red_qxl_set_display_peer(RedChannel *channel, RedClient *client,
-                                     RedsStream *stream, int migration,
+                                     RedStream *stream, int migration,
                                      RedChannelCapabilities *caps)
 {
     RedWorkerMessageDisplayConnect payload = {0,};
@@ -125,7 +125,7 @@ static void red_qxl_display_migrate(RedChannelClient *rcc)
                             &payload);
 }
 
-static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, RedsStream *stream,
+static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, RedStream *stream,
                                     int migration,
                                     RedChannelCapabilities *caps)
 {

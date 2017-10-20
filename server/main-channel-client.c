@@ -638,7 +638,7 @@ gboolean main_channel_client_migrate_src_complete(MainChannelClient *mcc,
 }
 
 MainChannelClient *main_channel_client_create(MainChannel *main_chan, RedClient *client,
-                                              RedsStream *stream, uint32_t connection_id,
+                                              RedStream *stream, uint32_t connection_id,
                                               RedChannelCapabilities *caps)
 {
     MainChannelClient *mcc;

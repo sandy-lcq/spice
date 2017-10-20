@@ -119,7 +119,7 @@ struct RedChannelClientPrivate
 {
     RedChannel *channel;
     RedClient  *client;
-    RedsStream *stream;
+    RedStream *stream;
     gboolean monitor_latency;
 
     struct {
@@ -349,7 +349,7 @@ red_channel_client_finalize(GObject *object)
         self->priv->connectivity_monitor.timer = NULL;
     }
 
-    reds_stream_free(self->priv->stream);
+    red_stream_free(self->priv->stream);
     self->priv->stream = NULL;
 
     if (self->priv->send_data.main.marshaller) {
@@ -571,11 +571,11 @@ static void red_channel_client_send_ping(RedChannelClient *rcc)
          * roundtrip measurement is less accurate (bigger).
          */
         rcc->priv->latency_monitor.tcp_nodelay = true;
-        delay_val = reds_stream_get_no_delay(rcc->priv->stream);
+        delay_val = red_stream_get_no_delay(rcc->priv->stream);
         if (delay_val != -1) {
             rcc->priv->latency_monitor.tcp_nodelay = delay_val;
             if (!delay_val) {
-                reds_stream_set_no_delay(rcc->priv->stream, TRUE);
+                red_stream_set_no_delay(rcc->priv->stream, TRUE);
             }
         }
     }
@@ -632,7 +632,7 @@ static void red_channel_client_msg_sent(RedChannelClient *rcc)
     int fd;
 
     if (spice_marshaller_get_fd(rcc->priv->send_data.marshaller, &fd)) {
-        if (reds_stream_send_msgfd(rcc->priv->stream, fd) < 0) {
+        if (red_stream_send_msgfd(rcc->priv->stream, fd) < 0) {
             perror("sendfd");
             red_channel_client_disconnect(rcc);
             if (fd != -1)
@@ -939,7 +939,7 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
     }
 
     core = red_channel_get_core_interface(self->priv->channel);
-    reds_stream_set_core_interface(self->priv->stream, core);
+    red_stream_set_core_interface(self->priv->stream, core);
     self->priv->stream->watch =
         core->watch_add(core, self->priv->stream->socket,
                         SPICE_WATCH_EVENT_READ,
@@ -947,7 +947,7 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
                         self);
 
     if (self->priv->monitor_latency
-        && reds_stream_get_family(self->priv->stream) != AF_UNIX) {
+        && red_stream_get_family(self->priv->stream) != AF_UNIX) {
         self->priv->latency_monitor.timer =
             core->timer_add(core, red_channel_client_ping_timer, self);
 
@@ -1071,7 +1071,7 @@ static void red_channel_client_release_msg_buf(RedChannelClient *rcc,
 
 static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
 {
-    RedsStream *stream = rcc->priv->stream;
+    RedStream *stream = rcc->priv->stream;
     OutgoingMessageBuffer *buffer = &rcc->priv->outgoing;
     ssize_t n;
 
@@ -1090,7 +1090,7 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
         buffer->vec_size =
             red_channel_client_prepare_out_msg(rcc, buffer->vec, G_N_ELEMENTS(buffer->vec),
                                                buffer->pos);
-        n = reds_stream_writev(stream, buffer->vec, buffer->vec_size);
+        n = red_stream_writev(stream, buffer->vec, buffer->vec_size);
         if (n == -1) {
             switch (errno) {
             case EAGAIN:
@@ -1123,7 +1123,7 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
 }
 
 /* return the number of bytes read. -1 in case of error */
-static int red_peer_receive(RedsStream *stream, uint8_t *buf, uint32_t size)
+static int red_peer_receive(RedStream *stream, uint8_t *buf, uint32_t size)
 {
     uint8_t *pos = buf;
     while (size) {
@@ -1135,7 +1135,7 @@ static int red_peer_receive(RedsStream *stream, uint8_t *buf, uint32_t size)
         if (!stream->watch) {
             return -1;
         }
-        now = reds_stream_read(stream, pos, size);
+        now = red_stream_read(stream, pos, size);
         if (now <= 0) {
             if (now == 0) {
                 return -1;
@@ -1185,7 +1185,7 @@ static uint8_t *red_channel_client_parse(RedChannelClient *rcc, uint8_t *message
 // this is suboptimal potentially. Profile and consider fixing.
 static void red_channel_client_handle_incoming(RedChannelClient *rcc)
 {
-    RedsStream *stream = rcc->priv->stream;
+    RedStream *stream = rcc->priv->stream;
     IncomingMessageBuffer *buffer = &rcc->priv->incoming;
     int bytes_read;
     uint16_t msg_type;
@@ -1377,7 +1377,7 @@ static void red_channel_client_handle_pong(RedChannelClient *rcc, SpiceMsgPing *
 
     /* set TCP_NODELAY=0, in case we reverted it for the test*/
     if (!rcc->priv->latency_monitor.tcp_nodelay) {
-        reds_stream_set_no_delay(rcc->priv->stream, FALSE);
+        red_stream_set_no_delay(rcc->priv->stream, FALSE);
     }
 
     /*
@@ -1749,7 +1749,7 @@ SpiceMarshaller *red_channel_client_get_marshaller(RedChannelClient *rcc)
     return rcc->priv->send_data.marshaller;
 }
 
-RedsStream *red_channel_client_get_stream(RedChannelClient *rcc)
+RedStream *red_channel_client_get_stream(RedChannelClient *rcc)
 {
     return rcc->priv->stream;
 }

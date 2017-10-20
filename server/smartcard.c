@@ -527,7 +527,7 @@ int smartcard_char_device_handle_migrate_data(RedCharDeviceSmartcard *smartcard,
 }
 
 static void smartcard_connect_client(RedChannel *channel, RedClient *client,
-                                     RedsStream *stream, int migration,
+                                     RedStream *stream, int migration,
                                      RedChannelCapabilities *caps)
 {
     SpiceCharDeviceInstance *char_device =

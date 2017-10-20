@@ -31,7 +31,7 @@
 #include "demarshallers.h"
 #include "spice.h"
 #include "red-common.h"
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "stat.h"
 #include "red-pipe-item.h"
 #include "red-channel-capabilities.h"
@@ -55,7 +55,7 @@ typedef uint64_t (*channel_handle_migrate_data_get_serial_proc)(RedChannelClient
                                             uint32_t size, void *message);
 
 
-typedef void (*channel_client_connect_proc)(RedChannel *channel, RedClient *client, RedsStream *stream,
+typedef void (*channel_client_connect_proc)(RedChannel *channel, RedClient *client, RedStream *stream,
                                             int migration, RedChannelCapabilities *caps);
 typedef void (*channel_client_disconnect_proc)(RedChannelClient *base);
 typedef void (*channel_client_migrate_proc)(RedChannelClient *base);
@@ -192,7 +192,7 @@ void red_channel_send(RedChannel *channel);
 // For red_worker
 void red_channel_disconnect(RedChannel *channel);
 void red_channel_connect(RedChannel *channel, RedClient *client,
-                         RedsStream *stream, int migration,
+                         RedStream *stream, int migration,
                          RedChannelCapabilities *caps);
 
 /* return the sum of all the rcc pipe size */

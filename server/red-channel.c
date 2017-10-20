@@ -27,7 +27,7 @@
 #include "red-channel.h"
 #include "red-channel-client.h"
 #include "reds.h"
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "main-dispatcher.h"
 #include "utils.h"
 
@@ -203,7 +203,7 @@ red_channel_constructed(GObject *object)
 }
 
 static void red_channel_client_default_connect(RedChannel *channel, RedClient *client,
-                                               RedsStream *stream,
+                                               RedStream *stream,
                                                int migration,
                                                RedChannelCapabilities *caps)
 {
@@ -479,7 +479,7 @@ void red_channel_disconnect(RedChannel *channel)
 }
 
 void red_channel_connect(RedChannel *channel, RedClient *client,
-                         RedsStream *stream, int migration,
+                         RedStream *stream, int migration,
                          RedChannelCapabilities *caps)
 {
     channel->priv->client_cbs.connect(channel, client, stream, migration, caps);

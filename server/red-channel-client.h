@@ -23,7 +23,7 @@
 #include <common/marshaller.h>
 
 #include "red-pipe-item.h"
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "red-channel.h"
 
 G_BEGIN_DECLS
@@ -122,7 +122,7 @@ void red_channel_client_disconnect(RedChannelClient *rcc);
 
 /* Note: the valid times to call red_channel_get_marshaller are just during send_item callback. */
 SpiceMarshaller *red_channel_client_get_marshaller(RedChannelClient *rcc);
-RedsStream *red_channel_client_get_stream(RedChannelClient *rcc);
+RedStream *red_channel_client_get_stream(RedChannelClient *rcc);
 RedClient *red_channel_client_get_client(RedChannelClient *rcc);
 
 /* Note that the header is valid only between red_channel_reset_send_data and

@@ -78,7 +78,7 @@ bool common_channel_client_config_socket(RedChannelClient *rcc)
 {
     RedClient *client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(client);
-    RedsStream *stream = red_channel_client_get_stream(rcc);
+    RedStream *stream = red_channel_client_get_stream(rcc);
     gboolean is_low_bandwidth;
 
     // TODO - this should be dynamic, not one time at channel creation
@@ -89,7 +89,7 @@ bool common_channel_client_config_socket(RedChannelClient *rcc)
      * the application level.
      * see: http://www.stuartcheshire.org/papers/NagleDelayedAck/
      */
-    reds_stream_set_no_delay(stream, !is_low_bandwidth);
+    red_stream_set_no_delay(stream, !is_low_bandwidth);
 
     // TODO: move wide/narrow ack setting to red_channel.
     red_channel_client_ack_set_client_window(rcc,

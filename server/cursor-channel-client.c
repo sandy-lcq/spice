@@ -97,7 +97,7 @@ void cursor_channel_client_migrate(RedChannelClient *rcc)
     red_channel_client_default_migrate(rcc);
 }
 
-CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient *client, RedsStream *stream,
+CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor, RedClient *client, RedStream *stream,
                                                int mig_target,
                                                RedChannelCapabilities *caps)
 {

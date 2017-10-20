@@ -64,7 +64,7 @@
 #ifdef USE_SMARTCARD
 #include "smartcard.h"
 #endif
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "red-client.h"
 
 #include "reds-private.h"
@@ -197,7 +197,7 @@ struct RedServerConfig {
 
 typedef struct RedLinkInfo {
     RedsState *reds;
-    RedsStream *stream;
+    RedStream *stream;
     SpiceLinkHeader link_header;
     SpiceLinkMess *link_mess;
     int mess_pos;
@@ -331,7 +331,7 @@ void reds_handle_channel_event(RedsState *reds, int event, SpiceChannelEventInfo
 
 static void reds_link_free(RedLinkInfo *link)
 {
-    reds_stream_free(link->stream);
+    red_stream_free(link->stream);
     link->stream = NULL;
 
     g_free(link->link_mess);
@@ -1608,16 +1608,16 @@ static bool reds_send_link_ack(RedsState *reds, RedLinkInfo *link)
         memset(msg.ack.pub_key, '\0', sizeof(msg.ack.pub_key));
     }
 
-    if (!reds_stream_write_all(link->stream, &msg, sizeof(msg)))
+    if (!red_stream_write_all(link->stream, &msg, sizeof(msg)))
         goto end;
     for (unsigned int i = 0; i < channel_caps->num_common_caps; i++) {
         guint32 cap = GUINT32_TO_LE(channel_caps->common_caps[i]);
-        if (!reds_stream_write_all(link->stream, &cap, sizeof(cap)))
+        if (!red_stream_write_all(link->stream, &cap, sizeof(cap)))
             goto end;
     }
     for (unsigned int i = 0; i < channel_caps->num_caps; i++) {
         guint32 cap = GUINT32_TO_LE(channel_caps->caps[i]);
-        if (!reds_stream_write_all(link->stream, &cap, sizeof(cap)))
+        if (!red_stream_write_all(link->stream, &cap, sizeof(cap)))
             goto end;
     }
 
@@ -1643,7 +1643,7 @@ static bool reds_send_link_error(RedLinkInfo *link, uint32_t error)
     msg.header.minor_version = GUINT32_TO_LE(SPICE_VERSION_MINOR);
     memset(&msg.reply, 0, sizeof(msg.reply));
     msg.reply.error = GUINT32_TO_LE(error);
-    return reds_stream_write_all(link->stream, &msg, sizeof(msg));
+    return red_stream_write_all(link->stream, &msg, sizeof(msg));
 }
 
 static void reds_info_new_channel(RedLinkInfo *link, int connection_id)
@@ -1651,18 +1651,18 @@ static void reds_info_new_channel(RedLinkInfo *link, int connection_id)
     spice_debug("channel %d:%d, connected successfully, over %s link",
                 link->link_mess->channel_type,
                 link->link_mess->channel_id,
-                reds_stream_is_ssl(link->stream) ? "Secure" : "Non Secure");
+                red_stream_is_ssl(link->stream) ? "Secure" : "Non Secure");
     /* add info + send event */
-    reds_stream_set_channel(link->stream, connection_id,
-                            link->link_mess->channel_type,
-                            link->link_mess->channel_id);
-    reds_stream_push_channel_event(link->stream, SPICE_CHANNEL_EVENT_INITIALIZED);
+    red_stream_set_channel(link->stream, connection_id,
+                           link->link_mess->channel_type,
+                           link->link_mess->channel_id);
+    red_stream_push_channel_event(link->stream, SPICE_CHANNEL_EVENT_INITIALIZED);
 }
 
 static void reds_send_link_result(RedLinkInfo *link, uint32_t error)
 {
     error = GUINT32_TO_LE(error);
-    reds_stream_write_all(link->stream, &error, sizeof(error));
+    red_stream_write_all(link->stream, &error, sizeof(error));
 }
 
 static void reds_mig_target_client_add(RedsState *reds, RedClient *client)
@@ -1693,7 +1693,7 @@ static RedsMigTargetClient* reds_mig_target_client_find(RedsState *reds, RedClie
 
 static void reds_mig_target_client_add_pending_link(RedsMigTargetClient *client,
                                                     SpiceLinkMess *link_msg,
-                                                    RedsStream *stream)
+                                                    RedStream *stream)
 {
     RedsMigPendingLink *mig_link;
 
@@ -1771,7 +1771,7 @@ red_channel_capabilities_init_from_link_message(RedChannelCapabilities *caps,
 static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
 {
     RedClient *client;
-    RedsStream *stream;
+    RedStream *stream;
     SpiceLinkMess *link_mess;
     uint32_t connection_id;
     MainChannelClient *mcc;
@@ -1804,7 +1804,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
 
     reds_info_new_channel(link, connection_id);
     stream = link->stream;
-    reds_stream_remove_watch(stream);
+    red_stream_remove_watch(stream);
     link->stream = NULL;
     link->link_mess = NULL;
     reds_link_free(link);
@@ -1845,7 +1845,7 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
         reds_mig_target_client_add(reds, client);
     }
 
-    if (reds_stream_get_family(stream) != AF_UNIX)
+    if (red_stream_get_family(stream) != AF_UNIX)
         main_channel_client_start_net_test(mcc, !mig_target);
 }
 
@@ -1873,7 +1873,7 @@ static void openssl_init(RedLinkInfo *link)
 
 static void reds_channel_do_link(RedChannel *channel, RedClient *client,
                                  SpiceLinkMess *link_msg,
-                                 RedsStream *stream)
+                                 RedStream *stream)
 {
     RedChannelCapabilities caps;
 
@@ -2006,7 +2006,7 @@ static void reds_handle_other_links(RedsState *reds, RedLinkInfo *link)
 
     reds_send_link_result(link, SPICE_LINK_ERR_OK);
     reds_info_new_channel(link, link_mess->connection_id);
-    reds_stream_remove_watch(link->stream);
+    red_stream_remove_watch(link->stream);
 
     mig_client = reds_mig_target_client_find(reds, client);
     /*
@@ -2103,9 +2103,9 @@ end:
 
 static void reds_get_spice_ticket(RedLinkInfo *link)
 {
-    reds_stream_async_read(link->stream,
-                           (uint8_t *)&link->tiTicketing.encrypted_ticket.encrypted_data,
-                           link->tiTicketing.rsa_size, reds_handle_ticket, link);
+    red_stream_async_read(link->stream,
+                          (uint8_t *)&link->tiTicketing.encrypted_ticket.encrypted_data,
+                          link->tiTicketing.rsa_size, reds_handle_ticket, link);
 }
 
 #if HAVE_SASL
@@ -2131,12 +2131,12 @@ static void reds_handle_auth_sasl_step(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     RedsState *reds = link->reds;
-    RedsSaslError status;
+    RedSaslError status;
 
-    status = reds_sasl_handle_auth_step(link->stream, reds_handle_auth_sasl_steplen, link);
-    if (status == REDS_SASL_ERROR_OK) {
+    status = red_sasl_handle_auth_step(link->stream, reds_handle_auth_sasl_steplen, link);
+    if (status == RED_SASL_ERROR_OK) {
         reds_handle_link(reds, link);
-    } else if (status != REDS_SASL_ERROR_CONTINUE) {
+    } else if (status != RED_SASL_ERROR_CONTINUE) {
         reds_link_free(link);
     }
 }
@@ -2144,10 +2144,10 @@ static void reds_handle_auth_sasl_step(void *opaque)
 static void reds_handle_auth_sasl_steplen(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedsSaslError status;
+    RedSaslError status;
 
-    status = reds_sasl_handle_auth_steplen(link->stream, reds_handle_auth_sasl_step, link);
-    if (status != REDS_SASL_ERROR_OK) {
+    status = red_sasl_handle_auth_steplen(link->stream, reds_handle_auth_sasl_step, link);
+    if (status != RED_SASL_ERROR_OK) {
         reds_link_free(link);
     }
 }
@@ -2172,12 +2172,12 @@ static void reds_handle_auth_sasl_start(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     RedsState *reds = link->reds;
-    RedsSaslError status;
+    RedSaslError status;
 
-    status = reds_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
-    if (status == REDS_SASL_ERROR_OK) {
+    status = red_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
+    if (status == RED_SASL_ERROR_OK) {
         reds_handle_link(reds, link);
-    } else if (status != REDS_SASL_ERROR_CONTINUE) {
+    } else if (status != RED_SASL_ERROR_CONTINUE) {
         reds_link_free(link);
     }
 }
@@ -2185,17 +2185,17 @@ static void reds_handle_auth_sasl_start(void *opaque)
 static void reds_handle_auth_startlen(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedsSaslError status;
+    RedSaslError status;
 
-    status = reds_sasl_handle_auth_startlen(link->stream, reds_handle_auth_sasl_start, link);
+    status = red_sasl_handle_auth_startlen(link->stream, reds_handle_auth_sasl_start, link);
     switch (status) {
-        case REDS_SASL_ERROR_OK:
+        case RED_SASL_ERROR_OK:
             break;
-        case REDS_SASL_ERROR_RETRY:
+        case RED_SASL_ERROR_RETRY:
             reds_handle_auth_sasl_start(opaque);
             break;
-        case REDS_SASL_ERROR_GENERIC:
-        case REDS_SASL_ERROR_INVALID_DATA:
+        case RED_SASL_ERROR_GENERIC:
+        case RED_SASL_ERROR_INVALID_DATA:
             reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
             reds_link_free(link);
             break;
@@ -2211,7 +2211,7 @@ static void reds_handle_auth_mechname(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
 
-    if (!reds_sasl_handle_auth_mechname(link->stream, reds_handle_auth_startlen, link)) {
+    if (!red_sasl_handle_auth_mechname(link->stream, reds_handle_auth_startlen, link)) {
             reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
     }
 }
@@ -2220,14 +2220,14 @@ static void reds_handle_auth_mechlen(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
 
-    if (!reds_sasl_handle_auth_mechlen(link->stream, reds_handle_auth_mechname, link)) {
+    if (!red_sasl_handle_auth_mechlen(link->stream, reds_handle_auth_mechname, link)) {
         reds_link_free(link);
     }
 }
 
 static void reds_start_auth_sasl(RedLinkInfo *link)
 {
-    if (!reds_sasl_start_auth(link->stream, reds_handle_auth_mechlen, link)) {
+    if (!red_sasl_start_auth(link->stream, reds_handle_auth_mechlen, link)) {
         reds_link_free(link);
     }
 }
@@ -2265,8 +2265,8 @@ static int reds_security_check(RedLinkInfo *link)
     RedsState *reds = link->reds;
     ChannelSecurityOptions *security_option = reds_find_channel_security(reds, link->link_mess->channel_type);
     uint32_t security = security_option ? security_option->options : reds->config->default_channel_security;
-    return (reds_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_SSL)) ||
-        (!reds_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_NONE));
+    return (red_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_SSL)) ||
+        (!red_stream_is_ssl(link->stream) && (security & SPICE_CHANNEL_SECURITY_NONE));
 }
 
 static void reds_handle_read_link_done(void *opaque)
@@ -2310,7 +2310,7 @@ static void reds_handle_read_link_done(void *opaque)
                                                    SPICE_COMMON_CAP_PROTOCOL_AUTH_SELECTION);
 
     if (!reds_security_check(link)) {
-        if (reds_stream_is_ssl(link->stream)) {
+        if (red_stream_is_ssl(link->stream)) {
             spice_warning("spice channels %d should not be encrypted", link_mess->channel_type);
             reds_send_link_error(link, SPICE_LINK_ERR_NEED_UNSECURED);
         } else {
@@ -2335,11 +2335,11 @@ static void reds_handle_read_link_done(void *opaque)
         spice_warning("Peer doesn't support AUTH selection");
         reds_get_spice_ticket(link);
     } else {
-        reds_stream_async_read(link->stream,
-                               (uint8_t *)&link->auth_mechanism,
-                               sizeof(SpiceLinkAuthMechanism),
-                               reds_handle_auth_mechanism,
-                               link);
+        red_stream_async_read(link->stream,
+                              (uint8_t *)&link->auth_mechanism,
+                              sizeof(SpiceLinkAuthMechanism),
+                              reds_handle_auth_mechanism,
+                              link);
     }
 }
 
@@ -2386,11 +2386,11 @@ static void reds_handle_read_header_done(void *opaque)
 
     link->link_mess = g_malloc(header->size);
 
-    reds_stream_async_read(link->stream,
-                           (uint8_t *)link->link_mess,
-                           header->size,
-                           reds_handle_read_link_done,
-                           link);
+    red_stream_async_read(link->stream,
+                          (uint8_t *)link->link_mess,
+                          header->size,
+                          reds_handle_read_link_done,
+                          link);
 }
 
 static void reds_handle_read_magic_done(void *opaque)
@@ -2404,43 +2404,43 @@ static void reds_handle_read_magic_done(void *opaque)
         return;
     }
 
-    reds_stream_async_read(link->stream,
-                           ((uint8_t *)&link->link_header) + sizeof(header->magic),
-                           sizeof(SpiceLinkHeader) - sizeof(header->magic),
-                           reds_handle_read_header_done,
-                           link);
+    red_stream_async_read(link->stream,
+                          ((uint8_t *)&link->link_header) + sizeof(header->magic),
+                          sizeof(SpiceLinkHeader) - sizeof(header->magic),
+                          reds_handle_read_header_done,
+                          link);
 }
 
 static void reds_handle_new_link(RedLinkInfo *link)
 {
-    reds_stream_set_async_error_handler(link->stream, reds_handle_link_error);
-    reds_stream_async_read(link->stream,
-                           (uint8_t *)&link->link_header,
-                           sizeof(link->link_header.magic),
-                           reds_handle_read_magic_done,
-                           link);
+    red_stream_set_async_error_handler(link->stream, reds_handle_link_error);
+    red_stream_async_read(link->stream,
+                          (uint8_t *)&link->link_header,
+                          sizeof(link->link_header.magic),
+                          reds_handle_read_magic_done,
+                          link);
 }
 
 static void reds_handle_ssl_accept(int fd, int event, void *data)
 {
     RedLinkInfo *link = (RedLinkInfo *)data;
     RedsState *reds = link->reds;
-    int return_code = reds_stream_ssl_accept(link->stream);
+    int return_code = red_stream_ssl_accept(link->stream);
 
     switch (return_code) {
-        case REDS_STREAM_SSL_STATUS_ERROR:
+        case RED_STREAM_SSL_STATUS_ERROR:
             reds_link_free(link);
             return;
-        case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
+        case RED_STREAM_SSL_STATUS_WAIT_FOR_READ:
             reds_core_watch_update_mask(reds, link->stream->watch,
                                         SPICE_WATCH_EVENT_READ);
             return;
-        case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
+        case RED_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
             reds_core_watch_update_mask(reds, link->stream->watch,
                                         SPICE_WATCH_EVENT_WRITE);
             return;
-        case REDS_STREAM_SSL_STATUS_OK:
-            reds_stream_remove_watch(link->stream);
+        case RED_STREAM_SSL_STATUS_OK:
+            red_stream_remove_watch(link->stream);
             reds_handle_new_link(link);
     }
 }
@@ -2463,11 +2463,11 @@ static RedLinkInfo *reds_init_client_connection(RedsState *reds, int socket)
 
     link = g_new0(RedLinkInfo, 1);
     link->reds = reds;
-    link->stream = reds_stream_new(reds, socket);
+    link->stream = red_stream_new(reds, socket);
 
     /* gather info + send event */
 
-    reds_stream_push_channel_event(link->stream, SPICE_CHANNEL_EVENT_CONNECTED);
+    red_stream_push_channel_event(link->stream, SPICE_CHANNEL_EVENT_CONNECTED);
 
     openssl_init(link);
 
@@ -2488,19 +2488,19 @@ static RedLinkInfo *reds_init_client_ssl_connection(RedsState *reds, int socket)
         return NULL;
     }
 
-    ssl_status = reds_stream_enable_ssl(link->stream, reds->ctx);
+    ssl_status = red_stream_enable_ssl(link->stream, reds->ctx);
     switch (ssl_status) {
-        case REDS_STREAM_SSL_STATUS_OK:
+        case RED_STREAM_SSL_STATUS_OK:
             reds_handle_new_link(link);
             return link;
-        case REDS_STREAM_SSL_STATUS_ERROR:
+        case RED_STREAM_SSL_STATUS_ERROR:
             goto error;
-        case REDS_STREAM_SSL_STATUS_WAIT_FOR_READ:
+        case RED_STREAM_SSL_STATUS_WAIT_FOR_READ:
             link->stream->watch = reds_core_watch_add(reds, link->stream->socket,
                                                       SPICE_WATCH_EVENT_READ,
                                                       reds_handle_ssl_accept, link);
             break;
-        case REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
+        case RED_STREAM_SSL_STATUS_WAIT_FOR_WRITE:
             link->stream->watch = reds_core_watch_add(reds, link->stream->socket,
                                                       SPICE_WATCH_EVENT_WRITE,
                                                       reds_handle_ssl_accept, link);

@@ -159,7 +159,7 @@ stream_channel_client_on_disconnect(RedChannelClient *rcc)
 }
 
 static StreamChannelClient*
-stream_channel_client_new(StreamChannel *channel, RedClient *client, RedsStream *stream,
+stream_channel_client_new(StreamChannel *channel, RedClient *client, RedStream *stream,
                           int mig_target, RedChannelCapabilities *caps)
 {
     StreamChannelClient *rcc;
@@ -351,7 +351,7 @@ stream_channel_get_supported_codecs(StreamChannel *channel, uint8_t *out_codecs)
 }
 
 static void
-stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedsStream *stream,
+stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedStream *stream,
                        int migration, RedChannelCapabilities *caps)
 {
     StreamChannel *channel = STREAM_CHANNEL(red_channel);

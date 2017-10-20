@@ -24,7 +24,7 @@
 #include "cache-item.h"
 #include "red-common.h"
 #include "red-channel-client.h"
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "cursor-channel.h"
 
 G_BEGIN_DECLS
@@ -61,7 +61,7 @@ GType cursor_channel_client_get_type(void) G_GNUC_CONST;
 
 CursorChannelClient* cursor_channel_client_new(CursorChannel *cursor,
                                                RedClient *client,
-                                               RedsStream *stream,
+                                               RedStream *stream,
                                                int mig_target,
                                                RedChannelCapabilities *caps);
 

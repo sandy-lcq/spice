@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 #include <common/log.h>
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "basic-event-loop.h"
 
 static SpiceServer *server = NULL;
@@ -100,7 +100,7 @@ sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
 
 int main(int argc, char *argv[])
 {
-    RedsStream *st[2];
+    RedStream *st[2];
     int sv[2];
     int ret, fd = -1;
     char c;
@@ -112,13 +112,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    st[0] = reds_stream_new(server, sv[0]);
-    spice_assert(reds_stream_is_plain_unix(st[0]));
-    st[1] = reds_stream_new(server, sv[1]);
-    spice_assert(reds_stream_is_plain_unix(st[1]));
+    st[0] = red_stream_new(server, sv[0]);
+    spice_assert(red_stream_is_plain_unix(st[0]));
+    st[1] = red_stream_new(server, sv[1]);
+    spice_assert(red_stream_is_plain_unix(st[1]));
 
     /* send stdin, for the fun of it */
-    ret = reds_stream_send_msgfd(st[0], 0);
+    ret = red_stream_send_msgfd(st[0], 0);
     spice_assert(ret == 1);
     ret = sock_fd_read(sv[1], &c, 1, &fd);
     spice_assert(c == '@');
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
     close(fd);
 
     /* send invalid fd behaviour */
-    ret = reds_stream_send_msgfd(st[0], -1);
+    ret = red_stream_send_msgfd(st[0], -1);
     spice_assert(ret == 1);
     ret = sock_fd_read(sv[1], &c, 1, &fd);
     spice_assert(c == '@');
@@ -135,9 +135,9 @@ int main(int argc, char *argv[])
     spice_assert(fd == -1);
 
     /* batch test */
-    ret = reds_stream_send_msgfd(st[0], 0);
+    ret = red_stream_send_msgfd(st[0], 0);
     spice_assert(ret == 1);
-    ret = reds_stream_send_msgfd(st[0], 0);
+    ret = red_stream_send_msgfd(st[0], 0);
     spice_assert(ret == 1);
     ret = sock_fd_read(sv[1], &c, 1, &fd);
     spice_assert(c == '@');
@@ -150,8 +150,8 @@ int main(int argc, char *argv[])
     spice_assert(fd != -1);
     close(fd);
 
-    reds_stream_free(st[0]);
-    reds_stream_free(st[1]);
+    red_stream_free(st[0]);
+    red_stream_free(st[1]);
 
     return 0;
 }

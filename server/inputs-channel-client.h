@@ -58,7 +58,7 @@ GType inputs_channel_client_get_type(void) G_GNUC_CONST;
 
 RedChannelClient* inputs_channel_client_create(RedChannel *channel,
                                                RedClient *client,
-                                               RedsStream *stream,
+                                               RedStream *stream,
                                                RedChannelCapabilities *caps);
 
 uint16_t inputs_channel_client_get_motion_count(InputsChannelClient* self);

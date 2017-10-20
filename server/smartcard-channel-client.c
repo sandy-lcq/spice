@@ -107,7 +107,7 @@ smart_card_channel_client_init(SmartCardChannelClient *self)
 }
 
 SmartCardChannelClient* smartcard_channel_client_create(RedChannel *channel,
-                                                        RedClient *client, RedsStream *stream,
+                                                        RedClient *client, RedStream *stream,
                                                         RedChannelCapabilities *caps)
 {
     SmartCardChannelClient *rcc;

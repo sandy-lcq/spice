@@ -22,7 +22,7 @@
 #include <setjmp.h>
 #include <common/rect.h>
 
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "cache-item.h"
 #include "pixmap-cache.h"
 #include "stat.h"

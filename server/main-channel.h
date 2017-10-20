@@ -59,7 +59,7 @@ MainChannel *main_channel_new(RedsState *reds);
 RedClient *main_channel_get_client_by_link_id(MainChannel *main_chan, uint32_t link_id);
 /* This is a 'clone' from the reds.h Channel.link callback to allow passing link_id */
 MainChannelClient *main_channel_link(MainChannel *, RedClient *client,
-     RedsStream *stream, uint32_t link_id, int migration,
+     RedStream *stream, uint32_t link_id, int migration,
      RedChannelCapabilities *caps);
 void main_channel_push_mouse_mode(MainChannel *main_chan, SpiceMouseMode current_mode,
                                   int is_client_mouse_allowed);

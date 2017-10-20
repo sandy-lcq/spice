@@ -438,7 +438,7 @@ static FillBitsType fill_bits(DisplayChannelClient *dcc, SpiceMarshaller *m,
         /* Images must be added to the cache only after they are compressed
            in order to prevent starvation in the client between pixmap_cache and
            global dictionary (in cases of multiple monitors) */
-        if (reds_stream_get_family(red_channel_client_get_stream(rcc)) == AF_UNIX ||
+        if (red_stream_get_family(red_channel_client_get_stream(rcc)) == AF_UNIX ||
             !dcc_compress_image(dcc, &image, &simage->u.bitmap,
                                 drawable, can_lossy, &comp_send_data)) {
             SpicePalette *palette;

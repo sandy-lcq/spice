@@ -78,7 +78,7 @@ test_channel_send_item(RedChannelClient *rcc, RedPipeItem *item)
 }
 
 static void
-test_connect_client(RedChannel *channel, RedClient *client, RedsStream *stream,
+test_connect_client(RedChannel *channel, RedClient *client, RedStream *stream,
                     int migration, RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;
@@ -244,7 +244,7 @@ static void timeout_watch_count(void *opaque)
     // TODO watch
 }
 
-static RedsStream *create_dummy_stream(SpiceServer *server, int *p_socket)
+static RedStream *create_dummy_stream(SpiceServer *server, int *p_socket)
 {
     int sv[2];
     g_assert_cmpint(socketpair(AF_LOCAL, SOCK_STREAM, 0, sv), ==, 0);
@@ -254,7 +254,7 @@ static RedsStream *create_dummy_stream(SpiceServer *server, int *p_socket)
     red_socket_set_non_blocking(sv[0], true);
     red_socket_set_non_blocking(sv[1], true);
 
-    RedsStream * stream = reds_stream_new(server, sv[0]);
+    RedStream * stream = red_stream_new(server, sv[0]);
     g_assert_nonnull(stream);
 
     return stream;

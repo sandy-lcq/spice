@@ -239,7 +239,7 @@ static bool main_channel_handle_migrate_flush_mark(RedChannelClient *rcc)
 }
 
 MainChannelClient *main_channel_link(MainChannel *channel, RedClient *client,
-                                     RedsStream *stream, uint32_t connection_id, int migration,
+                                     RedStream *stream, uint32_t connection_id, int migration,
                                      RedChannelCapabilities *caps)
 {
     MainChannelClient *mcc;

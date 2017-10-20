@@ -495,7 +495,7 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 }
 
 DisplayChannelClient *dcc_new(DisplayChannel *display,
-                              RedClient *client, RedsStream *stream,
+                              RedClient *client, RedStream *stream,
                               int mig_target,
                               RedChannelCapabilities *caps,
                               SpiceImageCompression image_compression,
@@ -589,7 +589,7 @@ void dcc_start(DisplayChannelClient *dcc)
         dcc_create_all_streams(dcc);
     }
 
-    if (reds_stream_is_plain_unix(red_channel_client_get_stream(rcc)) &&
+    if (red_stream_is_plain_unix(red_channel_client_get_stream(rcc)) &&
         red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
         red_channel_client_pipe_add(rcc, dcc_gl_scanout_item_new(rcc, NULL, 0));
         dcc_push_monitors_config(dcc);
@@ -701,7 +701,7 @@ RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
     RedGlScanoutUnixItem *item;
 
     /* FIXME: on !unix peer, start streaming with a video codec */
-    if (!reds_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
+    if (!red_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
         !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
         spice_printerr("FIXME: client does not support GL scanout");
         red_channel_client_disconnect(rcc);
@@ -720,7 +720,7 @@ RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
     const SpiceMsgDisplayGlDraw *draw = data;
     RedGlDrawItem *item;
 
-    if (!reds_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
+    if (!red_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
         !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
         spice_printerr("FIXME: client does not support GL scanout");
         red_channel_client_disconnect(rcc);

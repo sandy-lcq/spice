@@ -763,7 +763,7 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
     int priority;
 #endif
     int tos;
-    RedsStream *stream = red_channel_client_get_stream(rcc);
+    RedStream *stream = red_channel_client_get_stream(rcc);
     RedClient *red_client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(red_client);
 
@@ -784,7 +784,7 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
         }
     }
 
-    reds_stream_set_no_delay(stream, !main_channel_client_is_low_bandwidth(mcc));
+    red_stream_set_no_delay(stream, !main_channel_client_is_low_bandwidth(mcc));
 
     return true;
 }
@@ -1084,7 +1084,7 @@ playback_channel_client_constructed(GObject *object)
     snd_send(scc);
 }
 
-static void snd_set_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
+static void snd_set_peer(RedChannel *red_channel, RedClient *client, RedStream *stream,
                          RedChannelCapabilities *caps, GType type)
 {
     SndChannel *channel = SND_CHANNEL(red_channel);
@@ -1105,7 +1105,7 @@ static void snd_set_peer(RedChannel *red_channel, RedClient *client, RedsStream 
     g_warn_if_fail(snd_client != NULL);
 }
 
-static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
+static void snd_set_playback_peer(RedChannel *red_channel, RedClient *client, RedStream *stream,
                                   G_GNUC_UNUSED int migration,
                                   RedChannelCapabilities *caps)
 {
@@ -1271,7 +1271,7 @@ record_channel_client_constructed(GObject *object)
 }
 
 
-static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, RedsStream *stream,
+static void snd_set_record_peer(RedChannel *red_channel, RedClient *client, RedStream *stream,
                                 G_GNUC_UNUSED int migration,
                                 RedChannelCapabilities *caps)
 {

@@ -34,11 +34,11 @@
 #include "main-dispatcher.h"
 #include "net-utils.h"
 #include "red-common.h"
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "reds.h"
 
 struct AsyncRead {
-    RedsStream *stream;
+    RedStream *stream;
     void *opaque;
     uint8_t *now;
     uint8_t *end;
@@ -50,7 +50,7 @@ typedef struct AsyncRead AsyncRead;
 #if HAVE_SASL
 #include <sasl/sasl.h>
 
-typedef struct RedsSASL {
+typedef struct RedSASL {
     sasl_conn_t *conn;
 
     /* If we want to negotiate an SSF layer with client */
@@ -74,38 +74,38 @@ typedef struct RedsSASL {
     /* temporary data during authentication */
     unsigned int len;
     char *data;
-} RedsSASL;
+} RedSASL;
 #endif
 
-struct RedsStreamPrivate {
+struct RedStreamPrivate {
     SSL *ssl;
 
 #if HAVE_SASL
-    RedsSASL sasl;
+    RedSASL sasl;
 #endif
 
     AsyncRead async_read;
 
     /* life time of info:
-     * allocated when creating RedsStream.
+     * allocated when creating RedStream.
      * deallocated when main_dispatcher handles the SPICE_CHANNEL_EVENT_DISCONNECTED
      * event, either from same thread or by call back from main thread. */
     SpiceChannelEventInfo* info;
 
-    ssize_t (*read)(RedsStream *s, void *buf, size_t nbyte);
-    ssize_t (*write)(RedsStream *s, const void *buf, size_t nbyte);
-    ssize_t (*writev)(RedsStream *s, const struct iovec *iov, int iovcnt);
+    ssize_t (*read)(RedStream *s, void *buf, size_t nbyte);
+    ssize_t (*write)(RedStream *s, const void *buf, size_t nbyte);
+    ssize_t (*writev)(RedStream *s, const struct iovec *iov, int iovcnt);
 
     RedsState *reds;
     SpiceCoreInterfaceInternal *core;
 };
 
-static ssize_t stream_write_cb(RedsStream *s, const void *buf, size_t size)
+static ssize_t stream_write_cb(RedStream *s, const void *buf, size_t size)
 {
     return write(s->socket, buf, size);
 }
 
-static ssize_t stream_writev_cb(RedsStream *s, const struct iovec *iov, int iovcnt)
+static ssize_t stream_writev_cb(RedStream *s, const struct iovec *iov, int iovcnt)
 {
     ssize_t ret = 0;
     do {
@@ -134,12 +134,12 @@ static ssize_t stream_writev_cb(RedsStream *s, const struct iovec *iov, int iovc
     return ret;
 }
 
-static ssize_t stream_read_cb(RedsStream *s, void *buf, size_t size)
+static ssize_t stream_read_cb(RedStream *s, void *buf, size_t size)
 {
     return read(s->socket, buf, size);
 }
 
-static ssize_t stream_ssl_write_cb(RedsStream *s, const void *buf, size_t size)
+static ssize_t stream_ssl_write_cb(RedStream *s, const void *buf, size_t size)
 {
     int return_code;
     SPICE_GNUC_UNUSED int ssl_error;
@@ -153,7 +153,7 @@ static ssize_t stream_ssl_write_cb(RedsStream *s, const void *buf, size_t size)
     return return_code;
 }
 
-static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
+static ssize_t stream_ssl_read_cb(RedStream *s, void *buf, size_t size)
 {
     int return_code;
     SPICE_GNUC_UNUSED int ssl_error;
@@ -167,7 +167,7 @@ static ssize_t stream_ssl_read_cb(RedsStream *s, void *buf, size_t size)
     return return_code;
 }
 
-void reds_stream_remove_watch(RedsStream* s)
+void red_stream_remove_watch(RedStream* s)
 {
     if (s->watch) {
         s->priv->core->watch_remove(s->priv->core, s->watch);
@@ -176,16 +176,16 @@ void reds_stream_remove_watch(RedsStream* s)
 }
 
 #if HAVE_SASL
-static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte);
+static ssize_t red_stream_sasl_read(RedStream *s, uint8_t *buf, size_t nbyte);
 #endif
 
-ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte)
+ssize_t red_stream_read(RedStream *s, void *buf, size_t nbyte)
 {
     ssize_t ret;
 
 #if HAVE_SASL
     if (s->priv->sasl.conn && s->priv->sasl.runSSF) {
-        ret = reds_stream_sasl_read(s, buf, nbyte);
+        ret = red_stream_sasl_read(s, buf, nbyte);
     } else
 #endif
         ret = s->priv->read(s, buf, nbyte);
@@ -193,12 +193,12 @@ ssize_t reds_stream_read(RedsStream *s, void *buf, size_t nbyte)
     return ret;
 }
 
-bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n)
+bool red_stream_write_all(RedStream *stream, const void *in_buf, size_t n)
 {
     const uint8_t *buf = (uint8_t *)in_buf;
 
     while (n) {
-        int now = reds_stream_write(stream, buf, n);
+        int now = red_stream_write(stream, buf, n);
         if (now <= 0) {
             if (now == -1 && (errno == EINTR || errno == EAGAIN)) {
                 continue;
@@ -212,16 +212,16 @@ bool reds_stream_write_all(RedsStream *stream, const void *in_buf, size_t n)
 }
 
 #if HAVE_SASL
-static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nbyte);
+static ssize_t red_stream_sasl_write(RedStream *s, const void *buf, size_t nbyte);
 #endif
 
-ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
+ssize_t red_stream_write(RedStream *s, const void *buf, size_t nbyte)
 {
     ssize_t ret;
 
 #if HAVE_SASL
     if (s->priv->sasl.conn && s->priv->sasl.runSSF) {
-        ret = reds_stream_sasl_write(s, buf, nbyte);
+        ret = red_stream_sasl_write(s, buf, nbyte);
     } else
 #endif
         ret = s->priv->write(s, buf, nbyte);
@@ -229,7 +229,7 @@ ssize_t reds_stream_write(RedsStream *s, const void *buf, size_t nbyte)
     return ret;
 }
 
-int reds_stream_get_family(const RedsStream *s)
+int red_stream_get_family(const RedStream *s)
 {
     spice_return_val_if_fail(s != NULL, -1);
 
@@ -239,11 +239,11 @@ int reds_stream_get_family(const RedsStream *s)
     return s->priv->info->laddr_ext.ss_family;
 }
 
-bool reds_stream_is_plain_unix(const RedsStream *s)
+bool red_stream_is_plain_unix(const RedStream *s)
 {
     spice_return_val_if_fail(s != NULL, false);
 
-    if (reds_stream_get_family(s) != AF_UNIX) {
+    if (red_stream_get_family(s) != AF_UNIX) {
         return false;
     }
 
@@ -261,23 +261,23 @@ bool reds_stream_is_plain_unix(const RedsStream *s)
 }
 
 /**
- * reds_stream_set_no_delay:
- * @stream: a #RedsStream
+ * red_stream_set_no_delay:
+ * @stream: a #RedStream
  * @no_delay: whether to enable TCP_NODELAY on @@stream
  *
  * Returns: #true if the operation succeeded, #false otherwise.
  */
-bool reds_stream_set_no_delay(RedsStream *stream, bool no_delay)
+bool red_stream_set_no_delay(RedStream *stream, bool no_delay)
 {
     return red_socket_set_no_delay(stream->socket, no_delay);
 }
 
-int reds_stream_get_no_delay(RedsStream *stream)
+int red_stream_get_no_delay(RedStream *stream)
 {
     return red_socket_get_no_delay(stream->socket);
 }
 
-int reds_stream_send_msgfd(RedsStream *stream, int fd)
+int red_stream_send_msgfd(RedStream *stream, int fd)
 {
     struct msghdr msgh = { 0, };
     struct iovec iov;
@@ -290,7 +290,7 @@ int reds_stream_send_msgfd(RedsStream *stream, int fd)
         char data[CMSG_SPACE(fd_size)];
     } control;
 
-    spice_return_val_if_fail(reds_stream_is_plain_unix(stream), -1);
+    spice_return_val_if_fail(red_stream_is_plain_unix(stream), -1);
 
     /* set the payload */
     iov.iov_base = (char*)"@";
@@ -320,7 +320,7 @@ int reds_stream_send_msgfd(RedsStream *stream, int fd)
     return r;
 }
 
-ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt)
+ssize_t red_stream_writev(RedStream *s, const struct iovec *iov, int iovcnt)
 {
     int i;
     int n;
@@ -331,7 +331,7 @@ ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt)
     }
 
     for (i = 0; i < iovcnt; ++i) {
-        n = reds_stream_write(s, iov[i].iov_base, iov[i].iov_len);
+        n = red_stream_write(s, iov[i].iov_base, iov[i].iov_len);
         if (n <= 0)
             return ret == 0 ? n : ret;
         ret += n;
@@ -340,13 +340,13 @@ ssize_t reds_stream_writev(RedsStream *s, const struct iovec *iov, int iovcnt)
     return ret;
 }
 
-void reds_stream_free(RedsStream *s)
+void red_stream_free(RedStream *s)
 {
     if (!s) {
         return;
     }
 
-    reds_stream_push_channel_event(s, SPICE_CHANNEL_EVENT_DISCONNECTED);
+    red_stream_push_channel_event(s, SPICE_CHANNEL_EVENT_DISCONNECTED);
 
 #if HAVE_SASL
     if (s->priv->sasl.conn) {
@@ -366,20 +366,20 @@ void reds_stream_free(RedsStream *s)
         SSL_free(s->priv->ssl);
     }
 
-    reds_stream_remove_watch(s);
+    red_stream_remove_watch(s);
     close(s->socket);
 
     g_free(s);
 }
 
-void reds_stream_push_channel_event(RedsStream *s, int event)
+void red_stream_push_channel_event(RedStream *s, int event)
 {
     RedsState *reds = s->priv->reds;
     MainDispatcher *md = reds_get_main_dispatcher(reds);
     main_dispatcher_channel_event(md, event, s->priv->info);
 }
 
-static void reds_stream_set_socket(RedsStream *stream, int socket)
+static void red_stream_set_socket(RedStream *stream, int socket)
 {
     stream->socket = socket;
     /* deprecated fields. Filling them for backward compatibility */
@@ -398,27 +398,27 @@ static void reds_stream_set_socket(RedsStream *stream, int socket)
 }
 
 
-void reds_stream_set_channel(RedsStream *stream, int connection_id,
-                             int channel_type, int channel_id)
+void red_stream_set_channel(RedStream *stream, int connection_id,
+                            int channel_type, int channel_id)
 {
     stream->priv->info->connection_id = connection_id;
     stream->priv->info->type = channel_type;
     stream->priv->info->id   = channel_id;
-    if (reds_stream_is_ssl(stream)) {
+    if (red_stream_is_ssl(stream)) {
         stream->priv->info->flags |= SPICE_CHANNEL_EVENT_FLAG_TLS;
     }
 }
 
-RedsStream *reds_stream_new(RedsState *reds, int socket)
+RedStream *red_stream_new(RedsState *reds, int socket)
 {
-    RedsStream *stream;
+    RedStream *stream;
 
-    stream = g_malloc0(sizeof(RedsStream) + sizeof(RedsStreamPrivate));
-    stream->priv = (RedsStreamPrivate *)(stream+1);
+    stream = g_malloc0(sizeof(RedStream) + sizeof(RedStreamPrivate));
+    stream->priv = (RedStreamPrivate *)(stream+1);
     stream->priv->info = g_new0(SpiceChannelEventInfo, 1);
     stream->priv->reds = reds;
     stream->priv->core = reds_get_core_interface(reds);
-    reds_stream_set_socket(stream, socket);
+    red_stream_set_socket(stream, socket);
 
     stream->priv->read = stream_read_cb;
     stream->priv->write = stream_write_cb;
@@ -427,39 +427,39 @@ RedsStream *reds_stream_new(RedsState *reds, int socket)
     return stream;
 }
 
-void reds_stream_set_core_interface(RedsStream *stream, SpiceCoreInterfaceInternal *core)
+void red_stream_set_core_interface(RedStream *stream, SpiceCoreInterfaceInternal *core)
 {
-    reds_stream_remove_watch(stream);
+    red_stream_remove_watch(stream);
     stream->priv->core = core;
 }
 
-bool reds_stream_is_ssl(RedsStream *stream)
+bool red_stream_is_ssl(RedStream *stream)
 {
     return (stream->priv->ssl != NULL);
 }
 
-static void reds_stream_disable_writev(RedsStream *stream)
+static void red_stream_disable_writev(RedStream *stream)
 {
     stream->priv->writev = NULL;
 }
 
-RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
+RedStreamSslStatus red_stream_ssl_accept(RedStream *stream)
 {
     int ssl_error;
     int return_code;
 
     return_code = SSL_accept(stream->priv->ssl);
     if (return_code == 1) {
-        return REDS_STREAM_SSL_STATUS_OK;
+        return RED_STREAM_SSL_STATUS_OK;
     }
 
     ssl_error = SSL_get_error(stream->priv->ssl, return_code);
     if (return_code == -1 && (ssl_error == SSL_ERROR_WANT_READ ||
                               ssl_error == SSL_ERROR_WANT_WRITE)) {
         if (ssl_error == SSL_ERROR_WANT_READ) {
-            return REDS_STREAM_SSL_STATUS_WAIT_FOR_READ;
+            return RED_STREAM_SSL_STATUS_WAIT_FOR_READ;
         } else {
-            return REDS_STREAM_SSL_STATUS_WAIT_FOR_WRITE;
+            return RED_STREAM_SSL_STATUS_WAIT_FOR_WRITE;
         }
     }
 
@@ -468,24 +468,24 @@ RedsStreamSslStatus reds_stream_ssl_accept(RedsStream *stream)
     SSL_free(stream->priv->ssl);
     stream->priv->ssl = NULL;
 
-    return REDS_STREAM_SSL_STATUS_ERROR;
+    return RED_STREAM_SSL_STATUS_ERROR;
 }
 
-int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
+int red_stream_enable_ssl(RedStream *stream, SSL_CTX *ctx)
 {
     BIO *sbio;
 
     // Handle SSL handshaking
     if (!(sbio = BIO_new_socket(stream->socket, BIO_NOCLOSE))) {
         spice_warning("could not allocate ssl bio socket");
-        return REDS_STREAM_SSL_STATUS_ERROR;
+        return RED_STREAM_SSL_STATUS_ERROR;
     }
 
     stream->priv->ssl = SSL_new(ctx);
     if (!stream->priv->ssl) {
         spice_warning("could not allocate ssl context");
         BIO_free(sbio);
-        return REDS_STREAM_SSL_STATUS_ERROR;
+        return RED_STREAM_SSL_STATUS_ERROR;
     }
 
     SSL_set_bio(stream->priv->ssl, sbio, sbio);
@@ -494,11 +494,11 @@ int reds_stream_enable_ssl(RedsStream *stream, SSL_CTX *ctx)
     stream->priv->read = stream_ssl_read_cb;
     stream->priv->writev = NULL;
 
-    return reds_stream_ssl_accept(stream);
+    return red_stream_ssl_accept(stream);
 }
 
-void reds_stream_set_async_error_handler(RedsStream *stream,
-                                         AsyncReadError error_handler)
+void red_stream_set_async_error_handler(RedStream *stream,
+                                        AsyncReadError error_handler)
 {
     stream->priv->async_read.error = error_handler;
 }
@@ -506,7 +506,7 @@ void reds_stream_set_async_error_handler(RedsStream *stream,
 static inline void async_read_clear_handlers(AsyncRead *async)
 {
     if (async->stream->watch) {
-        reds_stream_remove_watch(async->stream);
+        red_stream_remove_watch(async->stream);
     }
     async->stream = NULL;
 }
@@ -516,14 +516,14 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
                                void *data)
 {
     AsyncRead *async = (AsyncRead *)data;
-    RedsStream *stream = async->stream;
+    RedStream *stream = async->stream;
     SpiceCoreInterfaceInternal *core = stream->priv->core;
 
     for (;;) {
         int n = async->end - async->now;
 
         spice_assert(n > 0);
-        n = reds_stream_read(stream, async->now, n);
+        n = red_stream_read(stream, async->now, n);
         if (n <= 0) {
             int err = n < 0 ? errno: 0;
             switch (err) {
@@ -554,10 +554,10 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
     }
 }
 
-void reds_stream_async_read(RedsStream *stream,
-                            uint8_t *data, size_t size,
-                            AsyncReadDone read_done_cb,
-                            void *opaque)
+void red_stream_async_read(RedStream *stream,
+                           uint8_t *data, size_t size,
+                           AsyncReadDone read_done_cb,
+                           void *opaque)
 {
     AsyncRead *async = &stream->priv->async_read;
 
@@ -572,17 +572,17 @@ void reds_stream_async_read(RedsStream *stream,
 }
 
 #if HAVE_SASL
-static bool reds_stream_write_u8(RedsStream *s, uint8_t n)
+static bool red_stream_write_u8(RedStream *s, uint8_t n)
 {
-    return reds_stream_write_all(s, &n, sizeof(uint8_t));
+    return red_stream_write_all(s, &n, sizeof(uint8_t));
 }
 
-static bool reds_stream_write_u32(RedsStream *s, uint32_t n)
+static bool red_stream_write_u32(RedStream *s, uint32_t n)
 {
-    return reds_stream_write_all(s, &n, sizeof(uint32_t));
+    return red_stream_write_all(s, &n, sizeof(uint32_t));
 }
 
-static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nbyte)
+static ssize_t red_stream_sasl_write(RedStream *s, const void *buf, size_t nbyte)
 {
     ssize_t ret;
 
@@ -627,7 +627,7 @@ static ssize_t reds_stream_sasl_write(RedsStream *s, const void *buf, size_t nby
     return -1;
 }
 
-static ssize_t reds_stream_sasl_read(RedsStream *s, uint8_t *buf, size_t nbyte)
+static ssize_t red_stream_sasl_read(RedStream *s, uint8_t *buf, size_t nbyte)
 {
     uint8_t encoded[4096];
     const char *decoded;
@@ -688,19 +688,19 @@ static char *addr_to_string(const char *format,
     return g_strdup_printf(format, host, serv);
 }
 
-static char *reds_stream_get_local_address(RedsStream *stream)
+static char *red_stream_get_local_address(RedStream *stream)
 {
     return addr_to_string("%s;%s", &stream->priv->info->laddr_ext,
                           stream->priv->info->llen_ext);
 }
 
-static char *reds_stream_get_remote_address(RedsStream *stream)
+static char *red_stream_get_remote_address(RedStream *stream)
 {
     return addr_to_string("%s;%s", &stream->priv->info->paddr_ext,
                           stream->priv->info->plen_ext);
 }
 
-static int auth_sasl_check_ssf(RedsSASL *sasl, int *runSSF)
+static int auth_sasl_check_ssf(RedSASL *sasl, int *runSSF)
 {
     const void *val;
     int err, ssf;
@@ -743,13 +743,13 @@ static int auth_sasl_check_ssf(RedsSASL *sasl, int *runSSF)
  */
 #define SASL_DATA_MAX_LEN (1024 * 1024)
 
-RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+RedSaslError red_sasl_handle_auth_step(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 {
     const char *serverout;
     unsigned int serveroutlen;
     int err;
     char *clientdata = NULL;
-    RedsSASL *sasl = &stream->priv->sasl;
+    RedSASL *sasl = &stream->priv->sasl;
     uint32_t datalen = sasl->len;
 
     /* NB, distinction of NULL vs "" is *critical* in SASL */
@@ -770,34 +770,34 @@ RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_
         err != SASL_CONTINUE) {
         spice_warning("sasl step failed %d (%s)",
                       err, sasl_errdetail(sasl->conn));
-        return REDS_SASL_ERROR_GENERIC;
+        return RED_SASL_ERROR_GENERIC;
     }
 
     if (serveroutlen > SASL_DATA_MAX_LEN) {
         spice_warning("sasl step reply data too long %d",
                       serveroutlen);
-        return REDS_SASL_ERROR_INVALID_DATA;
+        return RED_SASL_ERROR_INVALID_DATA;
     }
 
     spice_debug("SASL return data %d bytes, %p", serveroutlen, serverout);
 
     if (serveroutlen) {
         serveroutlen += 1;
-        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
-        reds_stream_write_all(stream, serverout, serveroutlen);
+        red_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+        red_stream_write_all(stream, serverout, serveroutlen);
     } else {
-        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+        red_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
     }
 
     /* Whether auth is complete */
-    reds_stream_write_u8(stream, err == SASL_CONTINUE ? 0 : 1);
+    red_stream_write_u8(stream, err == SASL_CONTINUE ? 0 : 1);
 
     if (err == SASL_CONTINUE) {
         spice_debug("%s", "Authentication must continue (step)");
         /* Wait for step length */
-        reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
-                               read_cb, opaque);
-        return REDS_SASL_ERROR_CONTINUE;
+        red_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                              read_cb, opaque);
+        return RED_SASL_ERROR_CONTINUE;
     } else {
         int ssf;
 
@@ -807,33 +807,33 @@ RedsSaslError reds_sasl_handle_auth_step(RedsStream *stream, AsyncReadDone read_
         }
 
         spice_debug("Authentication successful");
-        reds_stream_write_u32(stream, SPICE_LINK_ERR_OK); /* Accept auth */
+        red_stream_write_u32(stream, SPICE_LINK_ERR_OK); /* Accept auth */
 
         /*
          * Delay writing in SSF encoded until now
          */
         sasl->runSSF = ssf;
-        reds_stream_disable_writev(stream); /* make sure writev isn't called directly anymore */
+        red_stream_disable_writev(stream); /* make sure writev isn't called directly anymore */
 
-        return REDS_SASL_ERROR_OK;
+        return RED_SASL_ERROR_OK;
     }
 
 authreject:
-    reds_stream_write_u32(stream, 1); /* Reject auth */
-    reds_stream_write_u32(stream, sizeof("Authentication failed"));
-    reds_stream_write_all(stream, "Authentication failed", sizeof("Authentication failed"));
+    red_stream_write_u32(stream, 1); /* Reject auth */
+    red_stream_write_u32(stream, sizeof("Authentication failed"));
+    red_stream_write_all(stream, "Authentication failed", sizeof("Authentication failed"));
 
-    return REDS_SASL_ERROR_AUTH_FAILED;
+    return RED_SASL_ERROR_AUTH_FAILED;
 }
 
-RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+RedSaslError red_sasl_handle_auth_steplen(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    RedsSASL *sasl = &stream->priv->sasl;
+    RedSASL *sasl = &stream->priv->sasl;
 
     spice_debug("Got steplen %d", sasl->len);
     if (sasl->len > SASL_DATA_MAX_LEN) {
         spice_warning("Too much SASL data %d", sasl->len);
-        return REDS_SASL_ERROR_INVALID_DATA;
+        return RED_SASL_ERROR_INVALID_DATA;
     }
 
     if (sasl->len == 0) {
@@ -842,12 +842,12 @@ RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone re
          * but read_cb() will have done the needed RedLinkInfo cleanups
          * if an error occurs, so the caller should not need to do more
          * treatment */
-        return REDS_SASL_ERROR_OK;
+        return RED_SASL_ERROR_OK;
     } else {
         sasl->data = g_realloc(sasl->data, sasl->len);
-        reds_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
-                               read_cb, opaque);
-        return REDS_SASL_ERROR_OK;
+        red_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
+                              read_cb, opaque);
+        return RED_SASL_ERROR_OK;
     }
 }
 
@@ -866,13 +866,13 @@ RedsSaslError reds_sasl_handle_auth_steplen(RedsStream *stream, AsyncReadDone re
  * u8 continue
  */
 
-RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+RedSaslError red_sasl_handle_auth_start(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 {
     const char *serverout;
     unsigned int serveroutlen;
     int err;
     char *clientdata = NULL;
-    RedsSASL *sasl = &stream->priv->sasl;
+    RedSASL *sasl = &stream->priv->sasl;
     uint32_t datalen = sasl->len;
 
     /* NB, distinction of NULL vs "" is *critical* in SASL */
@@ -894,34 +894,34 @@ RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read
         err != SASL_CONTINUE) {
         spice_warning("sasl start failed %d (%s)",
                     err, sasl_errdetail(sasl->conn));
-        return REDS_SASL_ERROR_INVALID_DATA;
+        return RED_SASL_ERROR_INVALID_DATA;
     }
 
     if (serveroutlen > SASL_DATA_MAX_LEN) {
         spice_warning("sasl start reply data too long %d",
                     serveroutlen);
-        return REDS_SASL_ERROR_INVALID_DATA;
+        return RED_SASL_ERROR_INVALID_DATA;
     }
 
     spice_debug("SASL return data %d bytes, %p", serveroutlen, serverout);
 
     if (serveroutlen) {
         serveroutlen += 1;
-        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
-        reds_stream_write_all(stream, serverout, serveroutlen);
+        red_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+        red_stream_write_all(stream, serverout, serveroutlen);
     } else {
-        reds_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
+        red_stream_write_all(stream, &serveroutlen, sizeof(uint32_t));
     }
 
     /* Whether auth is complete */
-    reds_stream_write_u8(stream, err == SASL_CONTINUE ? 0 : 1);
+    red_stream_write_u8(stream, err == SASL_CONTINUE ? 0 : 1);
 
     if (err == SASL_CONTINUE) {
         spice_debug("%s", "Authentication must continue (start)");
         /* Wait for step length */
-        reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
-                               read_cb, opaque);
-        return REDS_SASL_ERROR_CONTINUE;
+        red_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                              read_cb, opaque);
+        return RED_SASL_ERROR_CONTINUE;
     } else {
         int ssf;
 
@@ -931,48 +931,48 @@ RedsSaslError reds_sasl_handle_auth_start(RedsStream *stream, AsyncReadDone read
         }
 
         spice_debug("Authentication successful");
-        reds_stream_write_u32(stream, SPICE_LINK_ERR_OK); /* Accept auth */
+        red_stream_write_u32(stream, SPICE_LINK_ERR_OK); /* Accept auth */
 
         /*
          * Delay writing in SSF encoded until now
          */
         sasl->runSSF = ssf;
-        reds_stream_disable_writev(stream); /* make sure writev isn't called directly anymore */
-        return REDS_SASL_ERROR_OK;
+        red_stream_disable_writev(stream); /* make sure writev isn't called directly anymore */
+        return RED_SASL_ERROR_OK;
     }
 
 authreject:
-    reds_stream_write_u32(stream, 1); /* Reject auth */
-    reds_stream_write_u32(stream, sizeof("Authentication failed"));
-    reds_stream_write_all(stream, "Authentication failed", sizeof("Authentication failed"));
+    red_stream_write_u32(stream, 1); /* Reject auth */
+    red_stream_write_u32(stream, sizeof("Authentication failed"));
+    red_stream_write_all(stream, "Authentication failed", sizeof("Authentication failed"));
 
-    return REDS_SASL_ERROR_AUTH_FAILED;
+    return RED_SASL_ERROR_AUTH_FAILED;
 }
 
-RedsSaslError reds_sasl_handle_auth_startlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+RedSaslError red_sasl_handle_auth_startlen(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    RedsSASL *sasl = &stream->priv->sasl;
+    RedSASL *sasl = &stream->priv->sasl;
 
     spice_debug("Got client start len %d", sasl->len);
     if (sasl->len > SASL_DATA_MAX_LEN) {
         spice_warning("Too much SASL data %d", sasl->len);
-        return REDS_SASL_ERROR_INVALID_DATA;
+        return RED_SASL_ERROR_INVALID_DATA;
     }
 
     if (sasl->len == 0) {
-        return REDS_SASL_ERROR_RETRY;
+        return RED_SASL_ERROR_RETRY;
     }
 
     sasl->data = g_realloc(sasl->data, sasl->len);
-    reds_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
-                           read_cb, opaque);
+    red_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
+                          read_cb, opaque);
 
-    return REDS_SASL_ERROR_OK;
+    return RED_SASL_ERROR_OK;
 }
 
-bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+bool red_sasl_handle_auth_mechname(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    RedsSASL *sasl = &stream->priv->sasl;
+    RedSASL *sasl = &stream->priv->sasl;
 
     sasl->mechname[sasl->len] = '\0';
     spice_debug("Got client mechname '%s' check against '%s'",
@@ -1003,15 +1003,15 @@ bool reds_sasl_handle_auth_mechname(RedsStream *stream, AsyncReadDone read_cb, v
 
     spice_debug("Validated mechname '%s'", sasl->mechname);
 
-    reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
-                           read_cb, opaque);
+    red_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                          read_cb, opaque);
 
     return true;
 }
 
-bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+bool red_sasl_handle_auth_mechlen(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 {
-    RedsSASL *sasl = &stream->priv->sasl;
+    RedSASL *sasl = &stream->priv->sasl;
 
     if (sasl->len < 1 || sasl->len > 100) {
         spice_warning("Got bad client mechname len %d", sasl->len);
@@ -1021,26 +1021,26 @@ bool reds_sasl_handle_auth_mechlen(RedsStream *stream, AsyncReadDone read_cb, vo
     sasl->mechname = g_malloc(sasl->len + 1);
 
     spice_debug("Wait for client mechname");
-    reds_stream_async_read(stream, (uint8_t *)sasl->mechname, sasl->len,
-                           read_cb, opaque);
+    red_stream_async_read(stream, (uint8_t *)sasl->mechname, sasl->len,
+                          read_cb, opaque);
 
     return true;
 }
 
-bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaque)
+bool red_sasl_start_auth(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 {
     const char *mechlist = NULL;
     sasl_security_properties_t secprops;
     int err;
     char *localAddr, *remoteAddr;
     int mechlistlen;
-    RedsSASL *sasl = &stream->priv->sasl;
+    RedSASL *sasl = &stream->priv->sasl;
 
-    if (!(localAddr = reds_stream_get_local_address(stream))) {
+    if (!(localAddr = red_stream_get_local_address(stream))) {
         goto error;
     }
 
-    if (!(remoteAddr = reds_stream_get_remote_address(stream))) {
+    if (!(remoteAddr = red_stream_get_remote_address(stream))) {
         g_free(localAddr);
         goto error;
     }
@@ -1123,15 +1123,15 @@ bool reds_sasl_start_auth(RedsStream *stream, AsyncReadDone read_cb, void *opaqu
     sasl->mechlist = g_strdup(mechlist);
 
     mechlistlen = strlen(mechlist);
-    if (!reds_stream_write_all(stream, &mechlistlen, sizeof(uint32_t))
-        || !reds_stream_write_all(stream, sasl->mechlist, mechlistlen)) {
+    if (!red_stream_write_all(stream, &mechlistlen, sizeof(uint32_t))
+        || !red_stream_write_all(stream, sasl->mechlist, mechlistlen)) {
         spice_warning("SASL mechanisms write error");
         goto error;
     }
 
     spice_debug("Wait for client mechname length");
-    reds_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
-                           read_cb, opaque);
+    red_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+                          read_cb, opaque);
 
     return true;
 

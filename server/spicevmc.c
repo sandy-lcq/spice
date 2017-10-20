@@ -213,12 +213,12 @@ G_DEFINE_TYPE(VmcChannelClient, vmc_channel_client, RED_TYPE_CHANNEL_CLIENT)
 
 static RedChannelClient *
 vmc_channel_client_create(RedChannel *channel, RedClient *client,
-                          RedsStream *stream,
+                          RedStream *stream,
                           RedChannelCapabilities *caps);
 
 
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
-                             RedsStream *stream, int migration,
+                             RedStream *stream, int migration,
                              RedChannelCapabilities *caps);
 
 static void
@@ -337,7 +337,7 @@ static RedVmcPipeItem* try_compress_lz4(RedVmcChannel *channel, int n, RedVmcPip
     RedVmcPipeItem *msg_item_compressed;
     int compressed_data_count;
 
-    if (reds_stream_get_family(red_channel_client_get_stream(channel->rcc)) == AF_UNIX) {
+    if (red_stream_get_family(red_channel_client_get_stream(channel->rcc)) == AF_UNIX) {
         /* AF_LOCAL - data will not be compressed */
         return NULL;
     }
@@ -797,7 +797,7 @@ red_vmc_channel_port_class_init(RedVmcChannelPortClass *klass)
 }
 
 static void spicevmc_connect(RedChannel *channel, RedClient *client,
-    RedsStream *stream, int migration,
+    RedStream *stream, int migration,
     RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;
@@ -815,7 +815,7 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
                        type, id, vmc_channel->rcc);
         // TODO: notify client in advance about the in use channel using
         // SPICE_MSG_MAIN_CHANNEL_IN_USE (for example)
-        reds_stream_free(stream);
+        red_stream_free(stream);
         return;
     }
 
@@ -994,7 +994,7 @@ vmc_channel_client_class_init(VmcChannelClientClass *klass)
 
 static RedChannelClient *
 vmc_channel_client_create(RedChannel *channel, RedClient *client,
-                          RedsStream *stream,
+                          RedStream *stream,
                           RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;

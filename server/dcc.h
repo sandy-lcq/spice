@@ -131,7 +131,7 @@ typedef struct RedDrawablePipeItem {
 
 DisplayChannelClient*      dcc_new                                   (DisplayChannel *display,
                                                                       RedClient *client,
-                                                                      RedsStream *stream,
+                                                                      RedStream *stream,
                                                                       int mig_target,
                                                                       RedChannelCapabilities *caps,
                                                                       SpiceImageCompression image_compression,

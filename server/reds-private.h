@@ -50,7 +50,7 @@ typedef struct MonitorMode {
 
 typedef struct RedsMigPendingLink {
     SpiceLinkMess *link_msg;
-    RedsStream *stream;
+    RedStream *stream;
 } RedsMigPendingLink;
 
 typedef struct RedsMigTargetClient {

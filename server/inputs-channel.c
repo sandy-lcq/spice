@@ -32,7 +32,7 @@
 #include "spice.h"
 #include "red-common.h"
 #include "reds.h"
-#include "reds-stream.h"
+#include "red-stream.h"
 #include "red-channel.h"
 #include "red-channel-client.h"
 #include "red-client.h"
@@ -444,12 +444,12 @@ static void inputs_pipe_add_init(RedChannelClient *rcc)
 }
 
 static void inputs_connect(RedChannel *channel, RedClient *client,
-                           RedsStream *stream, int migration,
+                           RedStream *stream, int migration,
                            RedChannelCapabilities *caps)
 {
     RedChannelClient *rcc;
 
-    if (!reds_stream_is_ssl(stream) && !red_client_during_migrate_at_target(client)) {
+    if (!red_stream_is_ssl(stream) && !red_client_during_migrate_at_target(client)) {
         main_channel_client_push_notify(red_client_get_main(client),
                                         "keyboard channel is insecure");
     }

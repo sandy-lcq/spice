@@ -152,8 +152,8 @@ libserver_la_SOURCES =				\
 	reds.c					\
 	reds.h					\
 	reds-private.h				\
-	reds-stream.c				\
-	reds-stream.h				\
+	red-stream.c				\
+	red-stream.h				\
 	red-worker.c				\
 	red-worker.h				\
 	sound.c					\
