@@ -27,7 +27,7 @@
 #define FOREACH_STREAMS(display, item)                  \
     RING_FOREACH(item, &(display)->priv->streams)
 
-static void stream_agent_stats_print(StreamAgent *agent)
+static void video_stream_agent_stats_print(VideoStreamAgent *agent)
 {
 #ifdef STREAM_STATS
     StreamStats *stats = &agent->stats;
@@ -67,11 +67,12 @@ static void video_stream_create_destroy_item_release(RedPipeItem *base)
 {
     StreamCreateDestroyItem *item = SPICE_UPCAST(StreamCreateDestroyItem, base);
     DisplayChannel *display = DCC_TO_DC(item->agent->dcc);
-    stream_agent_unref(display, item->agent);
+    video_stream_agent_unref(display, item->agent);
     g_free(item);
 }
 
-static RedPipeItem *video_stream_create_destroy_item_new(StreamAgent *agent, gint type)
+static RedPipeItem *video_stream_create_destroy_item_new(VideoStreamAgent *agent,
+                                                         gint type)
 {
     StreamCreateDestroyItem *item = g_new0(StreamCreateDestroyItem, 1);
 
@@ -82,12 +83,12 @@ static RedPipeItem *video_stream_create_destroy_item_new(StreamAgent *agent, gin
     return &item->base;
 }
 
-static RedPipeItem *video_stream_create_item_new(StreamAgent *agent)
+static RedPipeItem *video_stream_create_item_new(VideoStreamAgent *agent)
 {
     return video_stream_create_destroy_item_new(agent, RED_PIPE_ITEM_TYPE_STREAM_CREATE);
 }
 
-static RedPipeItem *video_stream_destroy_item_new(StreamAgent *agent)
+static RedPipeItem *video_stream_destroy_item_new(VideoStreamAgent *agent)
 {
     return video_stream_create_destroy_item_new(agent, RED_PIPE_ITEM_TYPE_STREAM_DESTROY);
 }
@@ -103,9 +104,9 @@ void video_stream_stop(DisplayChannel *display, VideoStream *stream)
 
     spice_debug("stream %d", stream_id);
     FOREACH_DCC(display, dcc) {
-        StreamAgent *stream_agent;
+        VideoStreamAgent *stream_agent;
 
-        stream_agent = dcc_get_stream_agent(dcc, stream_id);
+        stream_agent = dcc_get_video_stream_agent(dcc, stream_id);
         region_clear(&stream_agent->vis_region);
         region_clear(&stream_agent->clip);
         if (stream_agent->video_encoder) {
@@ -120,7 +121,7 @@ void video_stream_stop(DisplayChannel *display, VideoStream *stream)
         }
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc),
                                     video_stream_destroy_item_new(stream_agent));
-        stream_agent_stats_print(stream_agent);
+        video_stream_agent_stats_print(stream_agent);
     }
     display->priv->streams_size_total -= stream->width * stream->height;
     ring_remove(&stream->link);
@@ -157,7 +158,7 @@ void video_stream_unref(DisplayChannel *display, VideoStream *stream)
     display->priv->stream_count--;
 }
 
-void stream_agent_unref(DisplayChannel *display, StreamAgent *agent)
+void video_stream_agent_unref(DisplayChannel *display, VideoStreamAgent *agent)
 {
     video_stream_unref(display, agent->stream);
 }
@@ -170,12 +171,12 @@ static void red_stream_clip_item_free(RedPipeItem *base)
 
     g_return_if_fail(item->base.refcount == 0);
 
-    stream_agent_unref(display, item->stream_agent);
+    video_stream_agent_unref(display, item->stream_agent);
     g_free(item->rects);
     g_free(item);
 }
 
-RedStreamClipItem *red_stream_clip_item_new(StreamAgent *agent)
+RedStreamClipItem *red_stream_clip_item_new(VideoStreamAgent *agent)
 {
     RedStreamClipItem *item = g_new(RedStreamClipItem, 1);
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_STREAM_CLIP,
@@ -299,10 +300,11 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, VideoStre
     }
 
     FOREACH_DCC(display, dcc) {
-        StreamAgent *agent;
+        VideoStreamAgent *agent;
         QRegion clip_in_draw_dest;
+        int stream_id = display_channel_get_video_stream_id(display, stream);
 
-        agent = dcc_get_stream_agent(dcc, display_channel_get_video_stream_id(display, stream));
+        agent = dcc_get_video_stream_agent(dcc, stream_id);
         region_or(&agent->vis_region, &drawable->tree_item.base.rgn);
 
         region_init(&clip_in_draw_dest);
@@ -312,7 +314,7 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, VideoStre
         if (!region_is_equal(&clip_in_draw_dest, &drawable->tree_item.base.rgn)) {
             region_remove(&agent->clip, &drawable->red_drawable->bbox);
             region_or(&agent->clip, &drawable->tree_item.base.rgn);
-            dcc_stream_agent_clip(dcc, agent);
+            dcc_video_stream_agent_clip(dcc, agent);
         }
         region_destroy(&clip_in_draw_dest);
 #ifdef STREAM_STATS
@@ -334,7 +336,7 @@ static void before_reattach_stream(DisplayChannel *display,
 {
     DisplayChannelClient *dcc;
     int index;
-    StreamAgent *agent;
+    VideoStreamAgent *agent;
     GList *dpi_link, *dpi_next;
 
     spice_return_if_fail(stream->current);
@@ -353,7 +355,7 @@ static void before_reattach_stream(DisplayChannel *display,
         RedDrawablePipeItem *dpi = dpi_link->data;
         dpi_next = dpi_link->next;
         dcc = dpi->dcc;
-        agent = dcc_get_stream_agent(dcc, index);
+        agent = dcc_get_video_stream_agent(dcc, index);
 
         if (red_channel_client_pipe_item_is_linked(RED_CHANNEL_CLIENT(dcc),
                                                    &dpi->dpi_pipe_item)) {
@@ -548,7 +550,8 @@ void video_stream_maintenance(DisplayChannel *display,
     }
 }
 
-static void dcc_update_streams_max_latency(DisplayChannelClient *dcc, StreamAgent *remove_agent)
+static void dcc_update_streams_max_latency(DisplayChannelClient *dcc,
+                                           VideoStreamAgent *remove_agent)
 {
     uint32_t new_max_latency = 0;
     int i;
@@ -562,7 +565,7 @@ static void dcc_update_streams_max_latency(DisplayChannelClient *dcc, StreamAgen
         return;
     }
     for (i = 0; i < NUM_STREAMS; i++) {
-        StreamAgent *other_agent = dcc_get_stream_agent(dcc, i);
+        VideoStreamAgent *other_agent = dcc_get_video_stream_agent(dcc, i);
         if (other_agent == remove_agent || !other_agent->video_encoder) {
             continue;
         }
@@ -622,7 +625,7 @@ static uint64_t get_initial_bit_rate(DisplayChannelClient *dcc, VideoStream *str
 
 static uint32_t get_roundtrip_ms(void *opaque)
 {
-    StreamAgent *agent = opaque;
+    VideoStreamAgent *agent = opaque;
     int roundtrip;
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(agent->dcc);
 
@@ -643,14 +646,14 @@ static uint32_t get_roundtrip_ms(void *opaque)
 
 static uint32_t get_source_fps(void *opaque)
 {
-    StreamAgent *agent = opaque;
+    VideoStreamAgent *agent = opaque;
 
     return agent->stream->input_fps;
 }
 
 static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
 {
-    StreamAgent *agent = opaque;
+    VideoStreamAgent *agent = opaque;
     DisplayChannelClient *dcc = agent->dcc;
     RedChannel *channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(dcc));
     RedClient *client = red_channel_client_get_client(RED_CHANNEL_CLIENT(dcc));
@@ -722,7 +725,7 @@ static VideoEncoder* dcc_create_video_encoder(DisplayChannelClient *dcc,
 void dcc_create_stream(DisplayChannelClient *dcc, VideoStream *stream)
 {
     int stream_id = display_channel_get_video_stream_id(DCC_TO_DC(dcc), stream);
-    StreamAgent *agent = dcc_get_stream_agent(dcc, stream_id);
+    VideoStreamAgent *agent = dcc_get_video_stream_agent(dcc, stream_id);
 
     spice_return_if_fail(region_is_empty(&agent->vis_region));
 
@@ -760,7 +763,7 @@ void dcc_create_stream(DisplayChannelClient *dcc, VideoStream *stream)
 #endif
 }
 
-void stream_agent_stop(StreamAgent *agent)
+void video_stream_agent_stop(VideoStreamAgent *agent)
 {
     DisplayChannelClient *dcc = agent->dcc;
 
@@ -794,11 +797,11 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
 {
     DisplayChannel *display = DCC_TO_DC(dcc);
     int stream_id = display_channel_get_video_stream_id(display, stream);
-    StreamAgent *agent = dcc_get_stream_agent(dcc, stream_id);
+    VideoStreamAgent *agent = dcc_get_video_stream_agent(dcc, stream_id);
 
     /* stopping the client from playing older frames at once*/
     region_clear(&agent->clip);
-    dcc_stream_agent_clip(dcc, agent);
+    dcc_video_stream_agent_clip(dcc, agent);
 
     if (region_is_empty(&agent->vis_region)) {
         spice_debug("stream %d: vis region empty", stream_id);
@@ -892,7 +895,7 @@ void video_stream_detach_behind(DisplayChannel *display,
         int stream_id = display_channel_get_video_stream_id(display, stream);
 
         FOREACH_DCC(display, dcc) {
-            StreamAgent *agent = dcc_get_stream_agent(dcc, stream_id);
+            VideoStreamAgent *agent = dcc_get_video_stream_agent(dcc, stream_id);
 
             if (region_intersects(&agent->vis_region, region)) {
                 dcc_detach_stream_gracefully(dcc, stream, drawable);

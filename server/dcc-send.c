@@ -1709,7 +1709,7 @@ static bool red_marshall_stream_data(RedChannelClient *rcc,
     }
 
     int stream_id = display_channel_get_video_stream_id(display, stream);
-    StreamAgent *agent = &dcc->priv->stream_agents[stream_id];
+    VideoStreamAgent *agent = &dcc->priv->stream_agents[stream_id];
     VideoBuffer *outbuf;
     /* workaround for vga streams */
     frame_mm_time =  drawable->red_drawable->mm_time ?
@@ -2151,7 +2151,8 @@ static void marshall_qxl_drawable(RedChannelClient *rcc,
 }
 
 static void marshall_stream_start(RedChannelClient *rcc,
-                                  SpiceMarshaller *base_marshaller, StreamAgent *agent)
+                                  SpiceMarshaller *base_marshaller,
+                                  VideoStreamAgent *agent)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     VideoStream *stream = agent->stream;
@@ -2195,7 +2196,7 @@ static void marshall_stream_clip(RedChannelClient *rcc,
                                  RedStreamClipItem *item)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    StreamAgent *agent = item->stream_agent;
+    VideoStreamAgent *agent = item->stream_agent;
 
     spice_return_if_fail(agent->stream);
 
@@ -2210,14 +2211,15 @@ static void marshall_stream_clip(RedChannelClient *rcc,
 }
 
 static void marshall_stream_end(RedChannelClient *rcc,
-                                SpiceMarshaller *base_marshaller, StreamAgent* agent)
+                                SpiceMarshaller *base_marshaller,
+                                VideoStreamAgent* agent)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     SpiceMsgDisplayStreamDestroy destroy;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DESTROY);
     destroy.id = display_channel_get_video_stream_id(DCC_TO_DC(dcc), agent->stream);
-    stream_agent_stop(agent);
+    video_stream_agent_stop(agent);
     spice_marshall_msg_display_stream_destroy(base_marshaller, &destroy);
 }
 
@@ -2308,7 +2310,7 @@ static void marshall_stream_activate_report(RedChannelClient *rcc,
                                             uint32_t stream_id)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    StreamAgent *agent = &dcc->priv->stream_agents[stream_id];
+    VideoStreamAgent *agent = &dcc->priv->stream_agents[stream_id];
     SpiceMsgDisplayStreamActivateReport msg;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_ACTIVATE_REPORT);

@@ -341,7 +341,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
 
     while (item) {
         VideoStream *stream = SPICE_CONTAINEROF(item, VideoStream, link);
-        StreamAgent *agent;
+        VideoStreamAgent *agent;
 
         item = ring_next(ring, item);
 
@@ -351,12 +351,12 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
 
         FOREACH_DCC(display, dcc) {
             int stream_id = display_channel_get_video_stream_id(display, stream);
-            agent = dcc_get_stream_agent(dcc, stream_id);
+            agent = dcc_get_video_stream_agent(dcc, stream_id);
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
                 region_exclude(&agent->vis_region, &drawable->tree_item.base.rgn);
                 region_exclude(&agent->clip, &drawable->tree_item.base.rgn);
-                dcc_stream_agent_clip(dcc, agent);
+                dcc_video_stream_agent_clip(dcc, agent);
             }
         }
     }

@@ -63,7 +63,7 @@ typedef struct StreamStats {
 } StreamStats;
 #endif
 
-typedef struct StreamAgent {
+typedef struct VideoStreamAgent {
     QRegion vis_region; /* the part of the surface area that is currently occupied by video
                            fragments */
     QRegion clip;       /* the current video clipping. It can be different from vis_region:
@@ -84,20 +84,20 @@ typedef struct StreamAgent {
 #ifdef STREAM_STATS
     StreamStats stats;
 #endif
-} StreamAgent;
+} VideoStreamAgent;
 
 typedef struct RedStreamClipItem {
     RedPipeItem base;
-    StreamAgent *stream_agent;
+    VideoStreamAgent *stream_agent;
     int clip_type;
     SpiceClipRects *rects;
 } RedStreamClipItem;
 
-RedStreamClipItem *   red_stream_clip_item_new                      (StreamAgent *agent);
+RedStreamClipItem *red_stream_clip_item_new(VideoStreamAgent *agent);
 
 typedef struct StreamCreateDestroyItem {
     RedPipeItem base;
-    StreamAgent *agent;
+    VideoStreamAgent *agent;
 } StreamCreateDestroyItem;
 
 typedef struct ItemTrace {
@@ -139,8 +139,8 @@ void video_stream_trace_add_drawable(DisplayChannel *display, Drawable *item);
 void video_stream_detach_behind(DisplayChannel *display, QRegion *region,
                                 Drawable *drawable);
 
-void stream_agent_unref(DisplayChannel *display, StreamAgent *agent);
-void stream_agent_stop(StreamAgent *agent);
+void video_stream_agent_unref(DisplayChannel *display, VideoStreamAgent *agent);
+void video_stream_agent_stop(VideoStreamAgent *agent);
 
 void video_stream_detach_drawable(VideoStream *stream);
 

@@ -79,7 +79,7 @@ GType display_channel_client_get_type(void) G_GNUC_CONST;
 
 typedef struct DisplayChannel DisplayChannel;
 typedef struct VideoStream VideoStream;
-typedef struct StreamAgent StreamAgent;
+typedef struct VideoStreamAgent VideoStreamAgent;
 
 typedef struct WaitForChannels {
     SpiceMsgWaitForChannels header;
@@ -146,8 +146,8 @@ bool                       dcc_handle_migrate_data                   (DisplayCha
 void                       dcc_push_monitors_config                  (DisplayChannelClient *dcc);
 void                       dcc_destroy_surface                       (DisplayChannelClient *dcc,
                                                                       uint32_t surface_id);
-void                       dcc_stream_agent_clip                     (DisplayChannelClient* dcc,
-                                                                      StreamAgent *agent);
+void                       dcc_video_stream_agent_clip               (DisplayChannelClient* dcc,
+                                                                      VideoStreamAgent *agent);
 void                       dcc_create_stream                         (DisplayChannelClient *dcc,
                                                                       VideoStream *stream);
 void                       dcc_create_surface                        (DisplayChannelClient *dcc,
@@ -189,7 +189,7 @@ int                        dcc_compress_image                        (DisplayCha
                                                                       int can_lossy,
                                                                       compress_send_data_t* o_comp_data);
 
-StreamAgent *              dcc_get_stream_agent                      (DisplayChannelClient *dcc, int stream_id);
+VideoStreamAgent *dcc_get_video_stream_agent(DisplayChannelClient *dcc, int stream_id);
 ImageEncoders *dcc_get_encoders(DisplayChannelClient *dcc);
 spice_wan_compression_t    dcc_get_jpeg_state                        (DisplayChannelClient *dcc);
 spice_wan_compression_t    dcc_get_zlib_glz_state                    (DisplayChannelClient *dcc);

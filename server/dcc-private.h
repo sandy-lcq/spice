@@ -61,7 +61,7 @@ struct DisplayChannelClientPrivate
     uint8_t surface_client_created[NUM_SURFACES];
     QRegion surface_client_lossy_region[NUM_SURFACES];
 
-    StreamAgent stream_agents[NUM_STREAMS];
+    VideoStreamAgent stream_agents[NUM_STREAMS];
     uint32_t streams_max_latency;
     uint64_t streams_max_bit_rate;
     bool gl_draw_ongoing;

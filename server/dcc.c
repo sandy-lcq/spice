@@ -487,7 +487,7 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
     DisplayChannel *display = DCC_TO_DC(dcc);
 
     for (i = 0; i < NUM_STREAMS; i++) {
-        StreamAgent *agent = &dcc->priv->stream_agents[i];
+        VideoStreamAgent *agent = &dcc->priv->stream_agents[i];
         agent->stream = display_channel_get_nth_video_stream(display, i);
         region_init(&agent->vis_region);
         region_init(&agent->clip);
@@ -601,7 +601,7 @@ static void dcc_destroy_stream_agents(DisplayChannelClient *dcc)
     int i;
 
     for (i = 0; i < NUM_STREAMS; i++) {
-        StreamAgent *agent = &dcc->priv->stream_agents[i];
+        VideoStreamAgent *agent = &dcc->priv->stream_agents[i];
         region_destroy(&agent->vis_region);
         region_destroy(&agent->clip);
         if (agent->video_encoder) {
@@ -627,7 +627,7 @@ static void dcc_stop(DisplayChannelClient *dcc)
     }
 }
 
-void dcc_stream_agent_clip(DisplayChannelClient* dcc, StreamAgent *agent)
+void dcc_video_stream_agent_clip(DisplayChannelClient* dcc, VideoStreamAgent *agent)
 {
     RedStreamClipItem *item = red_stream_clip_item_new(agent);
     int n_rects;
@@ -1041,7 +1041,7 @@ static bool dcc_handle_init(DisplayChannelClient *dcc, SpiceMsgcDisplayInit *ini
 static bool dcc_handle_stream_report(DisplayChannelClient *dcc,
                                      SpiceMsgcDisplayStreamReport *report)
 {
-    StreamAgent *agent;
+    VideoStreamAgent *agent;
 
     if (report->stream_id >= NUM_STREAMS) {
         spice_warning("stream_report: invalid stream id %u",
@@ -1383,7 +1383,7 @@ bool dcc_handle_migrate_data(DisplayChannelClient *dcc, uint32_t size, void *mes
     return TRUE;
 }
 
-StreamAgent* dcc_get_stream_agent(DisplayChannelClient *dcc, int stream_id)
+VideoStreamAgent* dcc_get_video_stream_agent(DisplayChannelClient *dcc, int stream_id)
 {
     return &dcc->priv->stream_agents[stream_id];
 }
