@@ -452,6 +452,11 @@ int red_channel_is_connected(RedChannel *channel)
     return channel && channel->priv->clients;
 }
 
+const char *red_channel_get_name(RedChannel *channel)
+{
+    return red_channel_type_to_str(channel->priv->type);
+}
+
 void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc)
 {
     GList *link;

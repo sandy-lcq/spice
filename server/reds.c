@@ -3983,32 +3983,23 @@ SPICE_GNUC_VISIBLE int spice_server_set_zlib_glz_compression(SpiceServer *s, spi
 
 SPICE_GNUC_VISIBLE int spice_server_set_channel_security(SpiceServer *s, const char *channel, int security)
 {
-    static const char *const names[] = {
-        [ SPICE_CHANNEL_MAIN     ] = "main",
-        [ SPICE_CHANNEL_DISPLAY  ] = "display",
-        [ SPICE_CHANNEL_INPUTS   ] = "inputs",
-        [ SPICE_CHANNEL_CURSOR   ] = "cursor",
-        [ SPICE_CHANNEL_PLAYBACK ] = "playback",
-        [ SPICE_CHANNEL_RECORD   ] = "record",
-#ifdef USE_SMARTCARD
-        [ SPICE_CHANNEL_SMARTCARD] = "smartcard",
-#endif
-        [ SPICE_CHANNEL_USBREDIR ] = "usbredir",
-        [ SPICE_CHANNEL_WEBDAV ] = "webdav",
-    };
-    int i;
-
+    int type;
     if (channel == NULL) {
         s->config->default_channel_security = security;
         return 0;
     }
-    for (i = 0; i < SPICE_N_ELEMENTS(names); i++) {
-        if (names[i] && strcmp(names[i], channel) == 0) {
-            reds_set_one_channel_security(s, i, security);
-            return 0;
-        }
+    type = red_channel_name_to_type(channel);
+#ifndef USE_SMARTCARD
+    if (type == SPICE_CHANNEL_SMARTCARD) {
+        type = -1;
     }
-    return -1;
+#endif
+    if (type == -1) {
+        return -1;
+    }
+
+    reds_set_one_channel_security(s, type, security);
+    return 0;
 }
 
 /* very obsolete and old function, retain only for ABI */

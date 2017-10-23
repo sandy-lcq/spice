@@ -128,6 +128,8 @@ struct RedChannelClass
 
 GType red_channel_get_type(void) G_GNUC_CONST;
 
+const char *red_channel_get_name(RedChannel *channel);
+
 void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc);
 void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc);
 
