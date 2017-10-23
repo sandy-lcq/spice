@@ -114,11 +114,10 @@ static void red_qxl_display_migrate(RedChannelClient *rcc)
     RedWorkerMessageDisplayMigrate payload;
     Dispatcher *dispatcher;
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    uint32_t type, id;
 
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
+    red_channel_printerr(channel, "");
+
     dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
-    spice_printerr("channel type %u id %u", type, id);
     payload.rcc = g_object_ref(rcc);
     dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_DISPLAY_MIGRATE,
@@ -164,11 +163,10 @@ static void red_qxl_cursor_migrate(RedChannelClient *rcc)
     RedWorkerMessageCursorMigrate payload;
     Dispatcher *dispatcher;
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    uint32_t type, id;
 
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
+    red_channel_printerr(channel, "");
+
     dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
-    spice_printerr("channel type %u id %u", type, id);
     payload.rcc = g_object_ref(rcc);
     dispatcher_send_message(dispatcher,
                             RED_WORKER_MESSAGE_CURSOR_MIGRATE,

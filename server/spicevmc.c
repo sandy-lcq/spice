@@ -804,15 +804,13 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
     RedVmcChannel *vmc_channel;
     SpiceCharDeviceInstance *sin;
     SpiceCharDeviceInterface *sif;
-    uint32_t type, id;
 
     vmc_channel = RED_VMC_CHANNEL(channel);
     sin = vmc_channel->chardev_sin;
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
 
     if (vmc_channel->rcc) {
-        spice_printerr("channel client %d:%d (%p) already connected, refusing second connection",
-                       type, id, vmc_channel->rcc);
+        red_channel_printerr(channel, "channel client (%p) already connected, refusing second connection",
+                             vmc_channel->rcc);
         // TODO: notify client in advance about the in use channel using
         // SPICE_MSG_MAIN_CHANNEL_IN_USE (for example)
         red_stream_free(stream);

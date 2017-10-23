@@ -191,8 +191,8 @@ static void
 red_channel_constructed(GObject *object)
 {
     RedChannel *self = RED_CHANNEL(object);
-    spice_debug("%p: channel type %d id %d thread_id 0x%lx", self,
-                self->priv->type, self->priv->id, self->priv->thread_id);
+
+    red_channel_debug(self, "thread_id 0x%lx", self->priv->thread_id);
 
     RedChannelClass *klass = RED_CHANNEL_GET_CLASS(self);
 
@@ -463,12 +463,10 @@ void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc)
     g_return_if_fail(channel == red_channel_client_get_channel(rcc));
 
     if (!pthread_equal(pthread_self(), channel->priv->thread_id)) {
-        spice_warning("channel type %d id %d - "
-                      "channel->thread_id (0x%lx) != pthread_self (0x%lx)."
-                      "If one of the threads is != io-thread && != vcpu-thread, "
-                      "this might be a BUG",
-                      channel->priv->type, channel->priv->id,
-                      channel->priv->thread_id, pthread_self());
+        red_channel_warning(channel, "channel->thread_id (0x%lx) != pthread_self (0x%lx)."
+                            "If one of the threads is != io-thread && != vcpu-thread, "
+                            "this might be a BUG",
+                            channel->priv->thread_id, pthread_self());
     }
     spice_return_if_fail(channel);
     link = g_list_find(channel->priv->clients, rcc);

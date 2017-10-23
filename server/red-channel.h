@@ -236,6 +236,27 @@ void red_channel_disconnect_client(RedChannel *channel, RedChannelClient *rcc);
 
 #define CHANNEL_BLOCKED_SLEEP_DURATION 10000 //micro
 
+#define red_channel_log_generic(log_cb, channel, format, ...)                            \
+    do {                                                                                 \
+        uint32_t id_;                                                                    \
+        RedChannel *channel_ = (channel);                                                \
+        g_object_get(channel_, "id", &id_, NULL);                                        \
+        log_cb("%s:%u (%p): " format, red_channel_get_name(channel_),                    \
+                        id_, channel_, ## __VA_ARGS__);                                  \
+    } while (0)
+
+#define red_channel_printerr(channel, format, ...)                                       \
+        red_channel_log_generic(spice_printerr, channel, format, ## __VA_ARGS__);
+
+#define red_channel_warning(channel, format, ...)                                        \
+        red_channel_log_generic(g_warning, channel, format, ## __VA_ARGS__);
+
+#define red_channel_message(channel, format, ...)                                        \
+        red_channel_log_generic(g_message, channel, format, ## __VA_ARGS__);
+
+#define red_channel_debug(channel, format, ...)                                          \
+        red_channel_log_generic(g_debug, channel, format, ## __VA_ARGS__);
+
 G_END_DECLS
 
 #endif /* RED_CHANNEL_H_ */

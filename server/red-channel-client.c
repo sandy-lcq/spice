@@ -181,10 +181,7 @@ static bool red_channel_client_config_socket(RedChannelClient *rcc);
 #define spice_channel_client_error(rcc, format, ...)                                     \
     do {                                                                                 \
         RedChannel *_ch = red_channel_client_get_channel(rcc);                           \
-        uint32_t _type, _id;                                                             \
-        g_object_get(_ch, "channel-type", &_type, "id", &_id, NULL);                     \
-        spice_warning("rcc %p type %u id %u: " format, rcc,                              \
-                    type, id, ## __VA_ARGS__);                                           \
+        red_channel_warning(_ch, format, ## __VA_ARGS__);                                \
         red_channel_client_shutdown(rcc);                                                \
     } while (0)
 
@@ -778,14 +775,10 @@ static void red_channel_client_connectivity_timer(void *opaque)
         core->timer_start(core, rcc->priv->connectivity_monitor.timer,
                           rcc->priv->connectivity_monitor.timeout);
     } else {
-        uint32_t type, id;
-        g_object_get(rcc->priv->channel,
-                     "channel-type", &type,
-                     "id", &id,
-                     NULL);
         monitor->state = CONNECTIVITY_STATE_DISCONNECTED;
-        spice_warning("rcc %p on channel %d:%d has been unresponsive for more than %u ms, disconnecting",
-                      rcc, type, id, monitor->timeout);
+        red_channel_warning(rcc->priv->channel,
+                            "rcc %p has been unresponsive for more than %u ms, disconnecting",
+                            rcc, monitor->timeout);
         red_channel_client_disconnect(rcc);
     }
 }
@@ -1419,11 +1412,9 @@ static void red_channel_client_handle_migrate_data(RedChannelClient *rcc,
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
     RedChannelClass *klass = RED_CHANNEL_GET_CLASS(channel);
-    uint32_t type, id;
 
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
-    spice_debug("channel type %d id %d rcc %p size %u",
-                type, id, rcc, size);
+    red_channel_debug(channel, "rcc %p size %u", rcc, size);
+
     if (!klass->handle_migrate_data) {
         return;
     }
@@ -1709,14 +1700,11 @@ void red_channel_client_disconnect(RedChannelClient *rcc)
 {
     RedChannel *channel = rcc->priv->channel;
     SpiceCoreInterfaceInternal *core = red_channel_get_core_interface(channel);
-    uint32_t type, id;
 
     if (!red_channel_client_is_connected(rcc)) {
         return;
     }
-    g_object_get(channel, "channel-type", &type, "id", &id, NULL);
-    spice_printerr("rcc=%p (channel=%p type=%d id=%d)", rcc, channel,
-                   type, id);
+    red_channel_printerr(channel, "rcc=%p", rcc);
     red_channel_client_pipe_clear(rcc);
     if (rcc->priv->stream->watch) {
         core->watch_remove(core, rcc->priv->stream->watch);
@@ -1881,19 +1869,17 @@ void red_channel_client_pipe_remove_and_release_pos(RedChannelClient *rcc,
 gboolean red_channel_client_set_migration_seamless(RedChannelClient *rcc)
 {
     gboolean ret = FALSE;
-    uint32_t type, id, flags;
+    uint32_t flags;
 
     g_object_get(rcc->priv->channel,
-                 "channel-type", &type,
-                 "id", &id,
                  "migration-flags", &flags,
                  NULL);
     if (flags & SPICE_MIGRATE_NEED_DATA_TRANSFER) {
         rcc->priv->wait_migrate_data = TRUE;
         ret = TRUE;
     }
-    spice_debug("channel type %d id %d rcc %p wait data %d", type, id, rcc,
-                rcc->priv->wait_migrate_data);
+    red_channel_debug(rcc->priv->channel, "rcc %p wait data %d", rcc,
+                      rcc->priv->wait_migrate_data);
 
     return ret;
 }
