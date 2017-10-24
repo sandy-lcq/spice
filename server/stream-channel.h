@@ -19,6 +19,8 @@
 #ifndef STREAM_CHANNEL_H_
 #define STREAM_CHANNEL_H_
 
+#include <spice/stream-device.h>
+
 #include "red-channel.h"
 
 G_BEGIN_DECLS
