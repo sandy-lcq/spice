@@ -81,7 +81,7 @@ stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *si
 
     /* read header */
     while (dev->hdr_pos < sizeof(dev->hdr)) {
-        n = sif->read(sin, (uint8_t *) &dev->hdr, sizeof(dev->hdr) - dev->hdr_pos);
+        n = sif->read(sin, (uint8_t *) &dev->hdr + dev->hdr_pos, sizeof(dev->hdr) - dev->hdr_pos);
         if (n <= 0) {
             return NULL;
         }
