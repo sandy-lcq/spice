@@ -2262,7 +2262,7 @@ static void drawables_init(DisplayChannel *display);
 static void
 display_channel_init(DisplayChannel *self)
 {
-    static SpiceImageSurfacesOps image_surfaces_ops = {
+    static const SpiceImageSurfacesOps image_surfaces_ops = {
         image_surfaces_get,
     };
 

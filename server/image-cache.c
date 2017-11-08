@@ -115,7 +115,7 @@ static pixman_image_t *image_cache_get(SpiceImageCache *spice_cache, uint64_t id
 
 void image_cache_init(ImageCache *cache)
 {
-    static SpiceImageCacheOps image_cache_ops = {
+    static const SpiceImageCacheOps image_cache_ops = {
         image_cache_put,
         image_cache_get,
     };
