@@ -58,8 +58,10 @@ static const char *const channel_names[] = {
     [ SPICE_CHANNEL_CURSOR   ] = "cursor",
     [ SPICE_CHANNEL_PLAYBACK ] = "playback",
     [ SPICE_CHANNEL_RECORD   ] = "record",
+    [ SPICE_CHANNEL_TUNNEL   ] = "tunnel",
     [ SPICE_CHANNEL_SMARTCARD] = "smartcard",
     [ SPICE_CHANNEL_USBREDIR ] = "usbredir",
+    [ SPICE_CHANNEL_PORT     ] = "port",
     [ SPICE_CHANNEL_WEBDAV   ] = "webdav",
 };
 
