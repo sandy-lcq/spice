@@ -20,6 +20,8 @@
 
 #include <glib.h>
 #include <spice/enums.h>
+#include <common/macros.h>
+
 #include "utils.h"
 
 int rgb32_data_has_alpha(int width, int height, size_t stride,
@@ -64,6 +66,14 @@ static const char *const channel_names[] = {
     [ SPICE_CHANNEL_PORT     ] = "port",
     [ SPICE_CHANNEL_WEBDAV   ] = "webdav",
 };
+
+/* Make sure the last channel in the protocol has a name.
+ * We don't want to do this check in all cases as this would make code
+ * fail to compile if there are additional channels in the protocol so
+ * do this check only if ENABLE_EXTRA_CHECKS is enabled */
+#if ENABLE_EXTRA_CHECKS
+verify(G_N_ELEMENTS(channel_names) == SPICE_END_CHANNEL);
+#endif
 
 /**
  * red_channel_type_to_str:
