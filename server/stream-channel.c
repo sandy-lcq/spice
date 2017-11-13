@@ -203,6 +203,13 @@ stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
             channel->width, channel->height,
             SPICE_SURFACE_FMT_32_xRGB, SPICE_SURFACE_FLAGS_PRIMARY
         };
+
+        // give an hint to client that we are sending just streaming
+        // see spice.proto for capability check here
+        if (red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MULTI_CODEC)) {
+            surface_create.flags |= SPICE_SURFACE_FLAGS_STREAMING_MODE;
+        }
+
         spice_marshall_msg_display_surface_create(m, &surface_create);
         break;
     }
