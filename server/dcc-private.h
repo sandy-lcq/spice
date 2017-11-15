@@ -22,7 +22,7 @@
 #include "cache-item.h"
 #include "dcc.h"
 #include "image-encoders.h"
-#include "stream.h"
+#include "video-stream.h"
 #include "red-channel-client.h"
 
 typedef struct DisplayChannelClientPrivate DisplayChannelClientPrivate;

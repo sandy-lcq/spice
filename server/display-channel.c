@@ -91,7 +91,7 @@ display_channel_finalize(GObject *object)
     if (ENABLE_EXTRA_CHECKS) {
         unsigned int count;
         _Drawable *drawable;
-        Stream *stream;
+        VideoStream *stream;
 
         count = 0;
         for (drawable = self->priv->free_drawables; drawable; drawable = drawable->u.next) {
@@ -206,9 +206,9 @@ int display_channel_get_streams_timeout(DisplayChannel *display)
 
     red_time_t now = spice_get_monotonic_time_ns();
     while ((item = ring_next(ring, item))) {
-        Stream *stream;
+        VideoStream *stream;
 
-        stream = SPICE_CONTAINEROF(item, Stream, link);
+        stream = SPICE_CONTAINEROF(item, VideoStream, link);
         red_time_t delta = (stream->last_time + RED_STREAM_TIMEOUT) - now;
 
         if (delta < 1000 * 1000) {
@@ -269,10 +269,10 @@ static void stop_streams(DisplayChannel *display)
     RingItem *item = ring_get_head(ring);
 
     while (item) {
-        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
+        VideoStream *stream = SPICE_CONTAINEROF(item, VideoStream, link);
         item = ring_next(ring, item);
         if (!stream->current) {
-            stream_stop(display, stream);
+            video_stream_stop(display, stream);
         } else {
             spice_debug("attached stream");
         }
@@ -340,7 +340,7 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
     item = ring_get_head(ring);
 
     while (item) {
-        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
+        VideoStream *stream = SPICE_CONTAINEROF(item, VideoStream, link);
         StreamAgent *agent;
 
         item = ring_next(ring, item);
@@ -350,7 +350,8 @@ static void streams_update_visible_region(DisplayChannel *display, Drawable *dra
         }
 
         FOREACH_DCC(display, dcc) {
-            agent = dcc_get_stream_agent(dcc, display_channel_get_stream_id(display, stream));
+            int stream_id = display_channel_get_video_stream_id(display, stream);
+            agent = dcc_get_stream_agent(dcc, stream_id);
 
             if (region_intersects(&agent->vis_region, &drawable->tree_item.base.rgn)) {
                 region_exclude(&agent->vis_region, &drawable->tree_item.base.rgn);
@@ -428,7 +429,7 @@ static void current_add_drawable(DisplayChannel *display,
 static void current_remove_drawable(DisplayChannel *display, Drawable *item)
 {
     /* todo: move all to unref? */
-    stream_trace_add_drawable(display, item);
+    video_stream_trace_add_drawable(display, item);
     draw_item_remove_shadow(&item->tree_item);
     ring_remove(&item->tree_item.base.siblings_link);
     ring_remove(&item->list_link);
@@ -553,7 +554,7 @@ static bool current_add_equal(DisplayChannel *display, DrawItem *item, TreeItem 
          * end of the queue */
         int add_after = !!other_drawable->stream &&
                         is_drawable_independent_from_surfaces(drawable);
-        stream_maintenance(display, drawable, other_drawable);
+        video_stream_maintenance(display, drawable, other_drawable);
         current_add_drawable(display, drawable, &other->siblings_link);
         other_drawable->refs++;
         current_remove_drawable(display, other_drawable);
@@ -712,7 +713,7 @@ static void __exclude_region(DisplayChannel *display, Ring *ring, TreeItem *item
                 /* TODO: document the purpose of this code */
                 if (frame_candidate) {
                     Drawable *drawable = SPICE_CONTAINEROF(draw, Drawable, tree_item);
-                    stream_maintenance(display, frame_candidate, drawable);
+                    video_stream_maintenance(display, frame_candidate, drawable);
                 }
                 /* Remove the intersection from the DrawItem's region */
                 region_exclude(&draw->base.rgn, &and_rgn);
@@ -883,7 +884,7 @@ static bool current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawabl
 
     // only primary surface streams are supported
     if (is_primary_surface(display, item->surface_id)) {
-        stream_detach_behind(display, &shadow->base.rgn, NULL);
+        video_stream_detach_behind(display, &shadow->base.rgn, NULL);
     }
 
     /* Prepend the shadow to the beginning of the current ring */
@@ -904,7 +905,7 @@ static bool current_add_with_shadow(DisplayChannel *display, Ring *ring, Drawabl
         streams_update_visible_region(display, item);
     } else {
         if (is_primary_surface(display, item->surface_id)) {
-            stream_detach_behind(display, &item->tree_item.base.rgn, item);
+            video_stream_detach_behind(display, &item->tree_item.base.rgn, item);
         }
     }
     stat_add(&display->priv->add_stat, start_time);
@@ -1083,7 +1084,7 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
          * the tree.  Add the new item's region to that */
         region_or(&exclude_rgn, &item->base.rgn);
         exclude_region(display, ring, exclude_base, &exclude_rgn, NULL, drawable);
-        stream_trace_update(display, drawable);
+        video_stream_trace_update(display, drawable);
         streams_update_visible_region(display, drawable);
         /*
          * Performing the insertion after exclude_region for
@@ -1093,14 +1094,14 @@ static bool current_add(DisplayChannel *display, Ring *ring, Drawable *drawable)
         current_add_drawable(display, drawable, ring);
     } else {
         /*
-         * stream_detach_behind can affect the current tree since
+         * video_stream_detach_behind can affect the current tree since
          * it may trigger calls to display_channel_draw. Thus, the
          * drawable should be added to the tree before calling
-         * stream_detach_behind
+         * video_stream_detach_behind
          */
         current_add_drawable(display, drawable, ring);
         if (is_primary_surface(display, drawable->surface_id)) {
-            stream_detach_behind(display, &drawable->tree_item.base.rgn, drawable);
+            video_stream_detach_behind(display, &drawable->tree_item.base.rgn, drawable);
         }
     }
     region_destroy(&exclude_rgn);
@@ -1284,7 +1285,7 @@ static bool handle_surface_deps(DisplayChannel *display, Drawable *drawable)
                 QRegion depend_region;
                 region_init(&depend_region);
                 region_add(&depend_region, &drawable->red_drawable->surfaces_rects[x]);
-                stream_detach_behind(display, &depend_region, NULL);
+                video_stream_detach_behind(display, &depend_region, NULL);
             }
         }
     }
@@ -1695,7 +1696,7 @@ void drawable_unref(Drawable *drawable)
     spice_warn_if_fail(drawable->pipes == NULL);
 
     if (drawable->stream) {
-        stream_detach_drawable(drawable->stream);
+        video_stream_detach_drawable(drawable->stream);
     }
     region_destroy(&drawable->tree_item.base.rgn);
 
@@ -2303,7 +2304,7 @@ display_channel_constructed(GObject *object)
                       "non_cache", TRUE);
     image_cache_init(&self->priv->image_cache);
     self->priv->stream_video = SPICE_STREAM_VIDEO_OFF;
-    display_channel_init_streams(self);
+    display_channel_init_video_streams(self);
 
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(channel, SPICE_DISPLAY_CAP_PREF_COMPRESSION);
@@ -2410,12 +2411,12 @@ void display_channel_gl_draw_done(DisplayChannel *display)
     set_gl_draw_async_count(display, display->priv->gl_draw_async_count - 1);
 }
 
-int display_channel_get_stream_id(DisplayChannel *display, Stream *stream)
+int display_channel_get_video_stream_id(DisplayChannel *display, VideoStream *stream)
 {
     return (int)(stream - display->priv->streams_buf);
 }
 
-Stream *display_channel_get_nth_stream(DisplayChannel *display, gint i)
+VideoStream *display_channel_get_nth_video_stream(DisplayChannel *display, gint i)
 {
     return &display->priv->streams_buf[i];
 }

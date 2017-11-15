@@ -16,8 +16,8 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef STREAM_H_
-#define STREAM_H_
+#ifndef VIDEO_STREAM_H_
+#define VIDEO_STREAM_H_
 
 #include <glib.h>
 #include <common/region.h>
@@ -43,7 +43,7 @@
 #define RED_STREAM_DEFAULT_LOW_START_BIT_RATE (2.5 * 1024 * 1024) // 2.5Mbps
 #define MAX_FPS 30
 
-typedef struct Stream Stream;
+typedef struct VideoStream VideoStream;
 
 typedef struct RedStreamActivateReportItem {
     RedPipeItem pipe_item;
@@ -73,7 +73,7 @@ typedef struct StreamAgent {
                            vis_region will contain c2 and also the part of c1/c2 that still
                            displays fragments of the video */
 
-    Stream *stream;
+    VideoStream *stream;
     VideoEncoder *video_encoder;
     DisplayChannelClient *dcc;
 
@@ -111,7 +111,7 @@ typedef struct ItemTrace {
     SpiceRect dest_area;
 } ItemTrace;
 
-struct Stream {
+struct VideoStream {
     uint8_t refs;
     Drawable *current;
     red_time_t last_time;
@@ -119,7 +119,7 @@ struct Stream {
     int height;
     SpiceRect dest_area;
     int top_down;
-    Stream *next;
+    VideoStream *next;
     RingItem link;
 
     uint32_t num_input_frames;
@@ -127,28 +127,21 @@ struct Stream {
     uint32_t input_fps;
 };
 
-void                  display_channel_init_streams                  (DisplayChannel *display);
-void                  stream_stop                                   (DisplayChannel *display,
-                                                                     Stream *stream);
-void                  stream_unref                                  (DisplayChannel *display,
-                                                                     Stream *stream);
-void                  stream_trace_update                           (DisplayChannel *display,
-                                                                     Drawable *drawable);
-void                  stream_maintenance                            (DisplayChannel *display,
-                                                                     Drawable *candidate,
-                                                                     Drawable *prev);
-void                  stream_timeout                                (DisplayChannel *display);
-void                  stream_detach_and_stop                        (DisplayChannel *display);
-void                  stream_trace_add_drawable                     (DisplayChannel *display,
-                                                                     Drawable *item);
-void                  stream_detach_behind                          (DisplayChannel *display,
-                                                                     QRegion *region,
-                                                                     Drawable *drawable);
+void display_channel_init_video_streams(DisplayChannel *display);
+void video_stream_stop(DisplayChannel *display, VideoStream *stream);
+void video_stream_unref(DisplayChannel *display, VideoStream *stream);
+void video_stream_trace_update(DisplayChannel *display, Drawable *drawable);
+void video_stream_maintenance(DisplayChannel *display, Drawable *candidate,
+                              Drawable *prev);
+void video_stream_timeout(DisplayChannel *display);
+void video_stream_detach_and_stop(DisplayChannel *display);
+void video_stream_trace_add_drawable(DisplayChannel *display, Drawable *item);
+void video_stream_detach_behind(DisplayChannel *display, QRegion *region,
+                                Drawable *drawable);
 
-void                  stream_agent_unref                            (DisplayChannel *display,
-                                                                     StreamAgent *agent);
-void                  stream_agent_stop                             (StreamAgent *agent);
+void stream_agent_unref(DisplayChannel *display, StreamAgent *agent);
+void stream_agent_stop(StreamAgent *agent);
 
-void stream_detach_drawable(Stream *stream);
+void video_stream_detach_drawable(VideoStream *stream);
 
-#endif /* STREAM_H_ */
+#endif /* VIDEO_STREAM_H_ */

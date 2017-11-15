@@ -189,6 +189,7 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
 {
     SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
     int n;
+
     while (1) {
         uint8_t buf[16 * 1024];
         n = sif->read(sin, buf, sizeof(buf));

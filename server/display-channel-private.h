@@ -98,8 +98,8 @@ struct DisplayChannelPrivate
     int stream_video;
     GArray *video_codecs;
     uint32_t stream_count;
-    Stream streams_buf[NUM_STREAMS];
-    Stream *free_streams;
+    VideoStream streams_buf[NUM_STREAMS];
+    VideoStream *free_streams;
     Ring streams;
     ItemTrace items_trace[NUM_TRACE_ITEMS];
     uint32_t next_item_trace;
@@ -170,8 +170,8 @@ void display_channel_current_flush(DisplayChannel *display,
                                    int surface_id);
 uint32_t display_channel_generate_uid(DisplayChannel *display);
 
-int display_channel_get_stream_id(DisplayChannel *display, Stream *stream);
-Stream *display_channel_get_nth_stream(DisplayChannel *display, gint i);
+int display_channel_get_video_stream_id(DisplayChannel *display, VideoStream *stream);
+VideoStream *display_channel_get_nth_video_stream(DisplayChannel *display, gint i);
 
 typedef struct RedSurfaceDestroyItem {
     RedPipeItem pipe_item;

@@ -1686,7 +1686,7 @@ static bool red_marshall_stream_data(RedChannelClient *rcc,
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     DisplayChannel *display = DCC_TO_DC(dcc);
-    Stream *stream = drawable->stream;
+    VideoStream *stream = drawable->stream;
     SpiceCopy *copy;
     uint32_t frame_mm_time;
     int is_sized;
@@ -1708,7 +1708,8 @@ static bool red_marshall_stream_data(RedChannelClient *rcc,
         return FALSE;
     }
 
-    StreamAgent *agent = &dcc->priv->stream_agents[display_channel_get_stream_id(display, stream)];
+    int stream_id = display_channel_get_video_stream_id(display, stream);
+    StreamAgent *agent = &dcc->priv->stream_agents[stream_id];
     VideoBuffer *outbuf;
     /* workaround for vga streams */
     frame_mm_time =  drawable->red_drawable->mm_time ?
@@ -1741,7 +1742,7 @@ static bool red_marshall_stream_data(RedChannelClient *rcc,
 
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA);
 
-        stream_data.base.id = display_channel_get_stream_id(display, stream);
+        stream_data.base.id = display_channel_get_video_stream_id(display, stream);
         stream_data.base.multi_media_time = frame_mm_time;
         stream_data.data_size = outbuf->size;
 
@@ -1751,7 +1752,7 @@ static bool red_marshall_stream_data(RedChannelClient *rcc,
 
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA_SIZED);
 
-        stream_data.base.id = display_channel_get_stream_id(display, stream);
+        stream_data.base.id = display_channel_get_video_stream_id(display, stream);
         stream_data.base.multi_media_time = frame_mm_time;
         stream_data.data_size = outbuf->size;
         stream_data.width = copy->src_area.right - copy->src_area.left;
@@ -2153,7 +2154,7 @@ static void marshall_stream_start(RedChannelClient *rcc,
                                   SpiceMarshaller *base_marshaller, StreamAgent *agent)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    Stream *stream = agent->stream;
+    VideoStream *stream = agent->stream;
 
     spice_assert(stream);
     if (!agent->video_encoder) {
@@ -2165,7 +2166,7 @@ static void marshall_stream_start(RedChannelClient *rcc,
     SpiceClipRects clip_rects;
 
     stream_create.surface_id = 0;
-    stream_create.id = display_channel_get_stream_id(DCC_TO_DC(dcc), stream);
+    stream_create.id = display_channel_get_video_stream_id(DCC_TO_DC(dcc), stream);
     stream_create.flags = stream->top_down ? SPICE_STREAM_FLAGS_TOP_DOWN : 0;
     stream_create.codec_type = agent->video_encoder->codec_type;
 
@@ -2201,7 +2202,7 @@ static void marshall_stream_clip(RedChannelClient *rcc,
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_CLIP);
     SpiceMsgDisplayStreamClip stream_clip;
 
-    stream_clip.id = display_channel_get_stream_id(DCC_TO_DC(dcc), agent->stream);
+    stream_clip.id = display_channel_get_video_stream_id(DCC_TO_DC(dcc), agent->stream);
     stream_clip.clip.type = item->clip_type;
     stream_clip.clip.rects = item->rects;
 
@@ -2215,7 +2216,7 @@ static void marshall_stream_end(RedChannelClient *rcc,
     SpiceMsgDisplayStreamDestroy destroy;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DESTROY);
-    destroy.id = display_channel_get_stream_id(DCC_TO_DC(dcc), agent->stream);
+    destroy.id = display_channel_get_video_stream_id(DCC_TO_DC(dcc), agent->stream);
     stream_agent_stop(agent);
     spice_marshall_msg_display_stream_destroy(base_marshaller, &destroy);
 }

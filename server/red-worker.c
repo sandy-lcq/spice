@@ -40,7 +40,7 @@
 #include <common/ring.h>
 
 #include "display-channel.h"
-#include "stream.h"
+#include "video-stream.h"
 
 #include "spice.h"
 #include "red-worker.h"
@@ -298,7 +298,7 @@ static void red_migrate_display(DisplayChannel *display, RedChannelClient *rcc)
      * Notice that detach_and_stop_streams won't lead to any dev ram changes, since
      * handle_dev_stop already took care of releasing all the dev ram resources.
      */
-    stream_detach_and_stop(display);
+    video_stream_detach_and_stop(display);
     if (red_channel_client_is_connected(rcc)) {
         red_channel_client_default_migrate(rcc);
     }
@@ -1260,7 +1260,7 @@ static gboolean worker_source_dispatch(GSource *source, GSourceFunc callback,
     display_channel_free_glz_drawables_to_free(display);
 
     /* TODO: could use its own source */
-    stream_timeout(display);
+    video_stream_timeout(display);
 
     worker->event_timeout = INF_EVENT_WAIT;
     worker->was_blocked = FALSE;

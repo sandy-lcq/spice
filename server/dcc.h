@@ -78,7 +78,7 @@ GType display_channel_client_get_type(void) G_GNUC_CONST;
 #define MAX_PIPE_SIZE 50
 
 typedef struct DisplayChannel DisplayChannel;
-typedef struct Stream Stream;
+typedef struct VideoStream VideoStream;
 typedef struct StreamAgent StreamAgent;
 
 typedef struct WaitForChannels {
@@ -149,7 +149,7 @@ void                       dcc_destroy_surface                       (DisplayCha
 void                       dcc_stream_agent_clip                     (DisplayChannelClient* dcc,
                                                                       StreamAgent *agent);
 void                       dcc_create_stream                         (DisplayChannelClient *dcc,
-                                                                      Stream *stream);
+                                                                      VideoStream *stream);
 void                       dcc_create_surface                        (DisplayChannelClient *dcc,
                                                                       int surface_id);
 void                       dcc_push_surface_image                    (DisplayChannelClient *dcc,

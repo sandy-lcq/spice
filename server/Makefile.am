@@ -164,8 +164,6 @@ libserver_la_SOURCES =				\
 	stat-file.c				\
 	stat-file.h				\
 	stat.h					\
-	stream.c				\
-	stream.h				\
 	stream-channel.c			\
 	stream-channel.h			\
 	stream-device.c				\
@@ -175,6 +173,8 @@ libserver_la_SOURCES =				\
 	utils.c					\
 	utils.h					\
 	video-encoder.h				\
+	video-stream.c				\
+	video-stream.h				\
 	zlib-encoder.c				\
 	zlib-encoder.h				\
 	$(NULL)

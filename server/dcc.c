@@ -488,7 +488,7 @@ static void dcc_init_stream_agents(DisplayChannelClient *dcc)
 
     for (i = 0; i < NUM_STREAMS; i++) {
         StreamAgent *agent = &dcc->priv->stream_agents[i];
-        agent->stream = display_channel_get_nth_stream(display, i);
+        agent->stream = display_channel_get_nth_video_stream(display, i);
         region_init(&agent->vis_region);
         region_init(&agent->clip);
     }
@@ -531,7 +531,7 @@ static void dcc_create_all_streams(DisplayChannelClient *dcc)
     RingItem *item = ring;
 
     while ((item = ring_next(ring, item))) {
-        Stream *stream = SPICE_CONTAINEROF(item, Stream, link);
+        VideoStream *stream = SPICE_CONTAINEROF(item, VideoStream, link);
         dcc_create_stream(dcc, stream);
     }
 }

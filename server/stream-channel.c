@@ -27,7 +27,7 @@
 #include "reds.h"
 #include "common-graphics-channel.h"
 #include "display-limits.h"
-#include "stream.h" // TODO remove, put common stuff
+#include "video-stream.h" // TODO remove, put common stuff
 
 #define TYPE_STREAM_CHANNEL_CLIENT stream_channel_client_get_type()
 

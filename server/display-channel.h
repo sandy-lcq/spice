@@ -40,7 +40,7 @@
 #include "spice-bitmap-utils.h"
 #include "utils.h"
 #include "tree.h"
-#include "stream.h"
+#include "video-stream.h"
 #include "dcc.h"
 #include "image-encoders.h"
 #include "common-graphics-channel.h"
@@ -96,7 +96,7 @@ struct Drawable {
     int frames_count;
     int gradual_frames_count;
     int last_gradual_frame;
-    Stream *stream;
+    VideoStream *stream;
     int streamable;
     BitmapGradualType copy_bitmap_graduality;
     DependItem depend_items[3];
