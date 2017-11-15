@@ -42,6 +42,12 @@ struct StreamDevice {
 
     StreamDevHeader hdr;
     uint8_t hdr_pos;
+    union {
+        StreamMsgFormat format;
+        StreamMsgCapabilities capabilities;
+        uint8_t buf[STREAM_MSG_CAPABILITIES_MAX_BYTES];
+    } msg;
+    uint32_t msg_pos;
     bool has_error;
     bool opened;
     bool flow_stopped;
@@ -89,6 +95,7 @@ stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *si
         if (dev->hdr_pos >= sizeof(dev->hdr)) {
             dev->hdr.type = GUINT16_FROM_LE(dev->hdr.type);
             dev->hdr.size = GUINT32_FROM_LE(dev->hdr.size);
+            dev->msg_pos = 0;
         }
     }
 
@@ -155,19 +162,25 @@ handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin, const char *
 static bool
 handle_msg_format(StreamDevice *dev, SpiceCharDeviceInstance *sin)
 {
-    StreamMsgFormat fmt;
     SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
-    int n = sif->read(sin, (uint8_t *) &fmt, sizeof(fmt));
-    if (n == 0) {
-        return false;
-    }
-    if (n != sizeof(fmt)) {
+
+    spice_assert(dev->hdr_pos >= sizeof(StreamDevHeader));
+    spice_assert(dev->hdr.type == STREAM_TYPE_FORMAT);
+
+    int n = sif->read(sin, dev->msg.buf + dev->msg_pos, sizeof(StreamMsgFormat) - dev->msg_pos);
+    if (n < 0) {
         return handle_msg_invalid(dev, sin, NULL);
     }
-    fmt.width = GUINT32_FROM_LE(fmt.width);
-    fmt.height = GUINT32_FROM_LE(fmt.height);
-    stream_channel_change_format(dev->stream_channel, &fmt);
 
+    dev->msg_pos += n;
+
+    if (dev->msg_pos < sizeof(StreamMsgFormat)) {
+        return false;
+    }
+
+    dev->msg.format.width = GUINT32_FROM_LE(dev->msg.format.width);
+    dev->msg.format.height = GUINT32_FROM_LE(dev->msg.format.height);
+    stream_channel_change_format(dev->stream_channel, &dev->msg.format);
     return true;
 }
 
@@ -334,6 +347,7 @@ stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
         allocate_channels(dev);
     }
     dev->hdr_pos = 0;
+    dev->msg_pos = 0;
     dev->has_error = false;
     dev->flow_stopped = false;
     red_char_device_reset(char_dev);
