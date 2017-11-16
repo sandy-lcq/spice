@@ -163,10 +163,10 @@ void video_stream_agent_unref(DisplayChannel *display, VideoStreamAgent *agent)
     video_stream_unref(display, agent->stream);
 }
 
-static void red_stream_clip_item_free(RedPipeItem *base)
+static void video_stream_clip_item_free(RedPipeItem *base)
 {
     g_return_if_fail(base != NULL);
-    RedStreamClipItem *item = SPICE_UPCAST(RedStreamClipItem, base);
+    VideoStreamClipItem *item = SPICE_UPCAST(VideoStreamClipItem, base);
     DisplayChannel *display = DCC_TO_DC(item->stream_agent->dcc);
 
     g_return_if_fail(item->base.refcount == 0);
@@ -176,11 +176,11 @@ static void red_stream_clip_item_free(RedPipeItem *base)
     g_free(item);
 }
 
-RedStreamClipItem *red_stream_clip_item_new(VideoStreamAgent *agent)
+VideoStreamClipItem *video_stream_clip_item_new(VideoStreamAgent *agent)
 {
-    RedStreamClipItem *item = g_new(RedStreamClipItem, 1);
+    VideoStreamClipItem *item = g_new(VideoStreamClipItem, 1);
     red_pipe_item_init_full(&item->base, RED_PIPE_ITEM_TYPE_STREAM_CLIP,
-                            red_stream_clip_item_free);
+                            video_stream_clip_item_free);
 
     item->stream_agent = agent;
     agent->stream->refs++;

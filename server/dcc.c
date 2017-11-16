@@ -629,7 +629,7 @@ static void dcc_stop(DisplayChannelClient *dcc)
 
 void dcc_video_stream_agent_clip(DisplayChannelClient* dcc, VideoStreamAgent *agent)
 {
-    RedStreamClipItem *item = red_stream_clip_item_new(agent);
+    VideoStreamClipItem *item = video_stream_clip_item_new(agent);
     int n_rects;
 
     item->clip_type = SPICE_CLIP_TYPE_RECTS;

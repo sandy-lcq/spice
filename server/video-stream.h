@@ -86,14 +86,14 @@ typedef struct VideoStreamAgent {
 #endif
 } VideoStreamAgent;
 
-typedef struct RedStreamClipItem {
+typedef struct VideoStreamClipItem {
     RedPipeItem base;
     VideoStreamAgent *stream_agent;
     int clip_type;
     SpiceClipRects *rects;
-} RedStreamClipItem;
+} VideoStreamClipItem;
 
-RedStreamClipItem *red_stream_clip_item_new(VideoStreamAgent *agent);
+VideoStreamClipItem *video_stream_clip_item_new(VideoStreamAgent *agent);
 
 typedef struct StreamCreateDestroyItem {
     RedPipeItem base;

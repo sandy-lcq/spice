@@ -2193,7 +2193,7 @@ static void marshall_stream_start(RedChannelClient *rcc,
 
 static void marshall_stream_clip(RedChannelClient *rcc,
                                  SpiceMarshaller *base_marshaller,
-                                 RedStreamClipItem *item)
+                                 VideoStreamClipItem *item)
 {
     DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
     VideoStreamAgent *agent = item->stream_agent;
@@ -2404,7 +2404,7 @@ void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         break;
     }
     case RED_PIPE_ITEM_TYPE_STREAM_CLIP:
-        marshall_stream_clip(rcc, m, SPICE_UPCAST(RedStreamClipItem, pipe_item));
+        marshall_stream_clip(rcc, m, SPICE_UPCAST(VideoStreamClipItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_STREAM_DESTROY: {
         StreamCreateDestroyItem *item = SPICE_UPCAST(StreamCreateDestroyItem, pipe_item);
