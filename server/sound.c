@@ -1452,7 +1452,7 @@ void snd_set_playback_compression(bool on)
             bool client_can_opus = red_channel_client_test_remote_cap(rcc,
                                     SPICE_PLAYBACK_CAP_OPUS);
             int desired_mode = snd_desired_audio_mode(on, now->frequency,
-                                                      client_can_opus, client_can_celt);
+                                                      client_can_celt, client_can_opus);
             if (playback->mode != desired_mode) {
                 playback->mode = desired_mode;
                 snd_set_command(client, SND_PLAYBACK_MODE_MASK);
