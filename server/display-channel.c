@@ -211,10 +211,10 @@ int display_channel_get_streams_timeout(DisplayChannel *display)
         stream = SPICE_CONTAINEROF(item, VideoStream, link);
         red_time_t delta = (stream->last_time + RED_STREAM_TIMEOUT) - now;
 
-        if (delta < 1000 * 1000) {
+        if (delta < NSEC_PER_MILLISEC) {
             return 0;
         }
-        timeout = MIN(timeout, (unsigned int)(delta / (1000 * 1000)));
+        timeout = MIN(timeout, (unsigned int)(delta / (NSEC_PER_MILLISEC)));
     }
     return timeout;
 }
