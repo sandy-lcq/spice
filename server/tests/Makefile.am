@@ -58,6 +58,7 @@ check_PROGRAMS =				\
 	test-fail-on-null-core-interface	\
 	test-empty-success			\
 	test-channel				\
+	test-stream-device			\
 	$(NULL)
 
 noinst_PROGRAMS =				\
