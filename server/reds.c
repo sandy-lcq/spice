@@ -2036,11 +2036,8 @@ static void reds_handle_ticket(void *opaque)
     RedLinkInfo *link = (RedLinkInfo *)opaque;
     RedsState *reds = link->reds;
     char *password;
-    time_t ltime;
     int password_size;
 
-    //todo: use monotonic time
-    time(&ltime);
     if (RSA_size(link->tiTicketing.rsa) < SPICE_MAX_PASSWORD_LENGTH) {
         spice_warning("RSA modulus size is smaller than SPICE_MAX_PASSWORD_LENGTH (%d < %d), "
                       "SPICE ticket sent from client may be truncated",
@@ -2061,13 +2058,18 @@ static void reds_handle_ticket(void *opaque)
     password[password_size] = '\0';
 
     if (reds->config->ticketing_enabled && !link->skip_auth) {
-        int expired =  reds->config->taTicket.expiration_time < ltime;
+        time_t ltime;
+        bool expired;
 
         if (strlen(reds->config->taTicket.password) == 0) {
             spice_warning("Ticketing is enabled, but no password is set. "
                           "please set a ticket first");
             goto error;
         }
+
+        //todo: use monotonic time
+        time(&ltime);
+        expired = (reds->config->taTicket.expiration_time < ltime);
 
         if (expired) {
             spice_warning("Ticket has expired");
