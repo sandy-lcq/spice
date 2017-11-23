@@ -438,10 +438,12 @@ bool red_stream_is_ssl(RedStream *stream)
     return (stream->priv->ssl != NULL);
 }
 
+#if HAVE_SASL
 static void red_stream_disable_writev(RedStream *stream)
 {
     stream->priv->writev = NULL;
 }
+#endif
 
 RedStreamSslStatus red_stream_ssl_accept(RedStream *stream)
 {
