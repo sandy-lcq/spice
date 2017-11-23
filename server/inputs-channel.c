@@ -100,9 +100,16 @@ struct SpiceTabletState {
     RedsState *reds;
 };
 
-static SpiceTabletState* spice_tablet_state_new(void)
+static SpiceTabletState* spice_tablet_state_new(RedsState* reds)
 {
-    return g_new0(SpiceTabletState, 1);
+    SpiceTabletState *st = g_new0(SpiceTabletState, 1);
+    st->reds = reds;
+    return st;
+}
+
+static void spice_tablet_state_free(SpiceTabletState* st)
+{
+    g_free(st);
 }
 
 RedsState* spice_tablet_state_get_server(SpiceTabletState *st)
@@ -640,8 +647,7 @@ int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet
         return -1;
     }
     inputs->tablet = tablet;
-    inputs->tablet->st = spice_tablet_state_new();
-    inputs->tablet->st->reds = red_channel_get_server(RED_CHANNEL(inputs));
+    inputs->tablet->st = spice_tablet_state_new(red_channel_get_server(RED_CHANNEL(inputs)));
     return 0;
 }
 
@@ -654,7 +660,7 @@ void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *ta
 {
     spice_printerr("");
     if (tablet != NULL && tablet == inputs->tablet) {
-        g_free(tablet->st);
+        spice_tablet_state_free(tablet->st);
         tablet->st = NULL;
     }
     inputs->tablet = NULL;
