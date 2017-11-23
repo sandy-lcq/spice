@@ -633,7 +633,7 @@ static SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs)
     return inputs->tablet;
 }
 
-int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet, RedsState *reds)
+int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet)
 {
     if (inputs->tablet) {
         spice_printerr("already have tablet");
@@ -641,7 +641,7 @@ int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet
     }
     inputs->tablet = tablet;
     inputs->tablet->st = spice_tablet_state_new();
-    inputs->tablet->st->reds = reds;
+    inputs->tablet->st->reds = red_channel_get_server(RED_CHANNEL(inputs));
     return 0;
 }
 

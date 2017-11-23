@@ -3331,7 +3331,7 @@ SPICE_GNUC_VISIBLE int spice_server_add_interface(SpiceServer *reds,
             spice_warning("unsupported tablet interface");
             return -1;
         }
-        if (inputs_channel_set_tablet(reds->inputs_channel, tablet, reds) != 0) {
+        if (inputs_channel_set_tablet(reds->inputs_channel, tablet) != 0) {
             return -1;
         }
         reds_update_mouse_mode(reds);

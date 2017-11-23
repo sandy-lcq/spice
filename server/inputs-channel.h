@@ -52,7 +52,7 @@ void inputs_channel_set_tablet_logical_size(InputsChannel *inputs, int x_res, in
 
 int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboard);
 int inputs_channel_set_mouse(InputsChannel *inputs, SpiceMouseInstance *mouse);
-int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet, RedsState *reds);
+int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet);
 int inputs_channel_has_tablet(InputsChannel *inputs);
 void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet);
 RedsState* spice_tablet_state_get_server(SpiceTabletState *dev);
