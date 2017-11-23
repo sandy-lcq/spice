@@ -139,6 +139,11 @@ static void test_stream_device(void)
     ++message_sizes_end;
 
     p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_VP9);
+
+    // this split the second format in half
+    *message_sizes_end = p - message - 4;
+    ++message_sizes_end;
+
     *message_sizes_end = p - message;
     ++message_sizes_end;
 
@@ -163,10 +168,10 @@ static void test_stream_device(void)
     spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
     spice_server_char_device_wakeup(&vmc_instance);
 
-    // make sure first 2 parts are read completely
-    g_assert(message_sizes_curr - message_sizes >= 2);
+    // make sure first 3 parts are read completely
+    g_assert(message_sizes_curr - message_sizes >= 3);
     // make sure last part is not read at all
-    g_assert(message_sizes_curr - message_sizes < 4);
+    g_assert(message_sizes_curr - message_sizes < 5);
 
     test_destroy(test);
     basic_event_loop_destroy();
