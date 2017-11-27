@@ -17,9 +17,12 @@ makecheck:
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
 
-statistics:
+# check non-standard options, currently
+# --enable-statistics  compile statistic code
+# --without-sasl       disable SASL
+options:
   script:
-  - ./autogen.sh --enable-statistics
+  - ./autogen.sh --enable-statistics --without-sasl
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
 
