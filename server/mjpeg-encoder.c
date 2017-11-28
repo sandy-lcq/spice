@@ -983,7 +983,7 @@ static void mjpeg_encoder_quality_eval_stop(MJpegEncoder *encoder)
         fps = MJPEG_MAX_FPS / 2;
         break;
     default:
-        spice_warning("unexected");
+        spice_warning("unexpected");
         return;
     }
     mjpeg_encoder_reset_quality(encoder, quality_id, fps, 0);
@@ -1025,7 +1025,7 @@ static void mjpeg_encoder_decrease_bit_rate(MJpegEncoder *encoder)
         measured_byte_rate = bit_rate_info->sum_enc_size / duration_sec;
         measured_fps = bit_rate_info->num_enc_frames / duration_sec;
         decrease_size = bit_rate_info->sum_enc_size / bit_rate_info->num_enc_frames;
-        spice_debug("bit rate esitimation %.2f (Mbps) fps %u",
+        spice_debug("bit rate estimation %.2f (Mbps) fps %u",
                     measured_byte_rate*8/1024.0/1024,
                     measured_fps);
     } else {
@@ -1094,7 +1094,7 @@ static void mjpeg_encoder_increase_bit_rate(MJpegEncoder *encoder)
         measured_byte_rate = bit_rate_info->sum_enc_size / duration_sec;
         measured_fps = bit_rate_info->num_enc_frames / duration_sec;
         avg_frame_size = bit_rate_info->sum_enc_size / bit_rate_info->num_enc_frames;
-        spice_debug("bit rate esitimation %.2f (Mbps) defined %.2f"
+        spice_debug("bit rate estimation %.2f (Mbps) defined %.2f"
                     " fps %u avg-frame-size=%.2f (KB)",
                     measured_byte_rate*8/1024.0/1024,
                     rate_control->byte_rate*8/1024.0/1024,
