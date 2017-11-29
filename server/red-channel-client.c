@@ -215,7 +215,7 @@ typedef struct RedEmptyMsgPipeItem {
 
 typedef struct MarkerPipeItem {
     RedPipeItem base;
-    bool item_in_pipe;
+    bool item_sent;
 } MarkerPipeItem;
 
 static void red_channel_client_start_ping_timer(RedChannelClient *rcc, uint32_t timeout)
@@ -610,7 +610,7 @@ static void red_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *ite
             red_channel_client_send_ping(rcc);
             break;
         case RED_PIPE_ITEM_TYPE_MARKER:
-            SPICE_UPCAST(MarkerPipeItem, item)->item_in_pipe = false;
+            SPICE_UPCAST(MarkerPipeItem, item)->item_sent = true;
             break;
         default:
             red_channel_send_item(rcc->priv->channel, rcc, item);
@@ -1772,7 +1772,7 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
                                             int64_t timeout)
 {
     uint64_t end_time;
-    bool item_in_pipe;
+    bool item_sent;
 
     spice_debug("trace");
 
@@ -1785,24 +1785,24 @@ bool red_channel_client_wait_pipe_item_sent(RedChannelClient *rcc,
     MarkerPipeItem *mark_item = g_new0(MarkerPipeItem, 1);
 
     red_pipe_item_init(&mark_item->base, RED_PIPE_ITEM_TYPE_MARKER);
-    mark_item->item_in_pipe = true;
+    mark_item->item_sent = false;
     red_pipe_item_ref(&mark_item->base);
     red_channel_client_pipe_add_before_pos(rcc, &mark_item->base, item_pos);
 
     for (;;) {
         red_channel_client_receive(rcc);
         red_channel_client_push(rcc);
-        if (!mark_item->item_in_pipe ||
+        if (mark_item->item_sent ||
             (timeout != -1 && spice_get_monotonic_time_ns() >= end_time)) {
             break;
         }
         usleep(CHANNEL_BLOCKED_SLEEP_DURATION);
     }
 
-    item_in_pipe = mark_item->item_in_pipe;
+    item_sent = mark_item->item_sent;
     red_pipe_item_unref(&mark_item->base);
 
-    if (item_in_pipe) {
+    if (!item_sent) {
         // still on the queue
         spice_warning("timeout");
         return FALSE;
