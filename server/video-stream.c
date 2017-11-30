@@ -218,8 +218,7 @@ static void update_copy_graduality(DisplayChannel *display, Drawable *drawable)
     }
 }
 
-static bool is_next_stream_frame(DisplayChannel *display,
-                                 const Drawable *candidate,
+static bool is_next_stream_frame(const Drawable *candidate,
                                  const int other_src_width,
                                  const int other_src_height,
                                  const SpiceRect *other_dest,
@@ -474,8 +473,7 @@ void video_stream_trace_update(DisplayChannel *display, Drawable *drawable)
 
     FOREACH_STREAMS(display, item) {
         VideoStream *stream = SPICE_CONTAINEROF(item, VideoStream, link);
-        bool is_next_frame = is_next_stream_frame(display,
-                                                  drawable,
+        bool is_next_frame = is_next_stream_frame(drawable,
                                                   stream->width,
                                                   stream->height,
                                                   &stream->dest_area,
@@ -496,7 +494,7 @@ void video_stream_trace_update(DisplayChannel *display, Drawable *drawable)
     trace = display->priv->items_trace;
     trace_end = trace + NUM_TRACE_ITEMS;
     for (; trace < trace_end; trace++) {
-        if (is_next_stream_frame(display, drawable, trace->width, trace->height,
+        if (is_next_stream_frame(drawable, trace->width, trace->height,
                                  &trace->dest_area, trace->time, NULL, FALSE)) {
             if (video_stream_add_frame(display, drawable,
                                        trace->first_frame_time,
@@ -521,7 +519,7 @@ void video_stream_maintenance(DisplayChannel *display,
     if (prev->stream) {
         VideoStream *stream = prev->stream;
 
-        is_next_frame = is_next_stream_frame(display, candidate,
+        is_next_frame = is_next_stream_frame(candidate,
                                              stream->width, stream->height,
                                              &stream->dest_area, stream->last_time,
                                              stream, TRUE);
@@ -535,7 +533,7 @@ void video_stream_maintenance(DisplayChannel *display,
         SpiceRect* prev_src = &prev->red_drawable->u.copy.src_area;
 
         is_next_frame =
-            is_next_stream_frame(display, candidate, prev_src->right - prev_src->left,
+            is_next_stream_frame(candidate, prev_src->right - prev_src->left,
                                  prev_src->bottom - prev_src->top,
                                  &prev->red_drawable->bbox, prev->creation_time,
                                  prev->stream,
