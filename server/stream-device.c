@@ -131,6 +131,10 @@ handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin, const char *
 {
     static const char default_error_msg[] = "Protocol error";
 
+    if (ENABLE_EXTRA_CHECKS) {
+        spice_assert(dev->hdr_pos >= sizeof(StreamDevHeader));
+    }
+
     if (!error_msg) {
         error_msg = default_error_msg;
     }
@@ -164,8 +168,10 @@ handle_msg_format(StreamDevice *dev, SpiceCharDeviceInstance *sin)
 {
     SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
 
-    spice_assert(dev->hdr_pos >= sizeof(StreamDevHeader));
-    spice_assert(dev->hdr.type == STREAM_TYPE_FORMAT);
+    if (ENABLE_EXTRA_CHECKS) {
+        spice_assert(dev->hdr_pos >= sizeof(StreamDevHeader));
+        spice_assert(dev->hdr.type == STREAM_TYPE_FORMAT);
+    }
 
     int n = sif->read(sin, dev->msg.buf + dev->msg_pos, sizeof(StreamMsgFormat) - dev->msg_pos);
     if (n < 0) {
@@ -189,6 +195,11 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
 {
     SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
     int n;
+
+    if (ENABLE_EXTRA_CHECKS) {
+        spice_assert(dev->hdr_pos >= sizeof(StreamDevHeader));
+        spice_assert(dev->hdr.type == STREAM_TYPE_DATA);
+    }
 
     while (1) {
         uint8_t buf[16 * 1024];
