@@ -207,6 +207,9 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
         main_channel_client_handle_migrate_dst_do_seamless(mcc,
             ((SpiceMsgcMainMigrateDstDoSeamless *)message)->src_version);
         break;
+    case SPICE_MSGC_MAIN_MIGRATE_END:
+        main_channel_client_handle_migrate_end(mcc);
+        break;
     case SPICE_MSGC_MAIN_MOUSE_MODE_REQUEST:
         reds_on_main_mouse_mode_request(reds, message, size);
         break;
@@ -214,9 +217,6 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
         main_channel_client_handle_pong(mcc, (SpiceMsgPing *)message, size);
         break;
     case SPICE_MSGC_DISCONNECTING:
-        break;
-    case SPICE_MSGC_MAIN_MIGRATE_END:
-        main_channel_client_handle_migrate_end(mcc);
         break;
     default:
         return red_channel_client_handle_message(rcc, type, size, message);
