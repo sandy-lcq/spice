@@ -3754,6 +3754,7 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
        reds_core_watch_remove(reds, reds->secure_listen_watch);
        close(reds->secure_listen_socket);
     }
+    g_clear_object(&reds->agent_dev);
     spice_buffer_free(&reds->client_monitors_config);
     red_record_unref(reds->record);
     reds_cleanup(reds);
@@ -4535,8 +4536,14 @@ red_char_device_vdi_port_finalize(GObject *object)
 {
     RedCharDeviceVDIPort *dev = RED_CHAR_DEVICE_VDIPORT(object);
 
+    /* make sure we have no other references to RedVDIReadBuf buffers */
+    red_char_device_reset(RED_CHAR_DEVICE(dev));
+    if (dev->priv->current_read_buf) {
+        red_pipe_item_unref(&dev->priv->current_read_buf->base);
+        dev->priv->current_read_buf = NULL;
+    }
+    g_list_free_full(dev->priv->read_bufs, g_free);
     g_free(dev->priv->mig_data);
-   /* FIXME: need to free the RedVDIReadBuf allocated previously */
 
     G_OBJECT_CLASS(red_char_device_vdi_port_parent_class)->finalize(object);
 }
