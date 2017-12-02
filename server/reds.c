@@ -1242,7 +1242,7 @@ void reds_on_main_channel_migrate(RedsState *reds, MainChannelClient *mcc)
     if (agent_dev->priv->read_state != VDI_PORT_READ_STATE_READ_DATA) {
         return;
     }
-    spice_assert(agent_dev->priv->current_read_buf->data &&
+    spice_assert(agent_dev->priv->current_read_buf &&
                  agent_dev->priv->receive_pos > agent_dev->priv->current_read_buf->data);
     read_data_len = agent_dev->priv->receive_pos - agent_dev->priv->current_read_buf->data;
 
