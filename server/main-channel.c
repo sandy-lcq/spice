@@ -165,7 +165,6 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
                                         uint32_t size, void *message)
 {
     RedChannel *channel = red_channel_client_get_channel(rcc);
-    MainChannel *main_chan = MAIN_CHANNEL(channel);
     MainChannelClient *mcc = MAIN_CHANNEL_CLIENT(rcc);
     RedsState *reds = red_channel_get_server(channel);
 
@@ -174,9 +173,6 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
         SpiceMsgcMainAgentStart *tokens;
 
         spice_printerr("agent start");
-        if (!main_chan) {
-            return FALSE;
-        }
         tokens = (SpiceMsgcMainAgentStart *)message;
         reds_on_main_agent_start(reds, mcc, tokens->num_tokens);
         break;
