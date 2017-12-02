@@ -29,11 +29,6 @@
 #include "test-display-base.h"
 #include "test-glib-compat.h"
 
-#ifndef MIN
-#define MIN(a, b) ((a) > (b) ? (b) : (a))
-#endif
-
-
 static int vmc_write(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
                      SPICE_GNUC_UNUSED const uint8_t *buf,
                      int len)
