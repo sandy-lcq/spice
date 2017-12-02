@@ -177,10 +177,9 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
         reds_on_main_agent_start(reds, mcc, tokens->num_tokens);
         break;
     }
-    case SPICE_MSGC_MAIN_AGENT_DATA: {
+    case SPICE_MSGC_MAIN_AGENT_DATA:
         reds_on_main_agent_data(reds, mcc, message, size);
         break;
-    }
     case SPICE_MSGC_MAIN_AGENT_TOKEN: {
         SpiceMsgcMainAgentTokens *tokens;
 
@@ -211,10 +210,9 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
     case SPICE_MSGC_MAIN_MOUSE_MODE_REQUEST:
         reds_on_main_mouse_mode_request(reds, message, size);
         break;
-    case SPICE_MSGC_PONG: {
+    case SPICE_MSGC_PONG:
         main_channel_client_handle_pong(mcc, (SpiceMsgPing *)message, size);
         break;
-    }
     case SPICE_MSGC_DISCONNECTING:
         break;
     case SPICE_MSGC_MAIN_MIGRATE_END:
