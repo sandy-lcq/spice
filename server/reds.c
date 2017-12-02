@@ -237,7 +237,7 @@ struct RedCharDeviceVDIPortPrivate {
     AgentMsgFilter write_filter;
 
     /* read from agent */
-    GList *read_bufs;
+    uint32_t num_read_buf;
     uint32_t read_state;
     uint32_t message_receive_len;
     uint8_t *receive_pos;
@@ -722,32 +722,28 @@ static AgentMsgFilterResult vdi_port_read_buf_process(RedCharDeviceVDIPort *dev,
     }
 }
 
-static void vdi_read_buf_init(RedVDIReadBuf *buf)
+static RedVDIReadBuf *vdi_read_buf_new(RedCharDeviceVDIPort *dev)
 {
-    g_return_if_fail(buf != NULL);
+    RedVDIReadBuf *buf = g_new(RedVDIReadBuf, 1);
+
     /* Bogus pipe item type, we only need the RingItem and refcounting
      * from the base class and are not going to use the type
      */
     red_pipe_item_init_full(&buf->base, -1,
                             vdi_port_read_buf_free);
+    buf->dev = dev;
+    buf->len = 0;
+    return buf;
 }
 
 static RedVDIReadBuf *vdi_port_get_read_buf(RedCharDeviceVDIPort *dev)
 {
-    GList *item;
-    RedVDIReadBuf *buf;
-
-    if (!(item = g_list_first(dev->priv->read_bufs))) {
+    if (dev->priv->num_read_buf >= REDS_VDI_PORT_NUM_RECEIVE_BUFFS) {
         return NULL;
     }
 
-    buf = item->data;
-    dev->priv->read_bufs = g_list_delete_link(dev->priv->read_bufs, item);
-
-    g_warn_if_fail(buf->base.refcount == 0);
-    vdi_read_buf_init(buf);
-
-    return buf;
+    dev->priv->num_read_buf++;
+    return vdi_read_buf_new(dev);
 }
 
 static void vdi_port_read_buf_free(RedPipeItem *base)
@@ -755,15 +751,16 @@ static void vdi_port_read_buf_free(RedPipeItem *base)
     RedVDIReadBuf *buf = SPICE_UPCAST(RedVDIReadBuf, base);
 
     g_warn_if_fail(buf->base.refcount == 0);
-    buf->dev->priv->read_bufs = g_list_prepend(buf->dev->priv->read_bufs, buf);
+    buf->dev->priv->num_read_buf--;
 
-    /* read_one_msg_from_vdi_port may have never completed because the read_bufs
-       ring was empty. So we call it again so it can complete its work if
+    /* read_one_msg_from_vdi_port may have never completed because we
+       reached buffer limit. So we call it again so it can complete its work if
        necessary. Note that since we can be called from red_char_device_wakeup
        this can cause recursion, but we have protection for that */
     if (buf->dev->priv->agent_attached) {
        red_char_device_wakeup(RED_CHAR_DEVICE(buf->dev));
     }
+    g_free(buf);
 }
 
 static void agent_adjust_capabilities(VDAgentMessage *message,
@@ -4511,24 +4508,11 @@ static void red_char_device_vdi_port_constructed(GObject *object)
 static void
 red_char_device_vdi_port_init(RedCharDeviceVDIPort *self)
 {
-    int i;
-
     self->priv = RED_CHAR_DEVICE_VDIPORT_PRIVATE(self);
 
     self->priv->read_state = VDI_PORT_READ_STATE_READ_HEADER;
     self->priv->receive_pos = (uint8_t *)&self->priv->vdi_chunk_header;
     self->priv->receive_len = sizeof(self->priv->vdi_chunk_header);
-
-    for (i = 0; i < REDS_VDI_PORT_NUM_RECEIVE_BUFFS; i++) {
-        RedVDIReadBuf *buf = g_new0(RedVDIReadBuf, 1);
-        vdi_read_buf_init(buf);
-        buf->dev = self;
-        g_warn_if_fail(!self->priv->agent_attached);
-        /* This ensures the newly created buffer is placed in the
-         * RedCharDeviceVDIPort::read_bufs queue ready to be reused
-         */
-        red_pipe_item_unref(&buf->base);
-    }
 }
 
 static void
@@ -4542,8 +4526,10 @@ red_char_device_vdi_port_finalize(GObject *object)
         red_pipe_item_unref(&dev->priv->current_read_buf->base);
         dev->priv->current_read_buf = NULL;
     }
-    g_list_free_full(dev->priv->read_bufs, g_free);
     g_free(dev->priv->mig_data);
+    if (ENABLE_EXTRA_CHECKS) {
+        spice_assert(dev->priv->num_read_buf == 0);
+    }
 
     G_OBJECT_CLASS(red_char_device_vdi_port_parent_class)->finalize(object);
 }
