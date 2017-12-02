@@ -216,8 +216,6 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
     case SPICE_MSGC_PONG:
         main_channel_client_handle_pong(mcc, (SpiceMsgPing *)message, size);
         break;
-    case SPICE_MSGC_DISCONNECTING:
-        break;
     default:
         return red_channel_client_handle_message(rcc, type, size, message);
     }

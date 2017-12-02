@@ -404,8 +404,6 @@ static bool inputs_channel_handle_message(RedChannelClient *rcc, uint16_t type,
         activate_modifiers_watch(inputs_channel);
         break;
     }
-    case SPICE_MSGC_DISCONNECTING:
-        break;
     default:
         return red_channel_client_handle_message(rcc, type, size, message);
     }
