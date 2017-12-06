@@ -1049,10 +1049,11 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
              * message from the client before sending any CHANNEL_LIST message. If
              * we've already sent our initial CHANNELS_LIST message, then it should be
              * safe to send new ones for newly-registered channels. */
-            if (mcc->priv->initial_channels_list_sent) {
-                main_channel_marshall_registered_channel(rcc, m,
-                    SPICE_UPCAST(RedRegisteredChannelPipeItem, base));
+            if (!mcc->priv->initial_channels_list_sent) {
+                return;
             }
+            main_channel_marshall_registered_channel(rcc, m,
+                SPICE_UPCAST(RedRegisteredChannelPipeItem, base));
             break;
         default:
             break;
