@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <spice/protocol.h>
 #include <spice/stream-device.h>
@@ -68,8 +69,12 @@ static int vmc_read(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
     pos += ret;
     // kick off next message read
     // currently Qemu kicks the device so we need to do it manually
-    // here
-    spice_server_char_device_wakeup(&vmc_instance);
+    // here. If not all data are read, the device goes into blocking
+    // state and we get the wake only when we read from the device
+    // again
+    if (pos >= *message_sizes_curr) {
+        spice_server_char_device_wakeup(&vmc_instance);
+    }
     return ret;
 }
 
@@ -177,11 +182,45 @@ static void test_stream_device(void)
     basic_event_loop_destroy();
 }
 
+// check if sending a partial message causes issues
+static void test_stream_device_unfinished(void)
+{
+    uint8_t *p = message;
+    SpiceCoreInterface *core = basic_event_loop_init();
+    Test *test = test_new(core);
+
+    pos = 0;
+    message_sizes_curr = message_sizes;
+    message_sizes_end = message_sizes;
+
+    // this long and not finished message should not cause an infinite loop
+    p = add_stream_hdr(p, STREAM_TYPE_DATA, 100000);
+    *message_sizes_end = p - message;
+    ++message_sizes_end;
+
+    vmc_instance.base.sif = &vmc_interface.base;
+    spice_server_add_interface(test->server, &vmc_instance.base);
+
+    // we need to open the device and kick the start
+    // the alarm is to prevent the program from getting stuck
+    alarm(5);
+    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
+    spice_server_char_device_wakeup(&vmc_instance);
+    alarm(0);
+
+    // we should have read all data
+    g_assert(message_sizes_curr - message_sizes == 1);
+
+    test_destroy(test);
+    basic_event_loop_destroy();
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/server/stream-device", test_stream_device);
+    g_test_add_func("/server/stream-device-unfinished", test_stream_device_unfinished);
 
     return g_test_run();
 }
