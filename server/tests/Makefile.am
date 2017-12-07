@@ -1,7 +1,7 @@
 NULL =
 
 @VALGRIND_CHECK_RULES@
-VALGRIND_SUPPRESSIONS_FILES = $(top_srcdir)/server/tests/valgrind/glib.supp
+VALGRIND_SUPPRESSIONS_FILES = $(srcdir)/valgrind/glib.supp
 EXTRA_DIST =				\
 	$(VALGRIND_SUPPRESSIONS_FILES)	\
 	pki/ca-cert.pem			\

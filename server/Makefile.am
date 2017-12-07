@@ -35,8 +35,8 @@ libspice_server_la_LDFLAGS =			\
 
 if HAVE_LD_VERSION_SCRIPT
 libspice_server_la_LDFLAGS += \
-	-Wl,--version-script=$(top_srcdir)/server/spice-server.syms
-EXTRA_libspice_server_la_DEPENDENCIES = $(top_srcdir)/server/spice-server.syms
+	-Wl,--version-script=$(srcdir)/spice-server.syms
+EXTRA_libspice_server_la_DEPENDENCIES = $(srcdir)/spice-server.syms
 endif
 
 libserver_la_LIBADD =							\
