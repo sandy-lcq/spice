@@ -28,7 +28,6 @@
 #include <unistd.h>
 #include <poll.h>
 #include <pthread.h>
-#include <openssl/ssl.h>
 #include <inttypes.h>
 #include <glib.h>
 
