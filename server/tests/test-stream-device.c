@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 #include <spice/protocol.h>
@@ -42,13 +43,20 @@ static unsigned pos;
 // then the size is reach we move on next one till exausted
 static unsigned message_sizes[16];
 static unsigned *message_sizes_end, *message_sizes_curr;
+static bool device_enabled = false;
+
+static unsigned vmc_write_pos;
+static uint8_t vmc_write_buf[2048];
 
 // handle writes to the device
 static int vmc_write(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
                      SPICE_GNUC_UNUSED const uint8_t *buf,
                      int len)
 {
-    // currently we don't test anything on write so reply we wrote it
+    // just copy into the buffer
+    unsigned copy = MIN(sizeof(vmc_write_buf) - vmc_write_pos, len);
+    memcpy(vmc_write_buf+vmc_write_pos, buf, copy);
+    vmc_write_pos += copy;
     return len;
 }
 
@@ -81,6 +89,7 @@ static int vmc_read(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
 static void vmc_state(SPICE_GNUC_UNUSED SpiceCharDeviceInstance *sin,
                       SPICE_GNUC_UNUSED int connected)
 {
+    device_enabled = !!connected;
 }
 
 static SpiceCharDeviceInterface vmc_interface = {
@@ -126,57 +135,80 @@ static uint8_t *add_format(uint8_t *p, uint32_t w, uint32_t h, SpiceVideoCodecTy
     return p + sizeof(fmt);
 }
 
+// check we have an error message on the write buffer
+static void
+check_vmc_error_message(void)
+{
+    StreamDevHeader hdr;
+
+    g_assert(vmc_write_pos >= sizeof(hdr));
+
+    memcpy(&hdr, vmc_write_buf, sizeof(hdr));
+    g_assert_cmpint(hdr.protocol_version, ==, STREAM_DEVICE_PROTOCOL);
+    g_assert_cmpint(GUINT16_FROM_LE(hdr.type), ==, STREAM_TYPE_NOTIFY_ERROR);
+    g_assert_cmpint(GUINT32_FROM_LE(hdr.size), <=, vmc_write_pos - sizeof(hdr));
+}
+
 static void test_stream_device(void)
 {
     uint8_t *p = message;
     SpiceCoreInterface *core = basic_event_loop_init();
     Test *test = test_new(core);
 
-    message_sizes_curr = message_sizes;
-    message_sizes_end = message_sizes;
+    for (int test_num=0; test_num < 2; ++test_num) {
+        pos = 0;
+        vmc_write_pos = 0;
+        message_sizes_curr = message_sizes;
+        message_sizes_end = message_sizes;
 
-    // add some messages into device buffer
-    // here we are testing the device is reading at least two
-    // consecutive format messages
-    // first message part has 2 extra bytes to check for header split
-    p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
-    *message_sizes_end = p - message + 2;
-    ++message_sizes_end;
+        // add some messages into device buffer
+        // here we are testing the device is reading at least two
+        // consecutive format messages
+        // first message part has 2 extra bytes to check for header split
+        p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
+        *message_sizes_end = p - message + 2;
+        ++message_sizes_end;
 
-    p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_VP9);
+        p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_VP9);
 
-    // this split the second format in half
-    *message_sizes_end = p - message - 4;
-    ++message_sizes_end;
+        // this split the second format in half
+        *message_sizes_end = p - message - 4;
+        ++message_sizes_end;
 
-    *message_sizes_end = p - message;
-    ++message_sizes_end;
+        *message_sizes_end = p - message;
+        ++message_sizes_end;
 
-    // add a message to stop data to be read
-    p = add_stream_hdr(p, STREAM_TYPE_INVALID, 0);
-    *message_sizes_end = p - message;
-    ++message_sizes_end;
+        // add a message to stop data to be read
+        p = add_stream_hdr(p, STREAM_TYPE_INVALID, 0);
+        *message_sizes_end = p - message;
+        ++message_sizes_end;
 
-    // this message should not be read
-    p = add_stream_hdr(p, STREAM_TYPE_INVALID, 0);
-    *message_sizes_end = p - message;
-    ++message_sizes_end;
+        // this message should not be read
+        p = add_stream_hdr(p, STREAM_TYPE_INVALID, 0);
+        *message_sizes_end = p - message;
+        ++message_sizes_end;
 
-    vmc_instance.base.sif = &vmc_interface.base;
-    spice_server_add_interface(test->server, &vmc_instance.base);
+        vmc_instance.base.sif = &vmc_interface.base;
+        spice_server_add_interface(test->server, &vmc_instance.base);
 
-    // device should not have read data before we open it
-    spice_server_char_device_wakeup(&vmc_instance);
-    g_assert_cmpint(pos, ==, 0);
+        // device should not have read data before we open it
+        spice_server_char_device_wakeup(&vmc_instance);
+        g_assert_cmpint(pos, ==, 0);
 
-    // we need to open the device and kick the start
-    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
-    spice_server_char_device_wakeup(&vmc_instance);
+        // we need to open the device and kick the start
+        spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
+        spice_server_char_device_wakeup(&vmc_instance);
+        spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_CLOSED);
 
-    // make sure first 3 parts are read completely
-    g_assert(message_sizes_curr - message_sizes >= 3);
-    // make sure last part is not read at all
-    g_assert(message_sizes_curr - message_sizes < 5);
+        // make sure first 3 parts are read completely
+        g_assert(message_sizes_curr - message_sizes >= 3);
+        // make sure the device readed all or that device was
+        // disabled, we need this to make sure that device will be in
+        // sync when opened again
+        g_assert(message_sizes_curr - message_sizes == 5 || !device_enabled);
+
+        check_vmc_error_message();
+    }
 
     test_destroy(test);
     basic_event_loop_destroy();
@@ -190,6 +222,7 @@ static void test_stream_device_unfinished(void)
     Test *test = test_new(core);
 
     pos = 0;
+    vmc_write_pos = 0;
     message_sizes_curr = message_sizes;
     message_sizes_end = message_sizes;
 
@@ -210,6 +243,9 @@ static void test_stream_device_unfinished(void)
 
     // we should have read all data
     g_assert(message_sizes_curr - message_sizes == 1);
+
+    // we should have no data from the device
+    g_assert_cmpint(vmc_write_pos, ==, 0);
 
     test_destroy(test);
     basic_event_loop_destroy();

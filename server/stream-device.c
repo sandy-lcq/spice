@@ -84,11 +84,22 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     int n;
     bool handled = false;
 
-    if (dev->has_error || dev->flow_stopped || !dev->stream_channel) {
+    sif = spice_char_device_get_interface(sin);
+
+    // in order to get in sync every time we open the device we need to discard data here.
+    // Qemu keeps a buffer of data which is used only during spice_server_char_device_wakeup
+    // from Qemu
+    if (G_UNLIKELY(dev->has_error)) {
+        uint8_t buf[16 * 1024];
+        while (sif->read(sin, buf, sizeof(buf)) > 0) {
+            continue;
+        }
         return false;
     }
 
-    sif = spice_char_device_get_interface(sin);
+    if (dev->flow_stopped || !dev->stream_channel) {
+        return false;
+    }
 
     /* read header */
     while (dev->hdr_pos < sizeof(dev->hdr)) {
