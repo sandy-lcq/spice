@@ -298,10 +298,10 @@ static void attach_stream(DisplayChannel *display, Drawable *drawable, VideoStre
         stream->num_input_frames++;
     }
 
+    int stream_id = display_channel_get_video_stream_id(display, stream);
     FOREACH_DCC(display, dcc) {
         VideoStreamAgent *agent;
         QRegion clip_in_draw_dest;
-        int stream_id = display_channel_get_video_stream_id(display, stream);
 
         agent = dcc_get_video_stream_agent(dcc, stream_id);
         region_or(&agent->vis_region, &drawable->tree_item.base.rgn);

@@ -1743,7 +1743,7 @@ static bool red_marshall_stream_data(RedChannelClient *rcc,
 
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA);
 
-        stream_data.base.id = display_channel_get_video_stream_id(display, stream);
+        stream_data.base.id = stream_id;
         stream_data.base.multi_media_time = frame_mm_time;
         stream_data.data_size = outbuf->size;
 
@@ -1753,7 +1753,7 @@ static bool red_marshall_stream_data(RedChannelClient *rcc,
 
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_DATA_SIZED);
 
-        stream_data.base.id = display_channel_get_video_stream_id(display, stream);
+        stream_data.base.id = stream_id;
         stream_data.base.multi_media_time = frame_mm_time;
         stream_data.data_size = outbuf->size;
         stream_data.width = copy->src_area.right - copy->src_area.left;
