@@ -186,7 +186,7 @@ if test "x$enable_celt051" = "xyes"; then
                       AS_VAR_APPEND([SPICE_REQUIRES], [" celt051 >= $CELT051_REQUIRED"]))
 fi
 
-PKG_CHECK_MODULES(SSL, openssl)
+PKG_CHECK_MODULES(SSL, openssl >= 1.0.0)
 AC_SUBST(SSL_CFLAGS)
 AC_SUBST(SSL_LIBS)
 AS_VAR_APPEND([SPICE_REQUIRES], [" openssl"])

@@ -2819,15 +2819,12 @@ static gpointer openssl_global_init(gpointer arg)
 static int reds_init_ssl(RedsState *reds)
 {
     static GOnce openssl_once = G_ONCE_INIT;
-#if OPENSSL_VERSION_NUMBER >= 0x10000000L
     const SSL_METHOD *ssl_method;
-#else
-    SSL_METHOD *ssl_method;
-#endif
     int return_code;
-    /* When some other SSL/TLS version becomes obsolete, add it to this
+    /* Limit connection to TLSv1 only.
+     * When some other SSL/TLS version becomes obsolete, add it to this
      * variable. */
-    long ssl_options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+    long ssl_options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION;
 
     /* Global system initialization*/
     g_once(&openssl_once, openssl_global_init, NULL);
@@ -2841,10 +2838,6 @@ static int reds_init_ssl(RedsState *reds)
         return -1;
     }
 
-    /* Limit connection to TLSv1 only */
-#ifdef SSL_OP_NO_COMPRESSION
-    ssl_options |= SSL_OP_NO_COMPRESSION;
-#endif
     SSL_CTX_set_options(reds->ctx, ssl_options);
 
     /* Load our keys and certificates*/
@@ -2877,10 +2870,6 @@ static int reds_init_ssl(RedsState *reds)
         return -1;
     }
 
-#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_CTX_set_verify_depth(reds->ctx, 1);
-#endif
-
     if (strlen(reds->config->ssl_parameters.dh_key_file) > 0) {
         if (load_dh_params(reds->ctx, reds->config->ssl_parameters.dh_key_file) < 0) {
             return -1;
@@ -2893,11 +2882,6 @@ static int reds_init_ssl(RedsState *reds)
             return -1;
         }
     }
-
-#ifndef SSL_OP_NO_COMPRESSION
-    STACK *cmp_stack = SSL_COMP_get_compression_methods();
-    sk_zero(cmp_stack);
-#endif
 
     return 0;
 }
