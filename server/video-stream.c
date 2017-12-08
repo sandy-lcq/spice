@@ -851,9 +851,9 @@ static void dcc_detach_stream_gracefully(DisplayChannelClient *dcc,
                     stream_id, stream->current != NULL);
         rect_debug(&upgrade_area);
         if (update_area_limit) {
-            display_channel_draw_until(DCC_TO_DC(dcc), &upgrade_area, 0, update_area_limit);
+            display_channel_draw_until(display, &upgrade_area, 0, update_area_limit);
         } else {
-            display_channel_draw(DCC_TO_DC(dcc), &upgrade_area, 0);
+            display_channel_draw(display, &upgrade_area, 0);
         }
         dcc_add_surface_area_image(dcc, 0, &upgrade_area, NULL, FALSE);
     }
