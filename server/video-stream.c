@@ -759,6 +759,7 @@ void dcc_create_stream(DisplayChannelClient *dcc, VideoStream *stream)
         red_pipe_item_init(&report_pipe_item->pipe_item,
                            RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
         report_pipe_item->stream_id = stream_id;
+        report_pipe_item->report_id = agent->report_id;
         red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &report_pipe_item->pipe_item);
     }
 #ifdef STREAM_STATS

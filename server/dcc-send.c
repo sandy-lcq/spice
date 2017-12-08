@@ -2308,15 +2308,13 @@ static void marshall_monitors_config(RedChannelClient *rcc, SpiceMarshaller *bas
 
 static void marshall_stream_activate_report(RedChannelClient *rcc,
                                             SpiceMarshaller *base_marshaller,
-                                            uint32_t stream_id)
+                                            RedStreamActivateReportItem *report_item)
 {
-    DisplayChannelClient *dcc = DISPLAY_CHANNEL_CLIENT(rcc);
-    VideoStreamAgent *agent = &dcc->priv->stream_agents[stream_id];
     SpiceMsgDisplayStreamActivateReport msg;
 
     red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_STREAM_ACTIVATE_REPORT);
-    msg.stream_id = stream_id;
-    msg.unique_id = agent->report_id;
+    msg.stream_id = report_item->stream_id;
+    msg.unique_id = report_item->report_id;
     msg.max_window_size = RED_STREAM_CLIENT_REPORT_WINDOW;
     msg.timeout_ms = RED_STREAM_CLIENT_REPORT_TIMEOUT;
     spice_marshall_msg_display_stream_activate_report(base_marshaller, &msg);
@@ -2454,7 +2452,7 @@ void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         RedStreamActivateReportItem *report_item = SPICE_CONTAINEROF(pipe_item,
                                                                      RedStreamActivateReportItem,
                                                                      pipe_item);
-        marshall_stream_activate_report(rcc, m, report_item->stream_id);
+        marshall_stream_activate_report(rcc, m, report_item);
         break;
     }
     case RED_PIPE_ITEM_TYPE_GL_SCANOUT:

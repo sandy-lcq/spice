@@ -48,6 +48,7 @@ typedef struct VideoStream VideoStream;
 typedef struct RedStreamActivateReportItem {
     RedPipeItem pipe_item;
     uint32_t stream_id;
+    uint32_t report_id;
 } RedStreamActivateReportItem;
 
 #ifdef STREAM_STATS
