@@ -45,6 +45,12 @@
 
 typedef struct VideoStream VideoStream;
 
+typedef struct RedUpgradeItem {
+    RedPipeItem base;
+    Drawable *drawable;
+    SpiceClipRects *rects;
+} RedUpgradeItem;
+
 typedef struct RedStreamActivateReportItem {
     RedPipeItem pipe_item;
     uint32_t stream_id;

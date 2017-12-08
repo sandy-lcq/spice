@@ -178,12 +178,6 @@ typedef struct RedSurfaceDestroyItem {
     SpiceMsgSurfaceDestroy surface_destroy;
 } RedSurfaceDestroyItem;
 
-typedef struct RedUpgradeItem {
-    RedPipeItem base;
-    Drawable *drawable;
-    SpiceClipRects *rects;
-} RedUpgradeItem;
-
 static inline int is_equal_path(SpicePath *path1, SpicePath *path2)
 {
     SpicePathSeg *seg1, *seg2;
