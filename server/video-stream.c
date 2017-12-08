@@ -661,9 +661,8 @@ static void update_client_playback_delay(void *opaque, uint32_t delay_ms)
 {
     VideoStreamAgent *agent = opaque;
     DisplayChannelClient *dcc = agent->dcc;
-    RedChannel *channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(dcc));
     RedClient *client = red_channel_client_get_client(RED_CHANNEL_CLIENT(dcc));
-    RedsState *reds = red_channel_get_server(channel);
+    RedsState *reds = red_client_get_server(client);
 
     dcc_update_streams_max_latency(dcc, agent);
 
