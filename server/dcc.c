@@ -630,14 +630,6 @@ static void dcc_stop(DisplayChannelClient *dcc)
 void dcc_video_stream_agent_clip(DisplayChannelClient* dcc, VideoStreamAgent *agent)
 {
     VideoStreamClipItem *item = video_stream_clip_item_new(agent);
-    int n_rects;
-
-    item->clip_type = SPICE_CLIP_TYPE_RECTS;
-
-    n_rects = pixman_region32_n_rects(&agent->clip);
-    item->rects = g_malloc(sizeof(SpiceClipRects) + n_rects * sizeof(SpiceRect));
-    item->rects->num_rects = n_rects;
-    region_ret_rects(&agent->clip, item->rects->rects, n_rects);
 
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &item->base);
 }

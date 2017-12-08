@@ -184,6 +184,14 @@ VideoStreamClipItem *video_stream_clip_item_new(VideoStreamAgent *agent)
 
     item->stream_agent = agent;
     agent->stream->refs++;
+
+    item->clip_type = SPICE_CLIP_TYPE_RECTS;
+
+    int n_rects = pixman_region32_n_rects(&agent->clip);
+    item->rects = g_malloc(sizeof(SpiceClipRects) + n_rects * sizeof(SpiceRect));
+    item->rects->num_rects = n_rects;
+    region_ret_rects(&agent->clip, item->rects->rects, n_rects);
+
     return item;
 }
 
