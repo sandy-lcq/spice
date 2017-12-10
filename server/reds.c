@@ -2588,6 +2588,7 @@ static int reds_init_socket(const char *addr, int portnr, int family)
         len = SUN_LEN(&local);
         if (bind(slisten, (struct sockaddr *)&local, len) == -1) {
             perror("bind");
+            close(slisten);
             return -1;
         }
 
