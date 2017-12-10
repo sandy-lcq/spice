@@ -66,6 +66,7 @@ sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
         msg.msg_iovlen = 1;
         msg.msg_control = cmsgu.control;
         msg.msg_controllen = sizeof(cmsgu.control);
+        msg.msg_flags = 0;
         size = recvmsg(sock, &msg, 0);
         if (size < 0) {
             perror ("recvmsg");
