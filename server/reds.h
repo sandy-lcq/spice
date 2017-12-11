@@ -80,7 +80,7 @@ void reds_on_main_agent_data(RedsState *reds, MainChannelClient *mcc, const void
                              size_t size);
 void reds_on_main_migrate_connected(RedsState *reds, int seamless); //should be called when all the clients
                                                    // are connected to the target
-bool reds_handle_migrate_data(RedsState *recs, MainChannelClient *mcc,
+bool reds_handle_migrate_data(RedsState *reds, MainChannelClient *mcc,
                               SpiceMigrateDataMain *mig_data, uint32_t size);
 void reds_on_main_mouse_mode_request(RedsState *reds, void *message, size_t size);
 /* migration dest side: returns whether it can support seamless migration
