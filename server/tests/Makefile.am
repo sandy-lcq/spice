@@ -75,8 +75,6 @@ noinst_PROGRAMS =				\
 TESTS = $(check_PROGRAMS)			\
 	$(NULL)
 
-test_qxl_parsing_LDADD = ../libserver.la $(LDADD)
-
 ## spice-server-replay
 
 noinst_PROGRAMS += spice-server-replay
