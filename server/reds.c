@@ -4002,13 +4002,6 @@ SPICE_GNUC_VISIBLE int spice_server_add_renderer(SpiceServer *reds, const char *
     return 0;
 }
 
-SPICE_GNUC_VISIBLE int spice_server_kbd_leds(SpiceKbdInstance *sin, int leds)
-{
-    RedsState *reds = spice_kbd_state_get_server(sin->st);
-    inputs_channel_on_keyboard_leds_change(reds->inputs_channel, leds);
-    return 0;
-}
-
 SPICE_GNUC_VISIBLE int spice_server_set_streaming_video(SpiceServer *reds, int value)
 {
     if (value != SPICE_STREAM_VIDEO_OFF &&

@@ -68,23 +68,18 @@ struct SpiceKbdState {
     /* track key press state */
     bool key[0x80];
     bool key_ext[0x80];
-    RedsState *reds;
+    InputsChannel *inputs;
 };
 
 static SpiceKbdInstance* inputs_channel_get_keyboard(InputsChannel *inputs);
 static SpiceMouseInstance* inputs_channel_get_mouse(InputsChannel *inputs);
 static SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs);
 
-static SpiceKbdState* spice_kbd_state_new(RedsState *reds)
+static SpiceKbdState* spice_kbd_state_new(InputsChannel *inputs)
 {
     SpiceKbdState *st = g_new0(SpiceKbdState, 1);
-    st->reds = reds;
+    st->inputs = inputs;
     return st;
-}
-
-RedsState* spice_kbd_state_get_server(SpiceKbdState *dev)
-{
-    return dev->reds;
 }
 
 struct SpiceMouseState {
@@ -485,9 +480,10 @@ static void inputs_channel_push_keyboard_modifiers(InputsChannel *inputs, uint8_
                           red_inputs_key_modifiers_item_new(modifiers));
 }
 
-void inputs_channel_on_keyboard_leds_change(InputsChannel *inputs, uint8_t leds)
+SPICE_GNUC_VISIBLE int spice_server_kbd_leds(SpiceKbdInstance *sin, int leds)
 {
-    inputs_channel_push_keyboard_modifiers(inputs, leds);
+    inputs_channel_push_keyboard_modifiers(sin->st->inputs, leds);
+    return 0;
 }
 
 static void key_modifiers_sender(void *opaque)
@@ -615,7 +611,7 @@ int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboar
         return -1;
     }
     inputs->keyboard = keyboard;
-    inputs->keyboard->st = spice_kbd_state_new(red_channel_get_server(RED_CHANNEL(inputs)));
+    inputs->keyboard->st = spice_kbd_state_new(inputs);
     return 0;
 }
 
