@@ -2202,6 +2202,7 @@ static void reds_handle_auth_mechname(void *opaque)
 
     if (!red_sasl_handle_auth_mechname(link->stream, reds_handle_auth_startlen, link)) {
             reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
+        reds_link_free(link);
     }
 }
 
