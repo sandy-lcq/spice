@@ -67,13 +67,6 @@ typedef struct RedSASL {
     unsigned int encodedOffset;
 
     SpiceBuffer inbuffer;
-
-    char *mechlist;
-    char *mechname;
-
-    /* temporary data during authentication */
-    unsigned int len;
-    char *data;
 } RedSASL;
 #endif
 
@@ -351,13 +344,8 @@ void red_stream_free(RedStream *s)
 #if HAVE_SASL
     if (s->priv->sasl.conn) {
         s->priv->sasl.runSSF = s->priv->sasl.wantSSF = 0;
-        s->priv->sasl.len = 0;
         s->priv->sasl.encodedLength = s->priv->sasl.encodedOffset = 0;
         s->priv->sasl.encoded = NULL;
-        g_free(s->priv->sasl.mechlist);
-        g_free(s->priv->sasl.mechname);
-        s->priv->sasl.mechlist = NULL;
-        g_free(s->priv->sasl.data);
         sasl_dispose(&s->priv->sasl.conn);
         s->priv->sasl.conn = NULL;
     }
@@ -735,6 +723,12 @@ static int auth_sasl_check_ssf(RedSASL *sasl, int *runSSF)
 
 typedef struct RedSASLAuth {
     RedStream *stream;
+    // list of mechanisms allowed, allocated and freed by SASL
+    char *mechlist;
+    // mech received
+    char *mechname;
+    uint32_t len;
+    char *data;
     // callback to call if success
     RedSaslResult result_cb;
     void *result_opaque;
@@ -743,6 +737,14 @@ typedef struct RedSASLAuth {
     AsyncReadError saved_error_cb;
 } RedSASLAuth;
 
+static void red_sasl_auth_free(RedSASLAuth *auth)
+{
+    g_free(auth->data);
+    g_free(auth->mechname);
+    g_free(auth->mechlist);
+    g_free(auth);
+}
+
 // handle SASL termination, either success or error
 // NOTE: After this function is called usually there should be a
 // return or the function should exit
@@ -750,7 +752,7 @@ static void red_sasl_async_result(RedSASLAuth *auth, RedSaslError err)
 {
     red_stream_set_async_error_handler(auth->stream, auth->saved_error_cb);
     auth->result_cb(auth->result_opaque, err);
-    g_free(auth);
+    red_sasl_auth_free(auth);
 }
 
 static void red_sasl_error(void *opaque, int err)
@@ -760,7 +762,7 @@ static void red_sasl_error(void *opaque, int err)
     if (auth->saved_error_cb) {
         auth->saved_error_cb(auth->result_opaque, err);
     }
-    g_free(auth);
+    red_sasl_auth_free(auth);
 }
 
 /*
@@ -799,32 +801,33 @@ static void red_sasl_handle_auth_steplen(void *opaque);
 
 static void red_sasl_handle_auth_step(void *opaque)
 {
-    RedStream *stream = ((RedSASLAuth *)opaque)->stream;
+    RedSASLAuth *auth = opaque;
+    RedStream *stream = auth->stream;
     const char *serverout;
     unsigned int serveroutlen;
     int err;
     char *clientdata = NULL;
     RedSASL *sasl = &stream->priv->sasl;
-    uint32_t datalen = sasl->len;
+    uint32_t datalen = auth->len;
 
     /* NB, distinction of NULL vs "" is *critical* in SASL */
     if (datalen) {
-        clientdata = sasl->data;
+        clientdata = auth->data;
         clientdata[datalen - 1] = '\0'; /* Wire includes '\0', but make sure */
         datalen--; /* Don't count NULL byte when passing to _start() */
     }
 
-    if (sasl->mechname != NULL) {
+    if (auth->mechname != NULL) {
         spice_debug("Start SASL auth with mechanism %s. Data %p (%d bytes)",
-                   sasl->mechname, clientdata, datalen);
+                    auth->mechname, clientdata, datalen);
         err = sasl_server_start(sasl->conn,
-                                sasl->mechname,
+                                auth->mechname,
                                 clientdata,
                                 datalen,
                                 &serverout,
                                 &serveroutlen);
-        g_free(sasl->mechname);
-        sasl->mechname = NULL;
+        g_free(auth->mechname);
+        auth->mechname = NULL;
     } else {
         spice_debug("Step using SASL Data %p (%d bytes)", clientdata, datalen);
         err = sasl_server_step(sasl->conn,
@@ -837,13 +840,13 @@ static void red_sasl_handle_auth_step(void *opaque)
         err != SASL_CONTINUE) {
         spice_warning("sasl step failed %d (%s)",
                     err, sasl_errdetail(sasl->conn));
-        return red_sasl_async_result(opaque, RED_SASL_ERROR_GENERIC);
+        return red_sasl_async_result(auth, RED_SASL_ERROR_GENERIC);
     }
 
     if (serveroutlen > SASL_DATA_MAX_LEN) {
         spice_warning("sasl step reply data too long %d",
                       serveroutlen);
-        return red_sasl_async_result(opaque, RED_SASL_ERROR_GENERIC);
+        return red_sasl_async_result(auth, RED_SASL_ERROR_GENERIC);
     }
 
     spice_debug("SASL return data %d bytes, %p", serveroutlen, serverout);
@@ -862,8 +865,8 @@ static void red_sasl_handle_auth_step(void *opaque)
     if (err == SASL_CONTINUE) {
         spice_debug("%s", "Authentication must continue");
         /* Wait for step length */
-        red_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
-                              red_sasl_handle_auth_steplen, opaque);
+        red_stream_async_read(stream, (uint8_t *)&auth->len, sizeof(uint32_t),
+                              red_sasl_handle_auth_steplen, auth);
         return;
     } else {
         int ssf;
@@ -882,7 +885,7 @@ static void red_sasl_handle_auth_step(void *opaque)
         sasl->runSSF = ssf;
         red_stream_disable_writev(stream); /* make sure writev isn't called directly anymore */
 
-        return red_sasl_async_result(opaque, RED_SASL_ERROR_OK);
+        return red_sasl_async_result(auth, RED_SASL_ERROR_OK);
     }
 
 authreject:
@@ -890,70 +893,69 @@ authreject:
     red_stream_write_u32_le(stream, sizeof("Authentication failed"));
     red_stream_write_all(stream, "Authentication failed", sizeof("Authentication failed"));
 
-    red_sasl_async_result(opaque, RED_SASL_ERROR_AUTH_FAILED);
+    red_sasl_async_result(auth, RED_SASL_ERROR_AUTH_FAILED);
 }
 
 static void red_sasl_handle_auth_steplen(void *opaque)
 {
-    RedStream *stream = ((RedSASLAuth *)opaque)->stream;
-    RedSASL *sasl = &stream->priv->sasl;
+    RedSASLAuth *auth = opaque;
 
-    sasl->len = GUINT32_FROM_LE(sasl->len);
-    spice_debug("Got steplen %d", sasl->len);
-    if (sasl->len > SASL_DATA_MAX_LEN) {
-        spice_warning("Too much SASL data %d", sasl->len);
-        return red_sasl_async_result(opaque, sasl->mechname ? RED_SASL_ERROR_INVALID_DATA : RED_SASL_ERROR_GENERIC);
+    auth->len = GUINT32_FROM_LE(auth->len);
+    uint32_t len = auth->len;
+    spice_debug("Got steplen %d", len);
+    if (len > SASL_DATA_MAX_LEN) {
+        spice_warning("Too much SASL data %d", len);
+        return red_sasl_async_result(opaque, auth->mechname ? RED_SASL_ERROR_INVALID_DATA : RED_SASL_ERROR_GENERIC);
     }
 
-    if (sasl->len == 0) {
-        return red_sasl_handle_auth_step(opaque);
+    if (len == 0) {
+        return red_sasl_handle_auth_step(auth);
     }
 
-    sasl->data = g_realloc(sasl->data, sasl->len);
-    red_stream_async_read(stream, (uint8_t *)sasl->data, sasl->len,
-                          red_sasl_handle_auth_step, opaque);
+    auth->data = g_realloc(auth->data, len);
+    red_stream_async_read(auth->stream, (uint8_t *)auth->data, len,
+                          red_sasl_handle_auth_step, auth);
 }
 
 
 
 static void red_sasl_handle_auth_mechname(void *opaque)
 {
-    RedStream *stream = ((RedSASLAuth *)opaque)->stream;
-    RedSASL *sasl = &stream->priv->sasl;
+    RedSASLAuth *auth = opaque;
 
-    sasl->mechname[sasl->len] = '\0';
+    auth->mechname[auth->len] = '\0';
     spice_debug("Got client mechname '%s' check against '%s'",
-               sasl->mechname, sasl->mechlist);
+                auth->mechname, auth->mechlist);
 
     char quoted_mechname[SASL_MAX_MECHNAME_LEN + 4];
-    sprintf(quoted_mechname, ",%s,", sasl->mechname);
+    sprintf(quoted_mechname, ",%s,", auth->mechname);
 
-    if (strchr(sasl->mechname, ',') || strstr(sasl->mechlist, quoted_mechname) == NULL) {
-        return red_sasl_async_result(opaque, RED_SASL_ERROR_INVALID_DATA);
+    if (strchr(auth->mechname, ',') || strstr(auth->mechlist, quoted_mechname) == NULL) {
+        return red_sasl_async_result(auth, RED_SASL_ERROR_INVALID_DATA);
     }
 
-    spice_debug("Validated mechname '%s'", sasl->mechname);
+    spice_debug("Validated mechname '%s'", auth->mechname);
 
-    red_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
-                          red_sasl_handle_auth_steplen, opaque);
+    red_stream_async_read(auth->stream, (uint8_t *)&auth->len, sizeof(uint32_t),
+                          red_sasl_handle_auth_steplen, auth);
 }
 
 static void red_sasl_handle_auth_mechlen(void *opaque)
 {
-    RedStream *stream = ((RedSASLAuth *)opaque)->stream;
-    RedSASL *sasl = &stream->priv->sasl;
+    RedSASLAuth *auth = opaque;
 
-    sasl->len = GUINT32_FROM_LE(sasl->len);
-    if (sasl->len < 1 || sasl->len > SASL_MAX_MECHNAME_LEN) {
-        spice_warning("Got bad client mechname len %d", sasl->len);
-        return red_sasl_async_result(opaque, RED_SASL_ERROR_GENERIC);
+    auth->len = GUINT32_FROM_LE(auth->len);
+    uint32_t len = auth->len;
+    if (len < 1 || len > SASL_MAX_MECHNAME_LEN) {
+        spice_warning("Got bad client mechname len %d", len);
+        return red_sasl_async_result(auth, RED_SASL_ERROR_GENERIC);
     }
 
-    sasl->mechname = g_malloc(sasl->len + 1);
+    auth->mechname = g_malloc(len + 1);
 
     spice_debug("Wait for client mechname");
-    red_stream_async_read(stream, (uint8_t *)sasl->mechname, sasl->len,
-                          red_sasl_handle_auth_mechname, opaque);
+    red_stream_async_read(auth->stream, (uint8_t *)auth->mechname, len,
+                          red_sasl_handle_auth_mechname, auth);
 }
 
 bool red_sasl_start_auth(RedStream *stream, RedSaslResult result_cb, void *result_opaque)
@@ -1050,11 +1052,9 @@ bool red_sasl_start_auth(RedStream *stream, RedSaslResult result_cb, void *resul
 
     spice_debug("Available mechanisms for client: '%s'", mechlist);
 
-    sasl->mechlist = g_strdup(mechlist);
-
     mechlistlen = strlen(mechlist);
     if (!red_stream_write_u32_le(stream, mechlistlen)
-        || !red_stream_write_all(stream, sasl->mechlist, mechlistlen)) {
+        || !red_stream_write_all(stream, mechlist, mechlistlen)) {
         spice_warning("SASL mechanisms write error");
         goto error;
     }
@@ -1064,10 +1064,11 @@ bool red_sasl_start_auth(RedStream *stream, RedSaslResult result_cb, void *resul
     auth->result_cb = result_cb;
     auth->result_opaque = result_opaque;
     auth->saved_error_cb = stream->priv->async_read.error;
-    red_stream_set_async_error_handler(stream, red_sasl_error);
+    auth->mechlist = g_strdup(mechlist);
 
     spice_debug("Wait for client mechname length");
-    red_stream_async_read(stream, (uint8_t *)&sasl->len, sizeof(uint32_t),
+    red_stream_set_async_error_handler(stream, red_sasl_error);
+    red_stream_async_read(stream, (uint8_t *)&auth->len, sizeof(uint32_t),
                           red_sasl_handle_auth_mechlen, auth);
 
     return true;
