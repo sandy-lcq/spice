@@ -2112,7 +2112,6 @@ static void reds_get_spice_ticket(RedLinkInfo *link)
  * u8-array serverout-strin
  * u8 continue
  */
-#define SASL_DATA_MAX_LEN (1024 * 1024)
 
 static void reds_handle_auth_sasl_steplen(void *opaque);
 
