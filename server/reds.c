@@ -2100,123 +2100,30 @@ static void reds_get_spice_ticket(RedLinkInfo *link)
 }
 
 #if HAVE_SASL
-/*
- * Step Msg
- *
- * Input from client:
- *
- * u32 clientin-length
- * u8-array clientin-string
- *
- * Output to client:
- *
- * u32 serverout-length
- * u8-array serverout-strin
- * u8 continue
- */
-
-static void reds_handle_auth_sasl_steplen(void *opaque);
-
-static void reds_handle_auth_sasl_step(void *opaque)
+static void reds_handle_sasl_result(void *opaque, RedSaslError status)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedSaslError status;
 
-    status = red_sasl_handle_auth_step(link->stream, reds_handle_auth_sasl_steplen, link);
-    if (status == RED_SASL_ERROR_OK) {
-        reds_handle_link(link);
-    } else if (status != RED_SASL_ERROR_CONTINUE) {
-        reds_link_free(link);
-    }
-}
-
-static void reds_handle_auth_sasl_steplen(void *opaque)
-{
-    RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedSaslError status;
-
-    status = red_sasl_handle_auth_steplen(link->stream, reds_handle_auth_sasl_step, link);
-    if (status != RED_SASL_ERROR_OK) {
-        reds_link_free(link);
-    }
-}
-
-/*
- * Start Msg
- *
- * Input from client:
- *
- * u32 clientin-length
- * u8-array clientin-string
- *
- * Output to client:
- *
- * u32 serverout-length
- * u8-array serverout-strin
- * u8 continue
- */
-
-
-static void reds_handle_auth_sasl_start(void *opaque)
-{
-    RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedSaslError status;
-
-    status = red_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
-    if (status == RED_SASL_ERROR_OK) {
-        reds_handle_link(link);
-    } else if (status != RED_SASL_ERROR_CONTINUE) {
-        reds_link_free(link);
-    }
-}
-
-static void reds_handle_auth_startlen(void *opaque)
-{
-    RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedSaslError status;
-
-    status = red_sasl_handle_auth_startlen(link->stream, reds_handle_auth_sasl_start, link);
     switch (status) {
-        case RED_SASL_ERROR_OK:
-            break;
-        case RED_SASL_ERROR_RETRY:
-            reds_handle_auth_sasl_start(opaque);
-            break;
-        case RED_SASL_ERROR_GENERIC:
-        case RED_SASL_ERROR_INVALID_DATA:
-            reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
-            reds_link_free(link);
-            break;
-        default:
-            g_warn_if_reached();
-            reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
-            reds_link_free(link);
-            break;
-    }
-}
-
-static void reds_handle_auth_mechname(void *opaque)
-{
-    RedLinkInfo *link = (RedLinkInfo *)opaque;
-
-    if (!red_sasl_handle_auth_mechname(link->stream, reds_handle_auth_startlen, link)) {
-            reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
+    case RED_SASL_ERROR_OK:
+        reds_handle_link(link);
+        break;
+    case RED_SASL_ERROR_INVALID_DATA:
+        reds_send_link_error(link, SPICE_LINK_ERR_INVALID_DATA);
         reds_link_free(link);
-    }
-}
-
-static void reds_handle_auth_mechlen(void *opaque)
-{
-    RedLinkInfo *link = (RedLinkInfo *)opaque;
-
-    if (!red_sasl_handle_auth_mechlen(link->stream, reds_handle_auth_mechname, link)) {
+        break;
+    default:
+        // in these cases error was reported using SASL protocol
+        // (RED_SASL_ERROR_AUTH_FAILED) or we just need to close the
+        // connection
         reds_link_free(link);
+        break;
     }
 }
 
 static void reds_start_auth_sasl(RedLinkInfo *link)
 {
-    if (!red_sasl_start_auth(link->stream, reds_handle_auth_mechlen, link)) {
+    if (!red_sasl_start_auth(link->stream, reds_handle_sasl_result, link)) {
         reds_link_free(link);
     }
 }

@@ -73,17 +73,10 @@ typedef enum {
     RED_SASL_ERROR_OK,
     RED_SASL_ERROR_GENERIC,
     RED_SASL_ERROR_INVALID_DATA,
-    RED_SASL_ERROR_RETRY,
-    RED_SASL_ERROR_CONTINUE,
     RED_SASL_ERROR_AUTH_FAILED
 } RedSaslError;
 
-RedSaslError red_sasl_handle_auth_step(RedStream *stream, AsyncReadDone read_cb, void *opaque);
-RedSaslError red_sasl_handle_auth_steplen(RedStream *stream, AsyncReadDone read_cb, void *opaque);
-RedSaslError red_sasl_handle_auth_start(RedStream *stream, AsyncReadDone read_cb, void *opaque);
-RedSaslError red_sasl_handle_auth_startlen(RedStream *stream, AsyncReadDone read_cb, void *opaque);
-bool red_sasl_handle_auth_mechname(RedStream *stream, AsyncReadDone read_cb, void *opaque);
-bool red_sasl_handle_auth_mechlen(RedStream *stream, AsyncReadDone read_cb, void *opaque);
-bool red_sasl_start_auth(RedStream *stream, AsyncReadDone read_cb, void *opaque);
+typedef void (*RedSaslResult)(void *opaque, RedSaslError err);
+bool red_sasl_start_auth(RedStream *stream, RedSaslResult result_cb, void *opaque);
 
 #endif /* RED_STREAM_H_ */
