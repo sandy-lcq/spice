@@ -357,6 +357,7 @@ void red_stream_free(RedStream *s)
         g_free(s->priv->sasl.mechlist);
         g_free(s->priv->sasl.mechname);
         s->priv->sasl.mechlist = NULL;
+        g_free(s->priv->sasl.data);
         sasl_dispose(&s->priv->sasl.conn);
         s->priv->sasl.conn = NULL;
     }
