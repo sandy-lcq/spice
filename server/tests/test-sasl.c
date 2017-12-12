@@ -29,6 +29,10 @@
 #include "basic-event-loop.h"
 
 static char *mechlist;
+static bool mechlist_called;
+static bool start_called;
+static bool step_called;
+static bool encode_called;
 
 static void
 check_sasl_conn(sasl_conn_t *conn)
@@ -49,6 +53,8 @@ sasl_decode(sasl_conn_t *conn,
             const char **output, unsigned *outputlen)
 {
     check_sasl_conn(conn);
+    g_assert(start_called);
+
     return SASL_NOTDONE;
 }
 
@@ -58,6 +64,9 @@ sasl_encode(sasl_conn_t *conn,
             const char **output, unsigned *outputlen)
 {
     check_sasl_conn(conn);
+    g_assert(start_called);
+
+    encode_called = true;
     return SASL_NOTDONE;
 }
 
@@ -139,6 +148,10 @@ sasl_listmech(sasl_conn_t *conn,
     g_assert_nonnull(prefix);
     g_assert_nonnull(sep);
     g_assert_nonnull(suffix);
+    g_assert(!mechlist_called);
+    g_assert(!start_called);
+    g_assert(!step_called);
+    mechlist_called = true;
 
     g_free(mechlist);
     mechlist = g_strjoin("", prefix, "ONE", sep, "TWO", sep, "THREE", suffix, NULL);
@@ -156,6 +169,10 @@ sasl_server_start(sasl_conn_t *conn,
 {
     check_sasl_conn(conn);
     g_assert_nonnull(serverout);
+    g_assert(mechlist_called);
+    g_assert(!start_called);
+    g_assert(!step_called);
+    start_called = true;
 
     *serverout = "foo";
     *serveroutlen = 3;
@@ -171,6 +188,8 @@ sasl_server_step(sasl_conn_t *conn,
 {
     check_sasl_conn(conn);
     g_assert_nonnull(serverout);
+    g_assert(start_called);
+    step_called = true;
 
     *serverout = "foo";
     *serveroutlen = 3;
