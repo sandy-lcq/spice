@@ -744,6 +744,7 @@ static int auth_sasl_check_ssf(RedSASL *sasl, int *runSSF)
  * u8-array serverout-strin
  * u8 continue
  */
+#define SASL_MAX_MECHNAME_LEN 100
 #define SASL_DATA_MAX_LEN (1024 * 1024)
 
 RedSaslError red_sasl_handle_auth_step(RedStream *stream, AsyncReadDone read_cb, void *opaque)
@@ -981,24 +982,11 @@ bool red_sasl_handle_auth_mechname(RedStream *stream, AsyncReadDone read_cb, voi
     spice_debug("Got client mechname '%s' check against '%s'",
                sasl->mechname, sasl->mechlist);
 
-    if (strncmp(sasl->mechlist, sasl->mechname, sasl->len) == 0) {
-        if (sasl->mechlist[sasl->len] != '\0' &&
-            sasl->mechlist[sasl->len] != ',') {
-            spice_debug("One %d", sasl->mechlist[sasl->len]);
-            return false;
-        }
-    } else {
-        char *offset = strstr(sasl->mechlist, sasl->mechname);
-        spice_debug("Two %p", offset);
-        if (!offset) {
-            return false;
-        }
-        spice_debug("Two '%s'", offset);
-        if (offset[-1] != ',' ||
-            (offset[sasl->len] != '\0'&&
-             offset[sasl->len] != ',')) {
-            return false;
-        }
+    char quoted_mechname[SASL_MAX_MECHNAME_LEN + 4];
+    sprintf(quoted_mechname, ",%s,", sasl->mechname);
+
+    if (strstr(sasl->mechlist, quoted_mechname) == NULL) {
+        return false;
     }
 
     spice_debug("Validated mechname '%s'", sasl->mechname);
@@ -1013,7 +1001,7 @@ bool red_sasl_handle_auth_mechlen(RedStream *stream, AsyncReadDone read_cb, void
 {
     RedSASL *sasl = &stream->priv->sasl;
 
-    if (sasl->len < 1 || sasl->len > 100) {
+    if (sasl->len < 1 || sasl->len > SASL_MAX_MECHNAME_LEN) {
         spice_warning("Got bad client mechname len %d", sasl->len);
         return false;
     }
@@ -1106,9 +1094,9 @@ bool red_sasl_start_auth(RedStream *stream, AsyncReadDone read_cb, void *opaque)
 
     err = sasl_listmech(sasl->conn,
                         NULL, /* Don't need to set user */
-                        "", /* Prefix */
+                        ",", /* Prefix */
                         ",", /* Separator */
-                        "", /* Suffix */
+                        ",", /* Suffix */
                         &mechlist,
                         NULL,
                         NULL);
