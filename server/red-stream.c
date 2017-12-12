@@ -596,6 +596,7 @@ static ssize_t red_stream_sasl_write(RedStream *s, const void *buf, size_t nbyte
                           &s->priv->sasl.encodedLength);
         if (err != SASL_OK) {
             spice_warning("sasl_encode error: %d", err);
+            errno = EIO;
             return -1;
         }
 
@@ -657,6 +658,7 @@ static ssize_t red_stream_sasl_read(RedStream *s, uint8_t *buf, size_t nbyte)
                       &decoded, &decodedlen);
     if (err != SASL_OK) {
         spice_warning("sasl_decode error: %d", err);
+        errno = EIO;
         return -1;
     }
 
