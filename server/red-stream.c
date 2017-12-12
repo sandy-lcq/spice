@@ -985,7 +985,7 @@ bool red_sasl_handle_auth_mechname(RedStream *stream, AsyncReadDone read_cb, voi
     char quoted_mechname[SASL_MAX_MECHNAME_LEN + 4];
     sprintf(quoted_mechname, ",%s,", sasl->mechname);
 
-    if (strstr(sasl->mechlist, quoted_mechname) == NULL) {
+    if (strchr(sasl->mechname, ',') || strstr(sasl->mechlist, quoted_mechname) == NULL) {
         return false;
     }
 
