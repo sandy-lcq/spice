@@ -2019,8 +2019,10 @@ static void reds_handle_other_links(RedsState *reds, RedLinkInfo *link)
     reds_link_free(link);
 }
 
-static void reds_handle_link(RedsState *reds, RedLinkInfo *link)
+static void reds_handle_link(RedLinkInfo *link)
 {
+    RedsState *reds = link->reds;
+
     if (link->link_mess->channel_type == SPICE_CHANNEL_MAIN) {
         reds_handle_main_link(reds, link);
     } else {
@@ -2079,7 +2081,7 @@ static void reds_handle_ticket(void *opaque)
         }
     }
 
-    reds_handle_link(reds, link);
+    reds_handle_link(link);
     goto end;
 
 error:
@@ -2118,12 +2120,11 @@ static void reds_handle_auth_sasl_steplen(void *opaque);
 static void reds_handle_auth_sasl_step(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedsState *reds = link->reds;
     RedSaslError status;
 
     status = red_sasl_handle_auth_step(link->stream, reds_handle_auth_sasl_steplen, link);
     if (status == RED_SASL_ERROR_OK) {
-        reds_handle_link(reds, link);
+        reds_handle_link(link);
     } else if (status != RED_SASL_ERROR_CONTINUE) {
         reds_link_free(link);
     }
@@ -2159,12 +2160,11 @@ static void reds_handle_auth_sasl_steplen(void *opaque)
 static void reds_handle_auth_sasl_start(void *opaque)
 {
     RedLinkInfo *link = (RedLinkInfo *)opaque;
-    RedsState *reds = link->reds;
     RedSaslError status;
 
     status = red_sasl_handle_auth_start(link->stream, reds_handle_auth_sasl_steplen, link);
     if (status == RED_SASL_ERROR_OK) {
-        reds_handle_link(reds, link);
+        reds_handle_link(link);
     } else if (status != RED_SASL_ERROR_CONTINUE) {
         reds_link_free(link);
     }
