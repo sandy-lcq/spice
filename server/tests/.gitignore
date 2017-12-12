@@ -26,5 +26,6 @@ test-two-servers
 test-vdagent
 test-gst
 test-leaks
+test-sasl
 /test-*.log
 /test-*.trs

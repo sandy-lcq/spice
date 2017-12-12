@@ -133,6 +133,7 @@ AX_VALGRIND_CHECK
 
 SPICE_CHECK_LZ4
 SPICE_CHECK_SASL
+AM_CONDITIONAL(HAVE_SASL, test "x$have_sasl" = "xyes")
 
 dnl =========================================================================
 dnl Check deps

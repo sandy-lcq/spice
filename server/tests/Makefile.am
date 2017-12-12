@@ -141,3 +141,7 @@ test_gst_CPPFLAGS = \
 endif
 
 EXTRA_DIST += video-encoders
+
+if HAVE_SASL
+check_PROGRAMS += test-sasl
+endif
