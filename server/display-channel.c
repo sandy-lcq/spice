@@ -1659,7 +1659,7 @@ static void depended_item_remove(DependItem *item)
     ring_remove(&item->ring_item);
 }
 
-static void drawable_remove_dependencies(DisplayChannel *display, Drawable *drawable)
+static void drawable_remove_dependencies(Drawable *drawable)
 {
     int x;
     int surface_id;
@@ -1701,7 +1701,7 @@ void drawable_unref(Drawable *drawable)
     }
     region_destroy(&drawable->tree_item.base.rgn);
 
-    drawable_remove_dependencies(display, drawable);
+    drawable_remove_dependencies(drawable);
     drawable_unref_surface_deps(display, drawable);
     display_channel_surface_unref(display, drawable->surface_id);
 
