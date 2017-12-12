@@ -190,7 +190,7 @@ stat_file_add_counter(RedStatFile *stat_file, StatNodeRef parent, const char *na
         return NULL;
     }
     node = &stat_file->stat->nodes[ref];
-    node->flags |= SPICE_STAT_NODE_FLAG_VALUE;
+    __sync_or_and_fetch(&node->flags, SPICE_STAT_NODE_FLAG_VALUE);
     return &node->value;
 }
 
