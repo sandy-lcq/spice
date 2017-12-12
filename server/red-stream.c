@@ -886,9 +886,9 @@ RedSaslError red_sasl_handle_auth_start(RedStream *stream, AsyncReadDone read_cb
     }
 
     spice_debug("Start SASL auth with mechanism %s. Data %p (%d bytes)",
-               sasl->mechlist, clientdata, datalen);
+               sasl->mechname, clientdata, datalen);
     err = sasl_server_start(sasl->conn,
-                            sasl->mechlist,
+                            sasl->mechname,
                             clientdata,
                             datalen,
                             &serverout,
@@ -1000,9 +1000,6 @@ bool red_sasl_handle_auth_mechname(RedStream *stream, AsyncReadDone read_cb, voi
             return false;
         }
     }
-
-    g_free(sasl->mechlist);
-    sasl->mechlist = g_strdup(sasl->mechname);
 
     spice_debug("Validated mechname '%s'", sasl->mechname);
 
