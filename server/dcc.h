@@ -124,7 +124,7 @@ typedef struct RedImageItem {
 } RedImageItem;
 
 typedef struct RedDrawablePipeItem {
-    RedPipeItem dpi_pipe_item; /* link for the client's pipe itself */
+    RedPipeItem dpi_pipe_item;
     Drawable *drawable;
     DisplayChannelClient *dcc;
 } RedDrawablePipeItem;
