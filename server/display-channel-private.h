@@ -132,7 +132,7 @@ struct DisplayChannelPrivate
                   DisplayChannelClient, _data)
 
 typedef struct RedMonitorsConfigItem {
-    RedPipeItem pipe_item;
+    RedPipeItem base;
     MonitorsConfig *monitors_config;
 } RedMonitorsConfigItem;
 
@@ -174,7 +174,7 @@ int display_channel_get_video_stream_id(DisplayChannel *display, VideoStream *st
 VideoStream *display_channel_get_nth_video_stream(DisplayChannel *display, gint i);
 
 typedef struct RedSurfaceDestroyItem {
-    RedPipeItem pipe_item;
+    RedPipeItem base;
     SpiceMsgSurfaceDestroy surface_destroy;
 } RedSurfaceDestroyItem;
 

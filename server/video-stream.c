@@ -365,7 +365,7 @@ static void before_reattach_stream(DisplayChannel *display,
         agent = dcc_get_video_stream_agent(dcc, index);
 
         if (red_channel_client_pipe_item_is_linked(RED_CHANNEL_CLIENT(dcc),
-                                                   &dpi->dpi_pipe_item)) {
+                                                   &dpi->base)) {
 #ifdef STREAM_STATS
             agent->stats.num_drops_pipe++;
 #endif
@@ -755,11 +755,11 @@ void dcc_create_stream(DisplayChannelClient *dcc, VideoStream *stream)
         RedStreamActivateReportItem *report_pipe_item = g_new0(RedStreamActivateReportItem, 1);
 
         agent->report_id = rand();
-        red_pipe_item_init(&report_pipe_item->pipe_item,
+        red_pipe_item_init(&report_pipe_item->base,
                            RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT);
         report_pipe_item->stream_id = stream_id;
         report_pipe_item->report_id = agent->report_id;
-        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &report_pipe_item->pipe_item);
+        red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &report_pipe_item->base);
     }
 #ifdef STREAM_STATS
     memset(&agent->stats, 0, sizeof(StreamStats));

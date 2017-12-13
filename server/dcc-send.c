@@ -638,7 +638,7 @@ static bool pipe_rendered_drawables_intersect_with_areas(DisplayChannelClient *d
 
         if (pipe_item->type != RED_PIPE_ITEM_TYPE_DRAW)
             continue;
-        drawable = SPICE_CONTAINEROF(pipe_item, RedDrawablePipeItem, dpi_pipe_item)->drawable;
+        drawable = SPICE_UPCAST(RedDrawablePipeItem, pipe_item)->drawable;
 
         if (ring_item_is_linked(&drawable->list_link))
             continue; // item hasn't been rendered
@@ -731,7 +731,7 @@ static void red_pipe_replace_rendered_drawables_with_images(DisplayChannelClient
 
         if (pipe_item->type != RED_PIPE_ITEM_TYPE_DRAW)
             continue;
-        dpi = SPICE_CONTAINEROF(pipe_item, RedDrawablePipeItem, dpi_pipe_item);
+        dpi = SPICE_UPCAST(RedDrawablePipeItem, pipe_item);
         drawable = dpi->drawable;
         if (ring_item_is_linked(&drawable->list_link))
             continue; // item hasn't been rendered
@@ -2392,7 +2392,7 @@ void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
     reset_send_data(dcc);
     switch (pipe_item->type) {
     case RED_PIPE_ITEM_TYPE_DRAW: {
-        RedDrawablePipeItem *dpi = SPICE_CONTAINEROF(pipe_item, RedDrawablePipeItem, dpi_pipe_item);
+        RedDrawablePipeItem *dpi = SPICE_UPCAST(RedDrawablePipeItem, pipe_item);
         marshall_qxl_drawable(rcc, m, dpi);
         break;
     }
@@ -2432,28 +2432,23 @@ void dcc_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_INVAL_ALL_PALETTES);
         break;
     case RED_PIPE_ITEM_TYPE_CREATE_SURFACE: {
-        RedSurfaceCreateItem *surface_create = SPICE_CONTAINEROF(pipe_item, RedSurfaceCreateItem,
-                                                                 pipe_item);
+        RedSurfaceCreateItem *surface_create = SPICE_UPCAST(RedSurfaceCreateItem, pipe_item);
         marshall_surface_create(rcc, m, &surface_create->surface_create);
         break;
     }
     case RED_PIPE_ITEM_TYPE_DESTROY_SURFACE: {
-        RedSurfaceDestroyItem *surface_destroy = SPICE_CONTAINEROF(pipe_item, RedSurfaceDestroyItem,
-                                                                   pipe_item);
+        RedSurfaceDestroyItem *surface_destroy = SPICE_UPCAST(RedSurfaceDestroyItem, pipe_item);
         marshall_surface_destroy(rcc, m, surface_destroy->surface_destroy.surface_id);
         break;
     }
     case RED_PIPE_ITEM_TYPE_MONITORS_CONFIG: {
-        RedMonitorsConfigItem *monconf_item = SPICE_CONTAINEROF(pipe_item,
-                                                                RedMonitorsConfigItem,
-                                                                pipe_item);
+        RedMonitorsConfigItem *monconf_item = SPICE_UPCAST(RedMonitorsConfigItem, pipe_item);
         marshall_monitors_config(rcc, m, monconf_item->monitors_config);
         break;
     }
     case RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT: {
-        RedStreamActivateReportItem *report_item = SPICE_CONTAINEROF(pipe_item,
-                                                                     RedStreamActivateReportItem,
-                                                                     pipe_item);
+        RedStreamActivateReportItem *report_item =
+            SPICE_UPCAST(RedStreamActivateReportItem, pipe_item);
         marshall_stream_activate_report(rcc, m, report_item);
         break;
     }

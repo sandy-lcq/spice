@@ -96,7 +96,7 @@ typedef struct FreeList {
 #define DCC_TO_DC(dcc) ((DisplayChannel*)red_channel_client_get_channel((RedChannelClient*)dcc))
 
 typedef struct RedSurfaceCreateItem {
-    RedPipeItem pipe_item;
+    RedPipeItem base;
     SpiceMsgSurfaceCreate surface_create;
 } RedSurfaceCreateItem;
 
@@ -124,7 +124,7 @@ typedef struct RedImageItem {
 } RedImageItem;
 
 typedef struct RedDrawablePipeItem {
-    RedPipeItem dpi_pipe_item;
+    RedPipeItem base;
     Drawable *drawable;
     DisplayChannelClient *dcc;
 } RedDrawablePipeItem;

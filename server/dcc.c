@@ -202,7 +202,7 @@ static RedSurfaceCreateItem *red_surface_create_item_new(RedChannel* channel,
     create->surface_create.flags = flags;
     create->surface_create.format = format;
 
-    red_pipe_item_init(&create->pipe_item, RED_PIPE_ITEM_TYPE_CREATE_SURFACE);
+    red_pipe_item_init(&create->base, RED_PIPE_ITEM_TYPE_CREATE_SURFACE);
     return create;
 }
 
@@ -246,7 +246,7 @@ bool dcc_clear_surface_drawables_from_pipe(DisplayChannelClient *dcc, int surfac
 
         l = l->next;
         if (item->type == RED_PIPE_ITEM_TYPE_DRAW) {
-            dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem, dpi_pipe_item);
+            dpi = SPICE_UPCAST(RedDrawablePipeItem, item);
             drawable = dpi->drawable;
         } else if (item->type == RED_PIPE_ITEM_TYPE_UPGRADE) {
             drawable = SPICE_UPCAST(RedUpgradeItem, item)->drawable;
@@ -313,7 +313,7 @@ void dcc_create_surface(DisplayChannelClient *dcc, int surface_id)
                                          surface->context.height,
                                          surface->context.format, flags);
     dcc->priv->surface_client_created[surface_id] = TRUE;
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &create->pipe_item);
+    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &create->base);
 }
 
 // adding the pipe item after pos. If pos == NULL, adding to head.
@@ -433,8 +433,7 @@ static void add_drawable_surface_images(DisplayChannelClient *dcc, Drawable *dra
 
 static void red_drawable_pipe_item_free(RedPipeItem *item)
 {
-    RedDrawablePipeItem *dpi = SPICE_CONTAINEROF(item, RedDrawablePipeItem,
-                                                 dpi_pipe_item);
+    RedDrawablePipeItem *dpi = SPICE_UPCAST(RedDrawablePipeItem, item);
     spice_assert(item->refcount == 0);
 
     dpi->drawable->pipes = g_list_remove(dpi->drawable->pipes, dpi);
@@ -451,7 +450,7 @@ static RedDrawablePipeItem *red_drawable_pipe_item_new(DisplayChannelClient *dcc
     dpi->drawable = drawable;
     dpi->dcc = dcc;
     drawable->pipes = g_list_prepend(drawable->pipes, dpi);
-    red_pipe_item_init_full(&dpi->dpi_pipe_item, RED_PIPE_ITEM_TYPE_DRAW,
+    red_pipe_item_init_full(&dpi->base, RED_PIPE_ITEM_TYPE_DRAW,
                             red_drawable_pipe_item_free);
     drawable->refs++;
     return dpi;
@@ -462,7 +461,7 @@ void dcc_prepend_drawable(DisplayChannelClient *dcc, Drawable *drawable)
     RedDrawablePipeItem *dpi = red_drawable_pipe_item_new(dcc, drawable);
 
     add_drawable_surface_images(dcc, drawable);
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item);
+    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &dpi->base);
 }
 
 void dcc_append_drawable(DisplayChannelClient *dcc, Drawable *drawable)
@@ -470,7 +469,7 @@ void dcc_append_drawable(DisplayChannelClient *dcc, Drawable *drawable)
     RedDrawablePipeItem *dpi = red_drawable_pipe_item_new(dcc, drawable);
 
     add_drawable_surface_images(dcc, drawable);
-    red_channel_client_pipe_add_tail(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item);
+    red_channel_client_pipe_add_tail(RED_CHANNEL_CLIENT(dcc), &dpi->base);
 }
 
 void dcc_add_drawable_after(DisplayChannelClient *dcc, Drawable *drawable, RedPipeItem *pos)
@@ -478,7 +477,7 @@ void dcc_add_drawable_after(DisplayChannelClient *dcc, Drawable *drawable, RedPi
     RedDrawablePipeItem *dpi = red_drawable_pipe_item_new(dcc, drawable);
 
     add_drawable_surface_images(dcc, drawable);
-    red_channel_client_pipe_add_after(RED_CHANNEL_CLIENT(dcc), &dpi->dpi_pipe_item, pos);
+    red_channel_client_pipe_add_after(RED_CHANNEL_CLIENT(dcc), &dpi->base, pos);
 }
 
 static void dcc_init_stream_agents(DisplayChannelClient *dcc)
@@ -634,9 +633,9 @@ void dcc_video_stream_agent_clip(DisplayChannelClient* dcc, VideoStreamAgent *ag
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &item->base);
 }
 
-static void red_monitors_config_item_free(RedPipeItem *base)
+static void red_monitors_config_item_free(RedPipeItem *pipe_item)
 {
-    RedMonitorsConfigItem *item = SPICE_CONTAINEROF(base, RedMonitorsConfigItem, pipe_item);
+    RedMonitorsConfigItem *item = SPICE_UPCAST(RedMonitorsConfigItem, pipe_item);
 
     monitors_config_unref(item->monitors_config);
     g_free(item);
@@ -650,7 +649,7 @@ static RedMonitorsConfigItem *red_monitors_config_item_new(RedChannel* channel,
     mci = g_new(RedMonitorsConfigItem, 1);
     mci->monitors_config = monitors_config_ref(monitors_config);
 
-    red_pipe_item_init_full(&mci->pipe_item, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
+    red_pipe_item_init_full(&mci->base, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
                             red_monitors_config_item_free);
     return mci;
 }
@@ -673,7 +672,7 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
 
     mci = red_monitors_config_item_new(red_channel_client_get_channel(RED_CHANNEL_CLIENT(dcc)),
                                        monitors_config);
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &mci->pipe_item);
+    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &mci->base);
 }
 
 static RedSurfaceDestroyItem *red_surface_destroy_item_new(uint32_t surface_id)
@@ -682,7 +681,7 @@ static RedSurfaceDestroyItem *red_surface_destroy_item_new(uint32_t surface_id)
 
     destroy = g_new(RedSurfaceDestroyItem, 1);
     destroy->surface_destroy.surface_id = surface_id;
-    red_pipe_item_init(&destroy->pipe_item, RED_PIPE_ITEM_TYPE_DESTROY_SURFACE);
+    red_pipe_item_init(&destroy->base, RED_PIPE_ITEM_TYPE_DESTROY_SURFACE);
 
     return destroy;
 }
@@ -744,7 +743,7 @@ void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
 
     dcc->priv->surface_client_created[surface_id] = FALSE;
     destroy = red_surface_destroy_item_new(surface_id);
-    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &destroy->pipe_item);
+    red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &destroy->base);
 }
 
 #define MIN_DIMENSION_TO_QUIC 3

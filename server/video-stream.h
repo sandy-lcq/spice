@@ -54,7 +54,7 @@ typedef struct RedUpgradeItem {
 } RedUpgradeItem;
 
 typedef struct RedStreamActivateReportItem {
-    RedPipeItem pipe_item;
+    RedPipeItem base;
     uint32_t stream_id;
     uint32_t report_id;
 } RedStreamActivateReportItem;
