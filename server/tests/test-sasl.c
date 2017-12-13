@@ -22,6 +22,7 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
 #include <stdbool.h>
 #include <spice.h>
 #include <sasl/sasl.h>
@@ -48,6 +49,8 @@ static bool encode_called;
 
 static SpiceCoreInterface *core;
 static SpiceServer *server;
+
+static unsigned int test_num;
 
 static gboolean idle_end_test(void *arg);
 
@@ -340,9 +343,41 @@ idle_add(GSourceFunc func, void *arg)
     g_source_unref(source);
 }
 
+typedef struct {
+    const char *mechname;
+    int mechlen;
+    bool success;
+} TestData;
+
+static char long_mechname[128];
+static TestData tests_data[] = {
+    // these should just succeed
+#define TEST_SUCCESS(mech) \
+    { mech, -1, true },
+    TEST_SUCCESS("ONE")
+    TEST_SUCCESS("TWO")
+    TEST_SUCCESS("THREE")
+
+    // these test bad mech names
+#define TEST_BAD_NAME(mech, len) \
+    { mech, len, false },
+    TEST_BAD_NAME("ON", -1)
+    TEST_BAD_NAME("NE", -1)
+    TEST_BAD_NAME("THRE", -1)
+    TEST_BAD_NAME("HREE", -1)
+    TEST_BAD_NAME("ON\x00", 3)
+    TEST_BAD_NAME("O\x00\x00", 3)
+    TEST_BAD_NAME("", -1)
+    TEST_BAD_NAME(long_mechname, 100)
+    TEST_BAD_NAME(long_mechname, 101)
+    TEST_BAD_NAME("ONE,TWO", -1)
+};
+
 static void *
 client_emulator(void *arg)
 {
+    const TestData *data = &tests_data[test_num];
+
     int sock = GPOINTER_TO_INT(arg);
 
     // send initial message
@@ -376,12 +411,13 @@ client_emulator(void *arg)
     read_all(sock, buf, mechlen);
 
     // mech name
-    write_u32(sock, 3);
-    write_all(sock, "ONE", 3);
+    write_u32(sock, data->mechlen);
+    write_all(sock, data->mechname, data->mechlen);
 
     // first challenge
-    write_u32(sock, 5);
-    write_all(sock, "START", 5);
+    if (write_u32_err(sock, 5) == sizeof(uint32_t)) {
+        do_readwrite_all(sock, "START", 5, true);
+    }
 
     shutdown(sock, SHUT_RDWR);
     close(sock);
@@ -394,6 +430,13 @@ client_emulator(void *arg)
 static pthread_t
 setup_thread(void)
 {
+    TestData *data = &tests_data[test_num];
+    if (data->mechlen < 0) {
+        data->mechlen = strlen(data->mechname);
+    }
+    int len = data->mechlen;
+    printf("\nRunning test %d ('%*.*s' %d)\n", test_num, len, len, data->mechname, len);
+
     int sv[2];
     g_assert_cmpint(socketpair(AF_LOCAL, SOCK_STREAM, 0, sv), ==, 0);
 
@@ -414,17 +457,34 @@ idle_end_test(void *arg)
 }
 
 static void
+check_test_results(void)
+{
+    const TestData *data = &tests_data[test_num];
+    if (data->success) {
+        g_assert(encode_called);
+        return;
+    }
+
+    g_assert(mechlist_called);
+    g_assert(!encode_called);
+}
+
+static void
 sasl_mechs(void)
 {
     start_test();
 
-    pthread_t thread = setup_thread();
-    alarm(4);
-    basic_event_loop_mainloop();
-    g_assert_cmpint(pthread_join(thread, NULL), ==, 0);
-    alarm(0);
-    g_assert(encode_called);
-    reset_test();
+    memset(long_mechname, 'X', sizeof(long_mechname));
+
+    for (test_num = 0; test_num < G_N_ELEMENTS(tests_data); test_num++) {
+        pthread_t thread = setup_thread();
+        alarm(4);
+        basic_event_loop_mainloop();
+        g_assert_cmpint(pthread_join(thread, NULL), ==, 0);
+        alarm(0);
+        check_test_results();
+        reset_test();
+    }
 
     end_tests();
 }
