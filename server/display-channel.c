@@ -441,17 +441,12 @@ static void current_remove_drawable(DisplayChannel *display, Drawable *item)
 static void drawable_remove_from_pipes(Drawable *drawable)
 {
     RedDrawablePipeItem *dpi;
-    GList *l;
 
-    l = drawable->pipes;
-    while (l) {
-        GList *next = l->next;
+    GLIST_FOREACH(drawable->pipes, RedDrawablePipeItem, dpi) {
         RedChannelClient *rcc;
 
-        dpi = l->data;
         rcc = RED_CHANNEL_CLIENT(dpi->dcc);
         red_channel_client_pipe_remove_and_release(rcc, &dpi->dpi_pipe_item);
-        l = next;
     }
 }
 
