@@ -5,6 +5,7 @@ libtest-stat2.a
 libtest-stat3.a
 libtest-stat4.a
 test-agent-msg-filter
+test-channel
 test-codecs-parsing
 test-display-no-ssl
 test-display-resolution-changes
@@ -20,6 +21,7 @@ test-qxl-parsing
 test-stat
 test-stat-file
 test-stream
+test-stream-device
 test-two-servers
 test-vdagent
 test-gst
