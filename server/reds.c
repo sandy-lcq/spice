@@ -1791,7 +1791,6 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
 
     reds_info_new_channel(link, connection_id);
     stream = link->stream;
-    red_stream_remove_watch(stream);
     link->stream = NULL;
     link->link_mess = NULL;
     reds_link_free(link);
@@ -1993,7 +1992,6 @@ static void reds_handle_other_links(RedsState *reds, RedLinkInfo *link)
 
     reds_send_link_result(link, SPICE_LINK_ERR_OK);
     reds_info_new_channel(link, link_mess->connection_id);
-    red_stream_remove_watch(link->stream);
 
     mig_client = reds_mig_target_client_find(reds, client);
     /*
@@ -2023,6 +2021,7 @@ static void reds_handle_link(RedLinkInfo *link)
 {
     RedsState *reds = link->reds;
 
+    red_stream_remove_watch(link->stream);
     if (link->link_mess->channel_type == SPICE_CHANNEL_MAIN) {
         reds_handle_main_link(reds, link);
     } else {
