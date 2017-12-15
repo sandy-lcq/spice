@@ -68,7 +68,7 @@ display_channel_set_property(GObject *object,
     switch (property_id)
     {
         case PROP_N_SURFACES:
-            self->priv->n_surfaces = g_value_get_uint(value);
+            self->priv->n_surfaces = MIN(g_value_get_uint(value), NUM_SURFACES);
             break;
         case PROP_VIDEO_CODECS:
             display_channel_set_video_codecs(self, g_value_get_boxed(value));
