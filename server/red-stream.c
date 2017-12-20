@@ -38,7 +38,6 @@
 #include "reds.h"
 
 struct AsyncRead {
-    RedStream *stream;
     void *opaque;
     uint8_t *now;
     uint8_t *end;
@@ -492,20 +491,20 @@ void red_stream_set_async_error_handler(RedStream *stream,
     stream->priv->async_read.error = error_handler;
 }
 
-static inline void async_read_clear_handlers(AsyncRead *async)
+static inline void async_read_clear_handlers(RedStream *stream)
 {
-    if (async->stream->watch) {
-        red_stream_remove_watch(async->stream);
-    }
-    async->stream = NULL;
+    AsyncRead *async = &stream->priv->async_read;
+    red_stream_remove_watch(stream);
+    async->now = NULL;
+    async->end = NULL;
 }
 
 static void async_read_handler(G_GNUC_UNUSED int fd,
                                G_GNUC_UNUSED int event,
                                void *data)
 {
-    AsyncRead *async = (AsyncRead *)data;
-    RedStream *stream = async->stream;
+    RedStream *stream = data;
+    AsyncRead *async = &stream->priv->async_read;
     SpiceCoreInterfaceInternal *core = stream->priv->core;
 
     for (;;) {
@@ -520,13 +519,13 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
                 if (!stream->watch) {
                     stream->watch = core->watch_add(core, stream->socket,
                                                     SPICE_WATCH_EVENT_READ,
-                                                    async_read_handler, async);
+                                                    async_read_handler, stream);
                 }
                 return;
             case EINTR:
                 break;
             default:
-                async_read_clear_handlers(async);
+                async_read_clear_handlers(stream);
                 if (async->error) {
                     async->error(async->opaque, err);
                 }
@@ -535,7 +534,7 @@ static void async_read_handler(G_GNUC_UNUSED int fd,
         } else {
             async->now += n;
             if (async->now == async->end) {
-                async_read_clear_handlers(async);
+                async_read_clear_handlers(stream);
                 async->done(async->opaque);
                 return;
             }
@@ -550,13 +549,12 @@ void red_stream_async_read(RedStream *stream,
 {
     AsyncRead *async = &stream->priv->async_read;
 
-    g_return_if_fail(!async->stream);
-    async->stream = stream;
+    g_return_if_fail(async->now == NULL && async->end == NULL);
     async->now = data;
     async->end = async->now + size;
     async->done = read_done_cb;
     async->opaque = opaque;
-    async_read_handler(0, 0, async);
+    async_read_handler(0, 0, stream);
 
 }
 
