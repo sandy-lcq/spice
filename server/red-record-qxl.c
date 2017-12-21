@@ -294,7 +294,7 @@ static void red_record_image(FILE *fd, RedMemSlotInfo *slots, int group_id,
                 fprintf(fd, "ents %d\n", qp->ents[i]);
             }
         }
-        bitmap_size = qxl->bitmap.y * abs(qxl->bitmap.stride);
+        bitmap_size = qxl->bitmap.y * qxl->bitmap.stride;
         if (qxl_flags & QXL_BITMAP_DIRECT) {
             red_record_image_data_flat(fd, slots, group_id,
                                                          qxl->bitmap.data,

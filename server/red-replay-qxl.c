@@ -468,7 +468,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         } else {
             qxl->bitmap.palette = 0;
         }
-        bitmap_size = qxl->bitmap.y * abs(qxl->bitmap.stride);
+        bitmap_size = qxl->bitmap.y * qxl->bitmap.stride;
         qxl->bitmap.data = 0;
         if (qxl_flags & QXL_BITMAP_DIRECT) {
             qxl->bitmap.data = QXLPHYSICAL_FROM_PTR(red_replay_image_data_flat(replay, &bitmap_size));
