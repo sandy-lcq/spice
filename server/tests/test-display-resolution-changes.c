@@ -52,8 +52,8 @@ set_primary_params(SPICE_GNUC_UNUSED Test *test, Command *command)
 #endif
     static int count = 0;
 
-    command->create_primary.width = 800 + sin((float)count / 6) * 200;
-    command->create_primary.height = 600 + cos((float)count / 6) * 200;
+    command->create_primary.width = 800 + sin(count / 6.0) * 200;
+    command->create_primary.height = 600 + cos(count / 6.0) * 200;
     count++;
 }
 
