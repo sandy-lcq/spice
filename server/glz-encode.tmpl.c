@@ -89,21 +89,18 @@
 #ifdef LZ_RGB24
 #define PIXEL rgb24_pixel_t
 #define FNAME(name) glz_rgb24_##name
-#define ENCODE_PIXEL(e, pix) {encode(e, (pix).b); encode(e, (pix).g); encode(e, (pix).r);}
-#define MIN_REF_ENCODE_SIZE 2
-#define MAX_REF_ENCODE_SIZE 2
 #endif
 
 #ifdef LZ_RGB32
 #define PIXEL rgb32_pixel_t
 #define FNAME(name) glz_rgb32_##name
-#define ENCODE_PIXEL(e, pix) {encode(e, (pix).b); encode(e, (pix).g); encode(e, (pix).r);}
-#define MIN_REF_ENCODE_SIZE 2
-#define MAX_REF_ENCODE_SIZE 2
 #endif
 
 
 #if  defined(LZ_RGB24) || defined(LZ_RGB32)
+#define ENCODE_PIXEL(e, pix) {encode(e, (pix).b); encode(e, (pix).g); encode(e, (pix).r);}
+#define MIN_REF_ENCODE_SIZE 2
+#define MAX_REF_ENCODE_SIZE 2
 #define GET_r(pix) ((pix).r)
 #define GET_g(pix) ((pix).g)
 #define GET_b(pix) ((pix).b)
