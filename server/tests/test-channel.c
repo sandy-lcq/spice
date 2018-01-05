@@ -189,9 +189,9 @@ static void send_ack_sync(int socket, uint32_t generation)
         uint32_t generation;
     } msg;
     SPICE_VERIFY(sizeof(msg) == 12);
-    msg.type = SPICE_MSGC_ACK_SYNC;
-    msg.len = sizeof(generation);
-    msg.generation = generation;
+    msg.type = GUINT16_TO_LE(SPICE_MSGC_ACK_SYNC);
+    msg.len = GUINT32_TO_LE(sizeof(generation));
+    msg.generation = GUINT32_TO_LE(generation);
 
     g_assert_cmpint(write(socket, &msg.type, 10), ==, 10);
 }
