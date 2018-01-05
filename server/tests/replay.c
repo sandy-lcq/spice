@@ -225,7 +225,7 @@ static void end_replay(void)
 
 static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_info)
 {
-    spice_replay_free_cmd(replay, (QXLCommandExt *)release_info.info->id);
+    spice_replay_free_cmd(replay, (QXLCommandExt *)(uintptr_t)release_info.info->id);
 }
 
 static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *ext)

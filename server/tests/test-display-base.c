@@ -64,7 +64,7 @@ static void test_spice_destroy_update(SimpleSpiceUpdate *update)
         return;
     }
     if (update->drawable.clip.type != SPICE_CLIP_TYPE_NONE) {
-        uint8_t *ptr = (uint8_t*)update->drawable.clip.data;
+        uint8_t *ptr = (uint8_t*)(uintptr_t)update->drawable.clip.data;
         g_free(ptr);
     }
     g_free(update->bitmap);
@@ -401,7 +401,7 @@ static void create_primary_surface(Test *test, uint32_t width,
     surface.flags      = 0;
     surface.type       = 0;    /* unused by red_worker */
     surface.position   = 0;    /* unused by red_worker */
-    surface.mem        = (uint64_t)&test->primary_surface;
+    surface.mem        = (uintptr_t)&test->primary_surface;
     surface.group_id   = MEM_SLOT_GROUP_ID;
 
     test->width = width;
