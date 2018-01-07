@@ -406,10 +406,19 @@ typedef enum {
     STEP_NEVER,
 } ClientEmulationSteps;
 
+typedef enum {
+    FAILURE_OK,
+    FAILURE_UNKNOWN,
+    FAILURE_DISCONNECT,
+    FAILURE_MAGIC,
+    FAILURE_AUTH,
+} FailureType;
+
 typedef struct {
     const char *mechname;
     int mechlen;
     bool success;
+    FailureType failure_type;
     ClientEmulationSteps last_step;
     unsigned flags;
     int line;
@@ -419,28 +428,30 @@ static char long_mechname[128];
 static TestData tests_data[] = {
     // these should just succeed
 #define TEST_SUCCESS(mech) \
-    { mech, -1, true, STEP_NEVER, FLAG_NONE, __LINE__ },
+    { mech, -1, true, FAILURE_OK, STEP_NEVER, FLAG_NONE, __LINE__ },
     TEST_SUCCESS("ONE")
     TEST_SUCCESS("TWO")
     TEST_SUCCESS("THREE")
 
     // these test bad mech names
 #define TEST_BAD_NAME(mech, len) \
-    { mech, len, false, STEP_NEVER, FLAG_NONE, __LINE__ },
+    { mech, len, false, FAILURE_MAGIC, STEP_NEVER, FLAG_NONE, __LINE__ },
+#define TEST_BAD_NAME_LEN(mech, len) \
+    { mech, len, false, FAILURE_DISCONNECT, STEP_NEVER, FLAG_NONE, __LINE__ },
     TEST_BAD_NAME("ON", -1)
     TEST_BAD_NAME("NE", -1)
     TEST_BAD_NAME("THRE", -1)
     TEST_BAD_NAME("HREE", -1)
     TEST_BAD_NAME("ON\x00", 3)
     TEST_BAD_NAME("O\x00\x00", 3)
-    TEST_BAD_NAME("", -1)
+    TEST_BAD_NAME_LEN("", -1)
     TEST_BAD_NAME(long_mechname, 100)
-    TEST_BAD_NAME(long_mechname, 101)
+    TEST_BAD_NAME_LEN(long_mechname, 101)
     TEST_BAD_NAME("ONE,TWO", -1)
 
     // stop before filling everything
 #define TEST_EARLY_STOP(step) \
-    { "ONE", -1, false, step, FLAG_NONE, __LINE__},
+    { "ONE", -1, false, FAILURE_UNKNOWN, step, FLAG_NONE, __LINE__},
     TEST_EARLY_STOP(STEP_READ_MECHLIST_LEN)
     TEST_EARLY_STOP(STEP_READ_MECHLIST)
     TEST_EARLY_STOP(STEP_WRITE_MECHNAME_LEN)
@@ -449,29 +460,31 @@ static TestData tests_data[] = {
     TEST_EARLY_STOP(STEP_WRITE_START)
     TEST_EARLY_STOP(STEP_WRITE_STEP_LEN)
 
-#define TEST_FLAGS(result, flags) \
-    { "ONE", -1, result, STEP_NEVER, flags, __LINE__},
-    TEST_FLAGS(false, FLAG_LOW_SSF)
-    TEST_FLAGS(false, FLAG_START_OK|FLAG_LOW_SSF)
-    TEST_FLAGS(true, FLAG_START_OK)
-    TEST_FLAGS(true, FLAG_SERVER_NULL_START)
-    TEST_FLAGS(true, FLAG_SERVER_NULL_STEP)
-    TEST_FLAGS(true, FLAG_CLIENT_NULL_START)
-    TEST_FLAGS(true, FLAG_CLIENT_NULL_STEP)
-    TEST_FLAGS(false, FLAG_SERVER_BIG_START)
-    TEST_FLAGS(false, FLAG_SERVER_BIG_STEP)
-    TEST_FLAGS(false, FLAG_CLIENT_BIG_START)
-    TEST_FLAGS(false, FLAG_CLIENT_BIG_STEP)
-    TEST_FLAGS(false, FLAG_START_ERROR)
-    TEST_FLAGS(false, FLAG_STEP_ERROR)
+#define TEST_FLAGS_OK(flags) \
+    { "ONE", -1, true, FAILURE_OK, STEP_NEVER, flags, __LINE__},
+#define TEST_FLAGS_KO(failure, flags) \
+    { "ONE", -1, false, failure, STEP_NEVER, flags, __LINE__},
+    TEST_FLAGS_KO(FAILURE_OK, FLAG_LOW_SSF)
+    TEST_FLAGS_KO(FAILURE_OK, FLAG_START_OK|FLAG_LOW_SSF)
+    TEST_FLAGS_OK(FLAG_START_OK)
+    TEST_FLAGS_OK(FLAG_SERVER_NULL_START)
+    TEST_FLAGS_OK(FLAG_SERVER_NULL_STEP)
+    TEST_FLAGS_OK(FLAG_CLIENT_NULL_START)
+    TEST_FLAGS_OK(FLAG_CLIENT_NULL_STEP)
+    TEST_FLAGS_KO(FAILURE_DISCONNECT, FLAG_SERVER_BIG_START)
+    TEST_FLAGS_KO(FAILURE_DISCONNECT, FLAG_SERVER_BIG_STEP)
+    TEST_FLAGS_KO(FAILURE_MAGIC, FLAG_CLIENT_BIG_START)
+    TEST_FLAGS_KO(FAILURE_DISCONNECT, FLAG_CLIENT_BIG_STEP)
+    TEST_FLAGS_KO(FAILURE_DISCONNECT, FLAG_START_ERROR)
+    TEST_FLAGS_KO(FAILURE_DISCONNECT, FLAG_STEP_ERROR)
 };
 
-static void
+static FailureType
 client_emulator(int sock)
 {
     const TestData *data = &tests_data[test_num];
 
-#define STOP_AT(step) if (data->last_step == STEP_ ## step) { return; }
+#define STOP_AT(step) if (data->last_step == STEP_ ## step) { return FAILURE_UNKNOWN; }
 
     // send initial message
     write_all(sock, &initial_message, sizeof(initial_message));
@@ -521,32 +534,43 @@ client_emulator(int sock)
     if (write_u32_err(sock, out ? outlen : 0) == sizeof(uint32_t)) {
         STOP_AT(WRITE_START_LEN);
         if (out) {
-            if (do_readwrite_all(sock, out, outlen, true) != outlen) {
-                return;
-            }
+            do_readwrite_all(sock, out, outlen, true);
         }
         STOP_AT(WRITE_START);
     }
 
-    uint32_t datalen;
-    if (read_u32_err(sock, &datalen) != sizeof(datalen)) {
-        return;
-    }
-    if (datalen == GUINT32_FROM_LE(SPICE_MAGIC)) {
-        return;
-    }
-    g_assert_cmpint(datalen, <=, sizeof(buf));
-    read_all(sock, buf, datalen);
-
-    get_step_out(&out, &outlen, "STEP", FLAG_CLIENT_NULL_STEP, FLAG_CLIENT_BIG_STEP);
-    if (write_u32_err(sock, out ? outlen : 0) == sizeof(uint32_t)) {
-        STOP_AT(WRITE_STEP_LEN);
-        if (out) {
-            if (do_readwrite_all(sock, out, outlen, true) != outlen) {
-                return;
-            }
+    for (;;) {
+        uint32_t datalen;
+        if (read_u32_err(sock, &datalen) != sizeof(datalen)) {
+            return FAILURE_DISCONNECT;
         }
-        STOP_AT(WRITE_STEP);
+        if (datalen == GUINT32_FROM_LE(SPICE_MAGIC)) {
+            return FAILURE_MAGIC;
+        }
+        g_assert_cmpint(datalen, <=, sizeof(buf));
+        read_all(sock, buf, datalen);
+
+        uint8_t is_ok;
+        read_all(sock, &is_ok, sizeof(is_ok));
+        if (is_ok) {
+            // is_ok should be 0 or 1
+            g_assert_cmpint(is_ok, ==, 1);
+            uint32_t step_result;
+            read_u32(sock, &step_result);
+            if (!step_result) {
+                return FAILURE_AUTH;
+            }
+            return FAILURE_OK;
+        }
+
+        get_step_out(&out, &outlen, "STEP", FLAG_CLIENT_NULL_STEP, FLAG_CLIENT_BIG_STEP);
+        if (write_u32_err(sock, out ? outlen : 0) == sizeof(uint32_t)) {
+            STOP_AT(WRITE_STEP_LEN);
+            if (out) {
+                do_readwrite_all(sock, out, outlen, true);
+            }
+            STOP_AT(WRITE_STEP);
+        }
     }
 }
 
@@ -555,14 +579,14 @@ client_emulator_thread(void *arg)
 {
     int sock = GPOINTER_TO_INT(arg);
 
-    client_emulator(sock);
+    FailureType result = client_emulator(sock);
 
     shutdown(sock, SHUT_RDWR);
     close(sock);
 
     idle_add(idle_end_test, NULL);
 
-    return NULL;
+    return GINT_TO_POINTER(result);
 }
 
 static pthread_t
@@ -598,7 +622,7 @@ idle_end_test(void *arg)
 }
 
 static void
-check_test_results(void)
+check_test_results(FailureType res)
 {
     const TestData *data = &tests_data[test_num];
     if (data->success) {
@@ -608,6 +632,7 @@ check_test_results(void)
 
     g_assert(mechlist_called);
     g_assert(!encode_called);
+    g_assert_cmpint(res, ==, data->failure_type);
 }
 
 static void
@@ -621,9 +646,10 @@ sasl_mechs(void)
         pthread_t thread = setup_thread();
         alarm(4);
         basic_event_loop_mainloop();
-        g_assert_cmpint(pthread_join(thread, NULL), ==, 0);
+        void *thread_ret = NULL;
+        g_assert_cmpint(pthread_join(thread, &thread_ret), ==, 0);
         alarm(0);
-        check_test_results();
+        check_test_results((FailureType)GPOINTER_TO_INT(thread_ret));
         reset_test();
     }
 
