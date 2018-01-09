@@ -130,6 +130,9 @@ SpiceCoreInterface *basic_event_loop_init(void)
 {
     ignore_sigpipe();
     spice_assert(main_context == NULL);
+    /* Qemu can use a context which is not the default one so to make
+     * sure we can handle this condition here we emulate it so don't
+     * use g_main_context_default */
     main_context = g_main_context_new();
     base_core_interface = event_loop_core;
     base_core_interface.main_context = main_context;
