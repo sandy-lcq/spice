@@ -445,11 +445,6 @@ static void set_compression_level(SPICE_GNUC_UNUSED QXLInstance *qin,
     printf("%s\n", __func__);
 }
 
-static void set_mm_time(SPICE_GNUC_UNUSED QXLInstance *qin,
-                        SPICE_GNUC_UNUSED uint32_t mm_time)
-{
-}
-
 // we now have a secondary surface
 #define MAX_SURFACE_NUM 2
 
@@ -813,7 +808,6 @@ static QXLInterface display_sif = {
     },
     .attache_worker = attache_worker,
     .set_compression_level = set_compression_level,
-    .set_mm_time = set_mm_time,
     .get_init_info = get_init_info,
 
     /* the callbacks below are called from spice server thread context */
