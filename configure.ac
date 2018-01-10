@@ -49,7 +49,7 @@ AM_PROG_CC_C_O
 AC_C_BIGENDIAN
 PKG_PROG_PKG_CONFIG
 
-AC_CHECK_HEADERS([sys/time.h execinfo.h linux/sockios.h])
+AC_CHECK_HEADERS([sys/time.h execinfo.h linux/sockios.h pthread_np.h])
 AC_CHECK_DECL([TCP_KEEPIDLE], [have_tcp_keepidle="yes"],,
               [#include <netinet/tcp.h>])
 AS_IF([test "x$have_tcp_keepidle" = "xyes"],

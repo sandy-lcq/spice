@@ -47,6 +47,12 @@
 #include "cursor-channel.h"
 #include "tree.h"
 
+// compatibility for FreeBSD
+#ifdef HAVE_PTHREAD_NP_H
+#include <pthread_np.h>
+#define pthread_setname_np pthread_set_name_np
+#endif
+
 #define CMD_RING_POLL_TIMEOUT 10 //milli
 #define CMD_RING_POLL_RETRIES 1
 

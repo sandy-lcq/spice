@@ -23,6 +23,9 @@
 #include <fcntl.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -54,7 +57,7 @@ bool red_socket_set_keepalive(int fd, bool enable, int timeout)
     }
 
 #ifdef HAVE_TCP_KEEPIDLE
-    if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout)) == -1) {
+    if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout)) == -1) {
         if (errno != ENOTSUP) {
             spice_printerr("setsockopt for keepalive timeout failed, %s", strerror(errno));
             return false;
