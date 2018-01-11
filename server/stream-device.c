@@ -71,16 +71,15 @@ static StreamMsgHandler handle_msg_format, handle_msg_data;
 static bool handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin,
                                const char *error_msg) SPICE_GNUC_WARN_UNUSED_RESULT;
 
-static RedPipeItem *
-stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *sin)
+static bool
+stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
 {
-    StreamDevice *dev = STREAM_DEVICE(self);
     SpiceCharDeviceInterface *sif;
     int n;
     bool handled = false;
 
     if (dev->has_error || dev->flow_stopped || !dev->stream_channel) {
-        return NULL;
+        return false;
     }
 
     sif = spice_char_device_get_interface(sin);
@@ -89,7 +88,7 @@ stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *si
     while (dev->hdr_pos < sizeof(dev->hdr)) {
         n = sif->read(sin, (uint8_t *) &dev->hdr + dev->hdr_pos, sizeof(dev->hdr) - dev->hdr_pos);
         if (n <= 0) {
-            return NULL;
+            return false;
         }
         dev->hdr_pos += n;
         if (dev->hdr_pos >= sizeof(dev->hdr)) {
@@ -123,6 +122,26 @@ stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *si
         dev->hdr_pos = 0;
     }
 
+    if (handled || dev->has_error) {
+        // Qemu put the device on blocking state if we don't read all data
+        // so schedule another read.
+        // We arrive here if we processed that entire message or we
+        // got an error, try to read another message or discard the
+        // wrong data
+        return true;
+    }
+
+    return false;
+}
+
+static RedPipeItem *
+stream_device_read_msg_from_dev(RedCharDevice *self, SpiceCharDeviceInstance *sin)
+{
+    StreamDevice *dev = STREAM_DEVICE(self);
+
+    while (stream_device_partial_read(dev, sin)) {
+        continue;
+    }
     return NULL;
 }
 
