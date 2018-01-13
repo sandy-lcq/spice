@@ -616,6 +616,7 @@ static void red_get_brush_ptr(RedMemSlotInfo *slots, int group_id,
         break;
     case SPICE_BRUSH_TYPE_PATTERN:
         red->u.pattern.pat = red_get_image(slots, group_id, qxl->u.pattern.pat, flags, false);
+        red_get_point_ptr(&red->u.pattern.pos, &qxl->u.pattern.pos);
         break;
     }
 }
