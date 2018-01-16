@@ -550,6 +550,10 @@ void red_stream_async_read(RedStream *stream,
     AsyncRead *async = &stream->priv->async_read;
 
     g_return_if_fail(async->now == NULL && async->end == NULL);
+    if (size == 0) {
+        read_done_cb(opaque);
+        return;
+    }
     async->now = data;
     async->end = async->now + size;
     async->done = read_done_cb;
@@ -902,10 +906,6 @@ static void red_sasl_handle_auth_steplen(void *opaque)
     if (len > SASL_DATA_MAX_LEN) {
         spice_warning("Too much SASL data %d", len);
         return red_sasl_async_result(opaque, auth->mechname ? RED_SASL_ERROR_INVALID_DATA : RED_SASL_ERROR_GENERIC);
-    }
-
-    if (len == 0) {
-        return red_sasl_handle_auth_step(auth);
     }
 
     auth->data = g_realloc(auth->data, len);
