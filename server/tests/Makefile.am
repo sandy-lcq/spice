@@ -64,7 +64,6 @@ check_PROGRAMS =				\
 noinst_PROGRAMS =				\
 	test-display-no-ssl			\
 	test-display-streaming			\
-	test-just-sockets-no-ssl		\
 	test-playback				\
 	test-display-resolution-changes		\
 	test-two-servers			\

@@ -13,7 +13,6 @@ test-display-streaming
 test-display-width-stride
 test-empty-success
 test-fail-on-null-core-interface
-test-just-sockets-no-ssl
 test-loop
 test-options
 test-playback
