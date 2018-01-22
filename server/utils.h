@@ -72,7 +72,7 @@ static inline red_time_t spice_get_monotonic_time_ms(void)
 }
 
 int rgb32_data_has_alpha(int width, int height, size_t stride,
-                         uint8_t *data, int *all_set_out);
+                         const uint8_t *data, int *all_set_out);
 
 const char *red_channel_type_to_str(int type);
 int red_channel_name_to_type(const char *name);

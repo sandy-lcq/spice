@@ -25,14 +25,15 @@
 #include "utils.h"
 
 int rgb32_data_has_alpha(int width, int height, size_t stride,
-                         uint8_t *data, int *all_set_out)
+                         const uint8_t *data, int *all_set_out)
 {
-    uint32_t *line, *end, alpha;
+    const uint32_t *line, *end;
+    uint32_t alpha;
     int has_alpha;
 
     has_alpha = FALSE;
     while (height-- > 0) {
-        line = (uint32_t *)data;
+        line = (const uint32_t *)data;
         end = line + width;
         data += stride;
         while (line != end) {
