@@ -27,25 +27,25 @@
 int rgb32_data_has_alpha(int width, int height, size_t stride,
                          const uint8_t *data, int *all_set_out)
 {
-    const uint32_t *line, *end;
-    uint32_t alpha;
+    const uint8_t *line, *end;
+    uint8_t alpha;
     int has_alpha;
 
     has_alpha = FALSE;
     while (height-- > 0) {
-        line = (const uint32_t *)data;
-        end = line + width;
+        line = data;
+        end = line + sizeof(uint32_t) * width;
         data += stride;
         while (line != end) {
-            alpha = *line & 0xff000000U;
+            alpha = line[3];
             if (alpha != 0) {
                 has_alpha = TRUE;
-                if (alpha != 0xff000000U) {
+                if (alpha != 0xffU) {
                     *all_set_out = FALSE;
                     return TRUE;
                 }
             }
-            line++;
+            line += sizeof(uint32_t);
         }
     }
 
