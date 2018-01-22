@@ -788,7 +788,7 @@ gst_to_spice_bitmap(GstSample *sample)
     GstStructure *s = gst_caps_get_structure(caps, 0);
     spice_assert(s);
 
-    gint width, height;
+    gint width = 0, height = 0;
     spice_assert(gst_structure_get_int(s, "width", &width) &&
                  gst_structure_get_int(s, "height", &height));
 

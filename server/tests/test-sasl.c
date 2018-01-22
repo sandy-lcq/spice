@@ -550,7 +550,7 @@ client_emulator(int sock)
         g_assert_cmpint(datalen, <=, sizeof(buf));
         read_all(sock, buf, datalen);
 
-        uint8_t is_ok;
+        uint8_t is_ok = 0;
         read_all(sock, &is_ok, sizeof(is_ok));
         if (is_ok) {
             // is_ok should be 0 or 1
