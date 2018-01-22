@@ -281,7 +281,7 @@ static bool snd_record_handle_write(RecordChannelClient *record_client, size_t s
 {
     SpiceMsgcRecordPacket *packet;
     uint32_t write_pos;
-    uint32_t* data;
+    uint8_t* data;
     uint32_t len;
     uint32_t now;
 
@@ -292,7 +292,7 @@ static bool snd_record_handle_write(RecordChannelClient *record_client, size_t s
     packet = (SpiceMsgcRecordPacket *)message;
 
     if (record_client->mode == SPICE_AUDIO_DATA_MODE_RAW) {
-        data = (uint32_t *)packet->data;
+        data = packet->data;
         size = packet->data_size >> 2;
         size = MIN(size, RECORD_SAMPLES_SIZE);
      } else {
@@ -301,7 +301,7 @@ static bool snd_record_handle_write(RecordChannelClient *record_client, size_t s
         if (snd_codec_decode(record_client->codec, packet->data, packet->data_size,
                     record_client->decode_buf, &decode_size) != SND_CODEC_OK)
             return false;
-        data = (uint32_t *) record_client->decode_buf;
+        data = record_client->decode_buf;
         size = decode_size >> 2;
     }
 
