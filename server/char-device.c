@@ -880,8 +880,9 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
 {
     RedCharDeviceClient *dev_client;
     GList *item;
-    uint32_t *write_to_dev_size_ptr;
-    uint32_t *write_to_dev_tokens_ptr;
+    uint8_t *write_to_dev_sizes_ptr;
+    uint32_t write_to_dev_size;
+    uint32_t write_to_dev_tokens;
     SpiceMarshaller *m2;
 
     /* multi-clients are not supported */
@@ -895,10 +896,9 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
     spice_marshaller_add_uint8(m, 1); /* connected */
     spice_marshaller_add_uint32(m, dev_client->num_client_tokens);
     spice_marshaller_add_uint32(m, dev_client->num_send_tokens);
-    write_to_dev_size_ptr = (uint32_t *)spice_marshaller_reserve_space(m, sizeof(uint32_t));
-    write_to_dev_tokens_ptr = (uint32_t *)spice_marshaller_reserve_space(m, sizeof(uint32_t));
-    *write_to_dev_size_ptr = 0;
-    *write_to_dev_tokens_ptr = 0;
+    write_to_dev_sizes_ptr = spice_marshaller_reserve_space(m, sizeof(uint32_t)*2);
+    write_to_dev_size = 0;
+    write_to_dev_tokens = 0;
 
     m2 = spice_marshaller_get_ptr_submarshaller(m, 0);
     if (dev->priv->cur_write_buf) {
@@ -908,10 +908,10 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                          migrate_data_marshaller_write_buffer_free,
                                          red_char_device_write_buffer_ref(dev->priv->cur_write_buf)
                                          );
-        *write_to_dev_size_ptr += buf_remaining;
+        write_to_dev_size += buf_remaining;
         if (dev->priv->cur_write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(dev->priv->cur_write_buf->priv->client == dev_client->client);
-            (*write_to_dev_tokens_ptr) += dev->priv->cur_write_buf->priv->token_price;
+            write_to_dev_tokens += dev->priv->cur_write_buf->priv->token_price;
         }
     }
 
@@ -922,14 +922,16 @@ void red_char_device_migrate_data_marshall(RedCharDevice *dev,
                                          migrate_data_marshaller_write_buffer_free,
                                          red_char_device_write_buffer_ref(write_buf)
                                          );
-        *write_to_dev_size_ptr += write_buf->buf_used;
+        write_to_dev_size += write_buf->buf_used;
         if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT) {
             spice_assert(write_buf->priv->client == dev_client->client);
-            (*write_to_dev_tokens_ptr) += write_buf->priv->token_price;
+            write_to_dev_tokens += write_buf->priv->token_price;
         }
     }
     spice_debug("migration data dev %p: write_queue size %u tokens %u",
-                dev, *write_to_dev_size_ptr, *write_to_dev_tokens_ptr);
+                dev, write_to_dev_size, write_to_dev_tokens);
+    spice_marshaller_set_uint32(m, write_to_dev_sizes_ptr, write_to_dev_size);
+    spice_marshaller_set_uint32(m, write_to_dev_sizes_ptr + sizeof(uint32_t), write_to_dev_tokens);
 }
 
 bool red_char_device_restore(RedCharDevice *dev,
