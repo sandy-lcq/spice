@@ -91,10 +91,6 @@ static void set_compression_level(QXLInstance *qin, int level)
     g_debug("%s\n", __func__);
 }
 
-static void set_mm_time(QXLInstance *qin, uint32_t mm_time)
-{
-}
-
 // same as qemu/ui/spice-display.h
 #define MAX_SURFACE_NUM 1024
 
@@ -256,7 +252,6 @@ static QXLInterface display_sif = {
     },
     .attache_worker = attach_worker,
     .set_compression_level = set_compression_level,
-    .set_mm_time = set_mm_time,
     .get_init_info = get_init_info,
     .get_command = get_display_command,
     .req_cmd_notification = req_display_notification,
