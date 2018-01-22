@@ -89,7 +89,7 @@ int lz4_encode(Lz4EncoderContext *lz4, int height, int stride, uint8_t *io_ptr,
             LZ4_freeStream(stream);
             return 0;
         }
-        *((uint32_t *)compressed_lines) = htonl(enc_size);
+        *((uint32_t *)compressed_lines) = GUINT32_TO_BE(enc_size);
 
         out_size += enc_size += 4;
         already_copied = 0;
