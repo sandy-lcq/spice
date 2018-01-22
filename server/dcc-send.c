@@ -1793,11 +1793,12 @@ static void display_channel_marshall_migrate_data_surfaces(DisplayChannelClient 
                                                            int lossy)
 {
     SpiceMarshaller *m2 = spice_marshaller_get_ptr_submarshaller(m, 0);
-    uint32_t *num_surfaces_created;
+    uint32_t num_surfaces_created;
+    uint8_t *num_surfaces_created_ptr;
     uint32_t i;
 
-    num_surfaces_created = (uint32_t *)spice_marshaller_reserve_space(m2, sizeof(uint32_t));
-    *num_surfaces_created = 0;
+    num_surfaces_created_ptr = spice_marshaller_reserve_space(m2, sizeof(uint32_t));
+    num_surfaces_created = 0;
     for (i = 0; i < NUM_SURFACES; i++) {
         SpiceRect lossy_rect;
 
@@ -1805,7 +1806,7 @@ static void display_channel_marshall_migrate_data_surfaces(DisplayChannelClient 
             continue;
         }
         spice_marshaller_add_uint32(m2, i);
-        (*num_surfaces_created)++;
+        num_surfaces_created++;
 
         if (!lossy) {
             continue;
@@ -1816,6 +1817,7 @@ static void display_channel_marshall_migrate_data_surfaces(DisplayChannelClient 
         spice_marshaller_add_int32(m2, lossy_rect.right);
         spice_marshaller_add_int32(m2, lossy_rect.bottom);
     }
+    spice_marshaller_set_uint32(m2, num_surfaces_created_ptr, num_surfaces_created);
 }
 
 static void display_channel_marshall_migrate_data(RedChannelClient *rcc,
