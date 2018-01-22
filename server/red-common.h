@@ -104,17 +104,20 @@ typedef struct GListIter {
     typedef struct ModuleObjName ## Class ModuleObjName ## Class; \
     typedef struct ModuleObjName ## Private ModuleObjName ## Private; \
     GType module_obj_name ## _get_type(void) G_GNUC_CONST; \
-    static inline ModuleObjName *G_PASTE(RED_,OBJ_NAME)(void *obj) \
+    static inline SPICE_GNUC_UNUSED ModuleObjName *G_PASTE(RED_,OBJ_NAME)(void *obj) \
     { return G_TYPE_CHECK_INSTANCE_CAST(obj, \
              module_obj_name ## _get_type(), ModuleObjName); } \
-    static inline ModuleObjName ## Class *G_PASTE(G_PASTE(RED_,OBJ_NAME),_CLASS)(void *klass) \
+    static inline SPICE_GNUC_UNUSED \
+    ModuleObjName ## Class *G_PASTE(G_PASTE(RED_,OBJ_NAME),_CLASS)(void *klass) \
     { return G_TYPE_CHECK_CLASS_CAST(klass, \
              module_obj_name ## _get_type(), ModuleObjName ## Class); } \
-    static inline gboolean G_PASTE(RED_IS_,OBJ_NAME)(void *obj) \
+    static inline SPICE_GNUC_UNUSED gboolean G_PASTE(RED_IS_,OBJ_NAME)(void *obj) \
     { return G_TYPE_CHECK_INSTANCE_TYPE(obj, module_obj_name ## _get_type()); } \
-    static inline gboolean G_PASTE(G_PASTE(RED_IS_,OBJ_NAME),_CLASS)(void *klass) \
+    static inline SPICE_GNUC_UNUSED \
+    gboolean G_PASTE(G_PASTE(RED_IS_,OBJ_NAME),_CLASS)(void *klass) \
     { return G_TYPE_CHECK_CLASS_TYPE((klass), module_obj_name ## _get_type()); } \
-    static inline ModuleObjName ## Class *G_PASTE(G_PASTE(RED_,OBJ_NAME),_GET_CLASS)(void *obj) \
+    static inline SPICE_GNUC_UNUSED \
+    ModuleObjName ## Class *G_PASTE(G_PASTE(RED_,OBJ_NAME),_GET_CLASS)(void *obj) \
     { return G_TYPE_INSTANCE_GET_CLASS(obj, \
              module_obj_name ## _get_type(), ModuleObjName ## Class); }
 
