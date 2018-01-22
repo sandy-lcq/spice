@@ -249,7 +249,7 @@ static SimpleSpiceUpdate *test_spice_create_update_solid(uint32_t surface_id, QX
     bh = bbox.bottom - bbox.top;
 
     bitmap = g_malloc(bw * bh * 4);
-    dst = (uint32_t *)bitmap;
+    dst = SPICE_ALIGNED_CAST(uint32_t *, bitmap);
 
     for (i = 0 ; i < bh * bw ; ++i, ++dst) {
         *dst = color;

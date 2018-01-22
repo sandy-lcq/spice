@@ -905,7 +905,7 @@ get_convert_line(SpiceBitmapFmt format)
 static void
 convert_line16(uint8_t *dest, const uint8_t *src, uint32_t width)
 {
-    uint16_t *dest16 = (uint16_t *) dest;
+    uint16_t *dest16 = SPICE_ALIGNED_CAST(uint16_t *, dest);
     for (; width; --width) {
         *dest16++ = (src[0] >> 3) | ((src[1] & 0xf8) << 2) | ((src[2] & 0xf8) << 7);
         src += 4;
@@ -1055,7 +1055,7 @@ bitmap_extract32(SpiceBitmap *bitmap, uint8_t *buf, int32_t x, int32_t y, int32_
 static uint8_t *
 bitmap_extract16(SpiceBitmap *bitmap, uint8_t *buf, int32_t x, int32_t y, int32_t w)
 {
-    const uint16_t *line = (const uint16_t *)(bitmap_get_line(bitmap, y) + x * 2);
+    const uint16_t *line = SPICE_ALIGNED_CAST(const uint16_t *, bitmap_get_line(bitmap, y) + x * 2);
     uint8_t *dest = buf;
     for (; w; --w) {
         uint16_t pixel = *line++;
