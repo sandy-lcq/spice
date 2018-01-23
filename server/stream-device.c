@@ -281,7 +281,7 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
 
     while (1) {
         uint8_t buf[16 * 1024];
-        n = sif->read(sin, buf, sizeof(buf));
+        n = sif->read(sin, buf, MIN(sizeof(buf), dev->hdr.size));
         if (n <= 0) {
             break;
         }
