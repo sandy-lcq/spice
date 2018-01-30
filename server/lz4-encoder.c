@@ -18,7 +18,6 @@
 #include <config.h>
 #endif
 
-#include <arpa/inet.h>
 #include <lz4.h>
 #include "red-common.h"
 #include "lz4-encoder.h"
