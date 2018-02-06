@@ -380,3 +380,55 @@ Also in source (no header) files you must include `config.h` at the beginning so
 
 #include "spice_server.h"
 ----
+
+C++
+---
+C\++ style follows C style if not specified otherwise.
+The C+\+11 dialect is assumed by default. No attempts will be made to
+restrict the code to older variants of C+\+.
+For compatibility reasons don't use more recent C++ dialects.
+
+Method names
+~~~~~~~~~~~~
+
+Method names should use lower case and separate words with
+underscores.
+
+
+Namespaces
+~~~~~~~~~~
+
+Namespaces should use lower case and separate words with underscores.
+Namespace blocks should not increase indentation.
+Namespaces can be nested. Namespace closing brackets for nested
+namespaces can be placed together on the same line, but for
+readability reasons the closure should specify the namespace with a
+comment.
+
+[source,cpp]
+----
+namespace spice {
+namespace streaming_agent {
+
+class ClassInsideNamespace {
+...
+};
+
+}} // namespace spice::streaming_agent
+----
+
+The `using namespace` construct should never be used in headers. It should
+be used sparingly in source files, and only within the body of short
+functions.
+
+Preferred alternatives to `using namespace` include:
+
+* using declarations
++
+[source,cpp]
+using spice::streaming_agent::some_class;
++
+* namespace aliases
++
+[source,cpp]
+namespace ssa = spice::streaming_agent;
