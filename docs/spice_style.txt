@@ -90,6 +90,11 @@ goto
 
 Using goto is allowed in C code for error handling. In any other case it will be used only as a special exception.
 
+switch
+------
+
+If a switch case falls through (i.e. does not end with a `break`), annotate it with a `/* fall through */` comment. Some compilers will emit a warning otherwise.
+
 Defining Constant values
 ------------------------
 
