@@ -331,7 +331,7 @@ Multi line macro indentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 [source,c]
-#define MACRO_NAME(a, b, c) {        \
+#define MACRO_NAME(a, b, c) {   \
     int ab = a + c;             \
     int ac = a + b;             \
     int bc = b + c;             \
