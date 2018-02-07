@@ -118,7 +118,8 @@ void function(int *n)
     ...
 }
 ----
-on
+over
+
 [source,c]
 ----
 void function(int *n)
