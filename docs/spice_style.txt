@@ -348,6 +348,25 @@ char *array[] = {
     "item_3",
 };
 
+Headers
+-------
+
+Headers should be protected against multiple inclusion using a macro that contains the header file name in uppercase, with all characters that are invalid in C replaced with an underscore '_':
+
+[source,c]
+----
+#ifndef MY_MODULE_H
+#define MY_MODULE_H
+
+...
+
+#endif // MY_MODULE_H
+----
+
+The macro may include additional information, e.g. a component. For example a file generally referenced as foo/bar.h could use a FOO_BAR_H macro.
+
+Historically, some headers added underscores liberally, e.g. MY_MODULE_H_. This is neither necessary nor discouraged, although as a reminder, a leading underscore followed by a capital letter is reserved for the implementation and should not be used, so _MY_MODULE_H is, technically speaking, invalid C.
+
 Header inclusion
 ----------------
 
