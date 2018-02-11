@@ -2728,10 +2728,10 @@ static int reds_init_ssl(RedsState *reds)
     static GOnce openssl_once = G_ONCE_INIT;
     const SSL_METHOD *ssl_method;
     int return_code;
-    /* Limit connection to TLSv1 only.
+    /* Limit connection to TLSv1.1 or newer.
      * When some other SSL/TLS version becomes obsolete, add it to this
      * variable. */
-    long ssl_options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION;
+    long ssl_options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION | SSL_OP_NO_TLSv1;
 
     /* Global system initialization*/
     g_once(&openssl_once, openssl_global_init, NULL);
