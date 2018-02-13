@@ -94,6 +94,7 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         while (sif->read(sin, buf, sizeof(buf)) > 0) {
             continue;
         }
+        sif->state(sin, 0);
         return false;
     }
 
@@ -561,6 +562,19 @@ reset_channels(StreamDevice *dev)
 }
 
 static void
+char_device_set_state(RedCharDevice *char_dev, int state)
+{
+    SpiceCharDeviceInstance *sin = NULL;
+    g_object_get(char_dev, "sin", &sin, NULL);
+    spice_assert(sin != NULL);
+
+    SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
+    if (sif->state) {
+        sif->state(sin, state);
+    }
+}
+
+static void
 stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
 {
     if (event != SPICE_PORT_EVENT_OPENED && event != SPICE_PORT_EVENT_CLOSED) {
@@ -580,6 +594,10 @@ stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
     dev->flow_stopped = false;
     red_char_device_reset(char_dev);
     reset_channels(dev);
+
+    // enable the device again. We re-enable it on close as otherwise we don't want to get a
+    // failure when  we try to re-open the device as would happen if we keep it disabled
+    char_device_set_state(char_dev, 1);
 }
 
 static void
