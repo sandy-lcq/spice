@@ -117,6 +117,7 @@ struct RedsState {
     RedStatFile *stat_file;
 #endif
     int allow_multiple_clients;
+    bool late_initialization_done;
 
     /* Intermediate state for on going monitors config message from a single
      * client, being passed to the guest */

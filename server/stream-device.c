@@ -538,8 +538,8 @@ stream_device_finalize(GObject *object)
     dev->msg_pos = 0;
 }
 
-static void
-allocate_channels(StreamDevice *dev)
+void
+stream_device_create_channel(StreamDevice *dev)
 {
     if (dev->stream_channel) {
         return;
@@ -600,7 +600,7 @@ stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
     // reset device and channel on close/open
     dev->opened = (event == SPICE_PORT_EVENT_OPENED);
     if (dev->opened) {
-        allocate_channels(dev);
+        stream_device_create_channel(dev);
     }
     dev->hdr_pos = 0;
     dev->msg_pos = 0;

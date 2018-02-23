@@ -43,6 +43,11 @@ typedef struct StreamDeviceClass StreamDeviceClass;
 GType stream_device_get_type(void) G_GNUC_CONST;
 StreamDevice *stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin);
 
+/* Create channel for the streaming device.
+ * If the channel already exists the function does nothing.
+ */
+void stream_device_create_channel(StreamDevice *dev);
+
 G_END_DECLS
 
 #endif /* STREAM_DEVICE_H */

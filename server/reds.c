@@ -1734,6 +1734,26 @@ static RedClient *reds_get_client(RedsState *reds)
     return reds->clients->data;
 }
 
+/* Performs late initializations steps.
+ * This should be called when a client connects */
+static void reds_late_initialization(RedsState *reds)
+{
+    RedCharDevice *dev;
+
+    // do only once
+    if (reds->late_initialization_done) {
+        return;
+    }
+
+    // create stream channels for streaming devices
+    GLIST_FOREACH(reds->char_devices, RedCharDevice, dev) {
+        if (IS_STREAM_DEVICE(dev)) {
+            stream_device_create_channel(STREAM_DEVICE(dev));
+        }
+    }
+    reds->late_initialization_done = true;
+}
+
 static void
 red_channel_capabilities_init_from_link_message(RedChannelCapabilities *caps,
                                                 const SpiceLinkMess *link_mess)
@@ -1768,6 +1788,8 @@ static void reds_handle_main_link(RedsState *reds, RedLinkInfo *link)
 
     spice_debug("trace");
     spice_assert(reds->main_channel);
+
+    reds_late_initialization(reds);
 
     link_mess = link->link_mess;
     if (!reds->allow_multiple_clients) {
