@@ -59,6 +59,7 @@ check_PROGRAMS =				\
 	test-empty-success			\
 	test-channel				\
 	test-stream-device			\
+	test-listen				\
 	$(NULL)
 
 noinst_PROGRAMS =				\
