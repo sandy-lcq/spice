@@ -57,6 +57,7 @@ struct StreamDevice {
     bool flow_stopped;
     StreamChannel *stream_channel;
     CursorChannel *cursor_channel;
+    SpiceTimer *close_timer;
 };
 
 struct StreamDeviceClass {
@@ -68,6 +69,8 @@ static StreamDevice *stream_device_new(SpiceCharDeviceInstance *sin, RedsState *
 
 G_DEFINE_TYPE(StreamDevice, stream_device, RED_TYPE_CHAR_DEVICE)
 
+static void char_device_set_state(RedCharDevice *char_dev, int state);
+
 typedef bool StreamMsgHandler(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     SPICE_GNUC_WARN_UNUSED_RESULT;
 
@@ -76,6 +79,16 @@ static StreamMsgHandler handle_msg_format, handle_msg_data, handle_msg_cursor_se
 
 static bool handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin,
                                const char *error_msg) SPICE_GNUC_WARN_UNUSED_RESULT;
+
+static void
+close_timer_func(void *opaque)
+{
+    StreamDevice *dev = opaque;
+
+    if (dev->opened && dev->has_error) {
+        char_device_set_state(RED_CHAR_DEVICE(dev), 0);
+    }
+}
 
 static bool
 stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
@@ -94,7 +107,17 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         while (sif->read(sin, buf, sizeof(buf)) > 0) {
             continue;
         }
-        sif->state(sin, 0);
+
+        // This code is a workaround for a Qemu bug, see patch
+        // "stream-device: Workaround Qemu bug closing device".
+        // As calling sif->state here can cause a crash, schedule
+        // a timer and do the call in it. Remove this code when
+        // we are sure all Qemu versions have been patched.
+        RedsState *reds = red_char_device_get_server(RED_CHAR_DEVICE(dev));
+        if (!dev->close_timer) {
+            dev->close_timer = reds_core_timer_add(reds, close_timer_func, dev);
+        }
+        reds_core_timer_start(reds, dev->close_timer, 0);
         return false;
     }
 
@@ -500,6 +523,9 @@ static void
 stream_device_dispose(GObject *object)
 {
     StreamDevice *dev = STREAM_DEVICE(object);
+
+    RedsState *reds = red_char_device_get_server(RED_CHAR_DEVICE(dev));
+    reds_core_timer_remove(reds, dev->close_timer);
 
     if (dev->stream_channel) {
         // close all current connections and drop the reference
