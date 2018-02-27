@@ -46,7 +46,7 @@ GMainContext *basic_event_loop_get_context(void)
 
 static void event_loop_channel_event(int event, SpiceChannelEventInfo *info)
 {
-    DPRINTF(0, "channel event con, type, id, event: %d, %d, %d, %d",
+    DPRINTF(1, "channel event con, type, id, event: %d, %d, %d, %d",
             info->connection_id, info->type, info->id, event);
 }
 
