@@ -16,8 +16,9 @@ AM_CPPFLAGS =					\
 	-I$(top_builddir)/server		\
 	-I$(top_srcdir)/server/tests		\
 	$(COMMON_CFLAGS)			\
+	$(GIO_UNIX_CFLAGS)			\
 	$(GLIB2_CFLAGS)				\
-	$(GOBJECT2_CFLAGS)				\
+	$(GOBJECT2_CFLAGS)			\
 	$(SMARTCARD_CFLAGS)			\
 	$(SPICE_NONPKGCONFIG_CFLAGS)		\
 	$(SPICE_PROTOCOL_CFLAGS)		\
@@ -39,6 +40,7 @@ LDADD =								\
 	libtest.a						\
 	$(top_builddir)/spice-common/common/libspice-common.la	\
 	$(top_builddir)/server/libserver.la			\
+	$(GIO_UNIX_LIBS)					\
 	$(GLIB2_LIBS)						\
 	$(GOBJECT2_LIBS)					\
 	$(SPICE_NONPKGCONFIG_LIBS)		                \

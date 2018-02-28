@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <gio/gio.h>
+#include <gio/gunixsocketaddress.h>
 
 /* Arbitrary base port, we want a port which is not in use by the system, and
  * by another of our tests (in case of parallel runs)
@@ -207,9 +208,13 @@ static GThread *fake_client_new(GThreadFunc thread_func,
 {
     ThreadData *thread_data = g_new0(ThreadData, 1);
 
-    g_assert_cmpuint(port, >, 0);
-    g_assert_cmpuint(port, <, 65536);
-    thread_data->connectable = g_network_address_new(hostname, port);
+    if (port == -1) {
+        thread_data->connectable = G_SOCKET_CONNECTABLE(g_unix_socket_address_new(hostname));
+    } else {
+        g_assert_cmpuint(port, >, 0);
+        g_assert_cmpuint(port, <, 65536);
+        thread_data->connectable = g_network_address_new(hostname, port);
+    }
     thread_data->use_tls = use_tls;
     thread_data->event_loop = event_loop;
 
@@ -310,6 +315,32 @@ static void test_connect_plain_and_tls(void)
     spice_server_destroy(server);
 }
 
+static void test_connect_unix(void)
+{
+    GThread *thread;
+    int result;
+
+    TestEventLoop event_loop = { 0, };
+
+    test_event_loop_init(&event_loop);
+
+    /* server */
+    SpiceServer *server = spice_server_new();
+    spice_server_set_name(server, "SPICE listen test");
+    spice_server_set_noauth(server);
+    spice_server_set_addr(server, "test-listen.unix", SPICE_ADDR_FLAG_UNIX_ONLY);
+    result = spice_server_init(server, event_loop.core);
+    g_assert_cmpint(result, ==, 0);
+
+    /* fake client */
+    thread = fake_client_new(check_magic_thread, "test-listen.unix", -1, false, &event_loop);
+    test_event_loop_run(&event_loop);
+    g_assert_null(g_thread_join(thread));
+
+    test_event_loop_destroy(&event_loop);
+    spice_server_destroy(server);
+}
+
 static void test_connect_ko(void)
 {
     GThread *thread;
@@ -332,6 +363,7 @@ int main(int argc, char **argv)
     g_test_add_func("/server/listen/connect_plain", test_connect_plain);
     g_test_add_func("/server/listen/connect_tls", test_connect_tls);
     g_test_add_func("/server/listen/connect_both", test_connect_plain_and_tls);
+    g_test_add_func("/server/listen/connect_unix", test_connect_unix);
     g_test_add_func("/server/listen/connect_ko", test_connect_ko);
 
     return g_test_run();
