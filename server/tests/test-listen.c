@@ -33,6 +33,8 @@
  */
 #define BASE_PORT 5728
 
+#define PKI_DIR SPICE_TOP_SRCDIR "/server/tests/pki/"
+
 static bool error_is_set(GError **error)
 {
     return ((error != NULL) && (*error != NULL));
@@ -99,6 +101,28 @@ static GIOStream *fake_client_connect(GSocketConnectable *connectable, GError **
     return G_IO_STREAM(connection);
 }
 
+static GIOStream *fake_client_connect_tls(GSocketConnectable *connectable, GError **error)
+{
+    GSocketClient *client;
+    GSocketConnection *connection;
+    GIOStream *tls_connection;
+
+    client = g_socket_client_new();
+    connection = g_socket_client_connect(client, connectable, NULL, error);
+    g_assert_no_error(*error);
+    tls_connection = g_tls_client_connection_new(G_IO_STREAM(connection),
+                                                 connectable,
+                                                 error);
+    g_assert_no_error(*error);
+    /* Disable all certificate checks as our test setup is known to be invalid */
+    g_tls_client_connection_set_validation_flags(G_TLS_CLIENT_CONNECTION(tls_connection), 0);
+
+    g_object_unref(connection);
+    g_object_unref(client);
+
+    return tls_connection;
+}
+
 static void check_magic(GIOStream *io_stream, GError **error)
 {
     uint8_t buffer[4];
@@ -127,6 +151,7 @@ static void check_magic(GIOStream *io_stream, GError **error)
 typedef struct
 {
     GSocketConnectable *connectable;
+    bool use_tls;
     TestEventLoop *event_loop;
 } ThreadData;
 
@@ -137,7 +162,11 @@ static gpointer check_magic_thread(gpointer data)
     GSocketConnectable *connectable = G_SOCKET_CONNECTABLE(thread_data->connectable);
     GIOStream *stream;
 
-    stream = fake_client_connect(connectable, &error);
+    if (thread_data->use_tls) {
+        stream = fake_client_connect_tls(connectable, &error);
+    } else {
+        stream = fake_client_connect(connectable, &error);
+    }
     g_assert_no_error(error);
     check_magic(stream, &error);
     g_assert_no_error(error);
@@ -173,6 +202,7 @@ static gpointer check_no_connect_thread(gpointer data)
 
 static GThread *fake_client_new(GThreadFunc thread_func,
                                 const char *hostname, int port,
+                                bool use_tls,
                                 TestEventLoop *event_loop)
 {
     ThreadData *thread_data = g_new0(ThreadData, 1);
@@ -180,6 +210,7 @@ static GThread *fake_client_new(GThreadFunc thread_func,
     g_assert_cmpuint(port, >, 0);
     g_assert_cmpuint(port, <, 65536);
     thread_data->connectable = g_network_address_new(hostname, port);
+    thread_data->use_tls = use_tls;
     thread_data->event_loop = event_loop;
 
     /* check_magic_thread will assume ownership of 'connectable' */
@@ -204,7 +235,74 @@ static void test_connect_plain(void)
     g_assert_cmpint(result, ==, 0);
 
     /* fake client */
-    thread = fake_client_new(check_magic_thread, "localhost", BASE_PORT, &event_loop);
+    thread = fake_client_new(check_magic_thread, "localhost", BASE_PORT, false, &event_loop);
+    test_event_loop_run(&event_loop);
+    g_assert_null(g_thread_join(thread));
+
+    test_event_loop_destroy(&event_loop);
+    spice_server_destroy(server);
+}
+
+static void test_connect_tls(void)
+{
+    GThread *thread;
+    int result;
+
+    TestEventLoop event_loop = { 0, };
+
+    test_event_loop_init(&event_loop);
+
+    /* server */
+    SpiceServer *server = spice_server_new();
+    spice_server_set_name(server, "SPICE listen test");
+    spice_server_set_noauth(server);
+    result = spice_server_set_tls(server, BASE_PORT,
+                                  PKI_DIR "ca-cert.pem",
+                                  PKI_DIR "server-cert.pem",
+                                  PKI_DIR "server-key.pem",
+                                  NULL, NULL, NULL);
+    g_assert_cmpint(result, ==, 0);
+    result = spice_server_init(server, event_loop.core);
+    g_assert_cmpint(result, ==, 0);
+
+    /* fake client */
+    thread = fake_client_new(check_magic_thread, "localhost", BASE_PORT, true, &event_loop);
+    test_event_loop_run(&event_loop);
+    g_assert_null(g_thread_join(thread));
+
+    test_event_loop_destroy(&event_loop);
+    spice_server_destroy(server);
+}
+
+static void test_connect_plain_and_tls(void)
+{
+    GThread *thread;
+    int result;
+
+    TestEventLoop event_loop = { 0, };
+
+    test_event_loop_init(&event_loop);
+
+    /* server */
+    SpiceServer *server = spice_server_new();
+    spice_server_set_name(server, "SPICE listen test");
+    spice_server_set_noauth(server);
+    spice_server_set_port(server, BASE_PORT);
+    result = spice_server_set_tls(server, BASE_PORT+1,
+                                  PKI_DIR "ca-cert.pem",
+                                  PKI_DIR "server-cert.pem",
+                                  PKI_DIR "server-key.pem",
+                                  NULL, NULL, NULL);
+    g_assert_cmpint(result, ==, 0);
+    result = spice_server_init(server, event_loop.core);
+    g_assert_cmpint(result, ==, 0);
+
+    /* fake client */
+    thread = fake_client_new(check_magic_thread, "localhost", BASE_PORT, false, &event_loop);
+    test_event_loop_run(&event_loop);
+    g_assert_null(g_thread_join(thread));
+
+    thread = fake_client_new(check_magic_thread, "localhost", BASE_PORT+1, true, &event_loop);
     test_event_loop_run(&event_loop);
     g_assert_null(g_thread_join(thread));
 
@@ -220,7 +318,7 @@ static void test_connect_ko(void)
     test_event_loop_init(&event_loop);
 
     /* fake client */
-    thread = fake_client_new(check_no_connect_thread, "localhost", BASE_PORT, &event_loop);
+    thread = fake_client_new(check_no_connect_thread, "localhost", BASE_PORT, false, &event_loop);
     test_event_loop_run(&event_loop);
     g_assert_null(g_thread_join(thread));
 
@@ -232,6 +330,8 @@ int main(int argc, char **argv)
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/server/listen/connect_plain", test_connect_plain);
+    g_test_add_func("/server/listen/connect_tls", test_connect_tls);
+    g_test_add_func("/server/listen/connect_both", test_connect_plain_and_tls);
     g_test_add_func("/server/listen/connect_ko", test_connect_ko);
 
     return g_test_run();
