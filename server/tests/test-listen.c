@@ -33,11 +33,57 @@
  */
 #define BASE_PORT 5728
 
-static SpiceCoreInterface *core;
-
 static bool error_is_set(GError **error)
 {
     return ((error != NULL) && (*error != NULL));
+}
+
+typedef struct {
+    SpiceCoreInterface *core;
+    SpiceTimer *exit_mainloop_timer;
+    SpiceTimer *timeout_timer;
+} TestEventLoop;
+
+static void timeout_cb(SPICE_GNUC_UNUSED void *opaque)
+{
+    g_assert_not_reached();
+}
+
+static void exit_mainloop_cb(SPICE_GNUC_UNUSED void *opaque)
+{
+    basic_event_loop_quit();
+}
+
+static void test_event_loop_quit(TestEventLoop *event_loop)
+{
+    event_loop->core->timer_start(event_loop->exit_mainloop_timer, 0);
+}
+
+static void test_event_loop_init(TestEventLoop *event_loop)
+{
+    event_loop->core = basic_event_loop_init();
+    event_loop->timeout_timer = event_loop->core->timer_add(timeout_cb, NULL);
+    event_loop->exit_mainloop_timer = event_loop->core->timer_add(exit_mainloop_cb, NULL);
+}
+
+static void test_event_loop_destroy(TestEventLoop *event_loop)
+{
+    if (event_loop->timeout_timer != NULL) {
+        event_loop->core->timer_remove(event_loop->timeout_timer);
+        event_loop->timeout_timer = NULL;
+    }
+    if (event_loop->exit_mainloop_timer != NULL) {
+        event_loop->core->timer_remove(event_loop->exit_mainloop_timer);
+        event_loop->exit_mainloop_timer = NULL;
+    }
+    basic_event_loop_destroy();
+    event_loop->core = NULL;
+}
+
+static void test_event_loop_run(TestEventLoop *event_loop)
+{
+    event_loop->core->timer_start(event_loop->timeout_timer, 5000);
+    basic_event_loop_mainloop();
 }
 
 static GIOStream *fake_client_connect(GSocketConnectable *connectable, GError **error)
@@ -78,17 +124,18 @@ static void check_magic(GIOStream *io_stream, GError **error)
     g_assert_cmpint(memcmp(buffer, "REDQ", 4), ==, 0);
 }
 
-static void exit_mainloop_cb(SPICE_GNUC_UNUSED void *opaque)
+typedef struct
 {
-    basic_event_loop_quit();
-}
+    GSocketConnectable *connectable;
+    TestEventLoop *event_loop;
+} ThreadData;
 
 static gpointer check_magic_thread(gpointer data)
 {
     GError *error = NULL;
-    GSocketConnectable *connectable = G_SOCKET_CONNECTABLE(data);
+    ThreadData *thread_data = data;
+    GSocketConnectable *connectable = G_SOCKET_CONNECTABLE(thread_data->connectable);
     GIOStream *stream;
-    SpiceTimer *exit_mainloop_timer;
 
     stream = fake_client_connect(connectable, &error);
     g_assert_no_error(error);
@@ -97,8 +144,9 @@ static gpointer check_magic_thread(gpointer data)
 
     g_object_unref(stream);
     g_object_unref(connectable);
-    exit_mainloop_timer = core->timer_add(exit_mainloop_cb, NULL);
-    core->timer_start(exit_mainloop_timer, 0);
+    g_free(thread_data);
+
+    test_event_loop_quit(thread_data->event_loop);
 
     return NULL;
 }
@@ -106,9 +154,9 @@ static gpointer check_magic_thread(gpointer data)
 static gpointer check_no_connect_thread(gpointer data)
 {
     GError *error = NULL;
-    GSocketConnectable *connectable = G_SOCKET_CONNECTABLE(data);
+    ThreadData *thread_data = data;
+    GSocketConnectable *connectable = G_SOCKET_CONNECTABLE(thread_data->connectable);
     GIOStream *stream;
-    SpiceTimer *exit_mainloop_timer;
 
     stream = fake_client_connect(connectable, &error);
     g_assert(error != NULL);
@@ -116,22 +164,26 @@ static gpointer check_no_connect_thread(gpointer data)
     g_clear_error(&error);
 
     g_object_unref(connectable);
-    exit_mainloop_timer = core->timer_add(exit_mainloop_cb, NULL);
-    core->timer_start(exit_mainloop_timer, 0);
+    g_free(thread_data);
+
+    test_event_loop_quit(thread_data->event_loop);
 
     return NULL;
 }
 
-static GThread *fake_client_new(GThreadFunc thread_func, const char *hostname, int port)
+static GThread *fake_client_new(GThreadFunc thread_func,
+                                const char *hostname, int port,
+                                TestEventLoop *event_loop)
 {
-    GSocketConnectable *connectable;
+    ThreadData *thread_data = g_new0(ThreadData, 1);
 
     g_assert_cmpuint(port, >, 0);
     g_assert_cmpuint(port, <, 65536);
-    connectable = g_network_address_new(hostname, port);
+    thread_data->connectable = g_network_address_new(hostname, port);
+    thread_data->event_loop = event_loop;
 
     /* check_magic_thread will assume ownership of 'connectable' */
-    return g_thread_new("fake-client-thread", thread_func, connectable);
+    return g_thread_new("fake-client-thread", thread_func, thread_data);
 }
 
 static void test_connect_plain(void)
@@ -139,44 +191,40 @@ static void test_connect_plain(void)
     GThread *thread;
     int result;
 
+    TestEventLoop event_loop = { 0, };
+
+    test_event_loop_init(&event_loop);
+
     /* server */
     SpiceServer *server = spice_server_new();
-    core = basic_event_loop_init();
     spice_server_set_name(server, "SPICE listen test");
     spice_server_set_noauth(server);
     spice_server_set_port(server, BASE_PORT);
-    result = spice_server_init(server, core);
+    result = spice_server_init(server, event_loop.core);
     g_assert_cmpint(result, ==, 0);
 
     /* fake client */
-    thread = fake_client_new(check_magic_thread, "localhost", BASE_PORT);
-
-    basic_event_loop_mainloop();
-
+    thread = fake_client_new(check_magic_thread, "localhost", BASE_PORT, &event_loop);
+    test_event_loop_run(&event_loop);
     g_assert_null(g_thread_join(thread));
 
-    g_thread_unref(thread);
-    basic_event_loop_destroy();
-    core = NULL;
+    test_event_loop_destroy(&event_loop);
     spice_server_destroy(server);
 }
 
 static void test_connect_ko(void)
 {
     GThread *thread;
+    TestEventLoop event_loop = { 0, };
 
-    core = basic_event_loop_init();
+    test_event_loop_init(&event_loop);
 
     /* fake client */
-    thread = fake_client_new(check_no_connect_thread, "localhost", BASE_PORT);
-
-    basic_event_loop_mainloop();
-
+    thread = fake_client_new(check_no_connect_thread, "localhost", BASE_PORT, &event_loop);
+    test_event_loop_run(&event_loop);
     g_assert_null(g_thread_join(thread));
 
-    g_thread_unref(thread);
-    basic_event_loop_destroy();
-    core = NULL;
+    test_event_loop_destroy(&event_loop);
 }
 
 int main(int argc, char **argv)
