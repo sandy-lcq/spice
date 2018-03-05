@@ -76,6 +76,15 @@ close_timer_func(void *opaque)
     }
 }
 
+static void
+fill_dev_hdr(StreamDevHeader *hdr, StreamMsgType msg_type, uint32_t msg_size)
+{
+    hdr->protocol_version = STREAM_DEVICE_PROTOCOL;
+    hdr->padding = 0;
+    hdr->type = GUINT16_TO_LE(msg_type);
+    hdr->size = GUINT32_TO_LE(msg_size);
+}
+
 static bool
 stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
 {
@@ -212,10 +221,7 @@ handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin, const char *
     buf->buf_used = total_size;
 
     StreamDevHeader *const hdr = (StreamDevHeader *)buf->buf;
-    hdr->protocol_version = STREAM_DEVICE_PROTOCOL;
-    hdr->padding = 0;
-    hdr->type = GUINT16_TO_LE(STREAM_TYPE_NOTIFY_ERROR);
-    hdr->size = GUINT32_TO_LE(msg_size);
+    fill_dev_hdr(hdr, STREAM_TYPE_NOTIFY_ERROR, msg_size);
 
     StreamMsgNotifyError *const error = (StreamMsgNotifyError *)(hdr+1);
     error->error_code = GUINT32_TO_LE(0);
@@ -453,10 +459,7 @@ stream_device_stream_start(void *opaque, StreamMsgStartStop *start,
     buf->buf_used = total_size;
 
     StreamDevHeader *hdr = (StreamDevHeader *)buf->buf;
-    hdr->protocol_version = STREAM_DEVICE_PROTOCOL;
-    hdr->padding = 0;
-    hdr->type = GUINT16_TO_LE(STREAM_TYPE_START_STOP);
-    hdr->size = GUINT32_TO_LE(msg_size);
+    fill_dev_hdr(hdr, STREAM_TYPE_START_STOP, msg_size);
 
     memcpy(&hdr[1], start, msg_size);
 
