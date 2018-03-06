@@ -205,11 +205,11 @@ endif
 libspice_server_la_LIBADD = libserver.la
 libspice_server_la_SOURCES =
 
-spice-server-enums.c: spice-server.h spice-server-enums.tmpl.c
-	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.tmpl.c $< > $@
+spice-server-enums.c: spice-server.h spice-server-enums.c.tmpl
+	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.c.tmpl $< > $@
 
-spice-server-enums.h: spice-server.h spice-server-enums.tmpl.h
-	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.tmpl.h $< > $@
+spice-server-enums.h: spice-server.h spice-server-enums.h.tmpl
+	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.h.tmpl $< > $@
 
 EXTRA_DIST =					\
 	spice-bitmap-utils.tmpl.c		\
@@ -217,8 +217,8 @@ EXTRA_DIST =					\
 	glz-encode-match.tmpl.c			\
 	glz-encode.tmpl.c			\
 	spice-server.syms			\
-	spice-server-enums.tmpl.h		\
-	spice-server-enums.tmpl.c		\
+	spice-server-enums.h.tmpl		\
+	spice-server-enums.c.tmpl		\
 	$(NULL)
 
 BUILT_SOURCES = $(spice_built_sources)
