@@ -676,8 +676,7 @@ void dcc_push_monitors_config(DisplayChannelClient *dcc)
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &mci->pipe_item);
 }
 
-static RedSurfaceDestroyItem *red_surface_destroy_item_new(RedChannel *channel,
-                                                           uint32_t surface_id)
+static RedSurfaceDestroyItem *red_surface_destroy_item_new(uint32_t surface_id)
 {
     RedSurfaceDestroyItem *destroy;
 
@@ -730,7 +729,6 @@ RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
 void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
 {
     DisplayChannel *display;
-    RedChannel *channel;
     RedSurfaceDestroyItem *destroy;
 
     if (!dcc) {
@@ -738,7 +736,6 @@ void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
     }
 
     display = DCC_TO_DC(dcc);
-    channel = RED_CHANNEL(display);
 
     if (common_graphics_channel_get_during_target_migrate(COMMON_GRAPHICS_CHANNEL(display)) ||
         !dcc->priv->surface_client_created[surface_id]) {
@@ -746,7 +743,7 @@ void dcc_destroy_surface(DisplayChannelClient *dcc, uint32_t surface_id)
     }
 
     dcc->priv->surface_client_created[surface_id] = FALSE;
-    destroy = red_surface_destroy_item_new(channel, surface_id);
+    destroy = red_surface_destroy_item_new(surface_id);
     red_channel_client_pipe_add(RED_CHANNEL_CLIENT(dcc), &destroy->pipe_item);
 }
 
