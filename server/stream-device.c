@@ -19,24 +19,13 @@
 #include <config.h>
 #endif
 
+#include "stream-device.h"
+
 #include <spice/stream-device.h>
 
-#include "char-device.h"
 #include "stream-channel.h"
 #include "cursor-channel.h"
 #include "reds.h"
-
-#define TYPE_STREAM_DEVICE stream_device_get_type()
-
-#define STREAM_DEVICE(obj) \
-    (G_TYPE_CHECK_INSTANCE_CAST((obj), TYPE_STREAM_DEVICE, StreamDevice))
-#define STREAM_DEVICE_CLASS(klass) \
-    (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_STREAM_DEVICE, StreamDeviceClass))
-#define STREAM_DEVICE_GET_CLASS(obj) \
-    (G_TYPE_INSTANCE_GET_CLASS((obj), TYPE_STREAM_DEVICE, StreamDeviceClass))
-
-typedef struct StreamDevice StreamDevice;
-typedef struct StreamDeviceClass StreamDeviceClass;
 
 struct StreamDevice {
     RedCharDevice parent;
@@ -64,7 +53,6 @@ struct StreamDeviceClass {
     RedCharDeviceClass parent_class;
 };
 
-static GType stream_device_get_type(void) G_GNUC_CONST;
 static StreamDevice *stream_device_new(SpiceCharDeviceInstance *sin, RedsState *reds);
 
 G_DEFINE_TYPE(StreamDevice, stream_device, RED_TYPE_CHAR_DEVICE)
@@ -504,7 +492,7 @@ stream_device_stream_queue_stat(void *opaque, const StreamQueueStat *stats G_GNU
     }
 }
 
-RedCharDevice *
+StreamDevice *
 stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
 {
     SpiceCharDeviceInterface *sif;
@@ -516,7 +504,7 @@ stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin)
         sif->state(sin, 1);
     }
 
-    return RED_CHAR_DEVICE(dev);
+    return dev;
 }
 
 static void

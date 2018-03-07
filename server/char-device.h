@@ -236,7 +236,6 @@ RedCharDevice *spicevmc_device_connect(RedsState *reds,
                                        uint8_t channel_type);
 void spicevmc_device_disconnect(RedsState *reds,
                                 SpiceCharDeviceInstance *char_device);
-RedCharDevice *stream_device_connect(RedsState *reds, SpiceCharDeviceInstance *sin);
 
 SpiceCharDeviceInterface *spice_char_device_get_interface(SpiceCharDeviceInstance *instance);
 

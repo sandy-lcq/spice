@@ -74,6 +74,7 @@
 #include "red-client.h"
 #include "glib-compat.h"
 #include "net-utils.h"
+#include "stream-device.h"
 
 #define REDS_MAX_STAT_NODES 100
 
@@ -3108,7 +3109,7 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
         if (strcmp(char_device->portname, "org.spice-space.webdav.0") == 0) {
             dev_state = spicevmc_device_connect(reds, char_device, SPICE_CHANNEL_WEBDAV);
         } else if (strcmp(char_device->portname, "com.redhat.stream.0") == 0) {
-            dev_state = stream_device_connect(reds, char_device);
+            dev_state = RED_CHAR_DEVICE(stream_device_connect(reds, char_device));
         } else {
             dev_state = spicevmc_device_connect(reds, char_device, SPICE_CHANNEL_PORT);
         }

@@ -168,6 +168,7 @@ libserver_la_SOURCES =				\
 	stream-channel.c			\
 	stream-channel.h			\
 	stream-device.c				\
+	stream-device.h				\
 	sw-canvas.c				\
 	tree.c					\
 	tree.h					\
