@@ -11,7 +11,7 @@ before_script:
 makecheck:
   script:
   - >
-    CFLAGS='-O2 -pipe -g -fsanitize=address -fno-omit-frame-pointer'
+    CFLAGS='-O2 -pipe -g -fsanitize=address -fno-omit-frame-pointer -Wframe-larger-than=40920'
     LDFLAGS='-fsanitize=address -lasan'
     ./autogen.sh
   - make
