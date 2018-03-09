@@ -17,3 +17,7 @@ noinst_PROGRAMS = \
 reds_stat_SOURCES = \
 	reds_stat.c \
 	$(NULL)
+
+EXTRA_DIST = \
+	meson.build \
+	$(NULL)

@@ -213,6 +213,7 @@ spice-server-enums.h: spice-server.h spice-server-enums.h.tmpl
 	$(AM_V_GEN)glib-mkenums --template $(srcdir)/spice-server-enums.h.tmpl $< > $@
 
 EXTRA_DIST =					\
+	meson.build				\
 	spice-bitmap-utils.tmpl.c		\
 	cache-item.tmpl.c			\
 	glz-encode-match.tmpl.c			\

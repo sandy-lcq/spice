@@ -2,6 +2,7 @@ NULL =
 ASCIIDOC_FLAGS = -a icons -a toc
 
 EXTRA_DIST =					\
+	meson.build				\
 	spice_style.html			\
 	spice_style.txt				\
 	spice_threading_model.html		\

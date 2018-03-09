@@ -3,6 +3,7 @@ SUFFIXES = .html
 ASCIIDOC_FLAGS = -a icons -a toc
 
 EXTRA_DIST =					\
+	meson.build				\
 	images/icons/important.png		\
 	images/icons/note.png			\
 	manual.html				\

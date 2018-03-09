@@ -17,7 +17,10 @@ DISTCHECK_CONFIGURE_FLAGS =			\
 	$(NULL)
 
 EXTRA_DIST =					\
+	meson.build				\
+	meson_options.txt			\
 	build-aux/git-version-gen		\
+	build-aux/meson/check-spice-common	\
 	.version				\
 	$(NULL)
 

@@ -4,6 +4,7 @@ NULL =
 VALGRIND_SUPPRESSIONS_FILES = $(srcdir)/valgrind/glib.supp
 EXTRA_DIST =				\
 	$(VALGRIND_SUPPRESSIONS_FILES)	\
+	meson.build			\
 	pki/ca-cert.pem			\
 	pki/server-cert.pem		\
 	pki/server-key.pem		\
