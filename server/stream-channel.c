@@ -97,6 +97,7 @@ enum {
     RED_PIPE_ITEM_TYPE_STREAM_DATA,
     RED_PIPE_ITEM_TYPE_STREAM_DESTROY,
     RED_PIPE_ITEM_TYPE_STREAM_ACTIVATE_REPORT,
+    RED_PIPE_ITEM_TYPE_MONITORS_CONFIG,
 };
 
 typedef struct StreamCreateItem {
@@ -189,6 +190,28 @@ fill_base(SpiceMarshaller *m, const StreamChannel *channel)
 }
 
 static void
+marshall_monitors_config(RedChannelClient *rcc, StreamChannel *channel, SpiceMarshaller *m)
+{
+    struct {
+        SpiceMsgDisplayMonitorsConfig config;
+        SpiceHead head;
+    } msg = {
+        { 1, 1, },
+        {
+            // monitor ID. These IDs are allocated per channel starting from 0
+            0,
+            PRIMARY_SURFACE_ID,
+            channel->width, channel->height,
+            0, 0,
+            0 // flags
+        }
+    };
+
+    red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_MONITORS_CONFIG);
+    spice_marshall_msg_display_monitors_config(m, &msg.config);
+}
+
+static void
 stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
 {
     SpiceMarshaller *m = red_channel_client_get_marshaller(rcc);
@@ -213,6 +236,12 @@ stream_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_item)
         spice_marshall_msg_display_surface_create(m, &surface_create);
         break;
     }
+    case RED_PIPE_ITEM_TYPE_MONITORS_CONFIG:
+        if (!red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_MONITORS_CONFIG)) {
+            return;
+        }
+        marshall_monitors_config(rcc, channel, m);
+        break;
     case RED_PIPE_ITEM_TYPE_SURFACE_DESTROY: {
         red_channel_client_init_send_data(rcc, SPICE_MSG_DISPLAY_SURFACE_DESTROY);
         SpiceMsgSurfaceDestroy surface_destroy = { PRIMARY_SURFACE_ID };
@@ -381,7 +410,6 @@ stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedStream
     request_new_stream(channel, start);
 
 
-    // TODO set capabilities like  SPICE_DISPLAY_CAP_MONITORS_CONFIG
     // see guest_set_client_capabilities
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(client);
     red_channel_client_push_set_ack(rcc);
@@ -399,6 +427,7 @@ stream_channel_connect(RedChannel *red_channel, RedClient *red_client, RedStream
 
     // pass proper data
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_SURFACE_CREATE);
+    red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG);
     // surface data
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_FILL_SURFACE);
     // TODO monitor configs ??
@@ -417,8 +446,7 @@ stream_channel_constructed(GObject *object)
     client_cbs.connect = stream_channel_connect;
     red_channel_register_client_cbs(red_channel, &client_cbs, NULL);
 
-    // TODO, send monitor to support multiple monitors in the future
-//    red_channel_set_cap(red_channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
+    red_channel_set_cap(red_channel, SPICE_DISPLAY_CAP_MONITORS_CONFIG);
     red_channel_set_cap(red_channel, SPICE_DISPLAY_CAP_STREAM_REPORT);
 
     reds_register_channel(reds, red_channel);
@@ -462,6 +490,7 @@ stream_channel_change_format(StreamChannel *channel, const StreamMsgFormat *fmt)
         channel->width = fmt->width;
         channel->height = fmt->height;
         red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_SURFACE_CREATE);
+        red_channel_pipes_add_type(red_channel, RED_PIPE_ITEM_TYPE_MONITORS_CONFIG);
         // TODO monitors config ??
         red_channel_pipes_add_empty_msg(red_channel, SPICE_MSG_DISPLAY_MARK);
     }
