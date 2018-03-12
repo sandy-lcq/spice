@@ -74,7 +74,7 @@
 #include "red-client.h"
 #include "glib-compat.h"
 #include "net-utils.h"
-#include "stream-device.h"
+#include "red-stream-device.h"
 
 #define REDS_MAX_STAT_NODES 100
 

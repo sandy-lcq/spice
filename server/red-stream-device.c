@@ -19,9 +19,7 @@
 #include <config.h>
 #endif
 
-#include "stream-device.h"
-
-#include <spice/stream-device.h>
+#include "red-stream-device.h"
 
 #include "stream-channel.h"
 #include "cursor-channel.h"

@@ -167,8 +167,8 @@ libserver_la_SOURCES =				\
 	stat.h					\
 	stream-channel.c			\
 	stream-channel.h			\
-	stream-device.c				\
-	stream-device.h				\
+	red-stream-device.c			\
+	red-stream-device.h			\
 	sw-canvas.c				\
 	tree.c					\
 	tree.h					\
