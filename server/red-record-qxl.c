@@ -886,7 +886,7 @@ RedRecord *red_record_new(const char *filename)
         GError *error = NULL;
         GPid child_pid;
         gboolean ret;
-        gint fd_in;
+        gint fd_in = -1;
 
         ret = g_shell_parse_argv(filter, &argc, &argv, &error);
 
