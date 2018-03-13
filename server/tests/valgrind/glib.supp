@@ -491,3 +491,22 @@
 	...
 	fun:g_object_new_valist
 }
+
+{
+	getaddrinfo
+	Memcheck:Leak
+	fun:malloc
+	...
+	fun:__resolv_conf_allocate
+	...
+	fun:getaddrinfo
+}
+
+{
+	px_proxy_factory_get_proxies
+	Memcheck:Leak
+	fun:malloc
+	fun:tls_get_addr_tail
+	...
+	fun:px_proxy_factory_get_proxies
+}
