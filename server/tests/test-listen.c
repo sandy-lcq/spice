@@ -174,9 +174,9 @@ static gpointer check_magic_thread(gpointer data)
 
     g_object_unref(stream);
     g_object_unref(connectable);
-    g_free(thread_data);
 
     test_event_loop_quit(thread_data->event_loop);
+    g_free(thread_data);
 
     return NULL;
 }
@@ -194,9 +194,9 @@ static gpointer check_no_connect_thread(gpointer data)
     g_clear_error(&error);
 
     g_object_unref(connectable);
-    g_free(thread_data);
 
     test_event_loop_quit(thread_data->event_loop);
+    g_free(thread_data);
 
     return NULL;
 }
