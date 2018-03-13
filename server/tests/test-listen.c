@@ -85,7 +85,7 @@ static void test_event_loop_destroy(TestEventLoop *event_loop)
 
 static void test_event_loop_run(TestEventLoop *event_loop)
 {
-    event_loop->core->timer_start(event_loop->timeout_timer, 5000);
+    event_loop->core->timer_start(event_loop->timeout_timer, 50000);
     basic_event_loop_mainloop();
 }
 
