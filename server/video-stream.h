@@ -45,8 +45,8 @@
 
 typedef struct VideoStream VideoStream;
 
-/* This item is used to send a full quality image of the area where the stream was.
- * This to avoid the artifacts due to the lossless compression. */
+/* This item is used to send a full quality image (lossless) of the area where the stream was.
+ * This to avoid the artifacts due to the lossy compression. */
 typedef struct RedUpgradeItem {
     RedPipeItem base;
     Drawable *drawable;
