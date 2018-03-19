@@ -71,6 +71,7 @@ esac
 dnl =========================================================================
 dnl Check optional features
 SPICE_CHECK_SMARTCARD
+SPICE_EXTRA_CHECKS
 
 AC_ARG_ENABLE(gstreamer,
               AS_HELP_STRING([--enable-gstreamer=@<:@auto/0.10/1.0/yes/no@:>@],
@@ -236,14 +237,6 @@ AC_ARG_ENABLE([statistics],
                               [Build SPICE with statistic code enabled @<:@default=no@:>@]))
 AS_IF([test "$enable_statistics" = "yes"],
       [AC_DEFINE([RED_STATISTICS], [1], [Enable SPICE statistics])])
-
-AC_ARG_ENABLE([extra-checks],
-               AS_HELP_STRING([--enable-extra-checks=@<:@yes/no@:>@],
-                              [Enable expensive checks @<:@default=no@:>@]))
-AM_CONDITIONAL(ENABLE_EXTRA_CHECKS, test "$enable_extra_checks" = "yes")
-AC_DEFINE_UNQUOTED([ENABLE_EXTRA_CHECKS],
-                   [$(test "x$enable_extra_checks" = xyes && echo 1 || echo 0)],
-                   [Define to 1 to enable extra checks on code otherwise define to 0])
 
 dnl ===========================================================================
 dnl check compiler flags

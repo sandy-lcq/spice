@@ -4442,7 +4442,7 @@ red_char_device_vdi_port_finalize(GObject *object)
         dev->priv->current_read_buf = NULL;
     }
     g_free(dev->priv->mig_data);
-    if (ENABLE_EXTRA_CHECKS) {
+    if (spice_extra_checks) {
         spice_assert(dev->priv->num_read_buf == 0);
     }
 

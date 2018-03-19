@@ -89,7 +89,7 @@ display_channel_finalize(GObject *object)
     display_channel_destroy_surfaces(self);
     image_cache_reset(&self->priv->image_cache);
 
-    if (ENABLE_EXTRA_CHECKS) {
+    if (spice_extra_checks) {
         unsigned int count;
         _Drawable *drawable;
         VideoStream *stream;
