@@ -135,11 +135,35 @@ static uint8_t *add_format(uint8_t *p, uint32_t w, uint32_t h, SpiceVideoCodecTy
     return p + sizeof(fmt);
 }
 
+/* currently we don't care about possible capabilities sent so discard them
+ * from server reply */
+static void
+discard_server_capabilities(void)
+{
+    StreamDevHeader hdr;
+
+    if (vmc_write_pos == 0) {
+        return;
+    }
+    g_assert(vmc_write_pos >= sizeof(hdr));
+
+    memcpy(&hdr, vmc_write_buf, sizeof(hdr));
+    hdr.type = GUINT16_FROM_LE(hdr.type);
+    hdr.size = GUINT32_FROM_LE(hdr.size);
+    if (hdr.type == STREAM_TYPE_CAPABILITIES) {
+        g_assert_cmpint(hdr.size, <=, vmc_write_pos - sizeof(hdr));
+        vmc_write_pos -= hdr.size + sizeof(hdr);
+        memmove(vmc_write_buf, vmc_write_buf + hdr.size + sizeof(hdr), vmc_write_pos);
+    }
+}
+
 // check we have an error message on the write buffer
 static void
 check_vmc_error_message(void)
 {
     StreamDevHeader hdr;
+
+    discard_server_capabilities();
 
     g_assert(vmc_write_pos >= sizeof(hdr));
 
@@ -245,6 +269,7 @@ static void test_stream_device_unfinished(void)
     g_assert(message_sizes_curr - message_sizes == 1);
 
     // we should have no data from the device
+    discard_server_capabilities();
     g_assert_cmpint(vmc_write_pos, ==, 0);
 
     test_destroy(test);

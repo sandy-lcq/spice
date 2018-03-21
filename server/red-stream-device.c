@@ -1,6 +1,6 @@
 /* spice-server character device to handle a video stream
 
-   Copyright (C) 2017 Red Hat, Inc.
+   Copyright (C) 2017-2018 Red Hat, Inc.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,8 @@
 #include "cursor-channel.h"
 #include "reds.h"
 
+#define MAX_GUEST_CAPABILITIES_BYTES ((STREAM_CAP_END+7)/8)
+
 struct StreamDevice {
     RedCharDevice parent;
 
@@ -42,6 +44,7 @@ struct StreamDevice {
     bool has_error;
     bool opened;
     bool flow_stopped;
+    uint8_t guest_capabilities[MAX_GUEST_CAPABILITIES_BYTES];
     StreamChannel *stream_channel;
     CursorChannel *cursor_channel;
     SpiceTimer *close_timer;
@@ -61,7 +64,7 @@ typedef bool StreamMsgHandler(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     SPICE_GNUC_WARN_UNUSED_RESULT;
 
 static StreamMsgHandler handle_msg_format, handle_msg_data, handle_msg_cursor_set,
-    handle_msg_cursor_move;
+    handle_msg_cursor_move, handle_msg_capabilities;
 
 static bool handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin,
                                const char *error_msg) SPICE_GNUC_WARN_UNUSED_RESULT;
@@ -156,7 +159,8 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         }
         break;
     case STREAM_TYPE_CAPABILITIES:
-        /* FIXME */
+        handled = handle_msg_capabilities(dev, sin);
+        break;
     default:
         handled = handle_msg_invalid(dev, sin, "Invalid message type");
         break;
@@ -257,6 +261,39 @@ handle_msg_format(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     dev->msg->format.width = GUINT32_FROM_LE(dev->msg->format.width);
     dev->msg->format.height = GUINT32_FROM_LE(dev->msg->format.height);
     stream_channel_change_format(dev->stream_channel, &dev->msg->format);
+    return true;
+}
+
+static bool
+handle_msg_capabilities(StreamDevice *dev, SpiceCharDeviceInstance *sin)
+{
+    SpiceCharDeviceInterface *sif = spice_char_device_get_interface(sin);
+
+    if (spice_extra_checks) {
+        spice_assert(dev->hdr_pos >= sizeof(StreamDevHeader));
+        spice_assert(dev->hdr.type == STREAM_TYPE_CAPABILITIES);
+    }
+
+    if (dev->hdr.size > STREAM_MSG_CAPABILITIES_MAX_BYTES) {
+        return handle_msg_invalid(dev, sin, "Wrong size for StreamMsgCapabilities");
+    }
+
+    int n = sif->read(sin, dev->msg->buf + dev->msg_pos, dev->hdr.size - dev->msg_pos);
+    if (n < 0) {
+        return handle_msg_invalid(dev, sin, NULL);
+    }
+
+    dev->msg_pos += n;
+
+    if (dev->msg_pos < dev->hdr.size) {
+        return false;
+    }
+
+    // copy only capabilities we know about
+    memset(dev->guest_capabilities, 0, sizeof(dev->guest_capabilities));
+    memcpy(dev->guest_capabilities, dev->msg->capabilities.capabilities,
+           MIN(sizeof(dev->guest_capabilities), dev->hdr.size));
+
     return true;
 }
 
@@ -590,6 +627,25 @@ char_device_set_state(RedCharDevice *char_dev, int state)
 }
 
 static void
+send_capabilities(RedCharDevice *char_dev)
+{
+    int msg_size = MAX_GUEST_CAPABILITIES_BYTES;
+    int total_size = sizeof(StreamDevHeader) + msg_size;
+
+    RedCharDeviceWriteBuffer *buf =
+        red_char_device_write_buffer_get_server_no_token(char_dev, total_size);
+    buf->buf_used = total_size;
+
+    StreamDevHeader *const hdr = (StreamDevHeader *)buf->buf;
+    fill_dev_hdr(hdr, STREAM_TYPE_CAPABILITIES, msg_size);
+
+    StreamMsgCapabilities *const caps = (StreamMsgCapabilities *)(hdr+1);
+    memset(caps, 0, msg_size);
+
+    red_char_device_write_buffer_add(char_dev, buf);
+}
+
+static void
 stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
 {
     if (event != SPICE_PORT_EVENT_OPENED && event != SPICE_PORT_EVENT_CLOSED) {
@@ -602,6 +658,8 @@ stream_device_port_event(RedCharDevice *char_dev, uint8_t event)
     dev->opened = (event == SPICE_PORT_EVENT_OPENED);
     if (dev->opened) {
         stream_device_create_channel(dev);
+
+        send_capabilities(char_dev);
     }
     dev->hdr_pos = 0;
     dev->msg_pos = 0;
