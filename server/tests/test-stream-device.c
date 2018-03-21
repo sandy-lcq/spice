@@ -352,6 +352,51 @@ static void test_stream_device_format_after_data(void)
     basic_event_loop_destroy();
 }
 
+// check empty capabilities
+static void test_stream_device_empty_capabilities(void)
+{
+    uint8_t *p = message;
+    SpiceCoreInterface *core = basic_event_loop_init();
+    Test *test = test_new(core);
+
+    pos = 0;
+    vmc_write_pos = 0;
+    message_sizes_curr = message_sizes;
+    message_sizes_end = message_sizes;
+
+    // add some messages into device buffer
+    p = add_stream_hdr(p, STREAM_TYPE_CAPABILITIES, 0);
+    *message_sizes_end = p - message;
+    ++message_sizes_end;
+    p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
+    *message_sizes_end = p - message;
+    ++message_sizes_end;
+    p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
+    *message_sizes_end = p - message;
+    ++message_sizes_end;
+
+    vmc_instance.base.sif = &vmc_interface.base;
+    spice_server_add_interface(test->server, &vmc_instance.base);
+
+    // we need to open the device and kick the start
+    // the alarm is to avoid program to stuck
+    alarm(5);
+    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
+    spice_server_char_device_wakeup(&vmc_instance);
+    alarm(0);
+
+    // we should read all data
+    g_assert(message_sizes_curr - message_sizes == 3);
+
+    // we should have no data from the device
+    discard_server_capabilities();
+    g_assert_cmpint(vmc_write_pos, ==, 0);
+
+    test_destroy(test);
+    basic_event_loop_destroy();
+}
+
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -360,6 +405,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/server/stream-device-unfinished", test_stream_device_unfinished);
     g_test_add_func("/server/stream-device-multiple", test_stream_device_multiple);
     g_test_add_func("/server/stream-device-format-after-data", test_stream_device_format_after_data);
+    g_test_add_func("/server/stream-device-empty-capabilities", test_stream_device_empty_capabilities);
 
     return g_test_run();
 }
