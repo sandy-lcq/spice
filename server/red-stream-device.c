@@ -344,7 +344,7 @@ stream_msg_cursor_set_to_cursor_cmd(const StreamMsgCursorSet *msg, size_t msg_si
         return NULL;
     }
     cursor->data_size = size_required;
-    cursor->data = spice_memdup(msg->data, size_required);
+    cursor->data = g_memdup(msg->data, size_required);
     return cmd;
 }
 

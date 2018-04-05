@@ -1450,8 +1450,7 @@ static bool red_get_cursor(RedMemSlotInfo *slots, int group_id,
     if (free_data) {
         red->data = data;
     } else {
-        red->data = g_malloc(size);
-        memcpy(red->data, data, size);
+        red->data = g_memdup(data, size);
     }
     return true;
 }
