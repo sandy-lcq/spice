@@ -107,7 +107,7 @@ static SpiceCharDeviceInterface vmc_interface = {
 // this specifically creates a stream device
 static SpiceCharDeviceInstance vmc_instance = {
     .subtype = "port",
-    .portname = "com.redhat.stream.0",
+    .portname = "org.spice-space.stream.0",
 };
 
 static uint8_t *add_stream_hdr(uint8_t *p, StreamMsgType type, uint32_t size)
