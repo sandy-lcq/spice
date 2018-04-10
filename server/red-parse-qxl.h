@@ -99,6 +99,7 @@ typedef struct RedSurfaceCmd {
 } RedSurfaceCmd;
 
 typedef struct RedCursorCmd {
+    QXLInstance *qxl;
     QXLReleaseInfoExt release_info_ext;
     uint8_t type;
     union {

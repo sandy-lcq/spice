@@ -24,6 +24,7 @@
 #include <common/lz_common.h>
 #include "spice-bitmap-utils.h"
 #include "red-common.h"
+#include "red-qxl.h"
 #include "memslot.h"
 #include "red-parse-qxl.h"
 
@@ -1496,5 +1497,8 @@ void red_put_cursor_cmd(RedCursorCmd *red)
     case QXL_CURSOR_SET:
         red_put_cursor(&red->u.set.shape);
         break;
+    }
+    if (red->qxl) {
+        red_qxl_release_resource(red->qxl, red->release_info_ext);
     }
 }
