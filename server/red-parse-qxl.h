@@ -113,7 +113,6 @@ typedef struct RedCursorCmd {
         } trail;
         SpicePoint16 position;
     } u;
-    uint8_t *device_data;
 } RedCursorCmd;
 
 void red_get_rect_ptr(SpiceRect *red, const QXLRect *qxl);
