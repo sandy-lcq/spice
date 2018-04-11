@@ -142,9 +142,9 @@ static void red_marshall_cursor_init(CursorChannelClient *ccc, SpiceMarshaller *
     spice_marshall_msg_cursor_init(base_marshaller, &msg);
 }
 
-static void cursor_marshall(CursorChannelClient *ccc,
-                            SpiceMarshaller *m,
-                            RedCursorPipeItem *cursor_pipe_item)
+static void red_marshall_cursor(CursorChannelClient *ccc,
+                                SpiceMarshaller *m,
+                                RedCursorPipeItem *cursor_pipe_item)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(ccc);
     CursorChannel *cursor_channel = CURSOR_CHANNEL(red_channel_client_get_channel(rcc));
@@ -212,7 +212,7 @@ static void cursor_channel_send_item(RedChannelClient *rcc, RedPipeItem *pipe_it
 
     switch (pipe_item->type) {
     case RED_PIPE_ITEM_TYPE_CURSOR:
-        cursor_marshall(ccc, m, SPICE_UPCAST(RedCursorPipeItem, pipe_item));
+        red_marshall_cursor(ccc, m, SPICE_UPCAST(RedCursorPipeItem, pipe_item));
         break;
     case RED_PIPE_ITEM_TYPE_INVAL_ONE:
         red_marshall_inval(rcc, m, SPICE_CONTAINEROF(pipe_item, RedCacheItem, u.pipe_data));
