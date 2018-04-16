@@ -1303,11 +1303,11 @@ void red_channel_client_push(RedChannelClient *rcc)
 {
     RedPipeItem *pipe_item;
 
-    if (!rcc->priv->during_send) {
-        rcc->priv->during_send = TRUE;
-    } else {
+    if (rcc->priv->during_send) {
         return;
     }
+
+    rcc->priv->during_send = TRUE;
     g_object_ref(rcc);
     if (red_channel_client_is_blocked(rcc)) {
         red_channel_client_send(rcc);
