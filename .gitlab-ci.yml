@@ -34,7 +34,9 @@ check-valgrind:
     dnf install valgrind
     gstreamer1-libav gstreamer1-plugins-ugly gstreamer1-plugins-good gstreamer1-plugins-bad-free
     -y
-  - ./autogen.sh --enable-valgrind --enable-extra-checks
+  - >
+    CFLAGS='-O2 -pipe -g -D_FORTIFY_SOURCE=0'
+    ./autogen.sh --enable-valgrind --enable-extra-checks
   - make
   - make check-valgrind || (cat server/tests/test-suite-memcheck.log && exit 1)
 
