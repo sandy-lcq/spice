@@ -712,12 +712,7 @@ static void red_put_copy(SpiceCopy *red)
 
 // these types are really the same thing
 #define red_get_blend_ptr red_get_copy_ptr
-
-static void red_put_blend(SpiceBlend *red)
-{
-    red_put_image(red->src_bitmap);
-    red_put_qmask(&red->mask);
-}
+#define red_put_blend red_put_copy
 
 static void red_get_transparent_ptr(RedMemSlotInfo *slots, int group_id,
                                     SpiceTransparent *red, QXLTransparent *qxl,
