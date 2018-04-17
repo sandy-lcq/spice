@@ -986,27 +986,10 @@ static void red_put_whiteness(SpiceWhiteness *red)
     red_put_qmask(&red->mask);
 }
 
-static void red_get_blackness_ptr(RedMemSlotInfo *slots, int group_id,
-                                  SpiceBlackness *red, QXLBlackness *qxl, uint32_t flags)
-{
-    red_get_qmask_ptr(slots, group_id, &red->mask, &qxl->mask, flags);
-}
-
-static void red_put_blackness(SpiceWhiteness *red)
-{
-    red_put_qmask(&red->mask);
-}
-
-static void red_get_invers_ptr(RedMemSlotInfo *slots, int group_id,
-                               SpiceInvers *red, QXLInvers *qxl, uint32_t flags)
-{
-    red_get_qmask_ptr(slots, group_id, &red->mask, &qxl->mask, flags);
-}
-
-static void red_put_invers(SpiceWhiteness *red)
-{
-    red_put_qmask(&red->mask);
-}
+#define red_get_invers_ptr red_get_whiteness_ptr
+#define red_get_blackness_ptr red_get_whiteness_ptr
+#define red_put_invers red_put_whiteness
+#define red_put_blackness red_put_whiteness
 
 static void red_get_clip_ptr(RedMemSlotInfo *slots, int group_id,
                              SpiceClip *red, QXLClip *qxl)
