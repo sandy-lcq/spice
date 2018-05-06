@@ -835,8 +835,8 @@ void red_char_device_reset(RedCharDevice *dev)
 
         spice_debug("send_queue_empty %d", g_queue_is_empty(dev_client->send_queue));
         dev_client->num_send_tokens += g_queue_get_length(dev_client->send_queue);
-        g_queue_foreach(dev_client->send_queue, (GFunc)red_pipe_item_unref, NULL);
-        g_queue_clear(dev_client->send_queue);
+        g_queue_free_full(dev_client->send_queue, (GDestroyNotify)red_pipe_item_unref);
+        dev_client->send_queue = g_queue_new();
 
         /* If device is reset, we must reset the tokens counters as well as we
          * don't hold any data from client and upon agent's reconnection we send
