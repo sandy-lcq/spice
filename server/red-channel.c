@@ -301,10 +301,19 @@ red_channel_init(RedChannel *self)
     self->priv->client_cbs.migrate = red_channel_client_default_migrate;
 }
 
+// utility to avoid possible invalid function cast
+static void
+red_channel_foreach_client(RedChannel *channel, void (*func)(RedChannelClient* client))
+{
+    RedChannelClient *client;
+    GLIST_FOREACH(channel->priv->clients, RedChannelClient, client) {
+        func(client);
+    }
+}
 
 void red_channel_receive(RedChannel *channel)
 {
-    g_list_foreach(channel->priv->clients, (GFunc)red_channel_client_receive, NULL);
+    red_channel_foreach_client(channel, red_channel_client_receive);
 }
 
 void red_channel_add_client(RedChannel *channel, RedChannelClient *rcc)
@@ -403,13 +412,13 @@ void red_channel_destroy(RedChannel *channel)
     // prevent future connection
     reds_unregister_channel(channel->priv->reds, channel);
 
-    g_list_foreach(channel->priv->clients, (GFunc)red_channel_client_destroy, NULL);
+    red_channel_foreach_client(channel, red_channel_client_destroy);
     g_object_unref(channel);
 }
 
 void red_channel_send(RedChannel *channel)
 {
-    g_list_foreach(channel->priv->clients, (GFunc)red_channel_client_send, NULL);
+    red_channel_foreach_client(channel, red_channel_client_send);
 }
 
 void red_channel_push(RedChannel *channel)
@@ -418,7 +427,7 @@ void red_channel_push(RedChannel *channel)
         return;
     }
 
-    g_list_foreach(channel->priv->clients, (GFunc)red_channel_client_push, NULL);
+    red_channel_foreach_client(channel, red_channel_client_push);
 }
 
 void red_channel_pipes_add(RedChannel *channel, RedPipeItem *item)
@@ -478,7 +487,7 @@ void red_channel_remove_client(RedChannel *channel, RedChannelClient *rcc)
 
 void red_channel_disconnect(RedChannel *channel)
 {
-    g_list_foreach(channel->priv->clients, (GFunc)red_channel_client_disconnect, NULL);
+    red_channel_foreach_client(channel, red_channel_client_disconnect);
 }
 
 void red_channel_connect(RedChannel *channel, RedClient *client,
