@@ -143,7 +143,12 @@ static void watch_update_mask(const SpiceCoreInterfaceInternal *iface,
         return;
 
     watch->source = g_io_create_watch(watch->channel, spice_event_to_giocondition(event_mask));
-    g_source_set_callback(watch->source, (GSourceFunc)watch_func, watch, NULL);
+    /* g_source_set_callback() documentation says:
+     * "The exact type of func depends on the type of source; ie. you should
+     *  not count on func being called with data as its first parameter."
+     * In this case it is a GIOFunc. First cast to GIOFunc to make sure it is the right type.
+     * The other casts silence the warning from gcc */
+    g_source_set_callback(watch->source, (GSourceFunc)(void*)(GIOFunc)watch_func, watch, NULL);
     g_source_attach(watch->source, watch->context);
 }
 
