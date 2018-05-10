@@ -1071,8 +1071,8 @@ required Spice components.
 Client requirements
 ~~~~~~~~~~~~~~~~~~~
 
-See the http://cgit.freedesktop.org/spice/spice-gtk/tree/README[README
-file in spice-gtk] for the list of dependencies.
+See the https://gitlab.freedesktop.org/spice/spice-gtk/raw/master/README
+[README file in spice-gtk] for the list of dependencies.
 
 Host requirements
 ~~~~~~~~~~~~~~~~~
@@ -1112,7 +1112,7 @@ export INST_ROOT="/opt/spice"; mkdir $INST_ROOT
 export PKG_CONFIG_PATH=$INST_ROOT/lib/pkgconfig:$PKG_CONFIG_PATH
 
 cd $BUILD_ROOT
-git clone git://cgit.freedesktop.org/spice/spice
+git clone https://gitlab.freedesktop.org/spice/spice.git
 cd $BUILD_ROOT/spice
 ./configure --prefix=$INST_ROOT
 make
