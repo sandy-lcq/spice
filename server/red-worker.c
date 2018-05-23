@@ -93,12 +93,6 @@ struct RedWorker {
     GMainLoop *loop;
 };
 
-static int display_is_connected(RedWorker *worker)
-{
-    return worker->display_channel &&
-        red_channel_is_connected(RED_CHANNEL(worker->display_channel));
-}
-
 void red_drawable_unref(RedDrawable *red_drawable)
 {
     if (--red_drawable->refs) {
@@ -529,7 +523,7 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
 
     CommonGraphicsChannel *common = COMMON_GRAPHICS_CHANNEL(display);
     RedChannel *channel = RED_CHANNEL(display);
-    if (display_is_connected(worker) &&
+    if (red_channel_is_connected(channel) &&
         !common_graphics_channel_get_during_target_migrate(common)) {
         /* guest created primary, so it will (hopefully) send a monitors_config
          * now, don't send our own temporary one */
