@@ -43,7 +43,7 @@ typedef enum {
     JPEG_IMAGE_TYPE_BGRX32,
 } JpegEncoderImageType;
 
-typedef void* JpegEncoderContext;
+typedef struct JpegEncoderContext JpegEncoderContext;
 typedef struct JpegEncoderUsrContext JpegEncoderUsrContext;
 
 struct JpegEncoderUsrContext {
