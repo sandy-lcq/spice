@@ -486,7 +486,6 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
 {
     DisplayChannel *display = worker->display_channel;
     uint8_t *line_0;
-    int error;
 
     spice_debug("trace");
     spice_warn_if_fail(surface_id == 0);
@@ -503,8 +502,8 @@ static void dev_create_primary_surface(RedWorker *worker, uint32_t surface_id,
 
     line_0 = (uint8_t*)memslot_get_virt(&worker->mem_slots, surface.mem,
                                         surface.height * abs(surface.stride),
-                                        surface.group_id, &error);
-    if (error) {
+                                        surface.group_id);
+    if (line_0 == NULL) {
         return;
     }
     if (worker->record) {
@@ -767,14 +766,13 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
 {
     RedWorkerMessageMonitorsConfigAsync *msg = payload;
     RedWorker *worker = opaque;
-    int error;
     uint16_t count, max_allowed;
     QXLMonitorsConfig *dev_monitors_config =
         (QXLMonitorsConfig*)memslot_get_virt(&worker->mem_slots, msg->monitors_config,
                                              qxl_monitors_config_size(1),
-                                             msg->group_id, &error);
+                                             msg->group_id);
 
-    if (error) {
+    if (dev_monitors_config == NULL) {
         /* TODO: raise guest bug (requires added QXL interface) */
         goto async_complete;
     }
@@ -796,8 +794,8 @@ static void handle_dev_monitors_config_async(void *opaque, void *payload)
     dev_monitors_config =
         (QXLMonitorsConfig*)memslot_get_virt(&worker->mem_slots, msg->monitors_config,
                                              qxl_monitors_config_size(count),
-                                             msg->group_id, &error);
-    if (error) {
+                                             msg->group_id);
+    if (dev_monitors_config == NULL) {
         /* TODO: raise guest bug (requires added QXL interface) */
         goto async_complete;
     }

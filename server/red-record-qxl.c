@@ -42,10 +42,8 @@ static void hexdump_qxl(RedMemSlotInfo *slots, int group_id,
 {
     uint8_t *hex;
     int i;
-    int error;
 
-    hex = (uint8_t*)memslot_get_virt(slots, addr, bytes, group_id,
-                                     &error);
+    hex = (uint8_t*)memslot_get_virt(slots, addr, bytes, group_id);
     for (i = 0; i < bytes; i++) {
         if (0 == i % 16) {
             fprintf(stderr, "%lx: ", addr+i);
@@ -144,12 +142,10 @@ static size_t red_record_data_chunks_ptr(FILE *fd, const char *prefix,
     size_t data_size = qxl->data_size;
     int count_chunks = 0;
     QXLDataChunk *cur = qxl;
-    int error;
 
     while (cur->next_chunk) {
         cur =
-            (QXLDataChunk*)memslot_get_virt(slots, cur->next_chunk, sizeof(*cur), group_id,
-                                            &error);
+            (QXLDataChunk*)memslot_get_virt(slots, cur->next_chunk, sizeof(*cur), group_id);
         data_size += cur->data_size;
         count_chunks++;
     }
@@ -159,8 +155,7 @@ static size_t red_record_data_chunks_ptr(FILE *fd, const char *prefix,
 
     while (qxl->next_chunk) {
         memslot_id = memslot_get_id(slots, qxl->next_chunk);
-        qxl = (QXLDataChunk*)memslot_get_virt(slots, qxl->next_chunk, sizeof(*qxl), group_id,
-                                              &error);
+        qxl = (QXLDataChunk*)memslot_get_virt(slots, qxl->next_chunk, sizeof(*qxl), group_id);
 
         memslot_validate_virt(slots, (intptr_t)qxl->data, memslot_id, qxl->data_size, group_id);
         write_binary(fd, prefix, qxl->data_size, qxl->data);
@@ -175,10 +170,8 @@ static size_t red_record_data_chunks(FILE *fd, const char *prefix,
 {
     QXLDataChunk *qxl;
     int memslot_id = memslot_get_id(slots, addr);
-    int error;
 
-    qxl = (QXLDataChunk*)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                          &error);
+    qxl = (QXLDataChunk*)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
     return red_record_data_chunks_ptr(fd, prefix, slots, group_id, memslot_id, qxl);
 }
 
@@ -202,10 +195,8 @@ static void red_record_path(FILE *fd, RedMemSlotInfo *slots, int group_id,
                             QXLPHYSICAL addr)
 {
     QXLPath *qxl;
-    int error;
 
-    qxl = (QXLPath *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                      &error);
+    qxl = (QXLPath *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
     red_record_data_chunks_ptr(fd, "path", slots, group_id,
                                    memslot_get_id(slots, addr),
                                    &qxl->chunk);
@@ -215,10 +206,8 @@ static void red_record_clip_rects(FILE *fd, RedMemSlotInfo *slots, int group_id,
                                   QXLPHYSICAL addr)
 {
     QXLClipRects *qxl;
-    int error;
 
-    qxl = (QXLClipRects *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                           &error);
+    qxl = (QXLClipRects *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
     fprintf(fd, "num_rects %d\n", qxl->num_rects);
     red_record_data_chunks_ptr(fd, "clip_rects", slots, group_id,
                                    memslot_get_id(slots, addr),
@@ -229,11 +218,8 @@ static void red_record_virt_data_flat(FILE *fd, const char *prefix,
                                       RedMemSlotInfo *slots, int group_id,
                                       QXLPHYSICAL addr, size_t size)
 {
-    int error;
-
     write_binary(fd, prefix,
-                 size, (uint8_t*)memslot_get_virt(slots, addr, size, group_id,
-                                                  &error));
+                 size, (uint8_t*)memslot_get_virt(slots, addr, size, group_id));
 }
 
 static void red_record_image_data_flat(FILE *fd, RedMemSlotInfo *slots, int group_id,
@@ -255,15 +241,13 @@ static void red_record_image(FILE *fd, RedMemSlotInfo *slots, int group_id,
     QXLImage *qxl;
     size_t bitmap_size, size;
     uint8_t qxl_flags;
-    int error;
 
     fprintf(fd, "image %d\n", addr ? 1 : 0);
     if (addr == 0) {
         return;
     }
 
-    qxl = (QXLImage *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                       &error);
+    qxl = (QXLImage *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
     fprintf(fd, "descriptor.id %"PRIu64"\n", qxl->descriptor.id);
     fprintf(fd, "descriptor.type %d\n", qxl->descriptor.type);
     fprintf(fd, "descriptor.flags %d\n", qxl->descriptor.flags);
@@ -283,7 +267,7 @@ static void red_record_image(FILE *fd, RedMemSlotInfo *slots, int group_id,
             QXLPalette *qp;
             int i, num_ents;
             qp = (QXLPalette *)memslot_get_virt(slots, qxl->bitmap.palette,
-                                                sizeof(*qp), group_id, &error);
+                                                sizeof(*qp), group_id);
             num_ents = qp->num_ents;
             fprintf(fd, "qp.num_ents %d\n", qp->num_ents);
             memslot_validate_virt(slots, (intptr_t)qp->ents,
@@ -425,8 +409,6 @@ static void red_record_rop3_ptr(FILE *fd, RedMemSlotInfo *slots, int group_id,
 static void red_record_stroke_ptr(FILE *fd, RedMemSlotInfo *slots, int group_id,
                                   QXLStroke *qxl, uint32_t flags)
 {
-    int error;
-
     red_record_path(fd, slots, group_id, qxl->path);
     fprintf(fd, "attr.flags %d\n", qxl->attr.flags);
     if (qxl->attr.flags & SPICE_LINE_FLAGS_STYLED) {
@@ -436,8 +418,7 @@ static void red_record_stroke_ptr(FILE *fd, RedMemSlotInfo *slots, int group_id,
         fprintf(fd, "attr.style_nseg %d\n", qxl->attr.style_nseg);
         spice_assert(qxl->attr.style);
         buf = (uint8_t *)memslot_get_virt(slots, qxl->attr.style,
-                                          style_nseg * sizeof(QXLFIXED), group_id,
-                                          &error);
+                                          style_nseg * sizeof(QXLFIXED), group_id);
         write_binary(fd, "style", style_nseg * sizeof(QXLFIXED), buf);
     }
     red_record_brush_ptr(fd, slots, group_id, &qxl->brush, flags);
@@ -450,10 +431,8 @@ static void red_record_string(FILE *fd, RedMemSlotInfo *slots, int group_id,
 {
     QXLString *qxl;
     size_t chunk_size;
-    int error;
 
-    qxl = (QXLString *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                        &error);
+    qxl = (QXLString *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
     fprintf(fd, "data_size %d\n", qxl->data_size);
     fprintf(fd, "length %d\n", qxl->length);
     fprintf(fd, "flags %d\n", qxl->flags);
@@ -528,10 +507,8 @@ static void red_record_native_drawable(FILE *fd, RedMemSlotInfo *slots, int grou
 {
     QXLDrawable *qxl;
     int i;
-    int error;
 
-    qxl = (QXLDrawable *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                          &error);
+    qxl = (QXLDrawable *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
 
     red_record_rect_ptr(fd, "bbox", &qxl->bbox);
     red_record_clip_ptr(fd, slots, group_id, &qxl->clip);
@@ -604,10 +581,8 @@ static void red_record_compat_drawable(FILE *fd, RedMemSlotInfo *slots, int grou
                                        QXLPHYSICAL addr, uint32_t flags)
 {
     QXLCompatDrawable *qxl;
-    int error;
 
-    qxl = (QXLCompatDrawable *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                                &error);
+    qxl = (QXLCompatDrawable *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
 
     red_record_rect_ptr(fd, "bbox", &qxl->bbox);
     red_record_clip_ptr(fd, slots, group_id, &qxl->clip);
@@ -683,10 +658,8 @@ static void red_record_update_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id,
                                   QXLPHYSICAL addr)
 {
     QXLUpdateCmd *qxl;
-    int error;
 
-    qxl = (QXLUpdateCmd *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                           &error);
+    qxl = (QXLUpdateCmd *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
 
     fprintf(fd, "update\n");
     red_record_rect_ptr(fd, "area", &qxl->area);
@@ -698,7 +671,6 @@ static void red_record_message(FILE *fd, RedMemSlotInfo *slots, int group_id,
                                QXLPHYSICAL addr)
 {
     QXLMessage *qxl;
-    int error;
 
     /*
      * security alert:
@@ -706,8 +678,7 @@ static void red_record_message(FILE *fd, RedMemSlotInfo *slots, int group_id,
      *   luckily this is for debug logging only,
      *   so we can just ignore it by default.
      */
-    qxl = (QXLMessage *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                         &error);
+    qxl = (QXLMessage *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
     write_binary(fd, "message", strlen((char*)qxl->data), (uint8_t*)qxl->data);
 }
 
@@ -716,10 +687,8 @@ static void red_record_surface_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id
 {
     QXLSurfaceCmd *qxl;
     size_t size;
-    int error;
 
-    qxl = (QXLSurfaceCmd *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                            &error);
+    qxl = (QXLSurfaceCmd *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
 
     fprintf(fd, "surface_cmd\n");
     fprintf(fd, "surface_id %d\n", qxl->surface_id);
@@ -735,8 +704,7 @@ static void red_record_surface_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id
         size = qxl->u.surface_create.height * abs(qxl->u.surface_create.stride);
         if ((qxl->flags & QXL_SURF_FLAG_KEEP_DATA) != 0) {
             write_binary(fd, "data", size,
-                (uint8_t*)memslot_get_virt(slots, qxl->u.surface_create.data, size, group_id,
-                                           &error));
+                (uint8_t*)memslot_get_virt(slots, qxl->u.surface_create.data, size, group_id));
         }
         break;
     }
@@ -746,10 +714,8 @@ static void red_record_cursor(FILE *fd, RedMemSlotInfo *slots, int group_id,
                               QXLPHYSICAL addr)
 {
     QXLCursor *qxl;
-    int error;
 
-    qxl = (QXLCursor *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                        &error);
+    qxl = (QXLCursor *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
 
     fprintf(fd, "header.unique %"PRIu64"\n", qxl->header.unique);
     fprintf(fd, "header.type %d\n", qxl->header.type);
@@ -768,10 +734,8 @@ static void red_record_cursor_cmd(FILE *fd, RedMemSlotInfo *slots, int group_id,
                                   QXLPHYSICAL addr)
 {
     QXLCursorCmd *qxl;
-    int error;
 
-    qxl = (QXLCursorCmd *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id,
-                                           &error);
+    qxl = (QXLCursorCmd *)memslot_get_virt(slots, addr, sizeof(*qxl), group_id);
 
     fprintf(fd, "cursor_cmd\n");
     fprintf(fd, "type %d\n", qxl->type);

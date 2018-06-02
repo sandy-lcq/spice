@@ -86,11 +86,10 @@ unsigned long memslot_max_size_virt(RedMemSlotInfo *info,
 }
 
 /*
- * return virtual address if successful, which may be 0.
- * returns 0 and sets error to 1 if an error condition occurs.
+ * returns NULL on failure.
  */
-void* memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size,
-                       int group_id, int *error)
+void *memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size,
+                       int group_id)
 {
     int slot_id;
     int generation;
@@ -98,10 +97,8 @@ void* memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
 
     MemSlot *slot;
 
-    *error = 0;
     if (group_id > info->num_memslots_groups) {
         spice_critical("group_id too big");
-        *error = 1;
         return NULL;
     }
 
@@ -109,7 +106,6 @@ void* memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
     if (slot_id > info->num_memslots) {
         print_memslots(info);
         spice_critical("slot_id %d too big, addr=%" PRIx64, slot_id, addr);
-        *error = 1;
         return NULL;
     }
 
@@ -120,7 +116,6 @@ void* memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
         print_memslots(info);
         spice_critical("address generation is not valid, group_id %d, slot_id %d, gen %d, slot_gen %d\n",
               group_id, slot_id, generation, slot->generation);
-        *error = 1;
         return NULL;
     }
 
@@ -128,7 +123,6 @@ void* memslot_get_virt(RedMemSlotInfo *info, QXLPHYSICAL addr, uint32_t add_size
     h_virt += slot->address_delta;
 
     if (!memslot_validate_virt(info, h_virt, slot_id, add_size, group_id)) {
-        *error = 1;
         return NULL;
     }
 
