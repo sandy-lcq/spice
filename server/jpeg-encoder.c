@@ -161,11 +161,6 @@ static void convert_BGRX32_to_RGB24(void *line, int width, uint8_t **out_line)
     }
 }
 
-static void convert_RGB24_to_RGB24(void *line, int width, uint8_t **out_line)
-{
-    *out_line = line;
-}
-
 
 #define FILL_LINES() {                                                  \
     if (lines == lines_end) {                                           \
@@ -186,9 +181,7 @@ static void do_jpeg_encode(JpegEncoder *jpeg, uint8_t *lines, unsigned int num_l
     width = jpeg->cur_image.width;
     stride = jpeg->cur_image.stride;
 
-    if (jpeg->cur_image.type != JPEG_IMAGE_TYPE_RGB24) {
-        RGB24_line = g_new(uint8_t, width*3);
-    }
+    RGB24_line = g_new(uint8_t, width*3);
 
     lines_end = lines + (stride * num_lines);
 
@@ -199,9 +192,7 @@ static void do_jpeg_encode(JpegEncoder *jpeg, uint8_t *lines, unsigned int num_l
         jpeg_write_scanlines(&jpeg->cinfo, row_pointer, 1);
     }
 
-    if (jpeg->cur_image.type != JPEG_IMAGE_TYPE_RGB24) {
-        g_free(RGB24_line);
-    }
+    g_free(RGB24_line);
 }
 
 int jpeg_encode(JpegEncoderContext *enc, int quality, JpegEncoderImageType type,
@@ -217,9 +208,6 @@ int jpeg_encode(JpegEncoderContext *enc, int quality, JpegEncoderImageType type,
     switch (type) {
     case JPEG_IMAGE_TYPE_RGB16:
         enc->cur_image.convert_line_to_RGB24 = convert_RGB16_to_RGB24;
-        break;
-    case JPEG_IMAGE_TYPE_RGB24:
-        enc->cur_image.convert_line_to_RGB24 = convert_RGB24_to_RGB24;
         break;
     case JPEG_IMAGE_TYPE_BGR24:
         enc->cur_image.convert_line_to_RGB24 = convert_BGR24_to_RGB24;
