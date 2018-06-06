@@ -1989,9 +1989,6 @@ void display_channel_draw(DisplayChannel *display, const SpiceRect *area, int su
     RedSurface *surface;
     Drawable *last;
 
-    spice_debug("surface %d: area ==>", surface_id);
-    rect_debug(area);
-
     spice_return_if_fail(surface_id >= 0 && surface_id < NUM_SURFACES);
     spice_return_if_fail(area);
     spice_return_if_fail(area->left >= 0 && area->top >= 0 &&
