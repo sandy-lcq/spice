@@ -13,7 +13,7 @@ makecheck:
   - >
     CFLAGS='-O2 -pipe -g -fsanitize=address -fno-omit-frame-pointer -Wframe-larger-than=40920'
     LDFLAGS='-fsanitize=address -lasan'
-    ./autogen.sh
+    ./autogen.sh --enable-celt051
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
 
@@ -22,7 +22,7 @@ makecheck:
 # --without-sasl       disable SASL
 options:
   script:
-  - ./autogen.sh --enable-statistics --without-sasl
+  - ./autogen.sh --enable-statistics --without-sasl --disable-celt051
   - make
   - make -C server check || (cat server/tests/test-suite.log && exit 1)
 
@@ -36,11 +36,11 @@ check-valgrind:
     -y
   - >
     CFLAGS='-O2 -pipe -g -D_FORTIFY_SOURCE=0'
-    ./autogen.sh --enable-valgrind --enable-extra-checks
+    ./autogen.sh --enable-valgrind --enable-extra-checks --enable-celt051
   - make
   - make check-valgrind || (cat server/tests/test-suite-memcheck.log && exit 1)
 
 syntax-check:
   script:
-  - ./autogen.sh
+  - ./autogen.sh --enable-celt051
   - make syntax-check
