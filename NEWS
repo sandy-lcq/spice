@@ -1,3 +1,35 @@
+Major Changes in 0.14.1:
+========================
+
+The main change in this release is the addition of a new protocol extension
+in order to support streaming the remote display as a video stream rather than
+going through the QXL protocol. Together with spice-streaming-agent, and/or with
+more work on the qemu/spice-server side, this should allow streaming of 3D
+accelerated VMs in the future. At this point, this part of spice-server is
+still a work in progress (multi-monitor support and various features are
+missing).
+
+* add new org.spice-space.stream.0 channel used for passing an encoded video
+  stream from the guest to the client
+* add support for TCP_CORK to reduce the amount of packets that we send
+* fix CVE-2018-10873
+* fix cursor related migration crash
+* fix regression causing sound recording to be muted after
+  client disconnection/reconnection (introduced in 0.13.90)
+* fix regression in corner cases where images could be sent uncompressed
+  when they used to be compressed with QUIC
+* disable TLS 1.0 support
+* CELT 0.5.1 support is now disabled by default. If celt051-devel is installed
+  at build-time, --enable-celt051/--disable-celt051 must be explicitly specified
+* drop support for unsupported OpenSSL version. OpenSSL 1.0.0 or newer is now
+  required
+* bumped minimum required glib version to 2.32
+* endianness fixes
+* (small) leak fixes
+* usual round of code cleanups
+* not directly related to this release, but the upstream git repository is now
+  hosted on gitlab.freedesktop.org
+
 Major Changes in 0.14.0:
 ========================
 
