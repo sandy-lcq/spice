@@ -101,8 +101,6 @@ typedef struct RedChannelClientConnectivityMonitor {
 } RedChannelClientConnectivityMonitor;
 
 typedef struct OutgoingMessageBuffer {
-    struct iovec vec[IOV_MAX];
-    int vec_size;
     int pos;
     int size;
 } OutgoingMessageBuffer;
@@ -1081,10 +1079,11 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
     }
 
     for (;;) {
-        buffer->vec_size =
-            red_channel_client_prepare_out_msg(rcc, buffer->vec, G_N_ELEMENTS(buffer->vec),
+        struct iovec vec[IOV_MAX];
+        int vec_size =
+            red_channel_client_prepare_out_msg(rcc, vec, G_N_ELEMENTS(vec),
                                                buffer->pos);
-        n = red_stream_writev(stream, buffer->vec, buffer->vec_size);
+        n = red_stream_writev(stream, vec, vec_size);
         if (n == -1) {
             switch (errno) {
             case EAGAIN:
