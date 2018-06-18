@@ -11,7 +11,6 @@ pkgconfig_DATA = spice-server.pc
 
 DISTCHECK_CONFIGURE_FLAGS =			\
 	--disable-celt051			\
-	--enable-automated-tests		\
 	--enable-smartcard			\
 	--with-sasl				\
 	--enable-manual				\
