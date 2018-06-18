@@ -4,6 +4,7 @@ before_script:
   - >
     dnf install 'dnf-command(copr)' git libtool make libasan orc-devel
     python3 python3-six python3-pyparsing glib-networking
+    asciidoc bzip2
     -y
   - dnf copr enable @spice/nightly -y
   - dnf builddep spice -y
@@ -44,3 +45,8 @@ syntax-check:
   script:
   - ./autogen.sh --enable-celt051
   - make syntax-check
+
+distcheck:
+  script:
+  - ./autogen.sh --enable-celt051 --enable-manual
+  - make distcheck
