@@ -190,13 +190,13 @@ static int read_safe(int fd, uint8_t *buf, size_t size, int block)
 {
     int read_size = 0;
     int ret;
-    struct pollfd pollfd = {.fd = fd, .events = POLLIN, .revents = 0};
 
     if (size == 0) {
         return 0;
     }
 
     if (!block) {
+        struct pollfd pollfd = {.fd = fd, .events = POLLIN, .revents = 0};
         while ((ret = poll(&pollfd, 1, 0)) == -1) {
             if (errno == EINTR) {
                 spice_debug("EINTR in poll");
