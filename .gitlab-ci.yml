@@ -50,3 +50,22 @@ distcheck:
   script:
   - ./autogen.sh --enable-celt051 --enable-manual
   - make distcheck
+
+# Same as makecheck job but use a Centos image
+makecheck-centos:
+  before_script:
+    - >
+      yum install git libtool make libasan orc-devel
+      python3 python3-six python3-pyparsing glib-networking
+      yum-utils yum-plugin-copr
+      -y
+    - yum copr enable @spice/nightly -y
+    - yum-builddep spice -y
+  image: centos:latest
+  script:
+  - >
+    CFLAGS='-O2 -pipe -g -fsanitize=address -fno-omit-frame-pointer -Wframe-larger-than=40920'
+    LDFLAGS='-fsanitize=address -lasan'
+    ./autogen.sh --enable-celt051
+  - make
+  - make -C server check || (cat server/tests/test-suite.log && exit 1)
