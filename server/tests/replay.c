@@ -96,7 +96,7 @@ static void set_compression_level(QXLInstance *qin, int level)
 
 static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
 {
-    bzero(info, sizeof(*info));
+    memset(info, 0, sizeof(*info));
     info->num_memslots = 1;
     info->num_memslots_groups = 1;
     info->memslot_id_bits = 1;

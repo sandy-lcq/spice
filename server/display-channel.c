@@ -1627,7 +1627,7 @@ static Drawable *display_channel_drawable_try_new(DisplayChannel *display,
             return NULL;
     }
 
-    bzero(drawable, sizeof(Drawable));
+    memset(drawable, 0, sizeof(Drawable));
     /* Pointer to the display from which the drawable is allocated.  This
      * pointer is safe to be retained as DisplayChannel lifespan is bigger than
      * all drawables.  */
