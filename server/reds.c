@@ -2784,6 +2784,7 @@ static int reds_init_ssl(RedsState *reds)
     }
 
     SSL_CTX_set_options(reds->ctx, ssl_options);
+    SSL_CTX_set_ecdh_auto(reds->ctx, 1);
 
     /* Load our keys and certificates*/
     return_code = SSL_CTX_use_certificate_chain_file(reds->ctx, reds->config->ssl_parameters.certs_file);
