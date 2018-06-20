@@ -19,6 +19,7 @@
 #ifndef DISPATCHER_H_
 #define DISPATCHER_H_
 
+#include <pthread.h>
 #include <glib-object.h>
 
 #include "red-common.h"

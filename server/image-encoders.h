@@ -20,6 +20,7 @@
 #define IMAGE_ENCODERS_H_
 
 #include <setjmp.h>
+#include <pthread.h>
 #include <common/quic.h>
 #include <common/lz.h>
 
