@@ -181,15 +181,7 @@ AC_SUBST(PIXMAN_CFLAGS)
 AC_SUBST(PIXMAN_LIBS)
 AS_VAR_APPEND([SPICE_REQUIRES], [" pixman-1 >= $PIXMAN_REQUIRED"])
 
-AC_ARG_ENABLE([celt051],
-              AS_HELP_STRING([--disable-celt051], [Disable celt051 audio codec (enabled by default)]),,
-              [enable_celt051="yes"])
-
-if test "x$enable_celt051" = "xyes"; then
-    CELT051_REQUIRED=0.5.1.1
-    PKG_CHECK_MODULES(CELT051, celt051 >= $CELT051_REQUIRED,
-                      AS_VAR_APPEND([SPICE_REQUIRES], [" celt051 >= $CELT051_REQUIRED"]))
-fi
+SPICE_CHECK_CELT051
 
 PKG_CHECK_MODULES(SSL, openssl >= 1.0.0)
 AC_SUBST(SSL_CFLAGS)
