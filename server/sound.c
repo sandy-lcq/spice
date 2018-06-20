@@ -761,16 +761,13 @@ static void record_channel_send_item(RedChannelClient *rcc, G_GNUC_UNUSED RedPip
 
 static bool snd_channel_client_config_socket(RedChannelClient *rcc)
 {
-#ifdef SO_PRIORITY
-    int priority;
-#endif
     int tos;
     RedStream *stream = red_channel_client_get_stream(rcc);
     RedClient *red_client = red_channel_client_get_client(rcc);
     MainChannelClient *mcc = red_client_get_main(red_client);
 
 #ifdef SO_PRIORITY
-    priority = 6;
+    int priority = 6;
     if (setsockopt(stream->socket, SOL_SOCKET, SO_PRIORITY, (void*)&priority,
                    sizeof(priority)) == -1) {
         if (errno != ENOTSUP) {
