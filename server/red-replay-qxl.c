@@ -266,7 +266,7 @@ static replay_t read_binary(SpiceReplay *replay, const char *prefix, size_t *siz
             exit(1);
         }
         if ((ret = inflate(&strm, Z_NO_FLUSH)) != Z_STREAM_END) {
-            spice_error("inflate error %d (disc: %ld)", ret, *size - strm.total_out);
+            spice_error("inflate error %d (disc: %" PRIdPTR ")", ret, *size - strm.total_out);
             if (ret == Z_DATA_ERROR) {
                 /* last operation may be wrong. since we do the recording
                  * in red_worker, when there is a shutdown from the vcpu/io thread
@@ -296,7 +296,7 @@ static ssize_t red_replay_data_chunks(SpiceReplay *replay, const char *prefix,
     size_t next_data_size;
     QXLDataChunk *cur, *next;
 
-    replay_fscanf(replay, "data_chunks %u %zu\n", &count_chunks, &data_size);
+    replay_fscanf(replay, "data_chunks %u %" PRIuPTR "\n", &count_chunks, &data_size);
     if (replay->error) {
         return -1;
     }
@@ -475,7 +475,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         } else {
             size = red_replay_data_chunks(replay, "bitmap.data", (uint8_t**)&qxl->bitmap.data, 0);
             if (size != bitmap_size) {
-                spice_printerr("bad image, %zu != %zu", size, bitmap_size);
+                spice_printerr("bad image, %" PRIuPTR " != %" PRIuPTR, size, bitmap_size);
                 return NULL;
             }
         }
@@ -1137,7 +1137,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
         if ((qxl->flags & QXL_SURF_FLAG_KEEP_DATA) != 0) {
             read_binary(replay, "data", &read_size, (uint8_t**)&qxl->u.surface_create.data, 0);
             if (read_size != size) {
-                spice_printerr("mismatch %zu != %zu", size, read_size);
+                spice_printerr("mismatch %" PRIuPTR " != %" PRIuPTR, size, read_size);
             }
         } else {
             qxl->u.surface_create.data = QXLPHYSICAL_FROM_PTR(replay_malloc(replay, size));

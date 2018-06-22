@@ -123,7 +123,7 @@ static void write_binary(FILE *fd, const char *prefix, size_t size, const uint8_
     }
 #endif
 
-    fprintf(fd, "binary %d %s %zu:", WITH_ZLIB, prefix, size);
+    fprintf(fd, "binary %d %s %" PRIuPTR ":", WITH_ZLIB, prefix, size);
 #if WITH_ZLIB
     zlib_size = zlib_encode(enc, RECORD_ZLIB_DEFAULT_COMPRESSION_LEVEL, size,
         output, sizeof(output));
@@ -153,7 +153,7 @@ static size_t red_record_data_chunks_ptr(FILE *fd, const char *prefix,
         data_size += cur->data_size;
         count_chunks++;
     }
-    fprintf(fd, "data_chunks %d %zu\n", count_chunks, data_size);
+    fprintf(fd, "data_chunks %d %" PRIuPTR "\n", count_chunks, data_size);
     memslot_validate_virt(slots, (intptr_t)qxl->data, memslot_id, qxl->data_size, group_id);
     write_binary(fd, prefix, qxl->data_size, qxl->data);
 
