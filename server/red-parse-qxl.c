@@ -671,8 +671,15 @@ static void red_put_opaque(SpiceOpaque *red)
 }
 
 static bool red_get_copy_ptr(RedMemSlotInfo *slots, int group_id,
-                             SpiceCopy *red, QXLCopy *qxl, uint32_t flags)
+                             RedDrawable *red_drawable, QXLCopy *qxl, uint32_t flags)
 {
+    /* there's no sense to have this true, this will just waste CPU and reduce optimizations
+     * for this command. Due to some bugs however some driver set self_bitmap field for this
+     * command so reset it. */
+    red_drawable->self_bitmap = false;
+
+    SpiceCopy *red = &red_drawable->u.copy;
+
     red->src_bitmap      = red_get_image(slots, group_id, qxl->src_bitmap, flags, false);
     if (!red->src_bitmap) {
         return false;
@@ -1038,9 +1045,9 @@ static bool red_get_native_drawable(RedMemSlotInfo *slots, int group_id,
                               &red->u.blackness, &qxl->u.blackness, flags);
         break;
     case QXL_DRAW_BLEND:
-        return red_get_blend_ptr(slots, group_id, &red->u.blend, &qxl->u.blend, flags);
+        return red_get_blend_ptr(slots, group_id, red, &qxl->u.blend, flags);
     case QXL_DRAW_COPY:
-        return red_get_copy_ptr(slots, group_id, &red->u.copy, &qxl->u.copy, flags);
+        return red_get_copy_ptr(slots, group_id, red, &qxl->u.copy, flags);
     case QXL_COPY_BITS:
         red_get_point_ptr(&red->u.copy_bits.src_pos, &qxl->u.copy_bits.src_pos);
         break;
@@ -1116,9 +1123,9 @@ static bool red_get_compat_drawable(RedMemSlotInfo *slots, int group_id,
                               &red->u.blackness, &qxl->u.blackness, flags);
         break;
     case QXL_DRAW_BLEND:
-        return red_get_blend_ptr(slots, group_id, &red->u.blend, &qxl->u.blend, flags);
+        return red_get_blend_ptr(slots, group_id, red, &qxl->u.blend, flags);
     case QXL_DRAW_COPY:
-        return red_get_copy_ptr(slots, group_id, &red->u.copy, &qxl->u.copy, flags);
+        return red_get_copy_ptr(slots, group_id, red, &qxl->u.copy, flags);
     case QXL_COPY_BITS:
         red_get_point_ptr(&red->u.copy_bits.src_pos, &qxl->u.copy_bits.src_pos);
         red->surface_deps[0] = 0;
