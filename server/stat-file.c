@@ -154,12 +154,11 @@ stat_file_add_node(RedStatFile *stat_file, StatNodeRef parent, const char *name,
                                         stat_file->stat->nodes[parent].first_child_index);
     while (ref != INVALID_STAT_REF) {
         node = &stat_file->stat->nodes[ref];
-        if (strcmp(name, node->name)) {
-            ref = node->next_sibling_index;
-        } else {
+        if (strcmp(name, node->name) == 0) {
             pthread_mutex_unlock(&stat_file->lock);
             return ref;
         }
+        ref = node->next_sibling_index;
     }
     for (ref = 0; ref < stat_file->max_nodes; ref++) {
         node = &stat_file->stat->nodes[ref];
