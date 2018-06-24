@@ -905,6 +905,7 @@ RedRecord *red_record_new(const char *filename)
             continue;
         }
         close(fd_in);
+        g_spawn_close_pid(child_pid);
     }
 
     if (fwrite(header, sizeof(header)-1, 1, f) != 1) {
