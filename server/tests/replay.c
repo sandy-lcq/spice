@@ -49,7 +49,7 @@ static gint slow = 0;
 static gint skip = 0;
 static gboolean print_count = FALSE;
 static guint ncommands = 0;
-static pid_t client_pid;
+static GPid client_pid;
 static GMainLoop *loop = NULL;
 static GAsyncQueue *display_queue = NULL;
 static GAsyncQueue *cursor_queue = NULL;
@@ -213,7 +213,7 @@ static void end_replay(void)
     spice_replay_free(replay);
 
     if (client_pid) {
-        g_debug("kill %d", client_pid);
+        g_debug("kill %" G_PID_FORMAT, client_pid);
         kill(client_pid, SIGINT);
         waitpid(client_pid, &child_status, 0);
     }
