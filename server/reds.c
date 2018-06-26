@@ -3549,19 +3549,14 @@ static const char* parse_video_codecs(const char *codecs, char **encoder,
     if (!codecs) {
         return NULL;
     }
-    while (*codecs == ';') {
-        codecs++;
-    }
+    codecs += strspn(codecs, ";");
     if (!*codecs) {
         return NULL;
     }
     int n;
     *encoder = *codec = NULL;
     if (sscanf(codecs, "%m[0-9a-zA-Z_]:%m[0-9a-zA-Z_]%n", encoder, codec, &n) != 2) {
-        while (*codecs != '\0' && *codecs != ';') {
-            codecs++;
-        }
-        return codecs;
+        return codecs + strcspn(codecs, ";");
     }
     return codecs + n;
 }
