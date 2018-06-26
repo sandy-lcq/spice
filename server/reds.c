@@ -3563,10 +3563,14 @@ static const char* parse_next_video_codec(const char *codecs, char **encoder,
     }
     int n;
     *encoder = *codec = NULL;
-    if (sscanf(codecs, "%m[0-9a-zA-Z_]:%m[0-9a-zA-Z_]%n", encoder, codec, &n) != 2) {
-        return codecs + strcspn(codecs, ";");
+    if (sscanf(codecs, "%m[0-9a-zA-Z_]:%m[0-9a-zA-Z_]%n", encoder, codec, &n) == 2) {
+        // this avoids accepting "encoder:codec" followed by garbage like "$%*"
+        if (codecs[n] != ';' && codecs[n] != '\0') {
+            free(*codec);
+            *codec = NULL;
+        }
     }
-    return codecs + n;
+    return codecs + strcspn(codecs, ";");
 }
 
 static void reds_set_video_codecs_from_string(RedsState *reds, const char *codecs)
