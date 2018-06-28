@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "agent-msg-filter.h"
+#include "test-glib-compat.h"
 
 static void test_agent_msg_filter_setup(void)
 {
@@ -65,22 +66,30 @@ static void test_agent_msg_filter_run(void)
 
     /* message size too large */
     len = VD_AGENT_MAX_DATA_SIZE + 1;
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*invalid agent message: too large");
     g_assert_cmpint(agent_msg_filter_process_data(&filter, msg.data, len), ==,
                     AGENT_MSG_FILTER_PROTO_ERROR);
+    g_test_assert_expected_messages();
+
 
     /* data len too small */
     len = 0;
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*invalid agent message: incomplete header");
     g_assert_cmpint(agent_msg_filter_process_data(&filter, msg.data, len), ==,
                     AGENT_MSG_FILTER_PROTO_ERROR);
+    g_test_assert_expected_messages();
 
     /* invalid protocol */
     memset(&msg.msg_header, 0, sizeof(msg.msg_header));
     len = sizeof(msg.msg_header);
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*invalid agent protocol: 0");
     g_assert_cmpint(agent_msg_filter_process_data(&filter, msg.data, len), ==,
                     AGENT_MSG_FILTER_PROTO_ERROR);
+    g_test_assert_expected_messages();
 
     /* all messages should be discarded */
     msg.msg_header.protocol = VD_AGENT_PROTOCOL;
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "*invalid agent message: data exceeds size from header");
     for (type = VD_AGENT_MOUSE_STATE; type < VD_AGENT_END_MESSAGE; type++) {
         msg.msg_header.type = type;
         g_assert_cmpint(agent_msg_filter_process_data(&filter, msg.data, len), ==,
@@ -92,6 +101,7 @@ static void test_agent_msg_filter_run(void)
     len = sizeof(msg.msg_header) + msg.msg_header.size + 1;
     g_assert_cmpint(agent_msg_filter_process_data(&filter, msg.data, len), ==,
                     AGENT_MSG_FILTER_PROTO_ERROR);
+    g_test_assert_expected_messages();
 
     len = sizeof(msg.msg_header) + msg.msg_header.size; /* restore correct size */
 
