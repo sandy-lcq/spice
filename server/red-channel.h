@@ -232,9 +232,6 @@ void red_channel_disconnect_client(RedChannel *channel, RedChannelClient *rcc);
                         id_, channel_, ## __VA_ARGS__);                                  \
     } while (0)
 
-#define red_channel_printerr(channel, format, ...)                                       \
-        red_channel_log_generic(spice_printerr, channel, format, ## __VA_ARGS__);
-
 #define red_channel_warning(channel, format, ...)                                        \
         red_channel_log_generic(g_warning, channel, format, ## __VA_ARGS__);
 
