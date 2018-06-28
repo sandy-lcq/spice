@@ -1722,7 +1722,6 @@ void red_channel_client_disconnect(RedChannelClient *rcc)
     if (!red_channel_client_is_connected(rcc)) {
         return;
     }
-    red_channel_printerr(channel, "rcc=%p", rcc);
     red_channel_client_pipe_clear(rcc);
     if (rcc->priv->stream->watch) {
         core->watch_remove(core, rcc->priv->stream->watch);

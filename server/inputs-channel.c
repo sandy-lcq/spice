@@ -455,7 +455,6 @@ static void inputs_connect(RedChannel *channel, RedClient *client,
                                         "keyboard channel is insecure");
     }
 
-    spice_printerr("inputs channel client create");
     rcc = inputs_channel_client_create(channel, client, stream, caps);
     if (!rcc) {
         return;
@@ -654,7 +653,6 @@ int inputs_channel_has_tablet(InputsChannel *inputs)
 
 void inputs_channel_detach_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet)
 {
-    spice_printerr("");
     if (tablet != NULL && tablet == inputs->tablet) {
         spice_tablet_state_free(tablet->st);
         tablet->st = NULL;

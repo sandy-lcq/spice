@@ -175,7 +175,6 @@ void red_client_migrate(RedClient *client)
     RedChannelClient *rcc;
     RedChannel *channel;
 
-    spice_printerr("migrate client with #channels %d", g_list_length(client->channels));
     if (!pthread_equal(pthread_self(), client->thread_id)) {
         spice_warning("client->thread_id (0x%lx) != pthread_self (0x%lx)."
                       "If one of the threads is != io-thread && != vcpu-thread,"
@@ -194,7 +193,6 @@ void red_client_destroy(RedClient *client)
 {
     RedChannelClient *rcc;
 
-    spice_printerr("destroy client %p with #channels=%d", client, g_list_length(client->channels));
     if (!pthread_equal(pthread_self(), client->thread_id)) {
         spice_warning("client->thread_id (0x%lx) != pthread_self (0x%lx)."
                       "If one of the threads is != io-thread && != vcpu-thread,"

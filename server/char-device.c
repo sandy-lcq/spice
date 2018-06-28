@@ -216,7 +216,6 @@ static void red_char_device_client_free(RedCharDevice *dev,
 static void red_char_device_handle_client_overflow(RedCharDeviceClient *dev_client)
 {
     RedCharDevice *dev = dev_client->dev;
-    spice_printerr("dev %p client %p ", dev, dev_client);
     red_char_device_remove_client(dev, dev_client->client);
 }
 

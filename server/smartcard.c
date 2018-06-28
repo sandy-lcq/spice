@@ -198,7 +198,6 @@ static void smartcard_remove_client(RedCharDevice *self, RedClient *client)
     RedCharDeviceSmartcard *dev = RED_CHAR_DEVICE_SMARTCARD(self);
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(dev->priv->scc);
 
-    spice_printerr("smartcard  dev %p, client %p", dev, client);
     spice_assert(dev->priv->scc &&
                  red_channel_client_get_client(rcc) == client);
     red_channel_client_shutdown(rcc);

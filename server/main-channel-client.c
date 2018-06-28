@@ -202,7 +202,6 @@ main_channel_client_release_msg_rcv_buf(RedChannelClient *rcc,
 static void main_channel_client_on_disconnect(RedChannelClient *rcc)
 {
     RedsState *reds = red_channel_get_server(red_channel_client_get_channel(rcc));
-    spice_printerr("rcc=%p", rcc);
     main_dispatcher_client_disconnect(reds_get_main_dispatcher(reds),
                                       red_channel_client_get_client(rcc));
 }
@@ -471,8 +470,6 @@ void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
                                                   int success,
                                                   int seamless)
 {
-    RedClient *client = red_channel_client_get_client(RED_CHANNEL_CLIENT(mcc));
-    spice_printerr("client %p connected: %d seamless %d", client, success, seamless);
     if (mcc->priv->mig_wait_connect) {
         RedChannel *channel = red_channel_client_get_channel(RED_CHANNEL_CLIENT(mcc));
         MainChannel *main_channel = MAIN_CHANNEL(channel);
@@ -482,7 +479,6 @@ void main_channel_client_handle_migrate_connected(MainChannelClient *mcc,
         main_channel_on_migrate_connected(main_channel, success, seamless);
     } else {
         if (success) {
-            spice_printerr("client %p MIGRATE_CANCEL", client);
             red_channel_client_pipe_add_empty_msg(RED_CHANNEL_CLIENT(mcc),
                                                   SPICE_MSG_MAIN_MIGRATE_CANCEL);
         }
@@ -580,8 +576,6 @@ void main_channel_client_handle_migrate_end(MainChannelClient *mcc)
 void main_channel_client_migrate_cancel_wait(MainChannelClient *mcc)
 {
     if (mcc->priv->mig_wait_connect) {
-        spice_printerr("client %p cancel wait connect",
-                       red_channel_client_get_client(RED_CHANNEL_CLIENT(mcc)));
         mcc->priv->mig_wait_connect = FALSE;
         mcc->priv->mig_connect_ok = FALSE;
     }
@@ -610,23 +604,19 @@ gboolean main_channel_client_migrate_src_complete(MainChannelClient *mcc,
 {
     gboolean ret = FALSE;
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(mcc);
-    RedClient *client = red_channel_client_get_client(rcc);
     bool semi_seamless_support = red_channel_client_test_remote_cap(rcc,
                                                                     SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE);
     if (semi_seamless_support && mcc->priv->mig_connect_ok) {
         if (success) {
-            spice_printerr("client %p MIGRATE_END", client);
             red_channel_client_pipe_add_empty_msg(rcc,
                                                   SPICE_MSG_MAIN_MIGRATE_END);
             ret = TRUE;
         } else {
-            spice_printerr("client %p MIGRATE_CANCEL", client);
             red_channel_client_pipe_add_empty_msg(rcc,
                                                   SPICE_MSG_MAIN_MIGRATE_CANCEL);
         }
     } else {
         if (success) {
-            spice_printerr("client %p SWITCH_HOST", client);
             red_channel_client_pipe_add_type(rcc,
                                              RED_PIPE_ITEM_TYPE_MAIN_MIGRATE_SWITCH_HOST);
         }
@@ -691,7 +681,6 @@ gboolean main_channel_client_connect_semi_seamless(MainChannelClient *mcc)
                                            SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE)) {
         RedClient *client = red_channel_client_get_client(rcc);
         if (red_client_during_migrate_at_target(client)) {
-            spice_printerr("client %p: wait till previous migration completes", client);
             mcc->priv->mig_wait_prev_complete = TRUE;
             mcc->priv->mig_wait_prev_try_seamless = FALSE;
         } else {
@@ -712,7 +701,6 @@ void main_channel_client_connect_seamless(MainChannelClient *mcc)
     spice_assert(red_channel_client_test_remote_cap(rcc,
                                                     SPICE_MAIN_CAP_SEAMLESS_MIGRATE));
     if (red_client_during_migrate_at_target(client)) {
-        spice_printerr("client %p: wait till previous migration completes", client);
         mcc->priv->mig_wait_prev_complete = TRUE;
         mcc->priv->mig_wait_prev_try_seamless = TRUE;
     } else {
@@ -919,7 +907,6 @@ static void main_channel_marshall_migrate_switch(SpiceMarshaller *m, RedChannelC
     MainChannel *main_ch;
     const RedsMigSpice *mig_target;
 
-    spice_printerr("");
     red_channel_client_init_send_data(rcc, SPICE_MSG_MAIN_MIGRATE_SWITCH_HOST);
     main_ch = MAIN_CHANNEL(channel);
     mig_target = main_channel_get_migration_target(main_ch);

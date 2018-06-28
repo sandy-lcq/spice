@@ -172,7 +172,6 @@ static bool main_channel_handle_message(RedChannelClient *rcc, uint16_t type,
     case SPICE_MSGC_MAIN_AGENT_START: {
         SpiceMsgcMainAgentStart *tokens;
 
-        spice_printerr("agent start");
         tokens = (SpiceMsgcMainAgentStart *)message;
         reds_on_main_agent_start(reds, mcc, tokens->num_tokens);
         break;
@@ -241,7 +240,6 @@ MainChannelClient *main_channel_link(MainChannel *channel, RedClient *client,
     // TODO - migration - I removed it from channel creation, now put it
     // into usage somewhere (not an issue until we return migration to it's
     // former glory)
-    spice_printerr("add main channel client");
     mcc = main_channel_client_create(channel, client, stream, connection_id, caps);
     return mcc;
 }
@@ -367,8 +365,6 @@ int main_channel_migrate_src_complete(MainChannel *main_chan, int success)
 {
     int semi_seamless_count = 0;
     RedChannelClient *rcc;
-
-    spice_printerr("");
 
     if (!red_channel_get_clients(RED_CHANNEL(main_chan))) {
         spice_printerr("no peer connected");

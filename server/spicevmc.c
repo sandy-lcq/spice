@@ -433,7 +433,6 @@ static void spicevmc_char_dev_remove_client(RedCharDevice *self,
     RedCharDeviceSpiceVmc *vmc = RED_CHAR_DEVICE_SPICEVMC(self);
     RedVmcChannel *channel = RED_VMC_CHANNEL(vmc->channel);
 
-    spice_printerr("vmc channel %p, client %p", channel, client);
     spice_assert(channel->rcc &&
                  red_channel_client_get_client(channel->rcc) == client);
 

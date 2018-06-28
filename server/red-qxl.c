@@ -99,7 +99,6 @@ static void red_qxl_disconnect_display_peer(RedChannelClient *rcc)
 
     dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
 
-    spice_printerr("");
     payload.rcc = rcc;
 
     // TODO: we turned it to be sync, due to client_destroy . Should we support async? - for this we will need ref count
@@ -130,7 +129,6 @@ static void red_qxl_set_cursor_peer(RedChannel *channel, RedClient *client, RedS
 {
     RedWorkerMessageCursorConnect payload = {0,};
     Dispatcher *dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
-    spice_printerr("");
     // get a reference potentially the main channel can be destroyed in
     // the main thread causing RedClient to be destroyed before using it
     payload.client = g_object_ref(client);
@@ -150,7 +148,6 @@ static void red_qxl_disconnect_cursor_peer(RedChannelClient *rcc)
     RedChannel *channel = red_channel_client_get_channel(rcc);
 
     dispatcher = (Dispatcher *)g_object_get_data(G_OBJECT(channel), "dispatcher");
-    spice_printerr("");
     payload.rcc = rcc;
 
     dispatcher_send_message(dispatcher,
@@ -601,7 +598,6 @@ static void red_qxl_loadvm_commands(QXLState *qxl_state,
 {
     RedWorkerMessageLoadvmCommands payload;
 
-    spice_printerr("");
     payload.count = count;
     payload.ext = ext;
     dispatcher_send_message(qxl_state->dispatcher,
