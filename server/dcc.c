@@ -693,7 +693,8 @@ RedPipeItem *dcc_gl_scanout_item_new(RedChannelClient *rcc, void *data, int num)
     /* FIXME: on !unix peer, start streaming with a video codec */
     if (!red_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
         !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
-        spice_printerr("FIXME: client does not support GL scanout");
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "FIXME: client does not support GL scanout");
         red_channel_client_disconnect(rcc);
         return NULL;
     }
@@ -712,7 +713,8 @@ RedPipeItem *dcc_gl_draw_item_new(RedChannelClient *rcc, void *data, int num)
 
     if (!red_stream_is_plain_unix(red_channel_client_get_stream(rcc)) ||
         !red_channel_client_test_remote_cap(rcc, SPICE_DISPLAY_CAP_GL_SCANOUT)) {
-        spice_printerr("FIXME: client does not support GL scanout");
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "FIXME: client does not support GL scanout");
         red_channel_client_disconnect(rcc);
         return NULL;
     }

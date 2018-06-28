@@ -424,7 +424,10 @@ static void spicevmc_char_dev_send_tokens_to_client(RedCharDevice *self,
                                                     RedClient *client,
                                                     uint32_t tokens)
 {
-    spice_printerr("Not implemented!");
+    RedCharDeviceSpiceVmc *vmc = RED_CHAR_DEVICE_SPICEVMC(self);
+    RedVmcChannel *channel = RED_VMC_CHANNEL(vmc->channel);
+
+    red_channel_warning(RED_CHANNEL(channel), "%s: Not implemented!", G_STRFUNC);
 }
 
 static void spicevmc_char_dev_remove_client(RedCharDevice *self,
@@ -454,8 +457,9 @@ static void spicevmc_red_channel_client_on_disconnect(RedChannelClient *rcc)
         if (red_char_device_client_exists(channel->chardev, client)) {
             red_char_device_client_remove(channel->chardev, client);
         } else {
-            spice_printerr("client %p have already been removed from char dev %p",
-                           client, channel->chardev);
+            red_channel_warning(RED_CHANNEL(channel),
+                                "client %p have already been removed from char dev %p",
+                                client, channel->chardev);
         }
     }
 
@@ -768,8 +772,9 @@ static void spicevmc_connect(RedChannel *channel, RedClient *client,
     sin = vmc_channel->chardev_sin;
 
     if (vmc_channel->rcc) {
-        red_channel_printerr(channel, "channel client (%p) already connected, refusing second connection",
-                             vmc_channel->rcc);
+        red_channel_warning(RED_CHANNEL(channel),
+                            "channel client (%p) already connected, refusing second connection",
+                            vmc_channel->rcc);
         // TODO: notify client in advance about the in use channel using
         // SPICE_MSG_MAIN_CHANNEL_IN_USE (for example)
         red_stream_free(stream);

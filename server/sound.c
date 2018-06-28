@@ -364,12 +364,15 @@ record_channel_handle_message(RedChannelClient *rcc, uint16_t type, uint32_t siz
                                      SND_CODEC_DECODE) == SND_CODEC_OK) {
                     record_client->mode = mode->mode;
                 } else {
-                    spice_printerr("create decoder failed");
+                    red_channel_warning(red_channel_client_get_channel(rcc),
+                                        "create decoder failed");
                     return false;
                 }
             }
             else {
-                spice_printerr("unsupported mode %d", record_client->mode);
+                red_channel_warning(red_channel_client_get_channel(rcc),
+                                    "unsupported mode %d",
+                                    record_client->mode);
                 return false;
             }
         }
@@ -609,7 +612,7 @@ static bool snd_playback_send_write(PlaybackChannelClient *playback_client)
         if (snd_codec_encode(playback_client->codec, (uint8_t *) frame->samples,
                                     snd_codec_frame_size(playback_client->codec) * sizeof(frame->samples[0]),
                                     playback_client->encode_buf, &n) != SND_CODEC_OK) {
-            spice_printerr("encode failed");
+            red_channel_warning(red_channel_client_get_channel(rcc), "encode failed");
             red_channel_client_disconnect(rcc);
             return false;
         }
@@ -696,7 +699,8 @@ static void playback_channel_send_item(RedChannelClient *rcc, G_GNUC_UNUSED RedP
             if (snd_playback_send_write(playback_client)) {
                 break;
             }
-            spice_printerr("snd_send_playback_write failed");
+            red_channel_warning(red_channel_client_get_channel(rcc),
+                                "snd_send_playback_write failed");
         }
         if (client->command & SND_CTRL_MASK) {
             client->command &= ~SND_CTRL_MASK;
@@ -779,7 +783,8 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
     if (setsockopt(stream->socket, SOL_SOCKET, SO_PRIORITY, (void*)&priority,
                    sizeof(priority)) == -1) {
         if (errno != ENOTSUP) {
-            spice_printerr("setsockopt failed, %s", strerror(errno));
+            red_channel_warning(red_channel_client_get_channel(rcc),
+                                "setsockopt failed, %s", strerror(errno));
         }
     }
 #endif
@@ -787,7 +792,9 @@ static bool snd_channel_client_config_socket(RedChannelClient *rcc)
     tos = IPTOS_LOWDELAY;
     if (setsockopt(stream->socket, IPPROTO_IP, IP_TOS, (void*)&tos, sizeof(tos)) == -1) {
         if (errno != ENOTSUP) {
-            spice_printerr("setsockopt failed, %s", strerror(errno));
+            red_channel_warning(red_channel_client_get_channel(rcc),
+                                "setsockopt failed, %s",
+                                strerror(errno));
         }
     }
 
@@ -1070,7 +1077,7 @@ playback_channel_client_constructed(GObject *object)
                              SND_CODEC_ENCODE) == SND_CODEC_OK) {
             playback_client->mode = desired_mode;
         } else {
-            spice_printerr("create encoder failed");
+            red_channel_warning(red_channel, "create encoder failed");
         }
     }
 

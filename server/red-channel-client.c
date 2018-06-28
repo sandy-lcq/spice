@@ -696,7 +696,8 @@ static void red_channel_client_ping_timer(void *opaque)
 
         /* retrieving the occupied size of the socket's tcp snd buffer (unacked + unsent) */
         if (ioctl(rcc->priv->stream->socket, SIOCOUTQ, &so_unsent_size) == -1) {
-            spice_printerr("ioctl(SIOCOUTQ) failed, %s", strerror(errno));
+            red_channel_warning(red_channel_client_get_channel(rcc),
+                                "ioctl(SIOCOUTQ) failed, %s", strerror(errno));
         }
         if (so_unsent_size > 0) {
             /* tcp snd buffer is still occupied. rescheduling ping */
@@ -957,7 +958,9 @@ static gboolean red_channel_client_initable_init(GInitable *initable,
 
 cleanup:
     if (local_error) {
-        g_warning("Failed to create channel client: %s", local_error->message);
+        red_channel_warning(red_channel_client_get_channel(self),
+                            "Failed to create channel client: %s",
+                            local_error->message);
         g_propagate_error(error, local_error);
     }
     return local_error == NULL;
@@ -1095,7 +1098,7 @@ static void red_channel_client_handle_outgoing(RedChannelClient *rcc)
                 red_channel_client_disconnect(rcc);
                 return;
             default:
-                spice_printerr("%s", strerror(errno));
+                red_channel_warning(red_channel_client_get_channel(rcc), "%s", strerror(errno));
                 red_channel_client_disconnect(rcc);
                 return;
             }
@@ -1220,7 +1223,7 @@ static void red_channel_client_handle_incoming(RedChannelClient *rcc)
             if (!buffer->msg) {
                 buffer->msg = red_channel_client_alloc_msg_buf(rcc, msg_type, msg_size);
                 if (buffer->msg == NULL) {
-                    spice_printerr("ERROR: channel refused to allocate buffer.");
+                    red_channel_warning(channel, "ERROR: channel refused to allocate buffer.");
                     red_channel_client_disconnect(rcc);
                     return;
                 }
@@ -1248,7 +1251,7 @@ static void red_channel_client_handle_incoming(RedChannelClient *rcc)
                                           msg_type,
                                           &parsed_size, &parsed_free);
         if (parsed == NULL) {
-            spice_printerr("failed to parse message type %d", msg_type);
+            red_channel_warning(channel, "failed to parse message type %d", msg_type);
             red_channel_client_release_msg_buf(rcc,
                                                msg_type, msg_size,
                                                buffer->msg);
@@ -1314,7 +1317,8 @@ void red_channel_client_push(RedChannelClient *rcc)
 
     if (!red_channel_client_no_item_being_sent(rcc) && !red_channel_client_is_blocked(rcc)) {
         red_channel_client_set_blocked(rcc);
-        spice_printerr("ERROR: an item waiting to be sent and not blocked");
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "ERROR: an item waiting to be sent and not blocked");
     }
 
     while ((pipe_item = red_channel_client_pipe_item_get(rcc))) {
@@ -1445,7 +1449,7 @@ bool red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
     switch (type) {
     case SPICE_MSGC_ACK_SYNC:
         if (size != sizeof(uint32_t)) {
-            spice_printerr("bad message size");
+            red_channel_warning(red_channel_client_get_channel(rcc), "bad message size");
             return FALSE;
         }
         rcc->priv->ack_data.client_generation = *(uint32_t *)(message);
@@ -1475,7 +1479,7 @@ bool red_channel_client_handle_message(RedChannelClient *rcc, uint16_t type,
         red_channel_client_handle_pong(rcc, message);
         break;
     default:
-        spice_printerr("invalid message type %u", type);
+        red_channel_warning(red_channel_client_get_channel(rcc), "invalid message type %u", type);
         return FALSE;
     }
     return TRUE;
@@ -1494,7 +1498,7 @@ void red_channel_client_begin_send_message(RedChannelClient *rcc)
 
     // TODO - better check: type in channel_allowed_types. Better: type in channel_allowed_types(channel_state)
     if (rcc->priv->send_data.header.get_msg_type(&rcc->priv->send_data.header) == 0) {
-        spice_printerr("BUG: header->type == 0");
+        red_channel_warning(red_channel_client_get_channel(rcc), "BUG: header->type == 0");
         return;
     }
 

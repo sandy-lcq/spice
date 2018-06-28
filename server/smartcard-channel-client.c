@@ -318,8 +318,9 @@ bool smartcard_channel_client_handle_message(RedChannelClient *rcc,
 
     /* todo: fix */
     if (vheader->reader_id >= smartcard_get_n_readers()) {
-        spice_printerr("ERROR: received message for non existing reader: %d, %d, %d", vheader->reader_id,
-                       vheader->type, vheader->length);
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "ERROR: received message for non existing reader: %d, %d, %d",
+                            vheader->reader_id, vheader->type, vheader->length);
         return FALSE;
     }
     spice_assert(scc->priv->write_buf->buf == msg);

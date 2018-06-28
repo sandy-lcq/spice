@@ -49,7 +49,8 @@ inputs_channel_client_alloc_msg_rcv_buf(RedChannelClient *rcc,
                                         uint16_t type, uint32_t size)
 {
     if (size > RECEIVE_BUF_SIZE) {
-        spice_printerr("error: too large incoming message");
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "error: too large incoming message");
         return NULL;
     }
 

@@ -220,7 +220,9 @@ RedMsgItem *smartcard_char_device_on_message_from_device(RedCharDeviceSmartcard 
     }
     /* We pass any VSC_Error right now - might need to ignore some? */
     if (dev->priv->reader_id == VSCARD_UNDEFINED_READER_ID && vheader->type != VSC_Init) {
-        spice_printerr("error: reader_id not assigned for message of type %d", vheader->type);
+        red_channel_warning(red_channel_client_get_channel(RED_CHANNEL_CLIENT(dev->priv->scc)),
+                            "error: reader_id not assigned for message of type %d",
+                            vheader->type);
     }
     if (dev->priv->scc) {
         sent_header = g_memdup(vheader, sizeof(*vheader) + vheader->length);
@@ -529,7 +531,7 @@ static void smartcard_connect_client(RedChannel *channel, RedClient *client,
     if (char_device) {
         smartcard_char_device_attach_client(char_device, scc);
     } else {
-        spice_printerr("char dev unavailable");
+        red_channel_warning(channel, "char dev unavailable");
     }
 }
 

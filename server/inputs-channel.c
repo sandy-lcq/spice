@@ -606,7 +606,7 @@ static SpiceKbdInstance* inputs_channel_get_keyboard(InputsChannel *inputs)
 int inputs_channel_set_keyboard(InputsChannel *inputs, SpiceKbdInstance *keyboard)
 {
     if (inputs->keyboard) {
-        spice_printerr("already have keyboard");
+        red_channel_warning(RED_CHANNEL(inputs), "already have keyboard");
         return -1;
     }
     inputs->keyboard = keyboard;
@@ -622,7 +622,7 @@ static SpiceMouseInstance* inputs_channel_get_mouse(InputsChannel *inputs)
 int inputs_channel_set_mouse(InputsChannel *inputs, SpiceMouseInstance *mouse)
 {
     if (inputs->mouse) {
-        spice_printerr("already have mouse");
+        red_channel_warning(RED_CHANNEL(inputs), "already have mouse");
         return -1;
     }
     inputs->mouse = mouse;
@@ -638,7 +638,7 @@ static SpiceTabletInstance* inputs_channel_get_tablet(InputsChannel *inputs)
 int inputs_channel_set_tablet(InputsChannel *inputs, SpiceTabletInstance *tablet)
 {
     if (inputs->tablet) {
-        spice_printerr("already have tablet");
+        red_channel_warning(RED_CHANNEL(inputs), "already have tablet");
         return -1;
     }
     inputs->tablet = tablet;

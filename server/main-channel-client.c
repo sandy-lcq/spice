@@ -528,9 +528,10 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
         mcc->priv->net_test_id = 0;
         if (roundtrip <= mcc->priv->latency) {
             // probably high load on client or server result with incorrect values
-            spice_printerr("net test: invalid values, latency %" PRIu64
-                           " roundtrip %" PRIu64 ". assuming high"
-                           "bandwidth", mcc->priv->latency, roundtrip);
+            red_channel_debug(red_channel_client_get_channel(rcc),
+                              "net test: invalid values, latency %" PRIu64
+                              " roundtrip %" PRIu64 ". assuming high"
+                              "bandwidth", mcc->priv->latency, roundtrip);
             mcc->priv->latency = 0;
             mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
             red_channel_client_start_connectivity_monitoring(rcc,
@@ -540,19 +541,21 @@ void main_channel_client_handle_pong(MainChannelClient *mcc, SpiceMsgPing *ping,
         mcc->priv->bitrate_per_sec = (uint64_t)(NET_TEST_BYTES * 8) * 1000000
             / (roundtrip - mcc->priv->latency);
         mcc->priv->net_test_stage = NET_TEST_STAGE_COMPLETE;
-        spice_printerr("net test: latency %f ms, bitrate %"PRIu64" bps (%f Mbps)%s",
-                       (double)mcc->priv->latency / 1000,
-                       mcc->priv->bitrate_per_sec,
-                       (double)mcc->priv->bitrate_per_sec / 1024 / 1024,
-                       main_channel_client_is_low_bandwidth(mcc) ? " LOW BANDWIDTH" : "");
+        red_channel_debug(red_channel_client_get_channel(rcc),
+                          "net test: latency %f ms, bitrate %"PRIu64" bps (%f Mbps)%s",
+                          (double)mcc->priv->latency / 1000,
+                          mcc->priv->bitrate_per_sec,
+                          (double)mcc->priv->bitrate_per_sec / 1024 / 1024,
+                          main_channel_client_is_low_bandwidth(mcc) ? " LOW BANDWIDTH" : "");
         red_channel_client_start_connectivity_monitoring(rcc,
                                                          CLIENT_CONNECTIVITY_TIMEOUT);
         break;
     default:
-        spice_printerr("invalid net test stage, ping id %d test id %d stage %d",
-                       ping->id,
-                       mcc->priv->net_test_id,
-                       mcc->priv->net_test_stage);
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "invalid net test stage, ping id %d test id %d stage %d",
+                            ping->id,
+                            mcc->priv->net_test_id,
+                            mcc->priv->net_test_stage);
         mcc->priv->net_test_stage = NET_TEST_STAGE_INVALID;
     }
 }
@@ -561,13 +564,15 @@ void main_channel_client_handle_migrate_end(MainChannelClient *mcc)
 {
     RedClient *client = red_channel_client_get_client(RED_CHANNEL_CLIENT(mcc));
     if (!red_client_during_migrate_at_target(client)) {
-        spice_printerr("unexpected SPICE_MSGC_MIGRATE_END");
+        red_channel_warning(red_channel_client_get_channel(RED_CHANNEL_CLIENT(mcc)),
+                            "unexpected SPICE_MSGC_MIGRATE_END");
         return;
     }
     if (!red_channel_client_test_remote_cap(RED_CHANNEL_CLIENT(mcc),
                                             SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE)) {
-        spice_printerr("unexpected SPICE_MSGC_MIGRATE_END, "
-                   "client does not support semi-seamless migration");
+        red_channel_warning(red_channel_client_get_channel(RED_CHANNEL_CLIENT(mcc)),
+                            "unexpected SPICE_MSGC_MIGRATE_END, "
+                            "client does not support semi-seamless migration");
             return;
     }
     red_client_semi_seamless_migrate_complete(client);
@@ -966,9 +971,10 @@ void main_channel_client_send_item(RedChannelClient *rcc, RedPipeItem *base)
     if (!mcc->priv->init_sent &&
         !mcc->priv->seamless_mig_dst &&
         base->type != RED_PIPE_ITEM_TYPE_MAIN_INIT) {
-        spice_printerr("Init msg for client %p was not sent yet "
-                       "(client is probably during semi-seamless migration). Ignoring msg type %d",
-                       red_channel_client_get_client(rcc), base->type);
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "Init msg for client %p was not sent yet "
+                            "(client is probably during semi-seamless migration). Ignoring msg type %d",
+                            red_channel_client_get_client(rcc), base->type);
         return;
     }
     switch (base->type) {

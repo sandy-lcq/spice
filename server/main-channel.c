@@ -66,8 +66,9 @@ static void main_channel_push_channels(MainChannelClient *mcc)
 {
     RedChannelClient *rcc = RED_CHANNEL_CLIENT(mcc);
     if (red_client_during_migrate_at_target(red_channel_client_get_client(rcc))) {
-        spice_printerr("warning: ignoring unexpected SPICE_MSGC_MAIN_ATTACH_CHANNELS"
-                   "during migration");
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "warning: ignoring unexpected SPICE_MSGC_MAIN_ATTACH_CHANNELS"
+                            "during migration");
         return;
     }
     red_channel_client_pipe_add_type(rcc, RED_PIPE_ITEM_TYPE_MAIN_CHANNELS_LIST);
@@ -115,7 +116,8 @@ static bool main_channel_handle_migrate_data(RedChannelClient *rcc,
     spice_assert(red_channel_get_n_clients(channel) == 1);
 
     if (size < sizeof(SpiceMigrateDataHeader) + sizeof(SpiceMigrateDataMain)) {
-        spice_printerr("bad message size %u", size);
+        red_channel_warning(red_channel_client_get_channel(rcc),
+                            "bad message size %u", size);
         return FALSE;
     }
     if (!migration_protocol_validate_header(header,
@@ -367,7 +369,7 @@ int main_channel_migrate_src_complete(MainChannel *main_chan, int success)
     RedChannelClient *rcc;
 
     if (!red_channel_get_clients(RED_CHANNEL(main_chan))) {
-        spice_printerr("no peer connected");
+        red_channel_warning(RED_CHANNEL(main_chan), "no peer connected");
         return 0;
     }
 
