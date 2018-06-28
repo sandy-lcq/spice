@@ -1144,7 +1144,7 @@ static int red_peer_receive(RedStream *stream, uint8_t *buf, uint32_t size)
             } else if (errno == EPIPE) {
                 return -1;
             } else {
-                spice_printerr("%s", strerror(errno));
+                g_warning("%s", strerror(errno));
                 return -1;
             }
         } else {

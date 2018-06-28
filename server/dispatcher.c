@@ -259,7 +259,7 @@ static int dispatcher_handle_single_read(Dispatcher *dispatcher)
     uint32_t ack = ACK;
 
     if ((ret = read_safe(dispatcher->priv->recv_fd, (uint8_t*)&type, sizeof(type), 0)) == -1) {
-        spice_printerr("error reading from dispatcher: %d", errno);
+        g_warning("error reading from dispatcher: %d", errno);
         return 0;
     }
     if (ret == 0) {
@@ -272,7 +272,7 @@ static int dispatcher_handle_single_read(Dispatcher *dispatcher)
     }
     msg = &dispatcher->priv->messages[type];
     if (read_safe(dispatcher->priv->recv_fd, payload, msg->size, 1) == -1) {
-        spice_printerr("error reading from dispatcher: %d", errno);
+        g_warning("error reading from dispatcher: %d", errno);
         /* TODO: close socketpair? */
         return 0;
     }
@@ -282,12 +282,12 @@ static int dispatcher_handle_single_read(Dispatcher *dispatcher)
     if (msg->handler) {
         msg->handler(dispatcher->priv->opaque, payload);
     } else {
-        spice_printerr("error: no handler for message type %d", type);
+        g_warning("error: no handler for message type %d", type);
     }
     if (msg->ack) {
         if (write_safe(dispatcher->priv->recv_fd,
                        (uint8_t*)&ack, sizeof(ack)) == -1) {
-            spice_printerr("error writing ack for message %d", type);
+            g_warning("error writing ack for message %d", type);
             /* TODO: close socketpair? */
         }
     }
@@ -316,21 +316,21 @@ void dispatcher_send_message(Dispatcher *dispatcher, uint32_t message_type,
     msg = &dispatcher->priv->messages[message_type];
     pthread_mutex_lock(&dispatcher->priv->lock);
     if (write_safe(send_fd, (uint8_t*)&message_type, sizeof(message_type)) == -1) {
-        spice_printerr("error: failed to send message type for message %d",
-                   message_type);
+        g_warning("error: failed to send message type for message %d",
+                  message_type);
         goto unlock;
     }
     if (write_safe(send_fd, payload, msg->size) == -1) {
-        spice_printerr("error: failed to send message body for message %d",
-                   message_type);
+        g_warning("error: failed to send message body for message %d",
+                  message_type);
         goto unlock;
     }
     if (msg->ack) {
         if (read_safe(send_fd, (uint8_t*)&ack, sizeof(ack), 1) == -1) {
-            spice_printerr("error: failed to read ack");
+            g_warning("error: failed to read ack");
         } else if (ack != ACK) {
-            spice_printerr("error: got wrong ack value in dispatcher "
-                       "for message %d\n", message_type);
+            g_warning("error: got wrong ack value in dispatcher "
+                      "for message %d\n", message_type);
             /* TODO handling error? */
         }
     }

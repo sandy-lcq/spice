@@ -568,7 +568,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
        if (dev_client) {
             if (!migrated_data_tokens &&
                 dev_client->do_flow_control && !dev_client->num_client_tokens) {
-                spice_printerr("token violation: dev %p client %p", dev, client);
+                g_warning("token violation: dev %p client %p", dev, client);
                 red_char_device_handle_client_overflow(dev_client);
                 goto error;
             }
@@ -579,7 +579,7 @@ static RedCharDeviceWriteBuffer *__red_char_device_write_buffer_get(
         } else {
             /* it is possible that the client was removed due to send tokens underflow, but
              * the caller still receive messages from the client */
-            spice_printerr("client not found: dev %p client %p", dev, client);
+            g_warning("client not found: dev %p client %p", dev, client);
             goto error;
         }
     } else if (origin == WRITE_BUFFER_ORIGIN_SERVER) {
@@ -635,7 +635,7 @@ void red_char_device_write_buffer_add(RedCharDevice *dev,
     /* caller shouldn't add buffers for client that was removed */
     if (write_buf->priv->origin == WRITE_BUFFER_ORIGIN_CLIENT &&
         !red_char_device_client_find(dev, write_buf->priv->client)) {
-        spice_printerr("client not found: dev %p client %p", dev, write_buf->priv->client);
+        g_warning("client not found: dev %p client %p", dev, write_buf->priv->client);
         red_char_device_write_buffer_pool_add(dev, write_buf);
         return;
     }
@@ -658,7 +658,7 @@ void red_char_device_write_buffer_release(RedCharDevice *dev,
     RedClient *client = write_buf->priv->client;
 
     if (!dev) {
-        spice_printerr("no device. write buffer is freed");
+        g_warning("no device. write buffer is freed");
         red_char_device_write_buffer_free(write_buf);
         return;
     }

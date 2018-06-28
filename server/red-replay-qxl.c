@@ -475,7 +475,7 @@ static QXLImage *red_replay_image(SpiceReplay *replay, uint32_t flags)
         } else {
             size = red_replay_data_chunks(replay, "bitmap.data", (uint8_t**)&qxl->bitmap.data, 0);
             if (size != bitmap_size) {
-                spice_printerr("bad image, %" PRIuPTR " != %" PRIuPTR, size, bitmap_size);
+                g_warning("bad image, %" PRIuPTR " != %" PRIuPTR, size, bitmap_size);
                 return NULL;
             }
         }
@@ -1137,7 +1137,7 @@ static QXLSurfaceCmd *red_replay_surface_cmd(SpiceReplay *replay)
         if ((qxl->flags & QXL_SURF_FLAG_KEEP_DATA) != 0) {
             read_binary(replay, "data", &read_size, (uint8_t**)&qxl->u.surface_create.data, 0);
             if (read_size != size) {
-                spice_printerr("mismatch %" PRIuPTR " != %" PRIuPTR, size, read_size);
+                g_warning("mismatch %" PRIuPTR " != %" PRIuPTR, size, read_size);
             }
         } else {
             qxl->u.surface_create.data = QXLPHYSICAL_FROM_PTR(replay_malloc(replay, size));
@@ -1240,9 +1240,8 @@ static void replay_handle_create_primary(QXLWorker *worker, SpiceReplay *replay)
     uint8_t *mem = NULL;
 
     if (replay->created_primary) {
-        spice_printerr(
-            "WARNING: %d: original recording event not preceded by a destroy primary",
-            replay->counter);
+        g_warning("WARNING: %d: original recording event not preceded by a destroy primary",
+                  replay->counter);
         worker->destroy_primary_surface(worker, 0);
     }
     replay->created_primary = TRUE;

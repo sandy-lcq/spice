@@ -51,7 +51,7 @@ ZlibEncoder* zlib_encoder_create(ZlibEncoderUsrContext *usr, int level)
     z_ret = deflateInit(&enc->strm, level);
     enc->last_level = level;
     if (z_ret != Z_OK) {
-        spice_printerr("zlib error");
+        g_warning("zlib error");
         g_free(enc);
         return NULL;
     }

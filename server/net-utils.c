@@ -47,7 +47,7 @@ bool red_socket_set_keepalive(int fd, bool enable, int timeout)
 
     if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) == -1) {
         if (errno != ENOTSUP) {
-            spice_printerr("setsockopt for keepalive failed, %s", strerror(errno));
+            g_warning("setsockopt for keepalive failed, %s", strerror(errno));
             return false;
         }
     }
@@ -59,7 +59,7 @@ bool red_socket_set_keepalive(int fd, bool enable, int timeout)
 #ifdef HAVE_TCP_KEEPIDLE
     if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout)) == -1) {
         if (errno != ENOTSUP) {
-            spice_printerr("setsockopt for keepalive timeout failed, %s", strerror(errno));
+            g_warning("setsockopt for keepalive timeout failed, %s", strerror(errno));
             return false;
         }
     }

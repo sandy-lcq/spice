@@ -469,7 +469,7 @@ stream_device_send_msg_to_client(RedCharDevice *self, RedPipeItem *msg, RedClien
 static void
 stream_device_send_tokens_to_client(RedCharDevice *self, RedClient *client, uint32_t tokens)
 {
-    spice_printerr("Not implemented!");
+    g_warning("%s: Not implemented!", G_STRFUNC);
 }
 
 static void
