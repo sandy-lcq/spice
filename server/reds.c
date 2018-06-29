@@ -3542,9 +3542,17 @@ static const int video_codec_caps[] = {
 };
 
 
-/* Expected string:  encoder:codec;encoder:codec */
-static const char* parse_video_codecs(const char *codecs, char **encoder,
-                                      char **codec)
+/* Parses the given codec string and returns newly-allocated strings describing
+ * the next encoder and codec in the list. These strings must be freed by the
+ * caller.
+ *
+ * @codecs: a codec string in the following format: encoder:codec;encoder:codec
+ * @encoder: a location to return the parsed encoder
+ * @codec: a location to return the parsed codec
+ * @return the position of the next codec in the string
+ */
+static const char* parse_next_video_codec(const char *codecs, char **encoder,
+                                          char **codec)
 {
     if (!codecs) {
         return NULL;
@@ -3574,7 +3582,7 @@ static void reds_set_video_codecs_from_string(RedsState *reds, const char *codec
 
     video_codecs = g_array_new(FALSE, FALSE, sizeof(RedVideoCodec));
     const char *c = codecs;
-    while ( (c = parse_video_codecs(c, &encoder_name, &codec_name)) ) {
+    while ( (c = parse_next_video_codec(c, &encoder_name, &codec_name)) ) {
         uint32_t encoder_index, codec_index;
         if (!encoder_name || !codec_name) {
             spice_warning("spice: invalid encoder:codec value at %s", codecs);
