@@ -30,7 +30,6 @@
 #include <common/marshaller.h>
 #include <common/messages.h>
 #include <common/ring.h>
-#include <common/spice_common.h>
 #include <common/draw.h>
 #include <common/verify.h>
 
