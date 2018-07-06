@@ -37,6 +37,7 @@
 
 #include <spice/macros.h>
 #include "test-display-base.h"
+#include "test-glib-compat.h"
 #include <common/log.h>
 
 static SpiceCoreInterface *core;

@@ -68,4 +68,13 @@ g_test_assert_expected_messages_internal_no_warnings(const char *domain,
 #define g_assert_false(cond) g_assert(!(cond))
 #endif
 
+/* Added in glib 2.50 */
+#ifndef G_PID_FORMAT
+#ifdef G_OS_WIN32
+#define G_PID_FORMAT "i"
+#else
+#define G_PID_FORMAT "p"
+#endif /* G_OS_WIN32 */
+#endif /* G_PID_FORMAT */
+
 #endif // TEST_GLIB_COMPAT_H_
