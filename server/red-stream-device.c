@@ -48,6 +48,7 @@ struct StreamDevice {
     StreamChannel *stream_channel;
     CursorChannel *cursor_channel;
     SpiceTimer *close_timer;
+    uint32_t frame_mmtime;
 };
 
 struct StreamDeviceClass {
@@ -146,7 +147,11 @@ stream_device_partial_read(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         }
         break;
     case STREAM_TYPE_DATA:
-        handled = handle_msg_data(dev, sin);
+        if (dev->hdr.size > 32*1024*1024) {
+            handled = handle_msg_invalid(dev, sin, "STREAM_DATA too large");
+        } else {
+            handled = handle_msg_data(dev, sin);
+        }
         break;
     case STREAM_TYPE_CURSOR_SET:
         handled = handle_msg_cursor_set(dev, sin);
@@ -308,20 +313,38 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
         spice_assert(dev->hdr.type == STREAM_TYPE_DATA);
     }
 
-    while (1) {
-        uint8_t buf[16 * 1024];
-        n = sif->read(sin, buf, MIN(sizeof(buf), dev->hdr.size));
-        if (n <= 0) {
-            break;
+    /* make sure we have a large enough buffer for the whole frame */
+    /* ---
+     * TODO: Now that we copy partial data into the buffer, for each frame
+     * the buffer is allocated and freed (look for g_realloc in
+     * stream_device_partial_read).
+     * Probably better to just keep the larger buffer.
+     */
+    if (dev->msg_pos == 0) {
+        dev->frame_mmtime = reds_get_mm_time();
+        if (dev->msg_len < dev->hdr.size) {
+            g_free(dev->msg);
+            dev->msg = g_malloc(dev->hdr.size);
+            dev->msg_len = dev->hdr.size;
         }
-        // TODO collect all message ??
-        // up: we send a single frame together
-        // down: guest can cause a crash
-        stream_channel_send_data(dev->stream_channel, buf, n, reds_get_mm_time());
-        dev->hdr.size -= n;
     }
 
-    return dev->hdr.size == 0;
+    /* read from device */
+    n = sif->read(sin, dev->msg->buf + dev->msg_pos, dev->hdr.size - dev->msg_pos);
+    if (n <= 0) {
+        return false;
+    }
+
+    dev->msg_pos += n;
+    if (dev->msg_pos != dev->hdr.size) { /* some bytes are still missing */
+        return false;
+    }
+
+    /* The whole frame was read from the device, send it */
+    stream_channel_send_data(dev->stream_channel, dev->msg->buf, dev->hdr.size,
+                             dev->frame_mmtime);
+
+    return true;
 }
 
 /*
