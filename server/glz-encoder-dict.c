@@ -489,7 +489,8 @@ static WindowImage *glz_dictionary_window_add_image(SharedDictionary *dict, LzIm
 {
     unsigned int num_lines = num_first_lines;
     unsigned int row;
-    uint32_t seg_id, prev_seg_id;
+    uint32_t seg_id;
+    uint32_t prev_seg_id = 0;
     uint8_t* lines = first_lines;
     // alloc image info,update used head tail,  if used_head null - update  head
     WindowImage *image = __glz_dictionary_window_alloc_image(dict);
