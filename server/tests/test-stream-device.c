@@ -165,7 +165,7 @@ check_vmc_error_message(void)
 
     discard_server_capabilities();
 
-    g_assert(vmc_write_pos >= sizeof(hdr));
+    g_assert_cmpint(vmc_write_pos, >= ,sizeof(hdr));
 
     memcpy(&hdr, vmc_write_buf, sizeof(hdr));
     g_assert_cmpint(hdr.protocol_version, ==, STREAM_DEVICE_PROTOCOL);
@@ -408,6 +408,44 @@ static void test_stream_device_empty_data(void)
     test_stream_device_empty(STREAM_TYPE_DATA);
 }
 
+// check that server refuse huge data messages
+static void test_stream_device_huge_data(void)
+{
+    uint8_t *p = message;
+    SpiceCoreInterface *core = basic_event_loop_init();
+    Test *test = test_new(core);
+
+    pos = 0;
+    vmc_write_pos = 0;
+    message_sizes_curr = message_sizes;
+    message_sizes_end = message_sizes;
+
+    // add some messages into device buffer
+    p = add_stream_hdr(p, STREAM_TYPE_DATA, 33 * 1024 * 1024);
+    p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
+    *message_sizes_end = p - message;
+    ++message_sizes_end;
+
+    vmc_instance.base.sif = &vmc_interface.base;
+    spice_server_add_interface(test->server, &vmc_instance.base);
+
+    // we need to open the device and kick the start
+    // the alarm is to avoid program to stuck
+    alarm(5);
+    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
+    spice_server_char_device_wakeup(&vmc_instance);
+    alarm(0);
+
+    // we should read all data
+    g_assert(message_sizes_curr - message_sizes == 1);
+
+    // we should have an error back
+    check_vmc_error_message();
+
+    test_destroy(test);
+    basic_event_loop_destroy();
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -418,6 +456,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/server/stream-device-format-after-data", test_stream_device_format_after_data);
     g_test_add_func("/server/stream-device-empty-capabilities", test_stream_device_empty_capabilities);
     g_test_add_func("/server/stream-device-empty-data", test_stream_device_empty_data);
+    g_test_add_func("/server/stream-device-huge-data", test_stream_device_huge_data);
 
     return g_test_run();
 }
