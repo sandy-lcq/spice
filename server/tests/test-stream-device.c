@@ -203,6 +203,19 @@ static void test_stream_device_teardown(TestFixture *fixture, gconstpointer user
     core = NULL;
 }
 
+static void test_kick(void)
+{
+    vmc_instance.base.sif = &vmc_interface.base;
+    spice_server_add_interface(test->server, &vmc_instance.base);
+
+    // we need to open the device and kick the start
+    // the alarm is to prevent the program from getting stuck
+    alarm(5);
+    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
+    spice_server_char_device_wakeup(&vmc_instance);
+    alarm(0);
+}
+
 static void test_stream_device(TestFixture *fixture, gconstpointer user_data)
 {
     uint8_t *p = message;
@@ -273,15 +286,7 @@ static void test_stream_device_unfinished(TestFixture *fixture, gconstpointer us
     *message_sizes_end = p - message;
     ++message_sizes_end;
 
-    vmc_instance.base.sif = &vmc_interface.base;
-    spice_server_add_interface(test->server, &vmc_instance.base);
-
-    // we need to open the device and kick the start
-    // the alarm is to prevent the program from getting stuck
-    alarm(5);
-    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
-    spice_server_char_device_wakeup(&vmc_instance);
-    alarm(0);
+    test_kick();
 
     // we should have read all data
     g_assert(message_sizes_curr - message_sizes == 1);
@@ -303,15 +308,7 @@ static void test_stream_device_multiple(TestFixture *fixture, gconstpointer user
     *message_sizes_end = p - message;
     ++message_sizes_end;
 
-    vmc_instance.base.sif = &vmc_interface.base;
-    spice_server_add_interface(test->server, &vmc_instance.base);
-
-    // we need to open the device and kick the start
-    // the alarm is to prevent the program from getting stuck
-    alarm(5);
-    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
-    spice_server_char_device_wakeup(&vmc_instance);
-    alarm(0);
+    test_kick();
 
     // we should have read all data
     g_assert(message_sizes_curr - message_sizes == 1);
@@ -331,15 +328,7 @@ static void test_stream_device_format_after_data(TestFixture *fixture, gconstpoi
     *message_sizes_end = p - message;
     ++message_sizes_end;
 
-    vmc_instance.base.sif = &vmc_interface.base;
-    spice_server_add_interface(test->server, &vmc_instance.base);
-
-    // we need to open the device and kick the start
-    // the alarm is to avoid program to stuck
-    alarm(5);
-    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
-    spice_server_char_device_wakeup(&vmc_instance);
-    alarm(0);
+    test_kick();
 
     // we should read all data
     g_assert(message_sizes_curr - message_sizes == 1);
@@ -365,15 +354,7 @@ static void test_stream_device_empty(TestFixture *fixture, gconstpointer user_da
     *message_sizes_end = p - message;
     ++message_sizes_end;
 
-    vmc_instance.base.sif = &vmc_interface.base;
-    spice_server_add_interface(test->server, &vmc_instance.base);
-
-    // we need to open the device and kick the start
-    // the alarm is to avoid program to stuck
-    alarm(5);
-    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
-    spice_server_char_device_wakeup(&vmc_instance);
-    alarm(0);
+    test_kick();
 
     // we should read all data
     g_assert(message_sizes_curr - message_sizes == 3);
@@ -394,15 +375,7 @@ static void test_stream_device_huge_data(TestFixture *fixture, gconstpointer use
     *message_sizes_end = p - message;
     ++message_sizes_end;
 
-    vmc_instance.base.sif = &vmc_interface.base;
-    spice_server_add_interface(test->server, &vmc_instance.base);
-
-    // we need to open the device and kick the start
-    // the alarm is to avoid program to stuck
-    alarm(5);
-    spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
-    spice_server_char_device_wakeup(&vmc_instance);
-    alarm(0);
+    test_kick();
 
     // we should read all data
     g_assert(message_sizes_curr - message_sizes == 1);
