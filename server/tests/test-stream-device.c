@@ -173,11 +173,39 @@ check_vmc_error_message(void)
     g_assert_cmpint(GUINT32_FROM_LE(hdr.size), <=, vmc_write_pos - sizeof(hdr));
 }
 
-static void test_stream_device(void)
+static SpiceCoreInterface *core;
+static Test *test;
+typedef int TestFixture;
+
+static void test_stream_device_setup(TestFixture *fixture, gconstpointer user_data)
+{
+    g_assert_null(core);
+    g_assert_null(test);
+    core = basic_event_loop_init();
+    g_assert_nonnull(core);
+    test = test_new(core);
+    g_assert_nonnull(test);
+
+    pos = 0;
+    vmc_write_pos = 0;
+    message_sizes_curr = message_sizes;
+    message_sizes_end = message_sizes;
+}
+
+static void test_stream_device_teardown(TestFixture *fixture, gconstpointer user_data)
+{
+    g_assert_nonnull(core);
+    g_assert_nonnull(test);
+
+    test_destroy(test);
+    test = NULL;
+    basic_event_loop_destroy();
+    core = NULL;
+}
+
+static void test_stream_device(TestFixture *fixture, gconstpointer user_data)
 {
     uint8_t *p = message;
-    SpiceCoreInterface *core = basic_event_loop_init();
-    Test *test = test_new(core);
 
     for (int test_num=0; test_num < 2; ++test_num) {
         pos = 0;
@@ -233,22 +261,12 @@ static void test_stream_device(void)
 
         check_vmc_error_message();
     }
-
-    test_destroy(test);
-    basic_event_loop_destroy();
 }
 
 // check if sending a partial message causes issues
-static void test_stream_device_unfinished(void)
+static void test_stream_device_unfinished(TestFixture *fixture, gconstpointer user_data)
 {
     uint8_t *p = message;
-    SpiceCoreInterface *core = basic_event_loop_init();
-    Test *test = test_new(core);
-
-    pos = 0;
-    vmc_write_pos = 0;
-    message_sizes_curr = message_sizes;
-    message_sizes_end = message_sizes;
 
     // this long and not finished message should not cause an infinite loop
     p = add_stream_hdr(p, STREAM_TYPE_DATA, 100000);
@@ -271,21 +289,12 @@ static void test_stream_device_unfinished(void)
     // we should have no data from the device
     discard_server_capabilities();
     g_assert_cmpint(vmc_write_pos, ==, 0);
-
-    test_destroy(test);
-    basic_event_loop_destroy();
 }
 
 // check if sending multiple messages cause stall
-static void test_stream_device_multiple(void)
+static void test_stream_device_multiple(TestFixture *fixture, gconstpointer user_data)
 {
     uint8_t *p = message;
-    SpiceCoreInterface *core = basic_event_loop_init();
-    Test *test = test_new(core);
-
-    pos = 0;
-    message_sizes_curr = message_sizes;
-    message_sizes_end = message_sizes;
 
     // add some messages into device buffer
     p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
@@ -306,22 +315,12 @@ static void test_stream_device_multiple(void)
 
     // we should have read all data
     g_assert(message_sizes_curr - message_sizes == 1);
-
-    test_destroy(test);
-    basic_event_loop_destroy();
 }
 
 // check if data message consume even following message
-static void test_stream_device_format_after_data(void)
+static void test_stream_device_format_after_data(TestFixture *fixture, gconstpointer user_data)
 {
     uint8_t *p = message;
-    SpiceCoreInterface *core = basic_event_loop_init();
-    Test *test = test_new(core);
-
-    pos = 0;
-    vmc_write_pos = 0;
-    message_sizes_curr = message_sizes;
-    message_sizes_end = message_sizes;
 
     // add some messages into device buffer
     p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
@@ -347,22 +346,13 @@ static void test_stream_device_format_after_data(void)
 
     // we should have an error back
     check_vmc_error_message();
-
-    test_destroy(test);
-    basic_event_loop_destroy();
 }
 
 // check empty message
-static void test_stream_device_empty(StreamMsgType msg_type)
+static void test_stream_device_empty(TestFixture *fixture, gconstpointer user_data)
 {
+    const StreamMsgType msg_type = (StreamMsgType) GPOINTER_TO_INT(user_data);
     uint8_t *p = message;
-    SpiceCoreInterface *core = basic_event_loop_init();
-    Test *test = test_new(core);
-
-    pos = 0;
-    vmc_write_pos = 0;
-    message_sizes_curr = message_sizes;
-    message_sizes_end = message_sizes;
 
     // add some messages into device buffer
     p = add_stream_hdr(p, msg_type, 0);
@@ -391,34 +381,12 @@ static void test_stream_device_empty(StreamMsgType msg_type)
     // we should have no data from the device
     discard_server_capabilities();
     g_assert_cmpint(vmc_write_pos, ==, 0);
-
-    test_destroy(test);
-    basic_event_loop_destroy();
-}
-
-// check empty capabilities
-static void test_stream_device_empty_capabilities(void)
-{
-    test_stream_device_empty(STREAM_TYPE_CAPABILITIES);
-}
-
-// check empty data
-static void test_stream_device_empty_data(void)
-{
-    test_stream_device_empty(STREAM_TYPE_DATA);
 }
 
 // check that server refuse huge data messages
-static void test_stream_device_huge_data(void)
+static void test_stream_device_huge_data(TestFixture *fixture, gconstpointer user_data)
 {
     uint8_t *p = message;
-    SpiceCoreInterface *core = basic_event_loop_init();
-    Test *test = test_new(core);
-
-    pos = 0;
-    vmc_write_pos = 0;
-    message_sizes_curr = message_sizes;
-    message_sizes_end = message_sizes;
 
     // add some messages into device buffer
     p = add_stream_hdr(p, STREAM_TYPE_DATA, 33 * 1024 * 1024);
@@ -441,22 +409,31 @@ static void test_stream_device_huge_data(void)
 
     // we should have an error back
     check_vmc_error_message();
+}
 
-    test_destroy(test);
-    basic_event_loop_destroy();
+static void test_add(const char *name, void (*func)(TestFixture *, gconstpointer), gconstpointer arg)
+{
+    g_test_add(name, TestFixture, arg, test_stream_device_setup, func, test_stream_device_teardown);
 }
 
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
 
-    g_test_add_func("/server/stream-device", test_stream_device);
-    g_test_add_func("/server/stream-device-unfinished", test_stream_device_unfinished);
-    g_test_add_func("/server/stream-device-multiple", test_stream_device_multiple);
-    g_test_add_func("/server/stream-device-format-after-data", test_stream_device_format_after_data);
-    g_test_add_func("/server/stream-device-empty-capabilities", test_stream_device_empty_capabilities);
-    g_test_add_func("/server/stream-device-empty-data", test_stream_device_empty_data);
-    g_test_add_func("/server/stream-device-huge-data", test_stream_device_huge_data);
+    test_add("/server/stream-device",
+             test_stream_device, NULL);
+    test_add("/server/stream-device-unfinished",
+             test_stream_device_unfinished, NULL);
+    test_add("/server/stream-device-multiple",
+             test_stream_device_multiple, NULL);
+    test_add("/server/stream-device-format-after-data",
+             test_stream_device_format_after_data, NULL);
+    test_add("/server/stream-device-empty-capabilities",
+             test_stream_device_empty, GINT_TO_POINTER(STREAM_TYPE_CAPABILITIES));
+    test_add("/server/stream-device-empty-data",
+             test_stream_device_empty, GINT_TO_POINTER(STREAM_TYPE_DATA));
+    test_add("/server/stream-device-huge-data",
+             test_stream_device_huge_data, NULL);
 
     return g_test_run();
 }
