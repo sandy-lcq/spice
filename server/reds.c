@@ -3132,6 +3132,7 @@ static int spice_server_char_device_add_interface(SpiceServer *reds,
             return -1;
         }
         dev_state = attach_to_red_agent(reds, char_device);
+        g_object_ref(dev_state);
     }
 #ifdef USE_SMARTCARD
     else if (strcmp(char_device->subtype, SUBTYPE_SMARTCARD) == 0) {
@@ -3682,6 +3683,19 @@ SPICE_GNUC_VISIBLE void spice_server_destroy(SpiceServer *reds)
     }
     reds_cleanup_net(reds);
     g_clear_object(&reds->agent_dev);
+
+    // NOTE: don't replace with g_list_free_full as this function that passed callback
+    // don't change the list while g_object_unref in this case will change it.
+    RedCharDevice *dev;
+    GLIST_FOREACH(reds->char_devices, RedCharDevice, dev) {
+        g_object_unref(dev);
+    }
+    g_list_free(reds->char_devices);
+    reds->char_devices = NULL;
+
+    g_list_free(reds->channels);
+    reds->channels = NULL;
+
     spice_buffer_free(&reds->client_monitors_config);
     red_record_unref(reds->record);
     reds_cleanup(reds);
