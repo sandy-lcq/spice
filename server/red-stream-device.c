@@ -586,6 +586,8 @@ stream_device_dispose(GObject *object)
         red_channel_destroy(RED_CHANNEL(dev->cursor_channel));
         dev->cursor_channel = NULL;
     }
+
+    G_OBJECT_CLASS(stream_device_parent_class)->dispose(object);
 }
 
 static void
@@ -597,6 +599,8 @@ stream_device_finalize(GObject *object)
     dev->msg = NULL;
     dev->msg_len = 0;
     dev->msg_pos = 0;
+
+    G_OBJECT_CLASS(stream_device_parent_class)->finalize(object);
 }
 
 void
