@@ -332,7 +332,7 @@ handle_msg_data(StreamDevice *dev, SpiceCharDeviceInstance *sin)
     /* read from device */
     n = sif->read(sin, dev->msg->buf + dev->msg_pos, dev->hdr.size - dev->msg_pos);
     if (n <= 0) {
-        return false;
+        return dev->msg_pos == dev->hdr.size;
     }
 
     dev->msg_pos += n;

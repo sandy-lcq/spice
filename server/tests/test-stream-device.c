@@ -352,8 +352,8 @@ static void test_stream_device_format_after_data(void)
     basic_event_loop_destroy();
 }
 
-// check empty capabilities
-static void test_stream_device_empty_capabilities(void)
+// check empty message
+static void test_stream_device_empty(StreamMsgType msg_type)
 {
     uint8_t *p = message;
     SpiceCoreInterface *core = basic_event_loop_init();
@@ -365,7 +365,7 @@ static void test_stream_device_empty_capabilities(void)
     message_sizes_end = message_sizes;
 
     // add some messages into device buffer
-    p = add_stream_hdr(p, STREAM_TYPE_CAPABILITIES, 0);
+    p = add_stream_hdr(p, msg_type, 0);
     *message_sizes_end = p - message;
     ++message_sizes_end;
     p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
@@ -396,6 +396,17 @@ static void test_stream_device_empty_capabilities(void)
     basic_event_loop_destroy();
 }
 
+// check empty capabilities
+static void test_stream_device_empty_capabilities(void)
+{
+    test_stream_device_empty(STREAM_TYPE_CAPABILITIES);
+}
+
+// check empty data
+static void test_stream_device_empty_data(void)
+{
+    test_stream_device_empty(STREAM_TYPE_DATA);
+}
 
 int main(int argc, char *argv[])
 {
@@ -406,6 +417,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/server/stream-device-multiple", test_stream_device_multiple);
     g_test_add_func("/server/stream-device-format-after-data", test_stream_device_format_after_data);
     g_test_add_func("/server/stream-device-empty-capabilities", test_stream_device_empty_capabilities);
+    g_test_add_func("/server/stream-device-empty-data", test_stream_device_empty_data);
 
     return g_test_run();
 }
