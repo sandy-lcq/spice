@@ -31,6 +31,8 @@
 
 #include "test-display-base.h"
 #include "test-glib-compat.h"
+#include "stream-channel.h"
+#include "reds.h"
 
 static SpiceCharDeviceInstance vmc_instance;
 
@@ -173,6 +175,68 @@ check_vmc_error_message(void)
     g_assert_cmpint(GUINT32_FROM_LE(hdr.size), <=, vmc_write_pos - sizeof(hdr));
 }
 
+static int num_send_data_calls = 0;
+static size_t send_data_bytes = 0;
+
+struct StreamChannel {
+    RedChannel parent;
+};
+
+struct StreamChannelClass {
+    RedChannelClass parent_class;
+};
+
+G_DEFINE_TYPE(StreamChannel, stream_channel, RED_TYPE_CHANNEL)
+
+static void
+stream_channel_init(StreamChannel *channel)
+{
+}
+
+static void
+stream_channel_class_init(StreamChannelClass *klass)
+{
+}
+
+void stream_channel_change_format(StreamChannel *channel,
+                                  const struct StreamMsgFormat *fmt)
+{
+}
+
+void stream_channel_send_data(StreamChannel *channel,
+                              const void *data, size_t size,
+                              uint32_t mm_time)
+{
+    ++num_send_data_calls;
+    send_data_bytes += size;
+}
+
+void stream_channel_register_start_cb(StreamChannel *channel,
+                                      stream_channel_start_proc cb, void *opaque)
+{
+}
+
+void stream_channel_register_queue_stat_cb(StreamChannel *channel,
+                                           stream_channel_queue_stat_proc cb, void *opaque)
+{
+}
+
+StreamChannel* stream_channel_new(RedsState *server, uint32_t id)
+{
+    return g_object_new(TYPE_STREAM_CHANNEL,
+                        "spice-server", server,
+                        "core-interface", reds_get_core_interface(server),
+                        "channel-type", SPICE_CHANNEL_DISPLAY,
+                        "id", id,
+                        "migration-flags", 0,
+                        "handle-acks", FALSE,
+                        NULL);
+}
+
+void stream_channel_reset(StreamChannel *channel)
+{
+}
+
 static SpiceCoreInterface *core;
 static Test *test;
 typedef int TestFixture;
@@ -190,6 +254,9 @@ static void test_stream_device_setup(TestFixture *fixture, gconstpointer user_da
     vmc_write_pos = 0;
     message_sizes_curr = message_sizes;
     message_sizes_end = message_sizes;
+
+    num_send_data_calls = 0;
+    send_data_bytes = 0;
 }
 
 static void test_stream_device_teardown(TestFixture *fixture, gconstpointer user_data)
@@ -384,6 +451,40 @@ static void test_stream_device_huge_data(TestFixture *fixture, gconstpointer use
     check_vmc_error_message();
 }
 
+// check that server send all message
+static void test_stream_device_data_message(TestFixture *fixture, gconstpointer user_data)
+{
+    uint8_t *p = message;
+
+    // add some messages into device buffer
+    p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
+    p = add_stream_hdr(p, STREAM_TYPE_DATA, 1017);
+    for (int i = 0; i < 1017; ++i, ++p) {
+        *p = (uint8_t) (i * 123 + 57);
+    }
+    *message_sizes_end = 51;
+    ++message_sizes_end;
+    *message_sizes_end = 123;
+    ++message_sizes_end;
+    *message_sizes_end = 534;
+    ++message_sizes_end;
+    *message_sizes_end = p - message;
+    ++message_sizes_end;
+
+    test_kick();
+
+    // we should read all data
+    g_assert(message_sizes_curr - message_sizes == 4);
+
+    // we should have no data from the device
+    discard_server_capabilities();
+    g_assert_cmpint(vmc_write_pos, ==, 0);
+
+    // make sure data were collapsed in a single message
+    g_assert_cmpint(num_send_data_calls, ==, 1);
+    g_assert_cmpint(send_data_bytes, ==, 1017);
+}
+
 static void test_add(const char *name, void (*func)(TestFixture *, gconstpointer), gconstpointer arg)
 {
     g_test_add(name, TestFixture, arg, test_stream_device_setup, func, test_stream_device_teardown);
@@ -407,6 +508,8 @@ int main(int argc, char *argv[])
              test_stream_device_empty, GINT_TO_POINTER(STREAM_TYPE_DATA));
     test_add("/server/stream-device-huge-data",
              test_stream_device_huge_data, NULL);
+    test_add("/server/stream-device-data-message",
+             test_stream_device_data_message, NULL);
 
     return g_test_run();
 }
