@@ -32,6 +32,14 @@
 
 #define MAX_GLZ_DRAWABLE_INSTANCES 2
 
+#if 0
+#define COMPRESS_DEBUG(...) g_debug(__VA_ARGS__)
+#else
+#define COMPRESS_DEBUG(...) G_STMT_START { \
+        if (0) g_debug(__VA_ARGS__); \
+    } G_STMT_END
+#endif
+
 typedef struct RedGlzDrawable RedGlzDrawable;
 typedef struct GlzDrawableInstanceItem GlzDrawableInstanceItem;
 
@@ -837,9 +845,7 @@ bool image_encoders_compress_quic(ImageEncoders *enc, SpiceImage *dest,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &enc->shared_data->quic_stat);
 
-#ifdef COMPRESS_DEBUG
-    spice_debug("QUIC compress");
-#endif
+    COMPRESS_DEBUG("QUIC compress");
 
     switch (src->format) {
     case SPICE_BITMAP_FMT_32BIT:
@@ -926,9 +932,7 @@ bool image_encoders_compress_lz(ImageEncoders *enc,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &enc->shared_data->lz_stat);
 
-#ifdef COMPRESS_DEBUG
-    spice_debug("LZ LOCAL compress");
-#endif
+    COMPRESS_DEBUG("LZ LOCAL compress");
 
     encoder_data_init(&lz_data->data);
 
@@ -997,9 +1001,7 @@ bool image_encoders_compress_jpeg(ImageEncoders *enc, SpiceImage *dest,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &enc->shared_data->jpeg_alpha_stat);
 
-#ifdef COMPRESS_DEBUG
-    spice_debug("JPEG compress");
-#endif
+    COMPRESS_DEBUG("JPEG compress");
 
     switch (src->format) {
     case SPICE_BITMAP_FMT_16BIT:
@@ -1114,9 +1116,7 @@ bool image_encoders_compress_lz4(ImageEncoders *enc, SpiceImage *dest,
     stat_start_time_t start_time;
     stat_start_time_init(&start_time, &enc->shared_data->lz4_stat);
 
-#ifdef COMPRESS_DEBUG
-    spice_debug("LZ4 compress");
-#endif
+    COMPRESS_DEBUG("LZ4 compress");
 
     encoder_data_init(&lz4_data->data);
 
@@ -1226,9 +1226,7 @@ bool image_encoders_compress_glz(ImageEncoders *enc,
     int glz_size;
     int zlib_size;
 
-#ifdef COMPRESS_DEBUG
-    spice_debug("LZ global compress fmt=%d", src->format);
-#endif
+    COMPRESS_DEBUG("LZ global compress fmt=%d", src->format);
 
     if ((src->x * src->y) >= glz_enc_dictionary_get_size(enc->glz_dict->dict)) {
         return FALSE;
