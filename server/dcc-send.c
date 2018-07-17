@@ -2294,7 +2294,7 @@ static void marshall_monitors_config(RedChannelClient *rcc, SpiceMarshaller *bas
         if (monitors_config->heads[i].width == 0 || monitors_config->heads[i].height == 0) {
             continue;
         }
-        msg->heads[count].id = monitors_config->heads[i].id;
+        msg->heads[count].monitor_id = monitors_config->heads[i].id;
         msg->heads[count].surface_id = monitors_config->heads[i].surface_id;
         msg->heads[count].width = monitors_config->heads[i].width;
         msg->heads[count].height = monitors_config->heads[i].height;
