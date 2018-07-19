@@ -1339,7 +1339,7 @@ RedWorker* red_worker_new(QXLInstance *qxl,
     g_object_set_data(G_OBJECT(channel), "dispatcher", dispatcher);
     reds_register_channel(reds, channel);
 
-    // TODO: handle seemless migration. Temp, setting migrate to FALSE
+    // TODO: handle seamless migration. Temp, setting migrate to FALSE
     worker->display_channel = display_channel_new(reds, qxl, &worker->core, FALSE,
                                                   reds_get_streaming_video(reds),
                                                   reds_get_video_codecs(reds),
