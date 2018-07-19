@@ -759,7 +759,7 @@ static bool can_quic_compress(SpiceBitmap *bitmap)
             bitmap->x >= MIN_DIMENSION_TO_QUIC && bitmap->y >= MIN_DIMENSION_TO_QUIC;
 }
 /**
- * lz doesn't handle:
+ * lz/glz doesn't handle:
  *       (1) bitmaps with strides that are larger than the width of the image in bytes
  *       (2) unstable bitmaps
  */
