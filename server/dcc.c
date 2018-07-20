@@ -796,8 +796,10 @@ static SpiceImageCompression get_compression_for_bitmap(SpiceBitmap *bitmap,
                     bitmap_get_graduality_level(bitmap) == BITMAP_GRADUAL_HIGH) {
                     return SPICE_IMAGE_COMPRESSION_QUIC;
                 }
-            } else if (!can_lz_compress(bitmap) ||
-                       drawable->copy_bitmap_graduality == BITMAP_GRADUAL_HIGH) {
+            } else if (drawable->copy_bitmap_graduality == BITMAP_GRADUAL_HIGH) {
+                return SPICE_IMAGE_COMPRESSION_QUIC;
+            }
+            if (!can_lz_compress(bitmap)) {
                 return SPICE_IMAGE_COMPRESSION_QUIC;
             }
         }
