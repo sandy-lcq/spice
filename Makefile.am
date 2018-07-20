@@ -1,7 +1,7 @@
 NULL =
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = spice-common server docs tools
+SUBDIRS = subprojects/spice-common server docs tools
 
 check-valgrind:
 	$(MAKE) -C server check-valgrind

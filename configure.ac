@@ -30,7 +30,7 @@ SPICE_SERVER_VERSION=`printf "0x%02x%02x%02x" $major $minor $micro`
 AC_SUBST(SPICE_SERVER_VERSION)
 
 AC_CONFIG_MACRO_DIR([m4])
-m4_include([spice-common/m4/spice-deps.m4])
+m4_include([subprojects/spice-common/m4/spice-deps.m4])
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_AUX_DIR(.)
 
@@ -138,11 +138,13 @@ AM_CONDITIONAL(HAVE_SASL, test "x$have_sasl" = "xyes")
 
 dnl =========================================================================
 dnl Check deps
-
-AC_CONFIG_SUBDIRS([spice-common])
-COMMON_CFLAGS='-I ${top_srcdir}/spice-common/ -I ${top_builddir}/spice-common/'
+AC_CONFIG_SUBDIRS([subprojects/spice-common])
+COMMON_CFLAGS='-I ${top_srcdir}/subprojects/spice-common/ -I ${top_builddir}/subprojects/spice-common/'
 COMMON_CFLAGS="$COMMON_CFLAGS -DG_LOG_DOMAIN=\\\"Spice\\\""
 AC_SUBST(COMMON_CFLAGS)
+
+SPICE_COMMON_DIR='${top_builddir}/subprojects/spice-common'
+AC_SUBST(SPICE_COMMON_DIR)
 
 AC_CHECK_LIBM
 AC_SUBST(LIBM)

@@ -40,8 +40,8 @@ EXTRA_libspice_server_la_DEPENDENCIES = $(srcdir)/spice-server.syms
 endif
 
 libserver_la_LIBADD =							\
-	$(top_builddir)/spice-common/common/libspice-common.la		\
-	$(top_builddir)/spice-common/common/libspice-common-server.la	\
+	$(SPICE_COMMON_DIR)/common/libspice-common.la			\
+	$(SPICE_COMMON_DIR)/common/libspice-common-server.la		\
 	$(GL_LIBS)							\
 	$(GLIB2_LIBS)							\
 	$(GOBJECT2_LIBS)						\

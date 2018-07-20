@@ -38,7 +38,7 @@ libtest_a_SOURCES =				\
 
 LDADD =								\
 	libtest.a						\
-	$(top_builddir)/spice-common/common/libspice-common.la	\
+	$(SPICE_COMMON_DIR)/common/libspice-common.la		\
 	$(top_builddir)/server/libserver.la			\
 	$(GIO_UNIX_LIBS)					\
 	$(GLIB2_LIBS)						\
@@ -87,7 +87,7 @@ spice_server_replay_SOURCES = replay.c		\
 	basic-event-loop.h
 
 spice_server_replay_LDADD =					\
-	$(top_builddir)/spice-common/common/libspice-common.la	\
+	$(SPICE_COMMON_DIR)/common/libspice-common.la		\
 	$(top_builddir)/server/libspice-server.la		\
 	$(GLIB2_LIBS)						\
 	$(GOBJECT2_LIBS)					\
