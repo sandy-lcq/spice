@@ -56,7 +56,7 @@ There is also a mailing list for new release announcements:
 
 To view known bugs, or report new bugs, in SPICE visit
 
-   https://bugs.freedesktop.org/describecomponents.cgi?product=Spice
+   https://gitlab.freedesktop.org/spice/spice/issues/new?
 
 Bugs found when using an OS distribution's binary packages should
 be reported to the OS vendors' own bug tracker first.
