@@ -221,6 +221,8 @@ handle_msg_invalid(StreamDevice *dev, SpiceCharDeviceInstance *sin, const char *
         error_msg = default_error_msg;
     }
 
+    g_warning("Stream device received invalid message: %s", error_msg);
+
     int msg_size = sizeof(StreamMsgNotifyError) + strlen(error_msg) + 1;
     int total_size = sizeof(StreamDevHeader) + msg_size;
 
