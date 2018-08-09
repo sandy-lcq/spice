@@ -115,26 +115,6 @@ void spice_qxl_gl_draw_async(QXLInstance *instance,
                              uint32_t w, uint32_t h,
                              uint64_t cookie);
 
-typedef struct QXLDrawArea {
-    uint8_t *buf;
-    uint32_t size;
-    uint8_t *line_0;
-    uint32_t width;
-    uint32_t heigth;
-    int stride;
-} QXLDrawArea;
-
-typedef struct QXLDevInfo {
-    uint32_t x_res;
-    uint32_t y_res;
-    uint32_t bits;
-    uint32_t use_hardware_cursor;
-
-    QXLDrawArea draw_area;
-
-    uint32_t ram_size;
-} QXLDevInfo;
-
 typedef struct QXLDevInitInfo {
     uint32_t num_memslots_groups;
     uint32_t num_memslots;
