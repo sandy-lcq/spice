@@ -327,6 +327,8 @@ static void test_stream_device(TestFixture *fixture, gconstpointer user_data)
         spice_server_char_device_wakeup(&vmc_instance);
         g_assert_cmpint(pos, ==, 0);
 
+        g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Stream device received invalid message: Invalid message type");
+
         // we need to open the device and kick the start
         spice_server_port_event(&vmc_instance, SPICE_PORT_EVENT_OPENED);
         spice_server_char_device_wakeup(&vmc_instance);
@@ -395,6 +397,8 @@ static void test_stream_device_format_after_data(TestFixture *fixture, gconstpoi
     *message_sizes_end = p - message;
     ++message_sizes_end;
 
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Stream device received invalid message: Invalid message type");
+
     test_kick();
 
     // we should read all data
@@ -441,6 +445,8 @@ static void test_stream_device_huge_data(TestFixture *fixture, gconstpointer use
     p = add_format(p, 640, 480, SPICE_VIDEO_CODEC_TYPE_MJPEG);
     *message_sizes_end = p - message;
     ++message_sizes_end;
+
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Stream device received invalid message: STREAM_DATA too large");
 
     test_kick();
 
