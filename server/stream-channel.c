@@ -356,7 +356,6 @@ stream_channel_get_supported_codecs(StreamChannel *channel, uint8_t *out_codecs)
         SPICE_DISPLAY_CAP_CODEC_VP8,
         SPICE_DISPLAY_CAP_CODEC_H264,
         SPICE_DISPLAY_CAP_CODEC_VP9,
-        SPICE_DISPLAY_CAP_CODEC_H265,
     };
 
     bool supported[SPICE_N_ELEMENTS(codec2cap)];
