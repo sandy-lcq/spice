@@ -206,9 +206,8 @@ glib_encoded_version = 'GLIB_VERSION_@0@_@1@'.format(glib_major_minor[0], glib_m
 spice_server_global_cflags += ['-DGLIB_VERSION_MIN_REQUIRED=@0@'.format(glib_encoded_version),
                                '-DGLIB_VERSION_MAX_ALLOWED=@0@'.format(glib_encoded_version)]
 
-foreach arg : compiler.get_supported_arguments(spice_server_global_cflags)
-  add_project_arguments(arg, language : 'c')
-endforeach
+add_project_arguments(compiler.get_supported_arguments(spice_server_global_cflags),
+                      language : 'c')
 
 #
 # Subdirectories
